@@ -6,3 +6,6 @@ Verbose notebooks:
 - [RoseTTAFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold.ipynb)
 - [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb)
 - [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb)
+
+Credit
+- Most of the python code was written by Sergey Ovchinnikov (@sokrypton). The API is hosted at the Södinglab (@SoedingL) and maintained by Milot Mirdita (@milot_mirdita). Martin Steinegger (@thesteinegger) integrated everything.
