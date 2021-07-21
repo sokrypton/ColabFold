@@ -1,6 +1,6 @@
 # ColabFold
 Making Protein folding accessible to all via Google Colab!
-- [AlphaFold2 w/ MMseqs2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb) - predict single domains
+- [AlphaFold2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb) - predict single domains, w/ MMseqs2 for MSA generation
 - [RoseTTAFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold.ipynb) - predict single domains
 
 Experimental notebooks:
