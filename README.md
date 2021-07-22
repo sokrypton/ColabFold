@@ -15,3 +15,8 @@ Acknowledgments
 - We would like to thank the RoseTTAFold and AlphaFold team for doing an excellent job open sourcing the software. 
 - Also credit to [David Koes](https://github.com/dkoes) for his awesome [py3Dmol](https://3dmol.csb.pitt.edu/) plugin, without whom these notebooks would be quite boring!
 - A colab by Sergey Ovchinnikov (@sokrypton), Milot Mirdita (@milot_mirdita) and Martin Steinegger (@thesteinegger).
+
+
+How do I reference this work?
+
+[![DOI](https://zenodo.org/badge/387617756.svg)](https://zenodo.org/badge/latestdoi/387617756)
