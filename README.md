@@ -5,12 +5,12 @@ Making Protein folding accessible to all via Google Colab!
 
 Experimental notebooks:
 - [AlphaFold2_complexes](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2_complexes.ipynb) - predict heterodimers, w/ MMseqs2 for MSA generation
-- [AlphaFold2_jackhmmer](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold_wJackhmmer.ipynb) - predict monomers/homooligomers, w/ jackhmmer for MSA generation
 - [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb)
 - [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb)
 
 External notebooks:
 - [AlphaFold2](https://colab.research.google.com/github/deepmind/alphafold/blob/main/notebooks/AlphaFold.ipynb) - Official Notebook from Deepmind, no templates, monomers only.
+- [AlphaFold2_mod](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold_wJackhmmer.ipynb) - Official notebook from Deepmind, modified to add support for homooligomers and MMseqs2
 
 Acknowledgments
 - We would like to thank the RoseTTAFold and AlphaFold team for doing an excellent job open sourcing the software. 
