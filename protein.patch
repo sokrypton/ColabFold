@@ -1,0 +1,95 @@
+21a22
+> from string import ascii_uppercase as CHAIN_IDs
+79a81
+>     chains = [chain]
+82,87c84,89
+<     if len(chains) != 1:
+<       raise ValueError(
+<           'Only single chain PDBs are supported when chain_id not specified. '
+<           f'Found {len(chains)} chains.')
+<     else:
+<       chain = chains[0]
+---
+>   #  if len(chains) != 1:
+>   #    raise ValueError(
+>   #        'Only single chain PDBs are supported when chain_id not specified. '
+>   #        f'Found {len(chains)} chains.')
+>   #  else:
+>   #    chain = chains[0]
+95,107c97,118
+<   for res in chain:
+<     if res.id[2] != ' ':
+<       raise ValueError(
+<           f'PDB contains an insertion code at chain {chain.id} and residue '
+<           f'index {res.id[1]}. These are not supported.')
+<     res_shortname = residue_constants.restype_3to1.get(res.resname, 'X')
+<     restype_idx = residue_constants.restype_order.get(
+<         res_shortname, residue_constants.restype_num)
+<     pos = np.zeros((residue_constants.atom_type_num, 3))
+<     mask = np.zeros((residue_constants.atom_type_num,))
+<     res_b_factors = np.zeros((residue_constants.atom_type_num,))
+<     for atom in res:
+<       if atom.name not in residue_constants.atom_types:
+---
+>   PARAM_CHAIN_BREAK = 100
+>   residue_index_prev = 0
+>   for k,chain in enumerate(chains):
+>     for res in chain:
+>       if res.id[2] != ' ':
+>         raise ValueError(
+>             f'PDB contains an insertion code at chain {chain.id} and residue '
+>             f'index {res.id[1]}. These are not supported.')
+>       res_shortname = residue_constants.restype_3to1.get(res.resname, 'X')
+>       restype_idx = residue_constants.restype_order.get(
+>           res_shortname, residue_constants.restype_num)
+>       pos = np.zeros((residue_constants.atom_type_num, 3))
+>       mask = np.zeros((residue_constants.atom_type_num,))
+>       res_b_factors = np.zeros((residue_constants.atom_type_num,))
+>       for atom in res:
+>         if atom.name not in residue_constants.atom_types:
+>           continue
+>         pos[residue_constants.atom_order[atom.name]] = atom.coord
+>         mask[residue_constants.atom_order[atom.name]] = 1.
+>         res_b_factors[residue_constants.atom_order[atom.name]] = atom.bfactor
+>       if np.sum(mask) < 0.5:
+>         # If no known atom positions are reported for the residue then skip it.
+109,119c120,125
+<       pos[residue_constants.atom_order[atom.name]] = atom.coord
+<       mask[residue_constants.atom_order[atom.name]] = 1.
+<       res_b_factors[residue_constants.atom_order[atom.name]] = atom.bfactor
+<     if np.sum(mask) < 0.5:
+<       # If no known atom positions are reported for the residue then skip it.
+<       continue
+<     aatype.append(restype_idx)
+<     atom_positions.append(pos)
+<     atom_mask.append(mask)
+<     residue_index.append(res.id[1])
+<     b_factors.append(res_b_factors)
+---
+>       aatype.append(restype_idx)
+>       atom_positions.append(pos)
+>       atom_mask.append(mask)
+>       residue_index.append(res.id[1] + residue_index_prev + PARAM_CHAIN_BREAK*k)
+>       b_factors.append(res_b_factors)
+>     residue_index_prev = residue_index[-1]
+155c161,162
+<   chain_id = 'A'
+---
+>   chain_index = -1
+>   residue_index_prev = residue_index[0]-100
+157a165,173
+>     if residue_index[i] - residue_index_prev > 1:   # chain break
+>       chain_index += 1
+>       res_num = 1
+>       if chain_index > 0:
+>         pdb_lines.append("TER")
+>     elif residue_index[i] != residue_index_prev:
+>       res_num += 1
+>     residue_index_prev = residue_index[i]
+>     chain_id = CHAIN_IDs[chain_index]
+158a175
+>     #
+174c191
+<                    f'{residue_index[i]:>4}{insertion_code:>1}   '
+---
+>                    f'{res_num:>4}{insertion_code:>1}   '
