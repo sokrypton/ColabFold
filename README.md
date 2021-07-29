@@ -7,13 +7,13 @@ Making Protein folding accessible to all via Google Colab!
 Official Notebook from Deepmind:
 - [AlphaFold2](https://colab.research.google.com/github/deepmind/alphafold/blob/main/notebooks/AlphaFold.ipynb) - `monomers=Yes, homoligomers=No, mmseqs2=No, jackhmmer=Yes, templates=No`
 
-Maximum length limits depends on free GPU
+Maximum length limits depends on free GPU provided by Google-Colab `fingers-crossed`
 - For GPU: `Tesla T4` or `Tesla P100` with ~16G the max length is ~1400
 - For GPU: `Tesla K80` with ~12G the max length is ~1000
 - To check what GPU you got, open a new code cell and type `!nvidia-smi`
 
 OLD Experimental notebooks:
-- [RoseTTAFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold.ipynb) - Work in Progress...
+- [RoseTTAFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold.ipynb) - `Work in Progress`
 - [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb)
 - [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb)
 
