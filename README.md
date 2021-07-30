@@ -17,6 +17,8 @@ OLD Experimental notebooks:
 - [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb)
 - [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb)
 
+Others
+- [TrDesign](https://colab.research.google.com/github/gjoni/trDesign/blob/beta/02-GD/notebooks/TrDesign_GD_demo.ipynb) - TrRosetta_v1 for Protein Structure Prediction and Design
 
 Acknowledgments
 - We would like to thank the RoseTTAFold and AlphaFold team for doing an excellent job open sourcing the software. 
