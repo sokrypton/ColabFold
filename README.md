@@ -7,7 +7,7 @@ Making Protein folding accessible to all via Google Colab!
 Official Notebook from Deepmind:
 - [AlphaFold2](https://colab.research.google.com/github/deepmind/alphafold/blob/main/notebooks/AlphaFold.ipynb) - `monomers=Yes, homoligomers=No, mmseqs2=No, jackhmmer=Yes, templates=No`
 
-OLD Experimental notebooks:
+Experimental notebooks (WIP):
 - [RoseTTAFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold.ipynb) - `Work in Progress`
 - [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb)
 - [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb)
