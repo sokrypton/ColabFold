@@ -148,7 +148,7 @@ def plot_plddt_legend():
   return plt
 
 def plot_confidence(plddt=None, pae=None):
-  use_ptm = False if paes is None else True
+  use_ptm = False if pae is None else True
   if use_ptm:
     plt.figure(figsize=(10,3),dpi=100)
     plt.subplot(1,2,1);
