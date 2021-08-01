@@ -156,8 +156,9 @@ def plot_confidence(plddt, pae=None, homooligomer=1):
     plt.figure(figsize=(5,3),dpi=100)
   plt.title('Predicted lDDT')
   plt.plot(plddt)
+  Ln = plddt.shape[0]
   for n in range(homooligomer+1):
-    x = n*(len(sequence))
+    x = n*Ln
     plt.plot([x,x],[0,100],color="black")
   plt.ylabel('plDDT')
   plt.xlabel('position')
