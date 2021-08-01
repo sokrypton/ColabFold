@@ -7,6 +7,7 @@ import hashlib
 import tarfile
 import time
 import pickle
+import os
 
 ###########################################
 # control gpu/cpu memory usage
