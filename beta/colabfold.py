@@ -147,7 +147,7 @@ def plot_plddt_legend():
   plt.axis(False)
   return plt
 
-def plot_confidence(plddt, pae=None, homooligomer=1):
+def plot_confidence(plddt, pae=None, Ls=None):
   use_ptm = False if pae is None else True
   if use_ptm:
     plt.figure(figsize=(10,3),dpi=100)
@@ -156,10 +156,9 @@ def plot_confidence(plddt, pae=None, homooligomer=1):
     plt.figure(figsize=(5,3),dpi=100)
   plt.title('Predicted lDDT')
   plt.plot(plddt)
-  Ln = plddt.shape[0]
-  for n in range(homooligomer+1):
-    x = n*Ln
-    plt.plot([x,x],[0,100],color="black")
+  if Ls is not None:
+    for L in Ls[:-1]:
+      plt.plot([L,L],[0,100],color="black")
   plt.ylabel('plDDT')
   plt.xlabel('position')
   if use_ptm:
@@ -170,7 +169,7 @@ def plot_confidence(plddt, pae=None, homooligomer=1):
     plt.ylabel('Aligned residue')
   return plt
 
-def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False, color="lDDT"):
+def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False, color="lDDT", chains=1):
   view = py3Dmol.view(js='https://3dmol.org/build/3Dmol.js',)
   view.addModel(open(pred_output_path,'r').read(),'pdb')
   if color == "lDDT":
@@ -178,7 +177,7 @@ def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False, col
   elif color == "rainbow":
     view.setStyle({'cartoon': {'color':'spectrum'}})
   elif color == "chain":
-    for n,chain,color in zip(range(homooligomer),list("ABCDEFGH"),
+    for n,chain,color in zip(range(chains),list("ABCDEFGH"),
                      ["lime","cyan","magenta","yellow","salmon","white","blue","orange"]):
        view.setStyle({'chain':chain},{'cartoon': {'color':color}})
   if show_sidechains:
