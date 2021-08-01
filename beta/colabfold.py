@@ -9,6 +9,8 @@ import time
 import pickle
 import os
 import numpy as np
+import matplotlib.pyplot as plt
+import py3Dmol
 
 ###########################################
 # control gpu/cpu memory usage
@@ -127,3 +129,67 @@ def chain_break(idx_res, Ls, length=200):
     idx_res[L_prev+L_i:] += lengths
     L_prev += L_i      
   return idx_res
+
+##################################################
+# plotting
+##################################################
+def plot_plddt_legend():
+  thresh = ['plDDT:','Very low (<50)','Low (60)','OK (70)','Confident (80)','Very high (>90)']
+  plt.figure(figsize=(1,0.1),dpi=100)
+  ########################################
+  for c in ["#FFFFFF","#FF0000","#FFFF00","#00FF00","#00FFFF","#0000FF"]:
+    plt.bar(0, 0, color=c)
+  plt.legend(thresh, frameon=False,
+             loc='center', ncol=6,
+             handletextpad=1,
+             columnspacing=1,
+             markerscale=0.5,)
+  plt.axis(False)
+  return plt
+
+def plot_confidence(plddt=None, pae=None):
+  use_ptm = False if paes is None else True
+  if use_ptm:
+    plt.figure(figsize=(10,3),dpi=100)
+    plt.subplot(1,2,1);
+  else:
+    plt.figure(figsize=(5,3),dpi=100)
+  plt.title('Predicted lDDT')
+  plt.plot(plddt)
+  for n in range(homooligomer+1):
+    x = n*(len(sequence))
+    plt.plot([x,x],[0,100],color="black")
+  plt.ylabel('plDDT')
+  plt.xlabel('position')
+  if use_ptm:
+    plt.subplot(1,2,2);plt.title('Predicted Aligned Error')
+    plt.imshow(pae, cmap="bwr",vmin=0,vmax=30)
+    plt.colorbar()
+    plt.xlabel('Scored residue')
+    plt.ylabel('Aligned residue')
+  return plt
+
+def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False, color="lDDT"):
+  view = py3Dmol.view(js='https://3dmol.org/build/3Dmol.js',)
+  view.addModel(open(pred_output_path,'r').read(),'pdb')
+  if color == "lDDT":
+    view.setStyle({'cartoon': {'colorscheme': {'prop':'b','gradient': 'roygb','min':50,'max':90}}})
+  elif color == "rainbow":
+    view.setStyle({'cartoon': {'color':'spectrum'}})
+  elif color == "chain":
+    for n,chain,color in zip(range(homooligomer),list("ABCDEFGH"),
+                     ["lime","cyan","magenta","yellow","salmon","white","blue","orange"]):
+       view.setStyle({'chain':chain},{'cartoon': {'color':color}})
+  if show_sidechains:
+    BB = ['C','O','N']
+    view.addStyle({'and':[{'resn':["GLY","PRO"],'invert':True},{'atom':BB,'invert':True}]},
+                        {'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
+    view.addStyle({'and':[{'resn':"GLY"},{'atom':'CA'}]},
+                        {'sphere':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
+    view.addStyle({'and':[{'resn':"PRO"},{'atom':['C','O'],'invert':True}]},
+                        {'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})  
+  if show_mainchains:
+    BB = ['C','O','N','CA']
+    view.addStyle({'atom':BB},{'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
+  view.zoomTo()
+  return view
