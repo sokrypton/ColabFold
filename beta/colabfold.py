@@ -147,7 +147,7 @@ def plot_plddt_legend():
   plt.axis(False)
   return plt
 
-def plot_confidence(plddt=None, pae=None):
+def plot_confidence(plddt, pae=None, homooligomer=1):
   use_ptm = False if pae is None else True
   if use_ptm:
     plt.figure(figsize=(10,3),dpi=100)
