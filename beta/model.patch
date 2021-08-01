@@ -1,0 +1,17 @@
+--- /usr/local/lib/python3.7/dist-packages/alphafold/model/model.py	2021-08-01 22:46:44.444240429 +0000
++++ model.py	2021-08-01 22:52:08.258869028 +0000
+@@ -130,7 +130,7 @@
+     self.init_params(feat)
+     logging.info('Running predict with shape(feat) = %s',
+                  tree.map_structure(lambda x: x.shape, feat))
+-    result = self.apply(self.params, jax.random.PRNGKey(0), feat)
++    result, recycles = self.apply(self.params, jax.random.PRNGKey(0), feat)
+     # This block is to ensure benchmark timings are accurate. Some blocking is
+     # already happening when computing get_confidence_metrics, and this ensures
+     # all outputs are blocked on.
+@@ -138,4 +138,4 @@
+     result.update(get_confidence_metrics(result))
+     logging.info('Output shape was %s',
+                  tree.map_structure(lambda x: x.shape, result))
+-    return result
++    return result, recycles

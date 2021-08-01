@@ -1,0 +1,49 @@
+--- /usr/local/lib/python3.7/dist-packages/alphafold/model/modules.py	2021-08-01 22:46:44.444240429 +0000
++++ modules.py	2021-08-01 22:52:08.626893597 +0000
+@@ -365,21 +365,29 @@
+         # Eval mode or tests: use the maximum number of iterations.
+         num_iter = self.config.num_recycle
+ 
+-      body = lambda x: (x[0] + 1,  # pylint: disable=g-long-lambda
+-                        get_prev(do_call(x[1], recycle_idx=x[0],
+-                                         compute_loss=False)))
++      def pw_dist(a):
++        a_norm = jnp.square(a).sum(-1)
++        return jnp.sqrt(jnp.abs(a_norm[:,None] + a_norm[None,:] - 2 * a @ a.T))
++
++      def body(x):
++        n, tol, prev = x
++        prev_ = get_prev(do_call(prev, recycle_idx=n, compute_loss=False))
++        ca,ca_ = prev["prev_pos"][:,1,:], prev_["prev_pos"][:,1,:]
++        tol_ = jnp.sqrt(jnp.square(pw_dist(ca) - pw_dist(ca_)).mean())
++        return n+1, tol_, prev_
++
+       if hk.running_init():
+         # When initializing the Haiku module, run one iteration of the
+         # while_loop to initialize the Haiku modules used in `body`.
+-        _, prev = body((0, prev))
++        recycles, tol, prev = body((0, jnp.inf, prev))
+       else:
+-        _, prev = hk.while_loop(
+-            lambda x: x[0] < num_iter,
+-            body,
+-            (0, prev))
++        recycles, tol, prev = hk.while_loop(
++          lambda x: ((x[0] < num_iter) & (x[1] > self.config.recycle_tol)),
++          body,(0, jnp.inf, prev))
+     else:
+       prev = {}
+       num_iter = 0
++      (recycles,tol) = 0, jnp.inf
+ 
+     ret = do_call(prev=prev, recycle_idx=num_iter)
+     if compute_loss:
+@@ -387,7 +395,7 @@
+ 
+     if not return_representations:
+       del (ret[0] if compute_loss else ret)['representations']  # pytype: disable=unsupported-operands
+-    return ret
++    return ret, (recycles,tol)
+ 
+ 
+ class TemplatePairStack(hk.Module):
