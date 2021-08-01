@@ -8,6 +8,7 @@ import tarfile
 import time
 import pickle
 import os
+import numpy as np
 
 ###########################################
 # control gpu/cpu memory usage
