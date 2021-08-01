@@ -107,18 +107,19 @@ def cov_filter(msas, deletion_matrices, cov=0):
   else:
     return msas, deletion_matrices
 
-def homooliomerize(msas, deletion_matrices, homooligomer):
+def homooliomerize(msas, deletion_matrices, homooligomer=1):
  if homooligomer == 1:
   return msas, deletion_matrices
  else:
   new_msas = []
   new_mtxs = []
   for o in range(homooligomer):
-    L = num_res * o
-    R = num_res * (homooligomer-(o+1))
-    for msa,mtx in zip(msas,deletion_matrices):
-      new_msas.append(["-"*L+seq+"-"*R for seq in msa])
-      new_mtxs.append([[0]*L+mtx+[0]*R for mtx in deletion_matrix])
+    for msa,mtx in zip(msas, deletion_matrices):
+      num_res = len(msa[0])
+      L = num_res * o
+      R = num_res * (homooligomer-(o+1))
+      new_msas.append(["-"*L+s+"-"*R for s in msa])
+      new_mtxs.append([[0]*L+m+[0]*R for m in mtx])
   return new_msas, new_mtxs
 
 def chain_break(idx_res, Ls, length=200):
@@ -126,7 +127,7 @@ def chain_break(idx_res, Ls, length=200):
   # add big enough number to residue index to indicate chain breaks
   L_prev = 0
   for L_i in Ls[:-1]:
-    idx_res[L_prev+L_i:] += lengths
+    idx_res[L_prev+L_i:] += length
     L_prev += L_i      
   return idx_res
 
@@ -157,7 +158,10 @@ def plot_confidence(plddt, pae=None, Ls=None):
   plt.title('Predicted lDDT')
   plt.plot(plddt)
   if Ls is not None:
-    for L in Ls[:-1]:
+    L_prev = 0
+    for L_i in Ls[:-1]:
+      L = L_prev + L_i
+      L_prev += L_i
       plt.plot([L,L],[0,100],color="black")
   plt.ylabel('plDDT')
   plt.xlabel('position')
