@@ -132,6 +132,21 @@ def chain_break(idx_res, Ls, length=200):
   return idx_res
 
 ##################################################
+# parsers
+##################################################
+def parse_results(prediction_result):
+  b_factors = prediction_result['plddt'][:,None] * prediction_result['structure_module']['final_atom_mask']
+  out = {"unrelaxed_protein": protein.from_prediction(processed_feature_dict, prediction_result, b_factors=b_factors),
+         "plddt": prediction_result['plddt'],
+         "sco": prediction_result['plddt'].mean(),
+         "mtx": prediction_result["distogram"]["bin_edges"][prediction_result["distogram"]["logits"].argmax(-1)],
+         "adj": jax.nn.softmax(prediction_result["distogram"]["logits"])[:,:,prediction_result["distogram"]["bin_edges"] < 8].sum(-1)}
+  if "ptm" in prediction_result:
+    out.update({"pae": prediction_result['predicted_aligned_error'],
+                "ptm": prediction_result['ptm']})
+  return out
+
+##################################################
 # plotting
 ##################################################
 
@@ -223,5 +238,15 @@ def plot_paes(paes, dpi=100, fig=True):
     plt.subplot(1,num_models,n+1)
     plt.title(f"model_{n+1}")
     plt.imshow(pae,cmap="bwr",vmin=0,vmax=30)
+    plt.colorbar()
+  return plt
+
+def plot_adjs(adjs, dpi=100, fig=True):
+  num_models = len(adjs)
+  if fig: plt.figure(figsize=(3*num_models,2), dpi=dpi)
+  for n,adj in enumerate(adjs):
+    plt.subplot(1,num_models,n+1)
+    plt.title(f"model_{n+1}")
+    plt.imshow(adj,cmap="binary",vmin=0,vmax=1)
     plt.colorbar()
   return plt
