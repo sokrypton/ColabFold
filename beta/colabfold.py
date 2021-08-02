@@ -135,7 +135,7 @@ def chain_break(idx_res, Ls, length=200):
 # parsers
 ##################################################
 from alphafold.common import protein
-def parse_results(prediction_result):
+def parse_results(prediction_result, processed_feature_dict):
   b_factors = prediction_result['plddt'][:,None] * prediction_result['structure_module']['final_atom_mask']
   out = {"unrelaxed_protein": protein.from_prediction(processed_feature_dict, prediction_result, b_factors=b_factors),
          "plddt": prediction_result['plddt'],
