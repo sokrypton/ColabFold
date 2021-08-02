@@ -180,6 +180,7 @@ def plot_confidence(plddt, pae=None, Ls=None, dpi=100):
       L = L_prev + L_i
       L_prev += L_i
       plt.plot([L,L],[0,100],color="black")
+  plt.ylim(0,100)
   plt.ylabel('plDDT')
   plt.xlabel('position')
   if use_ptm:
