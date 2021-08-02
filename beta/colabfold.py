@@ -134,9 +134,10 @@ def chain_break(idx_res, Ls, length=200):
 ##################################################
 # plotting
 ##################################################
-def plot_plddt_legend():
+
+def plot_plddt_legend(dpi=100):
   thresh = ['plDDT:','Very low (<50)','Low (60)','OK (70)','Confident (80)','Very high (>90)']
-  plt.figure(figsize=(1,0.1),dpi=100)
+  plt.figure(figsize=(1,0.1),dpi=dpi)
   ########################################
   for c in ["#FFFFFF","#FF0000","#FFFF00","#00FF00","#00FFFF","#0000FF"]:
     plt.bar(0, 0, color=c)
@@ -148,13 +149,13 @@ def plot_plddt_legend():
   plt.axis(False)
   return plt
 
-def plot_confidence(plddt, pae=None, Ls=None):
+def plot_confidence(plddt, pae=None, Ls=None, dpi=100):
   use_ptm = False if pae is None else True
   if use_ptm:
-    plt.figure(figsize=(10,3),dpi=100)
+    plt.figure(figsize=(10,3), dpi=dpi)
     plt.subplot(1,2,1);
   else:
-    plt.figure(figsize=(5,3),dpi=100)
+    plt.figure(figsize=(5,3), dpi=dpi)
   plt.title('Predicted lDDT')
   plt.plot(plddt)
   if Ls is not None:
@@ -197,3 +198,30 @@ def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False, col
     view.addStyle({'atom':BB},{'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
   view.zoomTo()
   return view
+
+def plot_plddts(plddts, Ls=None, dpi=100, fig=True):
+  if fig: plt.figure(figsize=(8,5),dpi=100)
+  plt.title("Predicted lDDT per position")
+  for n,plddt in enumerate(plddts):
+    plt.plot(plddt,label=f"model_{n+1}")
+  if Ls is not None:
+    L_prev = 0
+    for L_i in Ls[:-1]:
+      L = L_prev + L_i
+      L_prev += L_i
+      plt.plot([L,L],[0,100],color="black")
+  plt.legend()
+  plt.ylim(0,100)
+  plt.ylabel("Predicted lDDT")
+  plt.xlabel("Positions")
+  return plt
+
+def plot_paes(paes, dpi=100, fig=True):
+  num_models = len(paes)
+  if fig: plt.figure(figsize=(3*num_models,2), dpi=dpi)
+  for n,pae in enumerate(paes):
+    plt.subplot(1,num_models,n+1)
+    plt.title(f"model_{n+1}")
+    plt.imshow(pae,cmap="bwr",vmin=0,vmax=30)
+    plt.colorbar()
+  return plt
