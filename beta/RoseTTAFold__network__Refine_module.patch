@@ -1,0 +1,106 @@
+--- Refine_module_old.py	2021-08-04 07:49:26.000000000 -0400
++++ Refine_module.py	2021-08-04 07:46:27.000000000 -0400
+@@ -129,47 +129,61 @@
+         self.norm_state = LayerNorm(SE3_param['l0_out_features'])
+         self.pred_lddt = nn.Linear(SE3_param['l0_out_features'], 1)
+ 
+-    def forward(self, node, edge, seq1hot, idx, use_transf_checkpoint=False, eps=1e-4):
++    def forward(self, node, edge, seq1hot, idx, use_transf_checkpoint=False, eps=1e-4,
++                mirror_mode="serial"):       
++        
++        def run(xyz, state, node, edge, idx, seq1hot):
++          best_xyz = xyz
++          best_lddt = torch.zeros((xyz.shape[0], xyz.shape[1], 1), device=xyz.device)
++          prev_lddt = 0.0
++          no_impr = 0
++          no_impr_best = 0
++          for i_iter in range(200):
++              for i_m in range(self.n_module):
++                  if use_transf_checkpoint:
++                      xyz, state = checkpoint.checkpoint(create_custom_forward(self.refine_net[i_m], top_k=64), node.float(), edge.float(), xyz.detach().float(), state.float(), seq1hot, idx)
++                  else:
++                      xyz, state = self.refine_net[i_m](node.float(), edge.float(), xyz.detach().float(), state.float(), seq1hot, idx, top_k=64)
++              #
++              lddt = self.pred_lddt(self.norm_state(state)) 
++              lddt = torch.clamp(lddt, 0.0, 1.0)[...,0]
++              print (f"SE(3) iteration {i_iter} {lddt.mean(-1).cpu().numpy()}")
++              if lddt.mean(-1).max() <= prev_lddt+eps:
++                  no_impr += 1
++              else:
++                  no_impr = 0
++              if lddt.mean(-1).max() <= best_lddt.mean(-1).max()+eps:
++                  no_impr_best += 1
++              else:
++                  no_impr_best = 0
++              if no_impr > 10 or no_impr_best > 20:
++                  break
++              if lddt.mean(-1).max() > best_lddt.mean(-1).max():
++                  best_lddt = lddt
++                  best_xyz = xyz
++              prev_lddt = lddt.mean(-1).max()
++          
++          return best_xyz, best_lddt
++        
+         edge = self.proj_edge(edge)
+-
+         xyz, state = self.regen_net(seq1hot, idx, node, edge)
+-       
+-        # DOUBLE IT w/ Mirror images
+-        xyz = torch.cat([xyz, xyz*torch.tensor([1,1,-1], dtype=xyz.dtype, device=xyz.device)])
+-        state = torch.cat([state, state])
+-        node = torch.cat([node, node])
+-        edge = torch.cat([edge, edge])
+-        idx = torch.cat([idx, idx])
+-        seq1hot = torch.cat([seq1hot, seq1hot])
+ 
+-        best_xyz = xyz
+-        best_lddt = torch.zeros((xyz.shape[0], xyz.shape[1], 1), device=xyz.device)
+-        prev_lddt = 0.0
+-        no_impr = 0
+-        no_impr_best = 0
+-        for i_iter in range(200):
+-            for i_m in range(self.n_module):
+-                if use_transf_checkpoint:
+-                    xyz, state = checkpoint.checkpoint(create_custom_forward(self.refine_net[i_m], top_k=64), node.float(), edge.float(), xyz.detach().float(), state.float(), seq1hot, idx)
+-                else:
+-                    xyz, state = self.refine_net[i_m](node.float(), edge.float(), xyz.detach().float(), state.float(), seq1hot, idx, top_k=64)
+-            #
+-            lddt = self.pred_lddt(self.norm_state(state)) 
+-            lddt = torch.clamp(lddt, 0.0, 1.0)[...,0]
+-            print (f"SE(3) iteration {i_iter} {lddt.mean(-1).cpu().numpy()}")
+-            if lddt.mean(-1).max() <= prev_lddt+eps:
+-                no_impr += 1
+-            else:
+-                no_impr = 0
+-            if lddt.mean(-1).max() <= best_lddt.mean(-1).max()+eps:
+-                no_impr_best += 1
+-            else:
+-                no_impr_best = 0
+-            if no_impr > 10 or no_impr_best > 20:
+-                break
+-            if lddt.mean(-1).max() > best_lddt.mean(-1).max():
+-                best_lddt = lddt
+-                best_xyz = xyz
+-            prev_lddt = lddt.mean(-1).max()
+-        pick = best_lddt.mean(-1).argmax()
+-        return best_xyz[pick][None], best_lddt[pick][None]
++        # DOUBLE IT w/ Mirror images
++        if mirror_mode == "parallel":
++          xyz = torch.cat([xyz, xyz*torch.tensor([1,1,-1], dtype=xyz.dtype, device=xyz.device)])
++          state = torch.cat([state, state])
++          node = torch.cat([node, node])
++          edge = torch.cat([edge, edge])
++          idx = torch.cat([idx, idx])
++          seq1hot = torch.cat([seq1hot, seq1hot])
++          best_xyz, best_lddt = run(xyz, state, node, edge, idx, seq1hot)
++          pick = best_lddt.mean(-1).argmax()
++          return best_xyz[pick][None], best_lddt[pick][None]
++        else:
++          best_xyz_A, best_lddt_A = run(xyz, state, node, edge, idx, seq1hot)
++          xyz = xyz * torch.tensor([1,1,-1], dtype=xyz.dtype, device=xyz.device)
++          best_xyz_B, best_lddt_B = run(xyz, state, node, edge, idx, seq1hot)
++          if best_lddt_B.mean() > best_lddt_A.mean():
++            return best_xyz_B, best_lddt_B
++          else:
++            return best_xyz_A, best_lddt_A
+\ No newline at end of file
