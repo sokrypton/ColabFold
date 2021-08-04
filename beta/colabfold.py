@@ -175,11 +175,12 @@ def plot_confidence(plddt, pae=None, Ls=None, dpi=100):
     plt.ylabel('Aligned residue')
   return plt
 
-def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False, color="lDDT", chains=1):
+def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False,
+             color="lDDT", chains=1, vmin=50, vmax=90):
   view = py3Dmol.view(js='https://3dmol.org/build/3Dmol.js',)
   view.addModel(open(pred_output_path,'r').read(),'pdb')
   if color == "lDDT":
-    view.setStyle({'cartoon': {'colorscheme': {'prop':'b','gradient': 'roygb','min':50,'max':90}}})
+    view.setStyle({'cartoon': {'colorscheme': {'prop':'b','gradient': 'roygb','min':vmin,'max':vmax}}})
   elif color == "rainbow":
     view.setStyle({'cartoon': {'color':'spectrum'}})
   elif color == "chain":
