@@ -2,7 +2,7 @@
 Making Protein folding accessible to all via Google Colab!
 - [AlphaFold2_mmseqs2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb) - `monomers=Yes, homoligomers=Yes, mmseqs2=Yes, jackhmmer=No, templates=Yes`
 - [AlphaFold2_complexes](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2_complexes.ipynb) - `monomers=No, heterodimers=Yes, mmseqs2=Yes, jackhmmer=No, templates=No`
-- [AlphaFold2_advanced](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold_advanced.ipynb) - `monomers=Yes, homoligomers=Yes, mmseqs2=Yes, jackhmmer=Yes, templates=No`
+- [AlphaFold2_advanced](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold2_advanced.ipynb) - `monomers=Yes, homoligomers=Yes, mmseqs2=Yes, jackhmmer=Yes, templates=No`
 - [RoseTTAFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold.ipynb) - `monomers=Yes, homoligomers=No, mmseqs2=Yes, jackhmmer=No, templates=No`
 
 Official Notebook from Deepmind:
