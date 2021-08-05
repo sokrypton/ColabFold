@@ -10,6 +10,9 @@ import pickle
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+from matplotlib import collections as mcoll
+
 import py3Dmol
 
 ###########################################
@@ -247,3 +250,70 @@ def plot_dists(dists, dpi=100, fig=True):
     plt.imshow(dist)
     plt.colorbar()
   return plt
+
+def plot_protein(protein=None, pos=None, plddt=None, dpi=100):
+  
+  if protein is not None:
+    pos = protein.atom_positions[:,1,:]
+    plddt = protein.b_factors[:,0]
+
+  # get best view
+  pos = pos - pos.mean(0,keepdims=True)
+  eigen_val, eigen_vec = np.linalg.eigh(np.cov(pos.T))
+  pos = (pos @ eigen_vec)[...,::-1]
+
+  def make_segments(x, y):
+    points = np.array([x, y]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+    return segments
+  
+  def get_color(x, alpha=None, tint=None, shade=None, vmin=50, vmax=90):
+    cmap = matplotlib.cm.get_cmap('gist_rainbow')
+    if x < vmin: x = vmin
+    if x > vmax: x = vmax
+    x = (x - vmin)/(vmax - vmin)
+    color = np.array(cmap(x * 0.8, alpha=alpha))
+    if tint is not None:
+      color[:3] = color[:3] + (1 - color[:3]) * tint
+    if shade is not None:
+      color[:3] = color[:3] * shade
+    return color
+
+  if plddt is not None:
+    fig, (ax1, ax3) = plt.subplots(1,2)
+    fig.set_figwidth(6)
+    fig.set_figheight(3)
+  else:
+    fig, ax1 = plt.subplots(1,1)
+    fig.set_figwidth(3)
+    fig.set_figheight(3)
+    
+  fig.set_dpi(dpi)
+  fig.subplots_adjust(top = 0.9, bottom = 0.1, right = 1, left = 0, hspace = 0.1, wspace = 0.1)
+
+  range_xy = (pos[:,:2].min(),pos[:,:2].max())
+  range_z = (pos[:,-1].min(),pos[:,-1].max())
+  z = (pos[:,-1] - range_z[0]) / (range_z[1] - range_z[0])
+
+  srt = (z[:-1]+z[1:]).argsort()[::-1]
+  seg = make_segments(pos[:,0],pos[:,1])
+
+  # color by rainbow
+  colors1 = np.array([get_color(p, vmin=0, vmax=len(pos)) for p in np.arange(len(pos))])
+  ttl3 = plt.text(0.5, 1.01, f"colored by N->C", horizontalalignment='center', verticalalignment='bottom', transform=ax1.transAxes)
+  ax1.axis('scaled')
+  ax1.set_xlim(*range_xy)
+  ax1.set_ylim(*range_xy)
+  ax1.axis(False)
+  ax1.add_collection(mcoll.LineCollection(seg[srt], colors=colors1[srt], linewidths=5))
+   
+  if plddt is not None:
+    # color by plddt
+    colors3 = np.array([get_color(p) for a,p in zip(z, plddt)])
+    ttl3 = plt.text(0.5, 1.01, f"colored by pLDDT", horizontalalignment='center', verticalalignment='bottom', transform=ax3.transAxes)
+    ax3.axis('scaled')
+    ax3.set_xlim(*range_xy)
+    ax3.set_ylim(*range_xy)
+    ax3.axis(False)
+    ax3.add_collection(mcoll.LineCollection(seg[srt], colors=colors3[srt], linewidths=5))
+    plt.show()
