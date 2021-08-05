@@ -295,11 +295,11 @@ def plot_protein(protein=None, pos=None, plddt=None, dpi=100):
   range_z = (pos[:,-1].min(),pos[:,-1].max())
   z = (pos[:,-1] - range_z[0]) / (range_z[1] - range_z[0])
 
-  srt = (z[:-1]+z[1:]).argsort()[::-1]
+  srt = (z[:-1]+z[1:]).argsort()
   seg = make_segments(pos[:,0],pos[:,1])
 
   # color by rainbow
-  colors1 = np.array([get_color(p, vmin=0, vmax=len(pos)) for p in np.arange(len(pos))])
+  colors1 = np.array([get_color(p, vmin=0, vmax=len(pos)) for p in np.arange(len(pos))[::-1]])
   ttl3 = plt.text(0.5, 1.01, f"colored by N->C", horizontalalignment='center', verticalalignment='bottom', transform=ax1.transAxes)
   ax1.axis('scaled')
   ax1.set_xlim(*range_xy)
