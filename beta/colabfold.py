@@ -325,3 +325,4 @@ def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100):
     plot_lines(ax1, 0, 9, c, "colored by chain", cmap="Set1")
 
   if plddt is not None: plot_lines(ax2, 50, 90, plddt, "colored by pLDDT")
+  return fig
