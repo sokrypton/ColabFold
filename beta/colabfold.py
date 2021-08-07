@@ -11,6 +11,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.patheffects
 from matplotlib import collections as mcoll
 
 import py3Dmol
