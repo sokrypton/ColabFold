@@ -252,24 +252,38 @@ def plot_dists(dists, dpi=100, fig=True):
     plt.colorbar()
   return plt
 
-def kabsch(P, Q, return_v=False):
-  # code borrowed from: https://github.com/charnley/rmsd/blob/master/rmsd/calculate_rmsd.py
-  V, S, W = np.linalg.svd(P.T @ Q)
-  if (np.linalg.det(V) * np.linalg.det(W)) < 0.0:
-    S[-1] = -S[-1]
-    V[:,-1] = -V[:,-1]
-  if return_v: return V
-  else: return np.dot(V, W)
+def kabsch(a, b, weights=None, return_v=False):
+  # code based on scipy/spatial/transform/rotation.pyx
+  a = np.asarray(a)
+  b = np.asarray(b)
+  if weights is None: weights = np.ones(len(b))
+  else: weights = np.asarray(weights)
+  B = np.einsum('ji,jk->ik', weights[:, None] * a, b)
+  u, s, vh = np.linalg.svd(B)
 
-def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100):
+  # Correct improper rotation if necessary (as in Kabsch algorithm)
+  if np.linalg.det(u @ vh) < 0:
+    s[-1] = -s[-1]
+    u[:, -1] = -u[:, -1]
+
+  if return_v: return u
+  else: return u @ vh
+
+def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view=True):
   
   if protein is not None:
-    pos = protein.atom_positions[:,1,:]
-    plddt = protein.b_factors[:,0]
+    pos = np.asarray(protein.atom_positions[:,1,:])
+    plddt = np.asarray(protein.b_factors[:,0])
 
   # get best view
-  pos = pos - pos.mean(0,keepdims=True)
-  pos = pos @ kabsch(pos,pos,return_v=True)
+  if best_view:
+    if plddt is not None:
+      weights = plddt/100
+      pos = pos - (pos * weights[:,None]).sum(0,keepdims=True) / weights.sum()
+      pos = pos @ kabsch(pos, pos, weights, return_v=True)
+    else:
+      pos = pos - pos.mean(0,keepdims=True)
+      pos = pos @ kabsch(pos, pos, return_v=True)
 
   def make_segments(x, y):
     points = np.array([x, y]).T.reshape(-1, 1, 2)
@@ -299,13 +313,17 @@ def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100):
   fig.set_dpi(dpi)
   fig.subplots_adjust(top = 0.9, bottom = 0.1, right = 1, left = 0, hspace = 0, wspace = 0)
 
-  range_xy = (pos[:,:2].min(),pos[:,:2].max())
-  range_z = (pos[:,-1].min(),pos[:,-1].max())
+  range_x, range_y, range_z = [[pos[:,k].min(),pos[:,k].max()] for k in range(3)]
   z = (pos[:,-1] - range_z[0]) / (range_z[1] - range_z[0])
+
+  line_w = 300/(range_x[1] - range_x[0])
+  range_x = [range_x[0]-line_w, range_x[1]+line_w]
+  range_y = [range_y[0]-line_w, range_y[1]+line_w]
+
 
   srt = (z[:-1]+z[1:]).argsort()
   seg = make_segments(pos[:,0],pos[:,1])
-  alpha = (np.sqrt(np.square(pos[:-1] - pos[1:]).sum(-1)) < 4).astype(float)
+  alpha = (np.sqrt(np.square(pos[:-1] - pos[1:]).sum(-1)) < 5).astype(float)
 
   def plot_lines(ax, vmin, vmax, values, title=None, cmap="gist_rainbow"):
     shade = (z + 2)/3
@@ -314,8 +332,8 @@ def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100):
                                  alpha=a, shade=s, tint=t, cmap=cmap) for p,a,s,t in zip(values,alpha,shade,tint)])
     plt.text(0.5, 1.01, title, horizontalalignment='center', verticalalignment='bottom', transform=ax.transAxes)
     ax.axis('scaled')
-    ax.set_xlim(*range_xy); ax.set_ylim(*range_xy); ax.axis(False)
-    ax.add_collection(mcoll.LineCollection(seg[srt], colors=colors[srt], linewidths=5,
+    ax.set_xlim(*range_x); ax.set_ylim(*range_y); ax.axis(False)
+    ax.add_collection(mcoll.LineCollection(seg[srt], colors=colors[srt], linewidths=line_w,
                                            path_effects=[matplotlib.patheffects.Stroke(capstyle="round")]))
   if Ls is None or len(Ls) == 1:
     c = np.arange(len(pos))[::-1]
