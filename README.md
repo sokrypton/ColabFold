@@ -15,10 +15,14 @@ OLD Experimental notebooks:
 - [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb)
 - [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb)
 
-Maximum length limits depends on free GPU provided by Google-Colab `fingers-crossed`
-- For GPU: `Tesla T4` or `Tesla P100` with ~16G the max length is ~1400
-- For GPU: `Tesla K80` with ~12G the max length is ~1000
-- To check what GPU you got, open a new code cell and type `!nvidia-smi`
+FAQ
+- Can I use the models for **Molecular Replacement**?
+  - Yes, but be **CAREFUL**, the bfactor column is populated with pLDDT confidence values (higher = better). Phenix.phaser expects a "real" bfactor, where (lower = better). See [post](https://twitter.com/cheshireminima/status/1423929241675120643) from Claudia Millán.
+- What is the maximum length?
+  - Limits depends on free GPU provided by Google-Colab `fingers-crossed`
+  - For GPU: `Tesla T4` or `Tesla P100` with ~16G the max length is ~1400
+  - For GPU: `Tesla K80` with ~12G the max length is ~1000
+  - To check what GPU you got, open a new code cell and type `!nvidia-smi`
 
 Acknowledgments
 - We would like to thank the RoseTTAFold and AlphaFold team for doing an excellent job open sourcing the software. 
