@@ -267,9 +267,8 @@ def kabsch(a, b, weights=None, return_v=False):
   else: return u @ vh
 
 def plot_pseudo_3D(xyz, c=None, ax=None, chainbreak=5,
-                   cmap="gist_rainbow", line_w=1.5,
-                   cmin=None, cmax=None,
-                   zmin=None, zmax=None):
+                   cmap="gist_rainbow", line_w=2.0,
+                   cmin=None, cmax=None, zmin=None, zmax=None):
 
   def rescale(a,amin=None,amax=None):
     a = np.copy(a)
@@ -335,7 +334,7 @@ def add_text(text, ax):
   return plt.text(0.5, 1.01, text, horizontalalignment='center',
                   verticalalignment='bottom', transform=ax.transAxes)
 
-def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view=True, line_w=1.5):
+def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view=True, line_w=2.0):
   
   if protein is not None:
     pos = np.asarray(protein.atom_positions[:,1,:])
