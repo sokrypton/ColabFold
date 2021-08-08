@@ -252,22 +252,75 @@ def plot_dists(dists, dpi=100, fig=True):
     plt.colorbar()
   return plt
 
+##########################################################################
+##########################################################################
+
 def kabsch(a, b, weights=None, return_v=False):
-  # code based on scipy/spatial/transform/rotation.pyx
   a = np.asarray(a)
   b = np.asarray(b)
   if weights is None: weights = np.ones(len(b))
   else: weights = np.asarray(weights)
   B = np.einsum('ji,jk->ik', weights[:, None] * a, b)
   u, s, vh = np.linalg.svd(B)
-
-  # Correct improper rotation if necessary (as in Kabsch algorithm)
-  if np.linalg.det(u @ vh) < 0:
-    s[-1] = -s[-1]
-    u[:, -1] = -u[:, -1]
-
+  if np.linalg.det(u @ vh) < 0: u[:, -1] = -u[:, -1]
   if return_v: return u
   else: return u @ vh
+
+def pseudo_3D_plot(xyz, c=None, ax=None, chainbreak=5,
+                   cmap="gist_rainbow", line_w=None,
+                   cmin=None, cmax=None,
+                   zmin=None, zmax=None):
+
+  def rescale(a,amin=None,amax=None):
+    a = np.copy(a)
+    if amin is None: amin = a.min()
+    if amax is None: amax = a.max()
+    a[a < amin] = amin
+    a[a > amax] = amax
+    return (a - amin)/(amax - amin)
+
+  # make segments
+  xyz = np.asarray(xyz)
+  seg = np.concatenate([xyz[:-1,None,:],xyz[1:,None,:]],axis=-2)
+  seg_xy = seg[...,:2]
+  seg_z = seg[...,2].mean(-1)
+  ord = seg_z.argsort()
+
+  # set colors
+  if c is None: c = np.arange(len(seg))[::-1]
+  else: c = (c[1:] + c[:-1])/2
+  c = rescale(c,cmin,cmax)  
+
+  if cmap == "gist_rainbow": c *= 0.8
+  colors = matplotlib.cm.get_cmap(cmap)(c)
+  if chainbreak is not None:
+    dist = np.linalg.norm(xyz[:-1] - xyz[1:], axis=-1)
+    colors[...,3] = (dist < chainbreak).astype(np.float)
+
+  # add shade/tint based on z-dimension
+  z = rescale(seg_z,zmin,zmax)[:,None]
+  tint, shade = z/3, (z+2)/3
+  colors[:,:3] = colors[:,:3] + (1 - colors[:,:3]) * tint
+  colors[:,:3] = colors[:,:3] * shade
+
+  if ax is None:
+    xy_min = xyz[:,:2].min() - 1
+    xy_max = xyz[:,:2].max() + 1
+
+    fig, ax = plt.subplots()
+    fig.set_figwidth(5)
+    fig.set_figheight(5)
+    ax.set_xlim(xy_min,xy_max)
+    ax.set_ylim(xy_min,xy_max)
+    ax.set_aspect('equal')
+    ax.axis(False)
+
+    width = fig.bbox_inches.width * ax.get_position().width
+    line_w = 100 * (width/(xy_max-xy_min))
+
+  lines = mcoll.LineCollection(seg_xy[ord], colors=colors[ord], linewidths=line_w,
+                               path_effects=[matplotlib.patheffects.Stroke(capstyle="round")])
+  return ax.add_collection(lines)
 
 def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view=True):
   
@@ -285,65 +338,42 @@ def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view
       pos = pos - pos.mean(0,keepdims=True)
       pos = pos @ kabsch(pos, pos, return_v=True)
 
-  def make_segments(x, y):
-    points = np.array([x, y]).T.reshape(-1, 1, 2)
-    segments = np.concatenate([points[:-1], points[1:]], axis=1)
-    return segments
-  
-  def get_color(x, alpha=None, tint=None, shade=None, vmin=50, vmax=90, cmap="gist_rainbow"):
-    color_map = matplotlib.cm.get_cmap(cmap)
-    if x < vmin: x = vmin
-    if x > vmax: x = vmax
-    x = (x - vmin)/(vmax - vmin)
-    if cmap == "gist_rainbow": x *= 0.8
-    color = np.array(color_map(x, alpha=alpha))
-    if tint is not None:
-      color[:3] = color[:3] + (1 - color[:3]) * tint
-    if shade is not None:
-      color[:3] = color[:3] * shade
-    return color
-
   if plddt is not None:
     fig, (ax1, ax2) = plt.subplots(1,2)
     fig.set_figwidth(6); fig.set_figheight(3)
+    ax = [ax1, ax2]
   else:
     fig, ax1 = plt.subplots(1,1)
     fig.set_figwidth(3); fig.set_figheight(3)
+    ax = [ax1]
     
   fig.set_dpi(dpi)
   fig.subplots_adjust(top = 0.9, bottom = 0.1, right = 1, left = 0, hspace = 0, wspace = 0)
 
-  range_x, range_y, range_z = [[pos[:,k].min(),pos[:,k].max()] for k in range(3)]
-  z = (pos[:,-1] - range_z[0]) / (range_z[1] - range_z[0])
+  xy_min = pos[...,:2].min() - 1
+  xy_max = pos[...,:2].max() + 1
+  line_w = []
+  for a in ax:
+    a.set_xlim(xy_min, xy_max)
+    a.set_ylim(xy_min, xy_max)
+    a.set_aspect('equal')
+    a.axis(False)
+    width = fig.bbox_inches.width * a.get_position().width
+    line_w.append(150 * (width/(xy_max-xy_min)))
 
-  line_w = 300/(range_x[1] - range_x[0])
-  range_x = [range_x[0]-line_w, range_x[1]+line_w]
-  range_y = [range_y[0]-line_w, range_y[1]+line_w]
-
-
-  srt = (z[:-1]+z[1:]).argsort()
-  seg = make_segments(pos[:,0],pos[:,1])
-  alpha = (np.sqrt(np.square(pos[:-1] - pos[1:]).sum(-1)) < 5).astype(float)
-
-  def plot_lines(ax, vmin, vmax, values, title=None, cmap="gist_rainbow"):
-    shade = (z + 2)/3
-    tint = z/3
-    colors = np.array([get_color(p, vmin=vmin, vmax=vmax,
-                                 alpha=a, shade=s, tint=t, cmap=cmap) for p,a,s,t in zip(values,alpha,shade,tint)])
-    plt.text(0.5, 1.01, title, horizontalalignment='center', verticalalignment='bottom', transform=ax.transAxes)
-    ax.axis('scaled')
-    ax.set_xlim(*range_x); ax.set_ylim(*range_y); ax.axis(False)
-    ax.add_collection(mcoll.LineCollection(seg[srt], colors=colors[srt], linewidths=line_w,
-                                           path_effects=[matplotlib.patheffects.Stroke(capstyle="round")]))
   if Ls is None or len(Ls) == 1:
     c = np.arange(len(pos))[::-1]
-    plot_lines(ax1, c.min(), c.max(), c, "colored by N->C")
+    im = pseudo_3D_plot(pos,  line_w=line_w[0], ax=ax1)
+    plt.text(0.5, 1.01, "colored by N→C", horizontalalignment='center', verticalalignment='bottom', transform=ax1.transAxes)
   else:
     c = np.concatenate([[n]*L for n,L in enumerate(Ls)])
     if len(Ls) > 10:
-      plot_lines(ax1, 0, 20, c, "colored by chain", cmap="tab20")
+      im = pseudo_3D_plot(pos, c=c, cmap="tab20", cmin=0, cmax=20, line_w=line_w[0], ax=ax1)
     else:
-      plot_lines(ax1, 0, 10, c, "colored by chain", cmap="tab10")
+      im = pseudo_3D_plot(pos, c=c, cmap="tab10", cmin=0, cmax=10, line_w=line_w[0], ax=ax1)
+    plt.text(0.5, 1.01, "colored by chain", horizontalalignment='center', verticalalignment='bottom', transform=ax1.transAxes)
+  if plddt is not None:
+    im = pseudo_3D_plot(pos, c=plddt, cmin=50, cmax=90, line_w=line_w[1], ax=ax2)
+    plt.text(0.5, 1.01, "colored by pLDDT", horizontalalignment='center', verticalalignment='bottom', transform=ax2.transAxes)
 
-  if plddt is not None: plot_lines(ax2, 50, 90, plddt, "colored by pLDDT")
   return fig
