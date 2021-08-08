@@ -1,4 +1,6 @@
 # ColabFold
+<img src="https://user-images.githubusercontent.com/4187522/128616692-a5f8ba4a-4f08-44ff-9bfd-a931bd8329c2.png" width="256" height="215">
+
 Making Protein folding accessible to all via Google Colab!
 - [AlphaFold2_mmseqs2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb) - `monomers=Yes, homoligomers=Yes, mmseqs2=Yes, jackhmmer=No, templates=Yes`
 - [AlphaFold2_complexes](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2_complexes.ipynb) - `monomers=No, heterodimers=Yes, mmseqs2=Yes, jackhmmer=No, templates=No`
