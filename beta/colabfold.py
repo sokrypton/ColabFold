@@ -266,8 +266,8 @@ def kabsch(a, b, weights=None, return_v=False):
   if return_v: return u
   else: return u @ vh
 
-def pseudo_3D_plot(xyz, c=None, ax=None, chainbreak=5,
-                   cmap="gist_rainbow", line_w=None,
+def plot_pseudo_3D(xyz, c=None, ax=None, chainbreak=5,
+                   cmap="gist_rainbow", line_w=1.5,
                    cmin=None, cmax=None,
                    zmin=None, zmax=None):
 
@@ -303,26 +303,39 @@ def pseudo_3D_plot(xyz, c=None, ax=None, chainbreak=5,
   colors[:,:3] = colors[:,:3] + (1 - colors[:,:3]) * tint
   colors[:,:3] = colors[:,:3] * shade
 
+  set_lim = False
   if ax is None:
-    xy_min = xyz[:,:2].min() - 1
-    xy_max = xyz[:,:2].max() + 1
-
     fig, ax = plt.subplots()
     fig.set_figwidth(5)
     fig.set_figheight(5)
+    set_lim = True
+  else:
+    fig = ax.get_figure()
+    if ax.get_xlim() == (0,1):
+      set_lim = True
+      
+  if set_lim:
+    xy_min = xyz[:,:2].min() - line_w
+    xy_max = xyz[:,:2].max() + line_w
     ax.set_xlim(xy_min,xy_max)
     ax.set_ylim(xy_min,xy_max)
-    ax.set_aspect('equal')
-    ax.axis(False)
 
-    width = fig.bbox_inches.width * ax.get_position().width
-    line_w = 100 * (width/(xy_max-xy_min))
+  ax.set_aspect('equal')
+    
+  # determine linewidths
+  width = fig.bbox_inches.width * ax.get_position().width
+  linewidths = line_w * 72 * width / np.diff(ax.get_xlim())
 
-  lines = mcoll.LineCollection(seg_xy[ord], colors=colors[ord], linewidths=line_w,
+  lines = mcoll.LineCollection(seg_xy[ord], colors=colors[ord], linewidths=linewidths,
                                path_effects=[matplotlib.patheffects.Stroke(capstyle="round")])
+  
   return ax.add_collection(lines)
 
-def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view=True):
+def add_text(text, ax):
+  return plt.text(0.5, 1.01, text, horizontalalignment='center',
+                  verticalalignment='bottom', transform=ax.transAxes)
+
+def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view=True, line_w=1.5):
   
   if protein is not None:
     pos = np.asarray(protein.atom_positions[:,1,:])
@@ -350,30 +363,29 @@ def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view
   fig.set_dpi(dpi)
   fig.subplots_adjust(top = 0.9, bottom = 0.1, right = 1, left = 0, hspace = 0, wspace = 0)
 
-  xy_min = pos[...,:2].min() - 1
-  xy_max = pos[...,:2].max() + 1
-  line_w = []
+  xy_min = pos[...,:2].min() - line_w
+  xy_max = pos[...,:2].max() + line_w
   for a in ax:
     a.set_xlim(xy_min, xy_max)
     a.set_ylim(xy_min, xy_max)
-    a.set_aspect('equal')
     a.axis(False)
-    width = fig.bbox_inches.width * a.get_position().width
-    line_w.append(150 * (width/(xy_max-xy_min)))
 
   if Ls is None or len(Ls) == 1:
+    # color N->C
     c = np.arange(len(pos))[::-1]
-    im = pseudo_3D_plot(pos,  line_w=line_w[0], ax=ax1)
-    plt.text(0.5, 1.01, "colored by N→C", horizontalalignment='center', verticalalignment='bottom', transform=ax1.transAxes)
+    plot_pseudo_3D(pos,  line_w=line_w, ax=ax1)
+    add_text("colored by N→C", ax1)
   else:
+    # color by chain
     c = np.concatenate([[n]*L for n,L in enumerate(Ls)])
-    if len(Ls) > 10:
-      im = pseudo_3D_plot(pos, c=c, cmap="tab20", cmin=0, cmax=20, line_w=line_w[0], ax=ax1)
-    else:
-      im = pseudo_3D_plot(pos, c=c, cmap="tab10", cmin=0, cmax=10, line_w=line_w[0], ax=ax1)
-    plt.text(0.5, 1.01, "colored by chain", horizontalalignment='center', verticalalignment='bottom', transform=ax1.transAxes)
+    if len(Ls) > 20:   plot_pseudo_3D(pos, c=c, line_w=line_w, ax=ax1)
+    elif len(Ls) > 10: plot_pseudo_3D(pos, c=c, cmap="tab20", cmin=0, cmax=20, line_w=line_w, ax=ax1)
+    else:              plot_pseudo_3D(pos, c=c, cmap="tab10", cmin=0, cmax=10, line_w=line_w, ax=ax1)
+    add_text("colored by chain", ax1)
+    
   if plddt is not None:
-    im = pseudo_3D_plot(pos, c=plddt, cmin=50, cmax=90, line_w=line_w[1], ax=ax2)
-    plt.text(0.5, 1.01, "colored by pLDDT", horizontalalignment='center', verticalalignment='bottom', transform=ax2.transAxes)
+    # color by pLDDT
+    plot_pseudo_3D(pos, c=plddt, cmin=50, cmax=90, line_w=line_w, ax=ax2)
+    add_text("colored by pLDDT", ax2)
 
   return fig
