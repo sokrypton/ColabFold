@@ -388,3 +388,60 @@ def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view
     add_text("colored by pLDDT", ax2)
 
   return fig
+
+##################################################
+# CODE FROM MINKYUNG/ROSETTAFOLD
+##################################################
+def read_a3m(a3m_lines):
+  '''parse an a3m files as a dictionary {label->sequence}'''
+  seq = []
+  lab = []
+  is_first = True
+  for line in a3m_lines.splitlines():
+    if line[0] == '>':
+      label = line.strip()[1:]
+      is_incl = True
+      if is_first: # include first sequence (query)
+        is_first = False
+        lab.append(label)
+        continue
+      if "UniRef" in label:
+        code = label.split()[0].split('_')[-1]
+        if code.startswith("UPI"): # UniParc identifier -- exclude
+          is_incl = False
+          continue
+      elif label.startswith("tr|"):
+        code = label.split('|')[1]
+      else:
+        is_incl = False
+        continue
+      lab.append(code)
+    else:
+      if is_incl:
+        seq.append(line.rstrip())
+      else:
+        continue
+  return seq, lab
+
+# https://www.uniprot.org/help/accession_numbers
+def uni2idx(ids):
+  '''convert uniprot ids into integers according to the structure
+  of uniprot accession numbers'''
+  ids2 = [i.split("-")[0] for i in ids]
+  ids2 = [i+'AAA0' if len(i)==6 else i for i in ids2]
+  arr = np.array([list(s) for s in ids2], dtype='|S1').view(np.uint8)
+  for i in [1,5,9]:
+    arr[:,i] -= ord('0')
+  arr[arr>=ord('A')] -= ord('A')
+  arr[arr>=ord('0')] -= ord('0')-26
+  arr[:,0][arr[:,0]>ord('Q')-ord('A')] -= 3
+  arr = arr.astype(np.int64)
+  coef = np.array([23,10,26,36,36,10,26,36,36,1], dtype=np.int64)
+  coef = np.tile(coef[None,:],[len(ids),1])
+  c1 = [i for i,id_ in enumerate(ids) if id_[0] in 'OPQ' and len(id_)==6]
+  c2 = [i for i,id_ in enumerate(ids) if id_[0] not in 'OPQ' and len(id_)==6]
+  coef[c1] = np.array([3, 10,36,36,36,1,1,1,1,1])
+  coef[c2] = np.array([23,10,26,36,36,1,1,1,1,1])
+  for i in range(1,10):
+    coef[:,-i-1] *= coef[:,-i]
+  return np.sum(arr*coef,axis=-1)
