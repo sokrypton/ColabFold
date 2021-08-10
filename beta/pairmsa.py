@@ -138,8 +138,8 @@ def hash_it(_seq, _lab, _mtx):
           "_hash_to_lab":_hash_to_lab}
 
 def stitch(_hash_a,_hash_b, stitch_min=1, stitch_max=20):
-  _seq_a, _seq_b = []
-  _mtx_a, _mtx_b = []
+  _seq_a, _seq_b = [],[]
+  _mtx_a, _mtx_b = [],[]
   for l_a,h_a in _hash_a["_lab_to_hash"].items():
     h_a = np.asarray(h_a)
     h_b = np.asarray(list(_hash_b["_hash_to_lab"].keys()))
