@@ -24,6 +24,9 @@ FAQ
   - For GPU: `Tesla K80` with ~12G the max length is ~1000
   - To check what GPU you got, open a new code cell and type `!nvidia-smi`
 
+Tutorials & Presentations
+- ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI/edit?usp=sharing). 
+
 Acknowledgments
 - We would like to thank the RoseTTAFold and AlphaFold team for doing an excellent job open sourcing the software. 
 - Also credit to [David Koes](https://github.com/dkoes) for his awesome [py3Dmol](https://3dmol.csb.pitt.edu/) plugin, without whom these notebooks would be quite boring!
