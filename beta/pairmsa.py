@@ -1,6 +1,7 @@
 from string import ascii_uppercase,ascii_lowercase
 import urllib.parse
 import urllib.request
+import numpy as np
 
 def parse_a3m(a3m_lines):
   seq,lab = [],[]
