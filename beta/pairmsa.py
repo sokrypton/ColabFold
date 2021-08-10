@@ -1,7 +1,7 @@
+import numpy as np
 from string import ascii_uppercase,ascii_lowercase
 import urllib.parse
 import urllib.request
-import numpy as np
 
 def parse_a3m(a3m_lines):
   seq,lab = [],[]
@@ -41,7 +41,19 @@ def parse_a3m(a3m_lines):
   deletion_table = str.maketrans('', '', ascii_lowercase)
   aligned_sequences = [s.translate(deletion_table) for s in seq]
 
-  return aligned_sequences, lab, deletion_matrix
+  return aligned_sequences, deletion_matrix, lab
+
+def get_uni_jackhmmer(msa,mtx,ids):
+  '''filter entries to uniprot'''
+  ids_,msa_,mtx_ = [],[],[]
+  for i,s,x in zip(ids[1:],msa[1:],mtx[1:]):
+    if i.startswith("UniRef"):
+      i = i.split("/")[0]
+      if "_UPI" not in i:
+        ids_.append(i)
+        msa_.append(s)
+        mtx_.append(x)
+  return msa_, mtx_, ids_
 
 def uni_num(ids):
   ########################################
