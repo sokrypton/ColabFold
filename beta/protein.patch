@@ -1,14 +1,16 @@
---- protein.py	2021-07-27 04:46:44.290375804 +0000
-+++ protein_.py	2021-07-27 04:49:55.794071912 +0000
-@@ -19,6 +19,7 @@
- from Bio.PDB import PDBParser
- import dataclasses
- import numpy as np
-+from string import ascii_uppercase as CHAIN_IDs
- 
+--- /content/alphafold_ori/common/protein.py	2021-08-10 10:03:26.580274340 +0000
++++ /content/alphafold/alphafold/common/protein.py	2021-08-10 10:04:47.660884323 +0000
+@@ -19,6 +19,9 @@
  from alphafold.common import residue_constants
+ from Bio.PDB import PDBParser
+ import numpy as np
++from string import ascii_uppercase,ascii_lowercase
++
++CHAIN_IDs = ascii_uppercase+ascii_lowercase
  
-@@ -77,14 +78,15 @@
+ FeatureDict = Mapping[str, np.ndarray]
+ ModelOutput = Mapping[str, Any]  # Is a nested dict.
+@@ -75,14 +78,15 @@
  
    if chain_id is not None:
      chain = model[chain_id]
@@ -30,7 +32,7 @@
  
    atom_positions = []
    aatype = []
-@@ -92,31 +94,35 @@
+@@ -90,31 +94,35 @@
    residue_index = []
    b_factors = []
  
@@ -90,7 +92,7 @@
  
    return Protein(
        atom_positions=np.array(atom_positions),
-@@ -152,10 +158,21 @@
+@@ -150,10 +158,21 @@
  
    pdb_lines.append('MODEL     1')
    atom_index = 1
@@ -113,7 +115,7 @@
      for atom_name, pos, mask, b_factor in zip(
          atom_types, atom_positions[i], atom_mask[i], b_factors[i]):
        if mask < 0.5:
-@@ -171,7 +188,7 @@
+@@ -169,7 +188,7 @@
        # PDB is a columnar format, every space matters here!
        atom_line = (f'{record_type:<6}{atom_index:>5} {name:<4}{alt_loc:>1}'
                     f'{res_name_3:>3} {chain_id:>1}'
