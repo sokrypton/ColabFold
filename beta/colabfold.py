@@ -15,6 +15,17 @@ import matplotlib.patheffects
 from matplotlib import collections as mcoll
 
 import py3Dmol
+from string import ascii_uppercase,ascii_lowercase
+
+pymol_color_list = ["#33ff33","#00ffff","#ff33cc","#ffff00","#ff9999","#e5e5e5","#7f7fff","#ff7f00",
+                    "#7fff7f","#199999","#ff007f","#ffdd5e","#8c3f99","#b2b2b2","#007fff","#c4b200",
+                    "#8cb266","#00bfbf","#b27f7f","#fcd1a5","#ff7f7f","#ffbfdd","#7fffff","#ffff7f",
+                    "#00ff7f","#337fcc","#d8337f","#bfff3f","#ff7fff","#d8d8ff","#3fffbf","#b78c4c",
+                    "#339933","#66b2b2","#ba8c84","#84bf00","#b24c66","#7f7f7f","#3f3fa5","#a5512b"]
+
+pymol_cmap = matplotlib.colors.ListedColormap(pymol_color_list)
+alphabet_list = list(ascii_uppercase+ascii_lowercase)
+
 
 ###########################################
 # control gpu/cpu memory usage
@@ -188,8 +199,7 @@ def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False,
   elif color == "rainbow":
     view.setStyle({'cartoon': {'color':'spectrum'}})
   elif color == "chain":
-    for n,chain,color in zip(range(chains),list("ABCDEFGH"),
-                     ["lime","cyan","magenta","yellow","salmon","white","blue","orange"]):
+    for n,chain,color in zip(range(chains),alphabet_list,pymol_color_list):
        view.setStyle({'chain':chain},{'cartoon': {'color':color}})
   if show_sidechains:
     BB = ['C','O','N']
@@ -290,8 +300,12 @@ def plot_pseudo_3D(xyz, c=None, ax=None, chainbreak=5,
   else: c = (c[1:] + c[:-1])/2
   c = rescale(c,cmin,cmax)  
 
-  if cmap == "gist_rainbow": c *= 0.8
-  colors = matplotlib.cm.get_cmap(cmap)(c)
+  if isinstance(cmap, str):
+    if cmap == "gist_rainbow": c *= 0.8
+    colors = matplotlib.cm.get_cmap(cmap)(c)
+  else:
+    colors = cmap(c)
+  
   if chainbreak is not None:
     dist = np.linalg.norm(xyz[:-1] - xyz[1:], axis=-1)
     colors[...,3] = (dist < chainbreak).astype(np.float)
@@ -377,9 +391,8 @@ def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view
   else:
     # color by chain
     c = np.concatenate([[n]*L for n,L in enumerate(Ls)])
-    if len(Ls) > 20:   plot_pseudo_3D(pos, c=c, line_w=line_w, ax=ax1)
-    elif len(Ls) > 10: plot_pseudo_3D(pos, c=c, cmap="tab20", cmin=0, cmax=20, line_w=line_w, ax=ax1)
-    else:              plot_pseudo_3D(pos, c=c, cmap="tab10", cmin=0, cmax=10, line_w=line_w, ax=ax1)
+    if len(Ls) > 40:   plot_pseudo_3D(pos, c=c, line_w=line_w, ax=ax1)
+    else:              plot_pseudo_3D(pos, c=c, cmap=pymol_cmap, cmin=0, cmax=39, line_w=line_w, ax=ax1)
     add_text("colored by chain", ax1)
     
   if plddt is not None:
