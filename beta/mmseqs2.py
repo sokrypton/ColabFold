@@ -34,7 +34,7 @@ def run_mmseqs2(query_sequence, prefix, use_env=True, filter=False):
     with tqdm.notebook.tqdm(bar_format='{l_bar}{bar}') as pbar:
       pbar.set_description("SUBMIT")
       out = submit(query_sequence, mode)
-      while out["status"] in ["UNKNOWN","RATELIMIT"]:
+      while out["status"] in ["RATELIMIT","UNKNOWN"]:
         # resubmit
         time.sleep(5 + random.randint(0,5))
         pbar.set_description(out["status"])                
