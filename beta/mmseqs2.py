@@ -5,16 +5,17 @@ import requests
 import random
 
 def run(query_sequence, prefix, use_env=True, filter=False):
-  def submit(query_sequence, mode):
-    res = requests.post('https://a3m.mmseqs.com/ticket/msa', data={'q':f">1\n{query_sequence}", 'mode': mode})
+  
+  def submit(query_sequence, mode, N=1):
+    res = requests.post('https://a3m.mmseqs.com/ticket/msa', data={'q':f">{N}\n{query_sequence}", 'mode': mode})
     try: out = res.json()
-    except ValueError: out = {"status":"UNKNOWN","id":None}
+    except ValueError: out = {"status":"UNKNOWN"}
     return out
 
   def status(ID):
     res = requests.get(f'https://a3m.mmseqs.com/ticket/{ID}')
     try: out = res.json()
-    except ValueError: out = {"status":"UNKNOWN","id":ID}
+    except ValueError: out = {"status":"UNKNOWN"}
     return out
 
   def download(ID, path):
@@ -33,23 +34,37 @@ def run(query_sequence, prefix, use_env=True, filter=False):
   tar_gz_file = f'{path}/out.tar.gz'
   if not os.path.isfile(tar_gz_file):
     with tqdm.notebook.tqdm(bar_format='{l_bar}{bar}') as pbar:
-      pbar.set_description("SUBMIT")
-      out = submit(query_sequence, mode)
-      while out["status"] in ["RATELIMIT","UNKNOWN"]:
-        # resubmit
-        time.sleep(5 + random.randint(0,5))
-        pbar.set_description(out["status"])                
-        out = submit(query_sequence, mode)
+      N,REDO = 1,True
+      while REDO:
+        pbar.set_description("SUBMIT")
+        
+        # Resubmit job until it goes through
+        out = submit(query_sequence, mode, N)
+        while out["status"] in ["UNKNOWN","RATELIMIT"]:
+          # resubmit
+          time.sleep(5 + random.randint(0,5))
+          out = submit(query_sequence, mode, N)
 
-      ID = out["id"]
-      pbar.set_description(out["status"])
-      while out["status"] in ["RUNNING","PENDING","UNKNOWN"]:
-        time.sleep(5 + random.randint(0,5))
-        out = status(ID)    
+        # wait for job to finish
+        ID = out["id"]
+        TIME = 0
         pbar.set_description(out["status"])
+        while out["status"] in ["UNKNOWN","RUNNING","PENDING"]:
+          t = 5 + random.randint(0,5)
+          time.sleep(t)
+          TIME += t
+          out = status(ID)    
+          pbar.set_description(out["status"])
+          if TIME > 600 and out["status"] != "COMPLETE":
+            # something failed on the server side, need to resubmit
+            N += 1
+            break
+        
+        if out["status"] == "COMPLETE":
+          REDO = False
 
-      download(ID, tar_gz_file)
-  
+    download(ID, tar_gz_file)
+
   # parse a3m files
   a3m_lines = []
   a3m = f"{prefix}_{mode}.a3m"
