@@ -46,8 +46,7 @@ def run(query_sequence, prefix, use_env=True, filter=False):
           out = submit(query_sequence, mode, N)
 
         # wait for job to finish
-        ID = out["id"]
-        TIME = 0
+        ID,TIME = out["id"],0
         pbar.set_description(out["status"])
         while out["status"] in ["UNKNOWN","RUNNING","PENDING"]:
           t = 5 + random.randint(0,5)
@@ -62,8 +61,9 @@ def run(query_sequence, prefix, use_env=True, filter=False):
         
         if out["status"] == "COMPLETE":
           REDO = False
-
-    download(ID, tar_gz_file)
+          
+      # Download results
+      download(ID, tar_gz_file)
 
   # parse a3m files
   a3m_lines = []
