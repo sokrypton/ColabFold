@@ -72,7 +72,7 @@ def run_mmseqs2(query_sequence, prefix, use_env=True, filter=False):
     if not os.path.isfile(tar_gz_file):
       out = submit(query_sequence, mode)
       while out["status"] in ["RUNNING","PENDING"]:
-        time.sleep(1)
+        time.sleep(5)
         out = status(out["id"])    
       download(out["id"], tar_gz_file)
     
