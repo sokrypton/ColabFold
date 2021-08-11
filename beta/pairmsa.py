@@ -110,7 +110,7 @@ def uni_num(ids):
     nums.append(num)
   return nums
 
-def map_retrieve(ids, call_uniprot=True):
+def map_retrieve(ids, call_uniprot=False):
 
   if call_uniprot:
     mode = "NF100" if "UniRef100" in ids[0] else "NF90"
@@ -147,7 +147,7 @@ def map_retrieve(ids, call_uniprot=True):
   
   return mapping
 
-def hash_it(_seq, _lab, _mtx, call_uniprot=True):
+def hash_it(_seq, _lab, _mtx, call_uniprot=False):
   if _seq is None or _lab is None:
     _seq, _lab = parse_a3m(a3m_lines)
 
