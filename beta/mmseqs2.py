@@ -1,6 +1,7 @@
 import tarfile
 import time
 import requests
+import random
 
 def run_mmseqs2(query_sequence, prefix, use_env=True, filter=False):
   def submit(query_sequence, mode):
@@ -33,16 +34,16 @@ def run_mmseqs2(query_sequence, prefix, use_env=True, filter=False):
     with tqdm.notebook.tqdm(bar_format='{l_bar}{bar}') as pbar:
       pbar.set_description("SUBMIT")
       out = submit(query_sequence, mode)
-      if out["status"] == "UNKNOWN":
-        while out["status"] == "UNKNOWN":
-          time.sleep(5)
-          pbar.set_description("RESUBMIT")                
-          out = submit(query_sequence, mode)
+      while out["status"] in ["UNKNOWN","RATELIMIT"]:
+        # resubmit
+        time.sleep(5 + random.randint(0,5))
+        pbar.set_description(out["status"])                
+        out = submit(query_sequence, mode)
 
       ID = out["id"]
       pbar.set_description(out["status"])
       while out["status"] in ["RUNNING","PENDING","UNKNOWN"]:
-        time.sleep(5)
+        time.sleep(5 + random.randint(0,5))
         out = status(ID)    
         pbar.set_description(out["status"])
 
