@@ -188,7 +188,7 @@ def cov_filter(msas, deletion_matrices, cov=0):
   else:
     return msas, deletion_matrices
 
-def homooliomerize(msas, deletion_matrices, homooligomer=1):
+def homooligomerize(msas, deletion_matrices, homooligomer=1):
  if homooligomer == 1:
   return msas, deletion_matrices
  else:
