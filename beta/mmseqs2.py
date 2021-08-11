@@ -1,9 +1,10 @@
+import tqdm.notebook
 import tarfile
 import time
 import requests
 import random
 
-def run_mmseqs2(query_sequence, prefix, use_env=True, filter=False):
+def run(query_sequence, prefix, use_env=True, filter=False):
   def submit(query_sequence, mode):
     res = requests.post('https://a3m.mmseqs.com/ticket/msa', data={'q':f">1\n{query_sequence}", 'mode': mode})
     try: out = res.json()
