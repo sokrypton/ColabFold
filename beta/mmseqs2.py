@@ -1,10 +1,13 @@
-import tqdm.notebook
+import os
 import tarfile
 import time
 import requests
 import random
 
-def run_mmseqs2(x, prefix, use_env=True, filter=False):
+import tqdm.notebook
+TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
+
+def run_mmseqs2(x, prefix, use_env=True, filter=True):
   
   def submit(seqs, mode, N=1):
     
@@ -85,23 +88,28 @@ def run_mmseqs2(x, prefix, use_env=True, filter=False):
   if use_env: a3m_files.append(f"{path}/bfd.mgnify30.metaeuk30.smag30.a3m")
   
   # extract a3m files
-  if not os.path.isfile(a3m_files[0])
+  if not os.path.isfile(a3m_files[0]):
     with tarfile.open(tar_gz_file) as tar_gz:
       tar_gz.extractall(path)  
-    
-  a3m_lines = {n:[] for n in range(N,N+len(seqs))}
+
+  # gather a3m lines  
+  a3m_lines = {}
   for a3m_file in a3m_files:
     update_M,M = True,None
     for line in open(a3m_file,"r"):
       if len(line) > 0:
         if "\x00" in line:
+          line = line.replace("\x00","")
           update_M = True
-        else:
-          if line.startswith(">") and update_M:
-            M = int(line[1:].rstrip())
-            update_M = False
-          a3m_lines[M].append(line)
+        if line.startswith(">") and update_M:
+          M = int(line[1:].rstrip())
+          update_M = False
+          a3m_lines[M] = []
+        a3m_lines[M].append(line)
+  
+  # return results
+  Ms = sorted(list(a3m_lines.keys()))
   if isinstance(x, str):
-    return "".join(a3m_lines[N])
+    return "".join(a3m_lines[Ms[0]])
   else:
-    return ["".join(a3m_lines[n]) for n in range(N,N+len(x))]
+    return ["".join(a3m_lines[n]) for n in Ms]
