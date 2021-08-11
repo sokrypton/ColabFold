@@ -4,7 +4,7 @@ import time
 import requests
 import random
 
-def run(query_sequence, prefix, use_env=True, filter=False):
+def run_mmseqs2(query_sequence, prefix, use_env=True, filter=False):
   
   def submit(query_sequence, mode, N=1):
     res = requests.post('https://a3m.mmseqs.com/ticket/msa', data={'q':f">{N}\n{query_sequence}", 'mode': mode})
