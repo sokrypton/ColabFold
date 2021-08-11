@@ -187,6 +187,7 @@ def cov_filter(msas, deletion_matrices, cov=0):
     return new_msas, new_mtxs
   else:
     return msas, deletion_matrices
+  
 
 def homooligomerize(msas, deletion_matrices, homooligomer=1):
  if homooligomer == 1:
@@ -202,6 +203,10 @@ def homooligomerize(msas, deletion_matrices, homooligomer=1):
       new_msas.append(["-"*L+s+"-"*R for s in msa])
       new_mtxs.append([[0]*L+m+[0]*R for m in mtx])
   return new_msas, new_mtxs
+
+# keeping typo for cross-compatibility
+def homooliomerize(msas, deletion_matrices, homooligomer=1):
+  return homooligomerize(msas, deletion_matrices, homooligomer=1)
 
 def homooligomerize_heterooligomer(msas, deletion_matrices, lengths, homooligomers):
   '''
