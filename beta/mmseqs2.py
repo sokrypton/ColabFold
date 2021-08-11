@@ -33,7 +33,7 @@ def run_mmseqs2(query_sequence, prefix, use_env=True, filter=False):
   # call mmseqs2 api
   tar_gz_file = f'{path}/out.tar.gz'
   if not os.path.isfile(tar_gz_file):
-    with tqdm.notebook.tqdm(bar_format='{l_bar}{bar}') as pbar:
+    with tqdm.notebook.tqdm(total=300, bar_format=TQDM_BAR_FORMAT) as pbar:
       N,REDO = 1,True
       while REDO:
         pbar.set_description("SUBMIT")
@@ -51,15 +51,19 @@ def run_mmseqs2(query_sequence, prefix, use_env=True, filter=False):
         while out["status"] in ["UNKNOWN","RUNNING","PENDING"]:
           t = 5 + random.randint(0,5)
           time.sleep(t)
-          TIME += t
           out = status(ID)    
           pbar.set_description(out["status"])
-          if TIME > 600 and out["status"] != "COMPLETE":
+          if out["status"] == "RUNNING":
+            TIME += t
+            pbar.update(n=t)
+          if TIME > 900 and out["status"] != "COMPLETE":
             # something failed on the server side, need to resubmit
             N += 1
             break
         
         if out["status"] == "COMPLETE":
+          if TIME < 300:
+            pbar.update(n=(300-TIME))
           REDO = False
           
       # Download results
