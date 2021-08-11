@@ -206,7 +206,7 @@ def homooligomerize(msas, deletion_matrices, homooligomer=1):
 
 # keeping typo for cross-compatibility
 def homooliomerize(msas, deletion_matrices, homooligomer=1):
-  return homooligomerize(msas, deletion_matrices, homooligomer=1)
+  return homooligomerize(msas, deletion_matrices, homooligomer=homooligomer)
 
 def homooligomerize_heterooligomer(msas, deletion_matrices, lengths, homooligomers):
   '''
