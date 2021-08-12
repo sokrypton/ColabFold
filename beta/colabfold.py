@@ -305,6 +305,18 @@ def plot_plddt_legend(dpi=100):
   plt.axis(False)
   return plt
 
+def plot_ticks(Ls):
+  Ln = sum(Ls)
+  L_prev = 0
+  for L_i in Ls[:-1]:
+    L = L_prev + L_i
+    L_prev += L_i
+    plt.plot([0,Ln],[L,L],color="black")
+    plt.plot([L,L],[0,Ln],color="black")
+  ticks = np.cumsum([0]+Ls)
+  ticks = (ticks[1:] + ticks[:-1])/2
+  plt.yticks(ticks,alphabet_list[:len(ticks)])
+
 def plot_confidence(plddt, pae=None, Ls=None, dpi=100):
   use_ptm = False if pae is None else True
   if use_ptm:
@@ -325,7 +337,9 @@ def plot_confidence(plddt, pae=None, Ls=None, dpi=100):
   plt.xlabel('position')
   if use_ptm:
     plt.subplot(1,2,2);plt.title('Predicted Aligned Error')
-    plt.imshow(pae, cmap="bwr",vmin=0,vmax=30)
+    Ln = pae.shape[0]
+    plt.imshow(pae,cmap="bwr",vmin=0,vmax=30,extent=(0, Ln, Ln, 0))
+    if Ls is not None and len(Ls) > 1: plot_ticks(Ls)
     plt.colorbar()
     plt.xlabel('Scored residue')
     plt.ylabel('Aligned residue')
@@ -373,33 +387,39 @@ def plot_plddts(plddts, Ls=None, dpi=100, fig=True):
   plt.xlabel("Positions")
   return plt
 
-def plot_paes(paes, dpi=100, fig=True):
+def plot_paes(paes, Ls=None, dpi=100, fig=True):
   num_models = len(paes)
   if fig: plt.figure(figsize=(3*num_models,2), dpi=dpi)
   for n,pae in enumerate(paes):
     plt.subplot(1,num_models,n+1)
     plt.title(f"rank_{n+1}")
-    plt.imshow(pae,cmap="bwr",vmin=0,vmax=30)
+    Ln = pae.shape[0]
+    plt.imshow(pae,cmap="bwr",vmin=0,vmax=30,extent=(0, Ln, Ln, 0))
+    if Ls is not None and len(Ls) > 1: plot_ticks(Ls)
     plt.colorbar()
   return plt
 
-def plot_adjs(adjs, dpi=100, fig=True):
+def plot_adjs(adjs, Ls=None, dpi=100, fig=True):
   num_models = len(adjs)
   if fig: plt.figure(figsize=(3*num_models,2), dpi=dpi)
   for n,adj in enumerate(adjs):
     plt.subplot(1,num_models,n+1)
     plt.title(f"rank_{n+1}")
-    plt.imshow(adj,cmap="binary",vmin=0,vmax=1)
+    Ln = adj.shape[0]
+    plt.imshow(adj,cmap="binary",vmin=0,vmax=1,extent=(0, Ln, Ln, 0))
+    if Ls is not None and len(Ls) > 1: plot_ticks(Ls)
     plt.colorbar()
   return plt
 
-def plot_dists(dists, dpi=100, fig=True):
+def plot_dists(dists, Ls=None, dpi=100, fig=True):
   num_models = len(dists)
   if fig: plt.figure(figsize=(3*num_models,2), dpi=dpi)
   for n,dist in enumerate(dists):
     plt.subplot(1,num_models,n+1)
     plt.title(f"rank_{n+1}")
-    plt.imshow(dist)
+    Ln = dist.shape[0]
+    plt.imshow(dist,extent=(0, Ln, Ln, 0))
+    if Ls is not None and len(Ls) > 1: plot_ticks(Ls)
     plt.colorbar()
   return plt
 
