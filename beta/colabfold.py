@@ -345,10 +345,35 @@ def plot_confidence(plddt, pae=None, Ls=None, dpi=100):
     plt.ylabel('Aligned residue')
   return plt
 
+def read_pdb_renum(pdb_filename, Ls=None):
+  if Ls is not None:
+    L_init = 0
+    new_chain = {}
+    for L,c in zip(Ls, alphabet_list):
+      new_chain.update({i:c for i in range(L_init,L_init+L)})
+      L_init += L  
+
+  n,pdb_out = 1,[]
+  resnum_,chain_ = 1,"A"
+  for line in open(pdb_filename,"r"):
+    if line[:4] == "ATOM":
+      chain = line[21:22]
+      resnum = int(line[22:22+5])
+      if resnum != resnum_ or chain != chain_:
+        resnum_,chain_ = resnum,chain
+        n += 1
+      if Ls is None: pdb_out.append("%s%4i%s" % (line[:22],n,line[26:]))
+      else: pdb_out.append("%s%s%4i%s" % (line[:21],new_chain[n-1],n,line[26:]))        
+  return "".join(pdb_out)
+
 def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False,
-             color="lDDT", chains=1, vmin=50, vmax=90):
+             color="lDDT", chains=None, Ls=None, vmin=50, vmax=90):
+  
+  if chains is None:
+    chains = 1 if Ls is None else len(Ls)
+
   view = py3Dmol.view(js='https://3dmol.org/build/3Dmol.js',)
-  view.addModel(open(pred_output_path,'r').read(),'pdb')
+  view.addModel(read_pdb_renum(pred_output_path, Ls),'pdb')
   if color == "lDDT":
     view.setStyle({'cartoon': {'colorscheme': {'prop':'b','gradient': 'roygb','min':vmin,'max':vmax}}})
   elif color == "rainbow":
