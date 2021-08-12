@@ -462,7 +462,7 @@ def plot_pseudo_3D(xyz, c=None, ax=None, chainbreak=5,
   c = rescale(c,cmin,cmax)  
 
   if isinstance(cmap, str):
-    if cmap == "gist_rainbow": c *= 0.8
+    if cmap == "gist_rainbow": c *= 0.75
     colors = matplotlib.cm.get_cmap(cmap)(c)
   else:
     colors = cmap(c)
