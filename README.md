@@ -2,19 +2,20 @@
 
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
-Making Protein folding accessible to all via Google Colab!
-- [AlphaFold2_mmseqs2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb) - `monomers=Yes, homoligomers=Yes, mmseqs2=Yes, jackhmmer=No, templates=Yes`
-- [AlphaFold2_advanced](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold2_advanced.ipynb) - `monomers=Yes, complexes=Yes, homoligomers=Yes, mmseqs2=Yes, jackhmmer=Yes, templates=No`
-- [RoseTTAFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold.ipynb) - `monomers=Yes, homoligomers=No, mmseqs2=Yes, jackhmmer=No, templates=No`
+### Making Protein folding accessible to all via Google Colab!
 
-Official Notebook from Deepmind:
-- [AlphaFold2](https://colab.research.google.com/github/deepmind/alphafold/blob/main/notebooks/AlphaFold.ipynb) - `monomers=Yes, homoligomers=No, mmseqs2=No, jackhmmer=Yes, templates=No`
-
-OLD Experimental notebooks:
-- [AlphaFold2_complexes](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2_complexes.ipynb) - `monomers=No, complexes=Yes, mmseqs2=Yes, jackhmmer=No, templates=No`
-- [AlphaFold2_jackhmmer](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold_wJackhmmer.ipynb) - `monomers=Yes, homoligomers=Yes, mmseqs2=Yes, jackhmmer=Yes, templates=No`
-- [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb)
-- [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb)
+| Notebook | monomers | complexes | mmseqs2 | jackhmmer | templates   |
+| :-------- | -------  | --------- | ------- | --------- | ----------- |
+| [AlphaFold2_mmseqs2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb) | Yes | No | Yes | No | Yes |
+| [AlphaFold2_advanced](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold2_advanced.ipynb) | Yes | Yes | Yes | Yes | No |
+| [RoseTTAFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold.ipynb) | Yes | No | Yes | No | No |
+| [AlphaFold2](https://colab.research.google.com/github/deepmind/alphafold/blob/main/notebooks/AlphaFold.ipynb) (from Deepmind) | Yes | No | No | Yes | No |
+||
+| **OLD Experimental notebooks** | **monomers** | **complexes** | **mmseqs2** | **jackhmmer** | **templates** |
+| [AlphaFold2_complexes](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2_complexes.ipynb) | Yes | Yes | No | No | No |
+| [AlphaFold2_jackhmmer](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold_wJackhmmer.ipynb) | Yes | No | Yes | Yes | No |
+| [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb) |
+| [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb) |
 
 FAQ
 - Can I use the models for **Molecular Replacement**?
