@@ -92,7 +92,8 @@ def run_mmseqs2(x, prefix, use_env=True, filter=True):
   # call mmseqs2 api
   tar_gz_file = f'{path}/out.tar.gz'
   if not os.path.isfile(tar_gz_file):
-    with tqdm.notebook.tqdm(total=150, bar_format=TQDM_BAR_FORMAT) as pbar:
+    TIME_ESTIMATE = 300 * len(seqs)
+    with tqdm.notebook.tqdm(total=TIME_ESTIMATE, bar_format=TQDM_BAR_FORMAT) as pbar:
       N,REDO = 1,True
       while REDO:
         pbar.set_description("SUBMIT")
@@ -115,14 +116,14 @@ def run_mmseqs2(x, prefix, use_env=True, filter=True):
           if out["status"] == "RUNNING":
             TIME += t
             pbar.update(n=t)
-          if TIME > 900 and out["status"] != "COMPLETE":
-            # something failed on the server side, need to resubmit
-            N += 1
-            break
+          #if TIME > 900 and out["status"] != "COMPLETE":
+          #  # something failed on the server side, need to resubmit
+          #  N += 1
+          #  break
         
         if out["status"] == "COMPLETE":
-          if TIME < 150:
-            pbar.update(n=(150-TIME))
+          if TIME < TIME_ESTIMATE:
+            pbar.update(n=(TIME_ESTIMATE-TIME))
           REDO = False
           
       # Download results
