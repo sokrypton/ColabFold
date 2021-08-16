@@ -42,4 +42,6 @@ Acknowledgments
 
 How do I reference this work?
 
+[Mirdita M, Ovchinnikov S and Steinegger M. ColabFold - Making protein folding accessible to all. biorxiv, doi: 10.1101/2021.08.15.456425 (2021)](https://www.biorxiv.org/content/10.1101/2021.08.15.456425v1)
+
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.5123296.svg)](https://doi.org/10.5281/zenodo.5123296)
