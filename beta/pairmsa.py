@@ -235,5 +235,4 @@ def stitch(_hash_a,_hash_b, stitch_min=1, stitch_max=20, filter_id=0.9):
       filt = lambda x: [x[i] for i in ok]
       return filt(_seq_a),filt(_seq_b),filt(_mtx_a),filt(_mtx_b)
   else:
-    pbar.update(n=1)
     return _seq_a, _seq_b, _mtx_a, _mtx_b
