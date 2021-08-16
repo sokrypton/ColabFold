@@ -22,7 +22,7 @@
 | [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb) |
 | [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb) |
 
-FAQ
+### FAQ
 - Can I use the models for **Molecular Replacement**?
   - Yes, but be **CAREFUL**, the bfactor column is populated with pLDDT confidence values (higher = better). Phenix.phaser expects a "real" bfactor, where (lower = better). See [post](https://twitter.com/cheshireminima/status/1423929241675120643) from Claudia Millán.
 - What is the maximum length?
@@ -31,17 +31,19 @@ FAQ
   - For GPU: `Tesla K80` with ~12G the max length is ~1000
   - To check what GPU you got, open a new code cell and type `!nvidia-smi`
 
-Tutorials & Presentations
+### Tutorials & Presentations
 - ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI). 
 
-Acknowledgments
+### Acknowledgments
 - We would like to thank the RoseTTAFold and AlphaFold team for doing an excellent job open sourcing the software. 
 - Also credit to [David Koes](https://github.com/dkoes) for his awesome [py3Dmol](https://3dmol.csb.pitt.edu/) plugin, without whom these notebooks would be quite boring!
 - A colab by Sergey Ovchinnikov (@sokrypton), Milot Mirdita (@milot_mirdita) and Martin Steinegger (@thesteinegger).
 
 
-How do I reference this work?
+### How do I reference this work?
 
-[Mirdita M, Ovchinnikov S and Steinegger M. ColabFold - Making protein folding accessible to all. biorxiv, doi: 10.1101/2021.08.15.456425 (2021)](https://www.biorxiv.org/content/10.1101/2021.08.15.456425v1)
+Mirdita M, Ovchinnikov S and Steinegger M. ColabFold - Making protein folding accessible to all. 
+<br />
+bioRxiv, doi: [10.1101/2021.08.15.456425](https://www.biorxiv.org/content/10.1101/2021.08.15.456425v1) (2021)
 
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.5123296.svg)](https://doi.org/10.5281/zenodo.5123296)
