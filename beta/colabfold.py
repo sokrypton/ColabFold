@@ -92,7 +92,7 @@ def run_mmseqs2(x, prefix, use_env=True, filter=True):
   # call mmseqs2 api
   tar_gz_file = f'{path}/out.tar.gz'
   if not os.path.isfile(tar_gz_file):
-    TIME_ESTIMATE = 300 * len(seqs)
+    TIME_ESTIMATE = 150 * len(seqs)
     with tqdm.notebook.tqdm(total=TIME_ESTIMATE, bar_format=TQDM_BAR_FORMAT) as pbar:
       N,REDO = 1,True
       while REDO:
