@@ -35,4 +35,4 @@ Acknowledgments
 
 How do I reference this work?
 
-[![DOI](https://zenodo.org/badge/387617756.svg)](https://zenodo.org/badge/latestdoi/387617756)
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.5123296.svg)](https://doi.org/10.5281/zenodo.5123296)
