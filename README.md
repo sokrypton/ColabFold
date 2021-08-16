@@ -1,4 +1,9 @@
 # ColabFold
+-----------------
+```diff
+- 16Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
+```
+-----------------
 
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
