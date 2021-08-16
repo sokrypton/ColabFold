@@ -150,7 +150,7 @@ def run_mmseqs2(x, prefix, use_env=True, filter=True):
         if line.startswith(">") and update_M:
           M = int(line[1:].rstrip())
           update_M = False
-          a3m_lines[M] = []
+          if M not in a3m_lines: a3m_lines[M] = []
         a3m_lines[M].append(line)
   
   # return results
