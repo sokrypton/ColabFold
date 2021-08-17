@@ -4,78 +4,78 @@ import urllib.parse
 import urllib.request
 import time
 
-def parse_a3m(a3m_lines, filter_qid=0.15, filter_cov=0.5):
-  seq,lab = [],[]
-  is_first = True
-  for line in a3m_lines.splitlines():
-    if line[0] == '>':
-      label = line.strip()[1:]
-      is_incl = True
-      if is_first: # include first sequence (query)
-        is_first = False
-        lab.append(label)
-        continue
-      if "UniRef" in label:
-        code = label.split()[0].split('-')[0]
-        if "_UPI" in code: # UniParc identifier -- exclude
-          is_incl = False
-          continue
-      else:
-        is_incl = False
-        continue
-      lab.append(code)
+def parse_a3m(a3m_lines=None, a3m_file=None, filter_qid=0.20, filter_cov=0.75):
+  
+  def seqid(a, b):
+    return sum(c1 == c2 for c1, c2 in zip(a, b))
+  
+  def nongaps(a):
+    return sum(c != "-" for c in a)
+  
+  def chk(seq, ref_seq):
+    rL = len(ref_seq)
+    L = nongaps(seq)
+    return not (L > filter_cov*rL and seqid(seq, ref_seq) > filter_qid*L)
+
+  rm_lower = str.maketrans('','',ascii_lowercase)
+
+  # prep inputs
+  if a3m_lines is None: a3m_lines = open(a3m_file,"r")
+  else: a3m_lines = a3m_lines.splitlines()
+
+  # parse inputs
+  n,nams,seqs,mtx = 0,[],[],[]
+  def do_filter():
+    seq = seqs[-1].translate(rm_lower)
+    if "_UPI" in nams[-1] or chk(seq,ref_seq):
+      nams.pop()
+      seqs.pop()
     else:
-      if is_incl:
-        seq.append(line.rstrip())
-      else:
-        continue
+      # deletion matrix
+      deletion_vec = []
+      deletion_count = 0
+      for j in seqs[-1]:
+        if j.islower():
+          deletion_count += 1
+        else:
+          deletion_vec.append(deletion_count)
+          deletion_count = 0
+      mtx.append(deletion_vec)
+      seqs[-1] = seq
 
-  deletion_matrix = []
-  for msa_sequence in seq:
-    deletion_vec = []
-    deletion_count = 0
-    for j in msa_sequence:
-      if j.islower():
-        deletion_count += 1
-      else:
-        deletion_vec.append(deletion_count)
-        deletion_count = 0
-    deletion_matrix.append(deletion_vec)
+  for line in a3m_lines:
+    line = line.rstrip()
+    if line.startswith(">"):
+      if n == 1:
+        ref_seq = seqs[0].translate(rm_lower)
+      if n >= 1:
+        # filter previous entry
+        do_filter()
+      # start new sequence entry
+      nams.append(line[1:])
+      seqs.append("")
+      n += 1
+    else:
+      seqs[-1] += line
 
-  # Make the MSA matrix out of aligned (deletion-free) sequences.
-  deletion_table = str.maketrans('', '', ascii_lowercase)
-  aligned_sequences = [s.translate(deletion_table) for s in seq]
+  # filter last entry
+  do_filter()
 
-  #Filter
-  if len(aligned_sequences) > 1 and (filter_cov < 1 or filter_qid < 1):
-    _msa,_mtx,_lab = [],[],[]
-    ref_seq = np.array(list(aligned_sequences[0]))
-    for s,m,l in zip(aligned_sequences[1:],deletion_matrix[1:],lab[1:]):
-      tar_seq = np.array(list(s))
-      cov = (tar_seq != "-").mean()
-      qid = (ref_seq == tar_seq).mean()
-      if cov > filter_cov and qid > filter_qid:
-        _msa.append(s)
-        _mtx.append(m)
-        _lab.append(l)
-    print(f"found {len(_lab)}")    
-    return _msa, _mtx, _lab
-  else:
-    print(f"found {len(aligned_sequences) - 1}")    
-    return aligned_sequences[1:], deletion_matrix[1:], lab[1:]
+  return seqs[1:],mtx[1:],nams[1:]
 
-def get_uni_jackhmmer(msa, mtx, lab, filter_qid=0.15, filter_cov=0.5):
+def get_uni_jackhmmer(msa, mtx, lab, filter_qid=0.2, filter_cov=0.75):
   '''filter entries to uniprot'''
   lab_,msa_,mtx_ = [],[],[]
   ref_seq = np.array(list(msa[0]))
+  rL = len(ref_seq)
   for l,s,x in zip(lab[1:],msa[1:],mtx[1:]):
     if l.startswith("UniRef"):
       l = l.split("/")[0]
       if "_UPI" not in l:
         tar_seq = np.array(list(s))
-        cov = (tar_seq != "-").mean()
-        qid = (ref_seq == tar_seq).mean()
-        if cov > filter_cov and qid > filter_qid:
+        L = (tar_seq != "-").sum()
+        qid = (ref_seq == tar_seq).sum()
+        if L > filter_cov * rL and qid > filter_qid * L:
           lab_.append(l)
           msa_.append(s)
           mtx_.append(x)
@@ -219,6 +219,8 @@ def stitch(_hash_a,_hash_b, stitch_min=1, stitch_max=20, filter_id=0.9):
           if filter_id < 1: _seq.append(_seq_a[-1]+_seq_b[-1])
 
       pbar.update()
+  # disabling filtering for now, until we can find a faster solution
+  '''
   if filter_id < 1: 
     TOTAL = len(_seq)
     _seq = np.asarray([list(s) for s in _seq])
@@ -235,4 +237,5 @@ def stitch(_hash_a,_hash_b, stitch_min=1, stitch_max=20, filter_id=0.9):
       filt = lambda x: [x[i] for i in ok]
       return filt(_seq_a),filt(_seq_b),filt(_mtx_a),filt(_mtx_b)
   else:
-    return _seq_a, _seq_b, _mtx_a, _mtx_b
+  '''
+  return _seq_a, _seq_b, _mtx_a, _mtx_b
