@@ -4,7 +4,7 @@ import urllib.parse
 import urllib.request
 import time
 
-def parse_a3m(a3m_lines=None, a3m_file=None, filter_qid=0.20, filter_cov=0.75):
+def parse_a3m(a3m_lines=None, a3m_file=None, filter_qid=0.2, filter_cov=0.75):
   
   def seqid(a, b):
     return sum(c1 == c2 for c1, c2 in zip(a, b))
@@ -61,6 +61,12 @@ def parse_a3m(a3m_lines=None, a3m_file=None, filter_qid=0.20, filter_cov=0.75):
   # filter last entry
   do_filter()
 
+  if len(seqs) > 20001:
+    print(f"found too many sequences ({len(seqs)}), taking the top 20K (sorted by seqid)")
+    sid = np.argsort([seqid(seq,ref_seq) for seq in seqs])[::-1][:20001]
+    seqs = [seqs[i] for i in sid]
+    mtx = [mtx[i] for i in sid]
+    nams = [nams[i] for i in sid]
   return seqs[1:],mtx[1:],nams[1:]
 
 def get_uni_jackhmmer(msa, mtx, lab, filter_qid=0.2, filter_cov=0.75):
