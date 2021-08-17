@@ -2,6 +2,7 @@
 -----------------
 ```diff
 - 16Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
++ 17Aug2021: Things are looking stable now! If you see any errors, please report them.
 ```
 -----------------
 
