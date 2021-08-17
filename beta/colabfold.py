@@ -54,7 +54,7 @@ TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaini
 
 def run_mmseqs2(x, prefix, use_env=True, filter=True):
   
-  def submit(seqs, mode, N=1):
+  def submit(seqs, mode, N=101):
     
     n,query = N,""
     for seq in seqs:
@@ -94,7 +94,7 @@ def run_mmseqs2(x, prefix, use_env=True, filter=True):
   if not os.path.isfile(tar_gz_file):
     TIME_ESTIMATE = 150 * len(seqs)
     with tqdm.notebook.tqdm(total=TIME_ESTIMATE, bar_format=TQDM_BAR_FORMAT) as pbar:
-      N,REDO = 1,True
+      N,REDO = 101,True
       while REDO:
         pbar.set_description("SUBMIT")
         
