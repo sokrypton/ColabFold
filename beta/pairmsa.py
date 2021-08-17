@@ -4,7 +4,7 @@ import urllib.parse
 import urllib.request
 import time
 
-def parse_a3m(a3m_lines=None, a3m_file=None, filter_qid=0.2, filter_cov=0.75):
+def parse_a3m(a3m_lines=None, a3m_file=None, filter_qid=0.2, filter_cov=0.75, N=100000):
   
   def seqid(a, b):
     return sum(c1 == c2 for c1, c2 in zip(a, b))
@@ -61,9 +61,9 @@ def parse_a3m(a3m_lines=None, a3m_file=None, filter_qid=0.2, filter_cov=0.75):
   # filter last entry
   do_filter()
 
-  if len(seqs) > 20001:
-    print(f"found too many sequences ({len(seqs)}), taking the top 20K (sorted by seqid)")
-    sid = np.argsort([seqid(seq,ref_seq) for seq in seqs])[::-1][:20001]
+  if len(seqs) > N+1:
+    print(f"found too many sequences ({len(seqs)}), taking the top{N} (sorted by seqid)")
+    sid = np.argsort([seqid(seq,ref_seq) for seq in seqs])[::-1][:N+1]
     seqs = [seqs[i] for i in sid]
     mtx = [mtx[i] for i in sid]
     nams = [nams[i] for i in sid]
