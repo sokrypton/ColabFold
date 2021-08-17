@@ -4,7 +4,7 @@ import urllib.parse
 import urllib.request
 import time
 
-def parse_a3m(a3m_lines=None, a3m_file=None, filter_qid=0.2, filter_cov=0.75, N=100000):
+def parse_a3m(a3m_lines=None, a3m_file=None, filter_qid=0.15, filter_cov=0.5, N=100000):
   
   def seqid(a, b):
     return sum(c1 == c2 for c1, c2 in zip(a, b))
@@ -69,7 +69,7 @@ def parse_a3m(a3m_lines=None, a3m_file=None, filter_qid=0.2, filter_cov=0.75, N=
     nams = [nams[i] for i in sid]
   return seqs[1:],mtx[1:],nams[1:]
 
-def get_uni_jackhmmer(msa, mtx, lab, filter_qid=0.2, filter_cov=0.75):
+def get_uni_jackhmmer(msa, mtx, lab, filter_qid=0.15, filter_cov=0.5):
   '''filter entries to uniprot'''
   lab_,msa_,mtx_ = [],[],[]
   ref_seq = np.array(list(msa[0]))
