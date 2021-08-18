@@ -29,7 +29,7 @@ def a3m_files_to_lines(a3m_files):
           update_M = False
           if M not in a3m_lines: a3m_lines[M] = []
         a3m_lines[M].append(line)
-  return a3m_lines
+  return ["".join(lines) for lines in a3m_lines]
 
 def run_mmseqs2(x, prefix, use_env=True, filter=True, return_a3m_lines=True):
   
@@ -125,9 +125,9 @@ def run_mmseqs2(x, prefix, use_env=True, filter=True, return_a3m_lines=True):
     # return results
     Ms = sorted(list(a3m_lines.keys()))
     if isinstance(x, str):
-      return "".join(a3m_lines[Ms[0]])
+      return a3m_lines[Ms[0]]
     else:
-      return ["".join(a3m_lines[n]) for n in Ms]
+      return [a3m_lines[n] for n in Ms]
   else:
     return a3m_files
 
@@ -186,6 +186,6 @@ def run_mmseqs2_compat(x, prefix, hhfilter_bin="tmp/bin/hhfilter", filter_scheme
   # return results
   Ms = sorted(list(a3m_lines.keys()))
   if isinstance(x, str):
-    return "".join(a3m_lines[Ms[0]])
+    return a3m_lines[Ms[0]]
   else:
-    return ["".join(a3m_lines[n]) for n in Ms]
+    return [a3m_lines[n] for n in Ms]
