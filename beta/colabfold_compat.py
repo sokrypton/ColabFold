@@ -29,7 +29,7 @@ def a3m_files_to_lines(a3m_files):
           update_M = False
           if M not in a3m_lines: a3m_lines[M] = []
         a3m_lines[M].append(line)
-  return ["".join(lines) for lines in a3m_lines]
+  return {k:"".join(v) for k,v in a3m_lines.items()}
 
 def run_mmseqs2(x, prefix, use_env=True, filter=True, return_a3m_lines=True):
   
@@ -136,10 +136,9 @@ def run_mmseqs2(x, prefix, use_env=True, filter=True, return_a3m_lines=True):
 #########################################################################
 def mmseqs2_bucket_filter(A3M_LINES, prefix, hhfilter_bin="tmp/bin/hhfilter"):
 
-  def hhfilter(a3m_in, a3m_out, hhf_id=90, hhf_qid=0, hhf_cov=0, hhf_diff=None):
+  def hhfilter(a3m_in, a3m_out, hhf_id=90, hhf_qid=0, hhf_cov=0, hhf_diff=0):
     if not os.path.isfile(a3m_out):
-      hhf_diff_ = 0 if hhf_diff is None else hhf_diff
-      os.system(f"{hhfilter_bin} -i {a3m_in} -o {a3m_out} -qid {hhf_qid} -id {hhf_id} -cov {hhf_cov} -diff {hhf_diff_}")
+      os.system(f"{hhfilter_bin} -i {a3m_in} -o {a3m_out} -qid {hhf_qid} -id {hhf_id} -cov {hhf_cov} -diff {hhf_diff}")
 
   for m, a3m_lines in A3M_LINES.items():
     a3m_in = f"{prefix}.{m}.a3m"
@@ -148,10 +147,10 @@ def mmseqs2_bucket_filter(A3M_LINES, prefix, hhfilter_bin="tmp/bin/hhfilter"):
         a3m_file.write(a3m_lines)
             
     a3m_outs = []
-    for hhf_qid in [0.5,0.3,0.15]:
+    for hhf_qid in [50,30,15]:
       a3m_out = f"{prefix}.{m}.qid{hhf_qid}.a3m"
       a3m_outs.append(a3m_out)
-      hhfilter(a3m_in, a3m_out, hhf_qid=hhf_qid)
+      hhfilter(a3m_in, a3m_out, hhf_qid=hhf_qid, hhf_diff=1000)
     
     a3m_all_in = f"{prefix}.{m}.filt.a3m"
     a3m_all_out = f"{prefix}.{m}.filt.id90.a3m"
@@ -160,13 +159,14 @@ def mmseqs2_bucket_filter(A3M_LINES, prefix, hhfilter_bin="tmp/bin/hhfilter"):
       os.system(f"cat {a3m_outs} > {a3m_all_in}")
       
     hhfilter(a3m_all_in, a3m_all_out)
-    A3M_LINES[m] = open(a3m_all_out,"r").read()
+    A3M_LINES[m] = "".join(open(a3m_all_out,"r").read())
+  return A3M_LINES
 
 def run_mmseqs2_compat(x, prefix, hhfilter_bin="tmp/bin/hhfilter", filter_scheme="18Aug2021"):
 
   # 22Jul2021 diff_1000 filtering ONLY applied to uniref
   # 16Aug2021 diff_1000 filtering applied to both uniref and env
-  # 18Aug2021 three seperate diff_1000 with qid_50, qid_30 and qid_15, merged and -id_90 filtered
+  # 18Aug2021 3 qid buckets:[50,30,15] -diff 1000 filtered and merged
 
   a3m_files = run_mmseqs2(x, prefix, use_env=True, filter=False, return_a3m_lines=False)
 
