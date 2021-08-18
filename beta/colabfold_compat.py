@@ -136,9 +136,9 @@ def run_mmseqs2(x, prefix, use_env=True, filter=True, return_a3m_lines=True):
 def mmseqs2_bucket_filter(A3M_LINES, prefix, hhfilter_bin="tmp/bin/hhfilter"):
 
   def hhfilter(a3m_in, a3m_out, hhf_id=90, hhf_qid=0, hhf_cov=0, hhf_diff=None):
-  if not os.path.isfile(a3m_out):
-    hhf_diff_ = 0 if hhf_diff is None else hhf_diff
-    os.system(f"{hhfilter_bin} -i {a3m_in} -o {a3m_out} -qid {hhf_qid} -id {hhf_id} -cov {hhf_cov} -diff {hhf_diff_}")
+    if not os.path.isfile(a3m_out):
+      hhf_diff_ = 0 if hhf_diff is None else hhf_diff
+      os.system(f"{hhfilter_bin} -i {a3m_in} -o {a3m_out} -qid {hhf_qid} -id {hhf_id} -cov {hhf_cov} -diff {hhf_diff_}")
 
   for m, a3m_lines in A3M_LINES.items():
     a3m_in = f"{prefix}.{m}.a3m"
