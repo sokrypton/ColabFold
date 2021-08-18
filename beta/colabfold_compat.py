@@ -15,11 +15,6 @@ import tqdm.notebook
 TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
 
 def a3m_files_to_lines(a3m_files):
-  # extract a3m files
-  if not os.path.isfile(a3m_files[0]):
-    with tarfile.open(tar_gz_file) as tar_gz:
-      tar_gz.extractall(path)  
-
   # gather a3m lines  
   a3m_lines = {}
   for a3m_file in a3m_files:
@@ -113,10 +108,16 @@ def run_mmseqs2(x, prefix, use_env=True, filter=True, return_a3m_lines=True):
       # Download results
       download(ID, tar_gz_file)
 
+
   # prep list of a3m files
   a3m_files = [f"{path}/uniref.a3m"]
   if use_env:
     a3m_files.append(f"{path}/bfd.mgnify30.metaeuk30.smag30.a3m")
+
+  # extract a3m files
+  if not os.path.isfile(a3m_files[0]):
+    with tarfile.open(tar_gz_file) as tar_gz:
+      tar_gz.extractall(path)  
 
   if return_a3m_lines:
     a3m_lines = a3m_files_to_lines(a3m_files)  
