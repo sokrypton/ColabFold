@@ -8,10 +8,12 @@ import time
 import os
 import numpy as np
 import tqdm.notebook
-    
+
+
 ##########################################
 # call mmseqs2
 ##########################################
+MAXSEQ = 1000000
 TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
 
 def a3m_files_to_lines(a3m_files):
@@ -138,7 +140,7 @@ def mmseqs2_bucket_filter(A3M_LINES, prefix, hhfilter_bin="tmp/bin/hhfilter"):
 
   def hhfilter(a3m_in, a3m_out, hhf_id=90, hhf_qid=0, hhf_cov=0, hhf_diff=0):
     if not os.path.isfile(a3m_out):
-      os.system(f"{hhfilter_bin} -maxseq 1000000 -i {a3m_in} -o {a3m_out} -qid {hhf_qid} -id {hhf_id} -cov {hhf_cov} -diff {hhf_diff}")
+      os.system(f"{hhfilter_bin} -maxseq {MAXSEQ} -i {a3m_in} -o {a3m_out} -qid {hhf_qid} -id {hhf_id} -cov {hhf_cov} -diff {hhf_diff}")
 
   for m, a3m_lines in A3M_LINES.items():
     a3m_in = f"{prefix}.{m}.a3m"
@@ -164,23 +166,23 @@ def mmseqs2_bucket_filter(A3M_LINES, prefix, hhfilter_bin="tmp/bin/hhfilter"):
 
 def run_mmseqs2_compat(x, prefix, hhfilter_bin="tmp/bin/hhfilter", filter_scheme="18Aug2021"):
 
-  # 22Jul2021 diff_1000 filtering ONLY applied to uniref
   # 16Aug2021 diff_1000 filtering applied to both uniref and env
   # 18Aug2021 3 qid buckets:[50,30,15] -diff 1000 filtered and merged
 
-  a3m_files = run_mmseqs2(x, prefix, use_env=True, filter=False, return_a3m_lines=False)
 
-  if filter_scheme == "22Jul2021" or filter_scheme == "17Aug2021":
-    os.system(f"{hhfilter_bin} -maxseq 1000000 -i {a3m_files[0]} -o {a3m_files[0]}.filt -diff 1000")
-    a3m_files[0] += ".filt"
+  if filter_scheme == "16Aug2021":
+    a3m_lines = run_mmseqs2(x, prefix, use_env=True, filter=True, return_a3m_lines=True)
 
-  elif filter_scheme == "17Aug2021":
-    os.system(f"{hhfilter_bin} -maxseq 1000000 -i {a3m_files[1]} -o {a3m_files[1]}.filt -diff 1000")
-    a3m_files[1] += ".filt"
+    # replicating the filtering on the colab side
+    # a3m_files = run_mmseqs2(x, prefix, use_env=True, filter=False, return_a3m_lines=False)
+    # a3m_lines = a3m_files_to_lines(a3m_files)
+    # for i in range(2):
+    #  os.system(f"{hhfilter_bin} -maxseq {MAXSEQ} -i {a3m_files[i]} -o {a3m_files[i]}.filt -diff 1000")
+    #  a3m_files[i] += ".filt"
   
-  a3m_lines = a3m_files_to_lines(a3m_files)
-
   if filter_scheme == "18Aug2021":
+    a3m_files = run_mmseqs2(x, prefix, use_env=True, filter=False, return_a3m_lines=False)
+    a3m_lines = a3m_files_to_lines(a3m_files)
     a3m_lines = mmseqs2_bucket_filter(a3m_lines, f"{prefix}_env-nofilter", hhfilter_bin=hhfilter_bin)
 
   # return results
