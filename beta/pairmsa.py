@@ -52,7 +52,8 @@ def parse_a3m(a3m_lines=None, a3m_file=None, filter_qid=0.15, filter_cov=0.5, N=
         # filter previous entry
         do_filter()
       # start new sequence entry
-      nams.append(line[1:])
+      nam = line.split()[0][1:]
+      nams.append(nam)
       seqs.append("")
       n += 1
     else:
