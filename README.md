@@ -1,9 +1,17 @@
 # ColabFold
 -----------------
+MMseqs2 status:
 ```diff
-- 16Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
-+ 17Aug2021: Things are looking stable now! If you see any errors, please report them.
-- 17Aug2021: We are still debugging the MSA generation procedure... there might be some differences between the old/new run.
+  16Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
+  17Aug2021: If you see any errors, please report them.
+  17Aug2021: We are still debugging the MSA generation procedure...
+- 20Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
+-            To avoid Google Colab from crashing, for large MSA we do -diff 1000 to get 
+-            1K most diverse sequences. This caused some large MSA to degrade in quality,
+-            as sequences close to query were being merged to single representive.
+-            We are working on updating the server (today) to fix this, by making sure
+-            that both diverse and sequences close to query are included in the final MSA.
+-            We'll post update here when update is complete.
 ```
 -----------------
 
