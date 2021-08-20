@@ -52,7 +52,8 @@ import random
 import tqdm.notebook
 TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
 
-def run_mmseqs2(x, prefix, use_env=True, filter=True):
+def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
+                use_templates=False, filter=None):
   
   def submit(seqs, mode, N=101):
     
@@ -78,9 +79,13 @@ def run_mmseqs2(x, prefix, use_env=True, filter=True):
   
   # process input x
   seqs = [x] if isinstance(x, str) else x
+
+  # compatibility to old option
+  if filter is not None:
+    use_filter = filter
     
   # setup mode
-  if filter:
+  if use_filter:
     mode = "env" if use_env else "all"
   else:
     mode = "env-nofilter" if use_env else "nofilter"
@@ -91,10 +96,10 @@ def run_mmseqs2(x, prefix, use_env=True, filter=True):
 
   # call mmseqs2 api
   tar_gz_file = f'{path}/out.tar.gz'
+  N,REDO = 101,True
   if not os.path.isfile(tar_gz_file):
     TIME_ESTIMATE = 150 * len(seqs)
     with tqdm.notebook.tqdm(total=TIME_ESTIMATE, bar_format=TQDM_BAR_FORMAT) as pbar:
-      N,REDO = 101,True
       while REDO:
         pbar.set_description("SUBMIT")
         
@@ -138,6 +143,30 @@ def run_mmseqs2(x, prefix, use_env=True, filter=True):
     with tarfile.open(tar_gz_file) as tar_gz:
       tar_gz.extractall(path)  
 
+  # templates
+  if use_templates:
+    templates = {}
+    print("seq\tpdb\tqid\tevalue")
+    for line in open(f"{path}/pdb70.m8","r"):
+      p = line.rstrip().split()
+      M,pdb,qid,e_value = p[0],p[1],p[2],p[10]
+      M = int(M)
+      if M not in templates: templates[M] = []
+      templates[M].append(pdb)
+      if len(templates[M]) <= 20:
+        print(f"{int(M)-N}\t{pdb}\t{qid}\t{e_value}")
+    
+    template_paths = {}
+    for k,TMPL in templates.items():
+      TMPL_PATH = f"{prefix}_{mode}/templates_{k}"
+      if not os.path.isdir(TMPL_PATH):
+        os.mkdir(TMPL_PATH)
+        TMPL_LINE = ",".join(TMPL[:20])
+        os.system(f"curl -s https://a3m-templates.mmseqs.com/template/{TMPL_LINE} | tar xzf - -C {TMPL_PATH}/")
+        os.system(f"cp {TMPL_PATH}/pdb70_a3m.ffindex {TMPL_PATH}/pdb70_cs219.ffindex")
+        os.system(f"touch {TMPL_PATH}/pdb70_cs219.ffdata")
+      template_paths[k] = TMPL_PATH
+
   # gather a3m lines  
   a3m_lines = {}
   for a3m_file in a3m_files:
@@ -155,10 +184,15 @@ def run_mmseqs2(x, prefix, use_env=True, filter=True):
   
   # return results
   Ms = sorted(list(a3m_lines.keys()))
+  a3m_lines = ["".join(a3m_lines[n]) for n in Ms]
+  if use_templates:
+    template_paths = [template_paths[n] for n in Ms]
+
   if isinstance(x, str):
-    return "".join(a3m_lines[Ms[0]])
+    return (a3m_lines[0], template_paths[0]) if use_templates else a3m_lines[0]
   else:
-    return ["".join(a3m_lines[n]) for n in Ms]
+    return (a3m_lines, template_paths) if use_templates else a3m_lines
+
 
 
 #########################################################################
