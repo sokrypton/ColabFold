@@ -18,9 +18,10 @@
 +            and merge them. More specifically 3K sequences at qid at (0→0.2),(0.2→0.4),
 +            (0.4→0.6),(0.6→0.8) and (0.8→1). If you submitted your sequence between
 +            16Aug2021 and 20Aug2021, we recommend submitting again for best results!
-- 21Aug2021  The use_templates option in AlphaFold2_mmseqs2 is not properly working. We are
--            working on fixing this. If you are not using templates, this does not affect the
--            the results. Other notebooks that do not use_templates are unaffected.
+  21Aug2021  The use_templates option in AlphaFold2_mmseqs2 is not properly working. We are
+             working on fixing this. If you are not using templates, this does not affect the
+             the results. Other notebooks that do not use_templates are unaffected.
++ 21Aug2021  The templates issue is resolved!
 ```
 -----------------
 
