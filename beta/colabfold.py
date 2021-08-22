@@ -146,7 +146,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
   # templates
   if use_templates:
     templates = {}
-    print("seq\tpdb\tqid\tevalue")
+    print("seq\tpdb\tcid\tevalue")
     for line in open(f"{path}/pdb70.m8","r"):
       p = line.rstrip().split()
       M,pdb,qid,e_value = p[0],p[1],p[2],p[10]
@@ -186,7 +186,14 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
   Ms = sorted(list(a3m_lines.keys()))
   a3m_lines = ["".join(a3m_lines[n]) for n in Ms]
   if use_templates:
-    template_paths = [template_paths[n] for n in Ms]
+    template_paths_ = [] 
+    for n in Ms:
+      if n not in template_paths:
+        template_paths_.append(None)
+        print(f"{n-N}\tno_templates_found")
+      else:
+        template_paths_.append(template_paths[n])
+    template_paths = template_paths_
 
   if isinstance(x, str):
     return (a3m_lines[0], template_paths[0]) if use_templates else a3m_lines[0]
