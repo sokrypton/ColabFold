@@ -192,10 +192,13 @@ def hash_it(_seq, _lab, _mtx, call_uniprot=False):
 import tqdm.notebook
 TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
 
-def stitch(_hash_a,_hash_b, stitch_min=1, stitch_max=20, filter_id=0.9):
-  _seq_a, _seq_b = [],[]
-  _mtx_a, _mtx_b = [],[]
-  if filter_id < 1: _seq = []
+# keeping old function for compatability
+def stitch(_hash_a,_hash_b, stitch_min=1, stitch_max=20, filter_id=None):
+  o = _stitch(_hash_a, _hash_b, stitch_min, stitch_max)
+  return (*o["seq"],*o["mtx"])
+
+def _stitch(_hash_a,_hash_b, stitch_min=1, stitch_max=20):
+  _seq, _mtx, _lab, _delta_gene = [[],[]],[[],[]],[[],[]],[]
   TOTAL = len(_hash_a["_lab_to_hash"])
   with tqdm.notebook.tqdm(total=TOTAL, bar_format=TQDM_BAR_FORMAT) as pbar:
     pbar.set_description("STITCHING")
@@ -207,42 +210,27 @@ def stitch(_hash_a,_hash_b, stitch_min=1, stitch_max=20, filter_id=0.9):
       match = np.abs(h[:,None]-H[None,:]).min(0)
       match_min = match.min()
       if match_min >= stitch_min and match_min <= stitch_max:
-        return True,H[match.argmin()]
+        return True,H[match.argmin()],match_min
       else:
-        return False,None
+        return False,None,None
 
     for n,(l_a,h_a) in enumerate(_hash_a["_lab_to_hash"].items()):
-      chk_b, h_b = hit(h_a,H_B)
+      chk_b, h_b, dg = hit(h_a,H_B)
       if chk_b:
         l_b = _hash_b["_hash_to_lab"][h_b]
         h_b = _hash_b["_lab_to_hash"][l_b]
-        chk_c, h_c = hit(h_b,H_A)
+        chk_c, h_c, _ = hit(h_b,H_A)
         if chk_c and _hash_a["_hash_to_lab"][h_c] == l_a:
-          _seq_a.append(_hash_a["_lab_to_seq"][l_a])
-          _mtx_a.append(_hash_a["_lab_to_mtx"][l_a])
-
-          _seq_b.append(_hash_b["_lab_to_seq"][l_b])
-          _mtx_b.append(_hash_b["_lab_to_mtx"][l_b])
-          if filter_id < 1: _seq.append(_seq_a[-1]+_seq_b[-1])
-
+          _seq[0].append(_hash_a["_lab_to_seq"][l_a])
+          _mtx[0].append(_hash_a["_lab_to_mtx"][l_a])
+          _lab[0].append(l_a)
+          _seq[1].append(_hash_b["_lab_to_seq"][l_b])
+          _mtx[1].append(_hash_b["_lab_to_mtx"][l_b])
+          _lab[1].append(l_b)
+          _delta_gene.append(dg)
       pbar.update()
-  # disabling filtering for now, until we can find a faster solution
-  '''
-  if filter_id < 1: 
-    TOTAL = len(_seq)
-    _seq = np.asarray([list(s) for s in _seq])
-    ok = np.ones(_seq.shape[0])
-    with tqdm.notebook.tqdm(total=TOTAL-1, bar_format=TQDM_BAR_FORMAT) as pbar:
-      pbar.set_description("FILTERING")
-      for n in range(_seq.shape[0]-1):
-        if ok[n]:
-          ident = (_seq[n] == _seq[(n+1):]).mean(-1)
-          ok[(n+1):] = (ident <= filter_id)
-        pbar.update()
-    
-      ok = np.where(ok)[0]
-      filt = lambda x: [x[i] for i in ok]
-      return filt(_seq_a),filt(_seq_b),filt(_mtx_a),filt(_mtx_b)
-  else:
-  '''
-  return _seq_a, _seq_b, _mtx_a, _mtx_b
+
+  return {"seq":_seq,
+          "mtx":_mtx,
+          "lab":_lab,
+          "delta_gene":_delta_gene}
