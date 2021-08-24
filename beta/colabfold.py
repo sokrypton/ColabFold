@@ -53,7 +53,7 @@ import tqdm.notebook
 TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
 
 def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
-                use_templates=False, filter=None):
+                use_templates=False, filter=None, host_url="https://a3m.mmseqs.com"):
   
   def submit(seqs, mode, N=101):
     
@@ -62,19 +62,19 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
       query += f">{n}\n{seq}\n"
       n += 1
       
-    res = requests.post('https://a3m.mmseqs.com/ticket/msa', data={'q':query,'mode': mode})
+    res = requests.post(f'{host_url}/ticket/msa', data={'q':query,'mode': mode})
     try: out = res.json()
     except ValueError: out = {"status":"UNKNOWN"}
     return out
 
   def status(ID):
-    res = requests.get(f'https://a3m.mmseqs.com/ticket/{ID}')
+    res = requests.get(f'{host_url}/{ID}')
     try: out = res.json()
     except ValueError: out = {"status":"UNKNOWN"}
     return out
 
   def download(ID, path):
-    res = requests.get(f'https://a3m.mmseqs.com/result/download/{ID}')
+    res = requests.get(f'{host_url}/result/download/{ID}')
     with open(path,"wb") as out: out.write(res.content)
   
   # process input x
