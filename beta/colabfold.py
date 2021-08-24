@@ -68,7 +68,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
     return out
 
   def status(ID):
-    res = requests.get(f'{host_url}/{ID}')
+    res = requests.get(f'{host_url}/ticket/{ID}')
     try: out = res.json()
     except ValueError: out = {"status":"UNKNOWN"}
     return out
