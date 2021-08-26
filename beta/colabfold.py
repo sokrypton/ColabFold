@@ -58,10 +58,9 @@ TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaini
 def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
                 use_templates=False, filter=None, host_url="https://a3m.mmseqs.com"):
   
-  def submit(seqs, mode, N=101):
-    
+  def submit(seqs, mode, N=101):    
     n,query = N,""
-    for seq in seqs:
+    for seq in seqs: 
       query += f">{n}\n{seq}\n"
       n += 1
       
@@ -82,7 +81,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
   
   # process input x
   seqs = [x] if isinstance(x, str) else x
-
+  
   # compatibility to old option
   if filter is not None:
     use_filter = filter
@@ -100,18 +99,24 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
   # call mmseqs2 api
   tar_gz_file = f'{path}/out.tar.gz'
   N,REDO = 101,True
+  
+  # deduplicate and keep track of order
+  seqs_unique = sorted(list(set(seqs)))
+  Ms = [N+seqs_unique.index(seq) for seq in seqs]
+  
+  # lets do it!
   if not os.path.isfile(tar_gz_file):
-    TIME_ESTIMATE = 150 * len(seqs)
+    TIME_ESTIMATE = 150 * len(seqs_unique)
     with tqdm.notebook.tqdm(total=TIME_ESTIMATE, bar_format=TQDM_BAR_FORMAT) as pbar:
       while REDO:
         pbar.set_description("SUBMIT")
         
         # Resubmit job until it goes through
-        out = submit(seqs, mode, N)
+        out = submit(seqs_unique, mode, N)
         while out["status"] in ["UNKNOWN","RATELIMIT"]:
           # resubmit
           time.sleep(5 + random.randint(0,5))
-          out = submit(seqs, mode, N)
+          out = submit(seqs_unique, mode, N)
 
         # wait for job to finish
         ID,TIME = out["id"],0
@@ -190,8 +195,8 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
         a3m_lines[M].append(line)
   
   # return results
-  Ms = sorted(list(a3m_lines.keys()))
   a3m_lines = ["".join(a3m_lines[n]) for n in Ms]
+  
   if use_templates:
     template_paths_ = [] 
     for n in Ms:
