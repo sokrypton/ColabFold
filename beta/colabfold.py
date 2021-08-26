@@ -8,6 +8,7 @@ import tarfile
 import time
 import pickle
 import os
+import re
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
@@ -25,6 +26,8 @@ pymol_color_list = ["#33ff33","#00ffff","#ff33cc","#ffff00","#ff9999","#e5e5e5",
 
 pymol_cmap = matplotlib.colors.ListedColormap(pymol_color_list)
 alphabet_list = list(ascii_uppercase+ascii_lowercase)
+
+aatypes = set('ACDEFGHIKLMNPQRSTVWY')
 
 
 ###########################################
@@ -205,36 +208,12 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
     return (a3m_lines, template_paths) if use_templates else a3m_lines
 
 
-
 #########################################################################
 # utils
 #########################################################################
 def get_hash(x):
   return hashlib.sha1(x.encode()).hexdigest()
-
-def cov_filter(msas, deletion_matrices, cov=0):
-  if cov > 0:
-    filtered = 0
-    new_msas = []
-    new_mtxs = []
-    for msa,mtx in zip(msas,deletion_matrices):
-      new_msa = []
-      new_mtx = []
-      for s,m in zip(msa,mtx):
-        c = (np.array(list(s)) != "-").mean()
-        if c >= cov/100:
-          new_msa.append(s)
-          new_mtx.append(m)
-        else:
-          filtered += 1
-      new_msas.append(new_msa)
-      new_mtxs.append(new_mtx)
-    print(f"Filtered {filtered} number of sequences that don't cover at least {cov}% of query")
-    return new_msas, new_mtxs
-  else:
-    return msas, deletion_matrices
   
-
 def homooligomerize(msas, deletion_matrices, homooligomer=1):
  if homooligomer == 1:
   return msas, deletion_matrices
@@ -331,7 +310,116 @@ def chain_break(idx_res, Ls, length=200):
     L_prev += L_i      
   return idx_res
 
+def trim_inputs(trim, msas, deletion_matrices, ori_seq=None, inverse=False):
+  '''
+  input: trim, msas, deletion_matrices, ori_seq
+  output: msas, deletion_matrices, ori_seq
+  '''
+  if ori_seq is None: ori_seq = msas[0][0]
+  seqs = ori_seq.replace("/","").split(":")
+  L_ini = 0
+  chain_idx = {}
+  idx_chain = []
+  for chain,seq in zip(ascii_uppercase,seqs):
+    L = len(seq)
+    chain_idx[chain] = dict(zip(range(L),range(L_ini,L_ini+L)))
+    idx_chain += [f"{chain}{i+1}" for i in range(L)]
+    L_ini += L
+  global_idx = dict(zip(range(L_ini),range(L_ini)))
 
+  mode = "keeping" if inverse else "trimming"
+  trim_set = []
+  for idx in trim.split(","):
+
+    i,j = idx.split("-") if "-" in idx else (idx,"")
+
+    # set index reference frame
+    trim_idx_i = trim_idx_j = global_idx    
+    if i != "" and i[0] in ascii_uppercase:
+      trim_idx_i,i = chain_idx[i[0]], i[1:]
+    if j != "" and j[0] in ascii_uppercase:
+      trim_idx_j,j = chain_idx[j[0]], j[1:]
+
+    # set which positions to trim
+    if "-" in idx:
+      i = trim_idx_i[int(i)-1] if i != "" else trim_idx_i[0]
+      j = trim_idx_j[int(j)-1] if j != "" else trim_idx_j[len(trim_idx_j) - 1]
+      trim_set += list(range(i,j+1))
+      print(f"{mode} positions: {idx_chain[i]}-{idx_chain[j]}")
+    else:
+      i = trim_idx_i[int(i)-1]
+      trim_set.append(i)
+      print(f"{mode} position: {idx_chain[i]}")
+    
+  # deduplicate list
+  trim_set = set(trim_set)
+  if inverse:
+    trim_set = set(range(L_ini)) ^ trim_set
+
+  trim_set = sorted(list(trim_set))
+      
+  # trim MSA
+  mod_msas, mod_mtxs = [],[]
+  for msa, mtx in zip(msas, deletion_matrices):
+    mod_msa = np.delete([list(s) for s in msa], trim_set, 1)
+    mod_msas.append(["".join(s) for s in mod_msa])
+    mod_mtxs.append(np.delete(mtx, trim_set, 1).tolist())
+
+  # trim original sequence
+  mod_idx = []
+  mod_ori_seq = []
+  n = 0
+  for a in ori_seq:
+    if a in aatypes:
+      if n not in trim_set:
+        mod_ori_seq.append(a)
+        mod_idx.append(n)
+        if len(mod_idx) > 1 and (mod_idx[-1] - mod_idx[-2]) > 1 and mod_ori_seq[-2] in aatypes:
+          mod_ori_seq[-1] = "/"
+          mod_ori_seq.append(a)
+      n += 1
+    else:
+      mod_ori_seq.append(a)
+  mod_ori_seq = "".join(mod_ori_seq)
+  mod_ori_seq = re.sub("^[:/]+","",mod_ori_seq)
+  mod_ori_seq = re.sub("[:/]+$","",mod_ori_seq)
+
+
+  return mod_msas, mod_mtxs, mod_ori_seq
+
+def cov_qid_filter(msas, deletion_matrices, ori_seq=None, cov=0, qid=0):
+  if ori_seq is None: ori_seq = msas[0][0]
+  seqs = ori_seq.replace("/","").split(":")
+  ref_seq_ = np.array(list("".join(seqs)))
+
+  new_msas,new_mtxs = [],[]
+  L = np.asarray([len(seq) for seq in seqs])
+  Ln = np.cumsum(np.append(0,L))
+  for msa, mtx in zip(msas, deletion_matrices):
+    msa_ = np.asarray([list(seq) for seq in msa])
+
+    # coverage (non-gap characters)
+    cov_ = msa_ != "-"
+    # sequence identity to query
+    qid_ = msa_ == ref_seq_
+    
+    # split by protein (for protein complexes)
+    cov__ = np.stack([cov_[:,Ln[i]:Ln[i+1]].sum(-1) for i in range(len(seqs))],-1)
+    qid__ = np.stack([qid_[:,Ln[i]:Ln[i+1]].sum(-1) for i in range(len(seqs))],-1)
+
+    not_empty__ = cov__ > 0
+    ok = []
+    for n in range(len(msa)):
+      m = not_empty__[n]
+      if m.sum() > 0:
+        q = qid__[n][m].sum() / cov__[n][m].sum()
+        c = cov__[n][m].sum() / L[m].sum()
+        if q > qid and c > cov:
+         ok.append(n)
+
+    new_msas.append([msa[n] for n in ok])
+    new_mtxs.append([mtx[n] for n in ok])
+  return new_msas, new_mtxs
 
 ##################################################
 # plotting
@@ -390,6 +478,58 @@ def plot_confidence(plddt, pae=None, Ls=None, dpi=100):
     plt.xlabel('Scored residue')
     plt.ylabel('Aligned residue')
   return plt
+
+def plot_msas(msas, ori_seq=None, sort_by_seqid=True, deduplicate=True, dpi=100, return_plt=True):
+  '''
+  plot the msas
+  '''
+  if ori_seq is None: ori_seq = msas[0][0]
+  seqs = ori_seq.replace("/","").split(":")
+  seqs_dash = ori_seq.replace(":","").split("/")
+
+  Ln = np.cumsum(np.append(0,[len(seq) for seq in seqs]))
+  Ln_dash = np.cumsum(np.append(0,[len(seq) for seq in seqs_dash]))
+  Nn,lines = [],[]
+  for msa in msas:
+    msa_ = set(msa) if deduplicate else msa
+    if len(msa_) > 0:
+      Nn.append(len(msa_))
+      msa_ = np.asarray([list(seq) for seq in msa_])
+      gap_ = msa_ != "-"
+      qid_ = msa_ == np.array(list("".join(seqs)))
+      gapid = np.stack([gap_[:,Ln[i]:Ln[i+1]].max(-1) for i in range(len(seqs))],-1)
+      seqid = np.stack([qid_[:,Ln[i]:Ln[i+1]].mean(-1) for i in range(len(seqs))],-1).sum(-1) / (gapid.sum(-1) + 1e-8)
+      non_gaps = gap_.astype(np.float)
+      non_gaps[non_gaps == 0] = np.nan
+      if sort_by_seqid:
+        lines.append(non_gaps[seqid.argsort()]*seqid[seqid.argsort(),None])
+      else:
+        lines.append(non_gaps[::-1] * seqid[::-1,None])
+
+  Nn = np.cumsum(np.append(0,Nn))
+  lines = np.concatenate(lines,0)
+
+  if return_plt:
+    plt.figure(figsize=(8,5),dpi=dpi)
+    plt.title("Sequence coverage")
+  plt.imshow(lines,
+            interpolation='nearest', aspect='auto',
+            cmap="rainbow_r", vmin=0, vmax=1, origin='lower',
+            extent=(0, lines.shape[1], 0, lines.shape[0]))
+  for i in Ln[1:-1]:
+    plt.plot([i,i],[0,lines.shape[0]],color="black")
+  for i in Ln_dash[1:-1]:
+    plt.plot([i,i],[0,lines.shape[0]],"--",color="black")
+  for j in Nn[1:-1]:
+    plt.plot([0,lines.shape[1]],[j,j],color="black")
+
+  plt.plot((np.isnan(lines) == False).sum(0), color='black')
+  plt.xlim(0,lines.shape[1])
+  plt.ylim(0,lines.shape[0])
+  plt.colorbar(label="Sequence identity to query")
+  plt.xlabel("Positions")
+  plt.ylabel("Sequences")
+  if return_plt: return plt
 
 def read_pdb_renum(pdb_filename, Ls=None):
   if Ls is not None:
