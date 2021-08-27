@@ -372,25 +372,25 @@ def trim_inputs(trim, msas, deletion_matrices, ori_seq=None, inverse=False):
 
   # trim original sequence
   mod_idx = []
+  mod_chain = []
   mod_ori_seq = []
-  n = 0
-  for a in ori_seq:
-    if a in aatypes:
-      if n not in trim_set:
-        mod_ori_seq.append(a)
-        mod_idx.append(n)
-        if len(mod_idx) > 1 and (mod_idx[-1] - mod_idx[-2]) > 1 and mod_ori_seq[-2] in aatypes:
+  for n,a in enumerate(ori_seq.replace("/","").replace(":","")):
+    if n not in trim_set:
+      mod_ori_seq.append(a)
+      mod_idx.append(n)
+      mod_chain.append(idx_chain[n][0])
+      if len(mod_idx) > 1:
+        if mod_chain[-1] != mod_chain[-2]:
+          mod_ori_seq[-1] = ":"
+          mod_ori_seq.append(a)
+        elif (mod_idx[-1] - mod_idx[-2]) > 1:
           mod_ori_seq[-1] = "/"
           mod_ori_seq.append(a)
-      n += 1
-    else:
-      mod_ori_seq.append(a)
+
   mod_ori_seq = "".join(mod_ori_seq)
-  mod_ori_seq = re.sub("^[:/]+","",mod_ori_seq)
-  mod_ori_seq = re.sub("[:/]+$","",mod_ori_seq)
-
-
-  return mod_msas, mod_mtxs, mod_ori_seq
+  chains = sorted([ascii_uppercase.index(a) for a in set(mod_chain)])
+  return {"msas":mod_msas, "deletion_matrices":mod_mtxs,
+          "ori_sequence":mod_ori_seq, "chains":chains}
 
 def cov_qid_filter(msas, deletion_matrices, ori_seq=None, cov=0, qid=0):
   if ori_seq is None: ori_seq = msas[0][0]
@@ -424,7 +424,7 @@ def cov_qid_filter(msas, deletion_matrices, ori_seq=None, cov=0, qid=0):
 
     new_msas.append([msa[n] for n in ok])
     new_mtxs.append([mtx[n] for n in ok])
-  return new_msas, new_mtxs
+  return {"msas":new_msas, "deletion_matrices":new_mtxs} 
 
 ##################################################
 # plotting
