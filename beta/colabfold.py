@@ -367,8 +367,10 @@ def trim_inputs(trim, msas, deletion_matrices, ori_seq=None, inverse=False):
   mod_msas, mod_mtxs = [],[]
   for msa, mtx in zip(msas, deletion_matrices):
     mod_msa = np.delete([list(s) for s in msa], trim_set, 1)
-    mod_msas.append(["".join(s) for s in mod_msa])
-    mod_mtxs.append(np.delete(mtx, trim_set, 1).tolist())
+    ok = (mod_msa != "-").sum(-1) > 0
+    mod_msas.append(["".join(s) for s in mod_msa[ok]])
+    mod_mtx = np.asarray(mtx)[ok]
+    mod_mtxs.append(np.delete(mod_mtx, trim_set, 1).tolist())
 
   # trim original sequence
   mod_idx = []
