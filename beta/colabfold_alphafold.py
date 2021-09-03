@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 
 import re
 import colabfold as cf
+import pairmsa
 
 try:
   from google.colab import files
@@ -128,7 +129,7 @@ def run_jackhmmer(sequence, prefix, jackhmmer_binary_path='jackhmmer'):
                    "names":names}, open(pickled_msa_path,"wb"))
   return msas, deletion_matrices, names
 
-def prep_inputs(sequence, jobname, homooligomer, clean=False, verbose=False):
+def prep_inputs(sequence, jobname, homooligomer="1", clean=False, verbose=True):
   # process inputs
   sequence = re.sub("[^A-Z:/]", "", sequence.upper())
   sequence = re.sub(":+",":",sequence)
@@ -187,7 +188,9 @@ def prep_inputs(sequence, jobname, homooligomer, clean=False, verbose=False):
     
   return I
 
-def prep_msa(I, msa_method, add_custom_msa, msa_format, pair_mode, pair_cov, pair_qid, verbose=False, TMP_DIR="tmp"):
+def prep_msa(I, msa_method="mmseqs2", add_custom_msa=False, msa_format="fas",
+             pair_mode="unpaired", pair_cov=50, pair_qid=20,
+             hhfilter_loc="hhfilter", reformat_loc="reformat.pl", TMP_DIR="tmp", verbose=True):
 
   # clear previous inputs
   I["msas"] = []
@@ -204,7 +207,7 @@ def prep_msa(I, msa_method, add_custom_msa, msa_format, pair_mode, pair_cov, pai
       output_file = os.path.join(TMP_DIR,f"upload.a3m")
       with open(input_file,"w") as tmp_upload:
         tmp_upload.write(lines)
-      os.system(f"reformat.pl {msa_format} a3m {input_file} {output_file}")
+      os.system(f"{reformat_loc} {msa_format} a3m {input_file} {output_file}")
       a3m_lines = open(output_file,"r").read()
 
       # parse
@@ -298,14 +301,14 @@ def prep_msa(I, msa_method, add_custom_msa, msa_format, pair_mode, pair_cov, pai
         if msa_method == "mmseqs2":
           a3m_lines = A3M_LINES[a]
           _msa, _mtx, _lab = pairmsa.parse_a3m(a3m_lines,
-                                              filter_qid=pair_qid/100,
-                                              filter_cov=pair_cov/100)
+                                               filter_qid=pair_qid/100,
+                                               filter_cov=pair_cov/100)
 
         elif msa_method == "jackhmmer":
           _msas, _mtxs, _names = run_jackhmmer(_seq, _prefix)
           _msa, _mtx, _lab = pairmsa.get_uni_jackhmmer(_msas[0], _mtxs[0], _names[0],
-                                                      filter_qid=pair_qid/100,
-                                                      filter_cov=pair_cov/100)
+                                                       filter_qid=pair_qid/100,
+                                                       filter_cov=pair_cov/100)
 
         if len(_msa) > 1:
           _data.append(pairmsa.hash_it(_msa, _lab, _mtx, call_uniprot=False))
@@ -326,10 +329,10 @@ def prep_msa(I, msa_method, add_custom_msa, msa_format, pair_mode, pair_cov, pai
               # filter to remove redundant sequences
               ##############################################
               ok = []
-              with open("tmp/tmp.fas","w") as fas_file:
+              with open(f"{TMP_DIR}/tmp.fas","w") as fas_file:
                 fas_file.writelines([f">{n}\n{a+b}\n" for n,(a,b) in enumerate(zip(_seq_a,_seq_b))])
-              os.system("hhfilter -maxseq 1000000 -i tmp/tmp.fas -o tmp/tmp.id90.fas -id 90")
-              for line in open("tmp/tmp.id90.fas","r"):
+              os.system(f"{hhfilter_loc} -maxseq 1000000 -i {TMP_DIR}/tmp.fas -o {TMP_DIR}/tmp.id90.fas -id 90")
+              for line in open(f"{TMP_DIR}/tmp.id90.fas","r"):
                 if line.startswith(">"): ok.append(int(line[1:]))
               ##############################################      
               if verbose:      
@@ -350,7 +353,7 @@ def prep_msa(I, msa_method, add_custom_msa, msa_format, pair_mode, pair_cov, pai
               open(os.path.join(I["output_dir"],"msa.pickle"),"wb"))
   return I
 
-def prep_filter(I, trim, trim_inverse=False, cov=0, qid=0, verbose=False):
+def prep_filter(I, trim="", trim_inverse=False, cov=0, qid=0, verbose=True):
   trim = re.sub("[^0-9A-Z,-]", "", trim.upper())
   trim = re.sub(",+",",",trim)
   trim = re.sub("^[,]+","",trim)
@@ -372,8 +375,7 @@ def prep_filter(I, trim, trim_inverse=False, cov=0, qid=0, verbose=False):
 
     if cov > 0 or qid > 0:
       mod_I.update(cf.cov_qid_filter(mod_I["msas"], mod_I["deletion_matrices"],
-                                    mod_I["ori_sequence"],
-                                    cov=cov/100, qid=qid/100))
+                                     mod_I["ori_sequence"], cov=cov/100, qid=qid/100))
     return mod_I
   else:
     return I  
