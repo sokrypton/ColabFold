@@ -1,17 +1,18 @@
 import os
-import jax
-import jax.numpy as jnp
 
 from urllib import request
 from concurrent import futures
 import pickle
 
+import jax
+import jax.numpy as jnp
 from alphafold.data.tools import jackhmmer
 from alphafold.data import parsers
 from alphafold.data import pipeline
 from alphafold.common import protein
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 import re
 import colabfold as cf
@@ -127,7 +128,7 @@ def run_jackhmmer(sequence, prefix, jackhmmer_binary_path='jackhmmer'):
                    "names":names}, open(pickled_msa_path,"wb"))
   return msas, deletion_matrices, names
 
-def prep_inputs(sequence, jobname, homooligomer, clean=True, verbose=False):
+def prep_inputs(sequence, jobname, homooligomer, clean=False, verbose=False):
   # process inputs
   sequence = re.sub("[^A-Z:/]", "", sequence.upper())
   sequence = re.sub(":+",":",sequence)
@@ -194,30 +195,36 @@ def prep_msa(I, msa_method, add_custom_msa, msa_format, pair_mode, pair_cov, pai
 
   if add_custom_msa:
     print(f"upload custom msa in '{msa_format}' format")
-    msa_dict = files.upload()
-    lines = msa_dict[list(msa_dict.keys())[0]].decode()
-    
-    # convert to a3m
-    input_file = os.path.join(TMP_DIR,f"upload.{msa_format}")
-    output_file = os.path.join(TMP_DIR,f"upload.a3m")
-    with open(input_file,"w") as tmp_upload:
-      tmp_upload.write(lines)
-    os.system(f"reformat.pl {msa_format} a3m {input_file} {output_file}")
-    a3m_lines = open(output_file,"r").read()
+    if IS_COLAB:
+      msa_dict = files.upload()      
+      lines = msa_dict[list(msa_dict.keys())[0]].decode()
 
-    # parse
-    msa, mtx = parsers.parse_a3m(a3m_lines)
-    I["msas"].append(msa)
-    I["deletion_matrices"].append(mtx)
-    if len(I["msas"][0][0]) != len(I["sequence"]):
-      raise ValueError("ERROR: the length of msa does not match input sequence")
+      # convert to a3m
+      input_file = os.path.join(TMP_DIR,f"upload.{msa_format}")
+      output_file = os.path.join(TMP_DIR,f"upload.a3m")
+      with open(input_file,"w") as tmp_upload:
+        tmp_upload.write(lines)
+      os.system(f"reformat.pl {msa_format} a3m {input_file} {output_file}")
+      a3m_lines = open(output_file,"r").read()
+
+      # parse
+      msa, mtx = parsers.parse_a3m(a3m_lines)
+      I["msas"].append(msa)
+      I["deletion_matrices"].append(mtx)
+      if len(I["msas"][0][0]) != len(I["sequence"]):
+        raise ValueError("ERROR: the length of msa does not match input sequence")
+    else:
+      raise ValueError("upload is currently only supported in colab :(")
 
   if msa_method == "precomputed":
-    print("upload precomputed pickled msa from previous run")
-    uploaded_dict = files.upload()
-    uploaded_filename = list(uploaded_dict.keys())[0]
-    uploaded_content = pickle.loads(uploaded_dict[uploaded_filename])
-    I.update(uploaded_content)
+    if IS_COLAB:
+      print("upload precomputed pickled msa from previous run")
+      uploaded_dict = files.upload()
+      uploaded_filename = list(uploaded_dict.keys())[0]
+      uploaded_content = pickle.loads(uploaded_dict[uploaded_filename])
+      I.update(uploaded_content)
+    else:
+      raise ValueError("upload is currently only supported in colab :(")
 
   elif msa_method == "single_sequence":
     if len(I["msas"]) == 0:
@@ -371,7 +378,6 @@ def prep_filter(I, trim, trim_inverse=False, cov=0, qid=0, verbose=False):
   else:
     return I  
 
-  
 ##########################################################################################
 def _placeholder_template_feats(num_templates_, num_res_):
   return {
@@ -425,20 +431,20 @@ def parse_results(prediction_result, processed_feature_dict):
     out["pTMscore"] = to_np(prediction_result['ptm'])
   return out
 
-def do_report(I, outs, key, show_images=True):
+def do_report(I, outs, key, Ls, show_images=True):
   o = outs[key]
   line = f"{key} recycles:{o['recycles']} tol:{o['tol']:.2f} pLDDT:{o['pLDDT']:.2f}"
   if 'pTMscore' in o:
     line += f" pTMscore:{o['pTMscore']:.2f}"
   print(line)
   if show_images:
-    fig = cf.plot_protein(o['unrelaxed_protein'], Ls=Ls_plot, dpi=100)
+    fig = cf.plot_protein(o['unrelaxed_protein'], Ls=Ls, dpi=100)
     plt.show()
   tmp_pdb_path = os.path.join(I["output_dir"],f'unranked_{key}_unrelaxed.pdb')
   pdb_lines = protein.to_pdb(o['unrelaxed_protein'])
   with open(tmp_pdb_path, 'w') as f: f.write(pdb_lines)
 
-def prep_feats(I, use_turbo=True, clean=True):
+def prep_feats(I, use_turbo=True, clean=False):
 
   # delete old files
   if clean:
