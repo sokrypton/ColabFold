@@ -71,7 +71,7 @@ bioRxiv, doi: [10.1101/2021.08.15.456425](https://www.biorxiv.org/content/10.110
   Jumper et al. "Highly accurate protein structure prediction with AlphaFold." Nature (2021)
   doi: [10.1038/s41586-021-03819-2](https://doi.org/10.1038/s41586-021-03819-2)
 - If you are using RoseTTAFold, please also cite:
-  Baek, Minkyung, et al. "Accurate prediction of protein structures and interactions using a three-track neural network." Science (2021) 
+  Minkyung et al. "Accurate prediction of protein structures and interactions using a three-track neural network." Science (2021) 
   doi: [10.1126/science.abj8754](https://doi.org/10.1126/science.abj8754)
 
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.5123296.svg)](https://doi.org/10.5281/zenodo.5123296)
