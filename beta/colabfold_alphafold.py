@@ -85,7 +85,7 @@ def prep_inputs(sequence, jobname, homooligomer="1", clean=False, verbose=True):
       os.remove(os.path.join(I["output_dir"], f))
 
   if verbose and len(I["full_sequence"]) > 1400:
-    print(f"WARNING: For a typical Google-Colab-GPU (16G) session, the max total length is ~1400 residues. You are at {len(full_sequence)}!")
+    print(f"WARNING: For a typical Google-Colab-GPU (16G) session, the max total length is ~1400 residues. You are at {len(I['full_sequence'])}!")
     print(f"Run Alphafold may crash, unless you trim to the protein(s) to a short length. (See trim options below).")
 
   if verbose:
