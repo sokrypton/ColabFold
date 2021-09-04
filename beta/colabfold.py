@@ -9,13 +9,21 @@ import time
 import pickle
 import os
 import re
+
+import random
+import tqdm.notebook
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import matplotlib.patheffects
 from matplotlib import collections as mcoll
 
-import py3Dmol
+try:
+  import py3Dmol
+except:
+  pass
+
 from string import ascii_uppercase,ascii_lowercase
 
 pymol_color_list = ["#33ff33","#00ffff","#ff33cc","#ffff00","#ff9999","#e5e5e5","#7f7fff","#ff7f00",
@@ -51,8 +59,6 @@ def clear_mem(device="gpu"):
 # call mmseqs2
 ##########################################
 
-import random
-import tqdm.notebook
 TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
 
 def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
