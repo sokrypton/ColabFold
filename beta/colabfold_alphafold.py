@@ -30,9 +30,9 @@ except:
 import tqdm.notebook
 TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
 
-#################################################################################################
+#######################################################################################################################################
 # prep_inputs
-#################################################################################################
+#######################################################################################################################################
 
 def prep_inputs(sequence, jobname, homooligomer="1", clean=False, verbose=True):
   # process inputs
@@ -93,9 +93,9 @@ def prep_inputs(sequence, jobname, homooligomer="1", clean=False, verbose=True):
     
   return I
 
-#################################################################################################
+#######################################################################################################################################
 # prep_msa
-#################################################################################################
+#######################################################################################################################################
 
 def run_jackhmmer(sequence, prefix, jackhmmer_binary_path='jackhmmer'):
 
@@ -291,9 +291,7 @@ def prep_msa(I, msa_method="mmseqs2", add_custom_msa=False, msa_format="fas",
           I["msas"].append(msa)
           I["deletion_matrices"].append(mtx)
 
-    ####################################################################################
     # PAIR_MSA
-    ####################################################################################
     if len(I["seqs"]) > 1 and (pair_mode == "paired" or pair_mode == "unpaired+paired"):
       print("attempting to pair some sequences...")
 
@@ -336,17 +334,15 @@ def prep_msa(I, msa_method="mmseqs2", add_custom_msa=False, msa_format="fas",
               O[a][b] = pairmsa._stitch(_data[a],_data[b])
               _seq_a, _seq_b, _mtx_a, _mtx_b = (*O[a][b]["seq"],*O[a][b]["mtx"])
 
-              ##############################################
               # filter to remove redundant sequences
-              ##############################################
               ok = []
               with open(f"{TMP_DIR}/tmp.fas","w") as fas_file:
                 fas_file.writelines([f">{n}\n{a+b}\n" for n,(a,b) in enumerate(zip(_seq_a,_seq_b))])
               os.system(f"{hhfilter_loc} -maxseq 1000000 -i {TMP_DIR}/tmp.fas -o {TMP_DIR}/tmp.id90.fas -id 90")
               for line in open(f"{TMP_DIR}/tmp.id90.fas","r"):
                 if line.startswith(">"): ok.append(int(line[1:]))
-              ##############################################      
-              if verbose:      
+
+                  if verbose:      
                 print(f"found {len(_seq_a)} pairs ({len(ok)} after filtering)")
 
               if len(_seq_a) > 0:
@@ -362,9 +358,9 @@ def prep_msa(I, msa_method="mmseqs2", add_custom_msa=False, msa_format="fas",
               open(os.path.join(I["output_dir"],"msa.pickle"),"wb"))
   return I
 
-#################################################################################################
+#######################################################################################################################################
 # prep_filter
-#################################################################################################
+#######################################################################################################################################
 
 def trim_inputs(trim, msas, deletion_matrices, ori_seq=None, inverse=False):
   '''
@@ -505,6 +501,10 @@ def prep_filter(I, trim="", trim_inverse=False, cov=0, qid=0, verbose=True):
     return mod_I
   else:
     return I  
+  
+#######################################################################################################################################
+# prep features
+#######################################################################################################################################
 
 def prep_feats(I, use_turbo=True, clean=False):
 
@@ -522,15 +522,11 @@ def prep_feats(I, use_turbo=True, clean=False):
     for f in os.listdir(I["output_dir"]):
       if "rank_" in f: os.remove(os.path.join(I["output_dir"], f))
 
-  #############################
   # homooligomerize
-  #############################
   lengths = [len(seq) for seq in I["seqs"]]
   msas_mod, deletion_matrices_mod = cf.homooligomerize_heterooligomer(I["msas"], I["deletion_matrices"],
                                                                       lengths, I["homooligomers"])
-  #############################
   # define input features
-  #############################
   num_res = len(I["full_sequence"])
   feature_dict = {}
   feature_dict.update(pipeline.make_sequence_features(I["full_sequence"], 'test', num_res))
@@ -538,9 +534,7 @@ def prep_feats(I, use_turbo=True, clean=False):
   if not use_turbo:
     feature_dict.update(_placeholder_template_feats(0, num_res))
 
-  ################################
   # set chainbreaks
-  ################################
   Ls = []
   for seq,h in zip(I["ori_sequence"].split(":"), I["homooligomers"]):
     Ls += [len(s) for s in seq.split("/")] * h
@@ -550,6 +544,10 @@ def prep_feats(I, use_turbo=True, clean=False):
 
   feature_dict['residue_index'] = cf.chain_break(feature_dict['residue_index'], Ls)
   return feature_dict, Ls_plot
+
+#######################################################################################################################################
+# run alphafold
+#######################################################################################################################################
 
 def clear_mem(device=None):
   '''remove all data from device'''
