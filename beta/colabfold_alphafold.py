@@ -10,6 +10,10 @@ from alphafold.data.tools import jackhmmer
 from alphafold.data import parsers
 from alphafold.data import pipeline
 from alphafold.common import protein
+from alphafold.model import config
+from alphafold.model import model
+from alphafold.model import data
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -433,18 +437,23 @@ def parse_results(prediction_result, processed_feature_dict):
     out["pTMscore"] = to_np(prediction_result['ptm'])
   return out
 
-def do_report(I, outs, key, Ls, show_images=True):
+def do_report(outs, key, Ls=None, show_images=True, output_dir=None):
   o = outs[key]
   line = f"{key} recycles:{o['recycles']} tol:{o['tol']:.2f} pLDDT:{o['pLDDT']:.2f}"
+
   if 'pTMscore' in o:
     line += f" pTMscore:{o['pTMscore']:.2f}"
+
   print(line)
+
   if show_images:
     fig = cf.plot_protein(o['unrelaxed_protein'], Ls=Ls, dpi=100)
-    plt.show()
-  tmp_pdb_path = os.path.join(I["output_dir"],f'unranked_{key}_unrelaxed.pdb')
-  pdb_lines = protein.to_pdb(o['unrelaxed_protein'])
-  with open(tmp_pdb_path, 'w') as f: f.write(pdb_lines)
+    plt.show()  
+
+  if output_dir is not None:
+    tmp_pdb_path = os.path.join(output_dir,f'unranked_{key}_unrelaxed.pdb')
+    pdb_lines = protein.to_pdb(o['unrelaxed_protein'])
+    with open(tmp_pdb_path, 'w') as f: f.write(pdb_lines)
 
 def prep_feats(I, use_turbo=True, clean=False):
 
@@ -481,3 +490,91 @@ def prep_feats(I, use_turbo=True, clean=False):
 
   feature_dict['residue_index'] = cf.chain_break(feature_dict['residue_index'], Ls)
   return feature_dict, Ls_plot
+
+def clear_mem(device=None):
+  '''remove all data from device'''
+  backend = jax.lib.xla_bridge.get_backend(device)
+  if hasattr(backend,'live_buffers'):
+    for buf in backend.live_buffers():
+      buf.delete()
+
+def prep_model_runner(opt, model_name="model_5", use_turbo=True, old_runner=None, params_loc='./alphafold/data'):
+  if old_runner is None or old_runner["opt"] != opt:
+    clear_mem()
+    name = f"{model_name}_ptm" if opt["use_ptm"] else model_name
+    cfg = config.model_config(name)
+
+    if use_turbo:
+      msa_clusters = min(opt["N"], opt["max_msa_clusters"])
+      cfg.data.eval.max_msa_clusters = msa_clusters
+      cfg.data.common.max_extra_msa = max(min(opt["N"] - msa_clusters, opt["max_extra_msa"]),1)
+
+    cfg.data.common.num_recycle = opt["max_recycles"]
+    cfg.model.num_recycle = opt["max_recycles"]
+    cfg.model.recycle_tol = opt["tol"]
+    cfg.data.eval.num_ensemble = opt["num_ensemble"]
+
+    params = data.get_model_haiku_params(name, params_loc)
+    return {"model":model.RunModel(cfg, params, is_training=opt["is_training"]), "opt":opt}
+  else:
+    return old_runner
+
+def run_alphafold(feature_dict, opt, runner=None, num_models=5, num_samples=1, subsample_msa=True,
+                  use_turbo=True, Ls=None, show_images=True, output_dir=None, params_loc='./alphafold/data'):
+  
+  model_names = ['model_1', 'model_2', 'model_3', 'model_4', 'model_5'][:num_models]
+  total = len(model_names) * num_samples
+  outs = {}
+  with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
+    if use_turbo:
+      
+      if runner is None:
+        runner = prep_model_runner(opt)
+      
+      # go through each random_seed
+      for seed in range(num_samples):
+        # prep input features
+        feat = do_subsample_msa(feature_dict, random_seed=seed) if subsample_msa else feature_dict
+        processed_feature_dict = runner["model"].process_features(feat, random_seed=seed)
+
+        # go through each model
+        for num, model_name in enumerate(model_names):
+          name = model_name+"_ptm" if opt["use_ptm"] else model_name
+          key = f"{name}_seed_{seed}"
+          pbar.set_description(f'Running {key}')
+
+          # replace model parameters
+          params = data.get_model_haiku_params(name, params_loc)
+          for k in runner["model"].params.keys():
+            runner["model"].params[k] = params[k]
+
+          # predict
+          prediction_result, (r, t) = runner["model"].predict(processed_feature_dict, random_seed=seed)
+          outs[key] = parse_results(prediction_result, processed_feature_dict)
+          outs[key].update({"recycles":r, "tol":t})
+
+          # report
+          pbar.update(n=1)
+          do_report(outs, key, Ls, show_images, output_dir)
+
+    else:  
+      # go through each model
+      for num, model_name in enumerate(model_names):
+        name = model_name+"_ptm" if opt["use_ptm"] else model_name
+        model_runner = prep_model_runner(opt, model_name=model_name, use_turbo=False)["model"]
+
+        # go through each random_seed
+        for seed in range(num_samples):
+          key = f"{name}_seed_{seed}"
+          pbar.set_description(f'Running {key}')
+          processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)
+          
+          # predict
+          prediction_result, (r, t) = model_runner.predict(processed_feature_dict, random_seed=seed)
+          outs[key] = parse_results(prediction_result, processed_feature_dict)
+          outs[key].update({"recycles":r, "tol":t})
+
+          # report
+          pbar.update(n=1)
+          do_report(outs, key, Ls, show_images, output_dir)
+  return outs
