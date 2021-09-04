@@ -30,6 +30,73 @@ except:
 import tqdm.notebook
 TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
 
+#################################################################################################
+# prep_inputs
+#################################################################################################
+
+def prep_inputs(sequence, jobname, homooligomer="1", clean=False, verbose=True):
+  # process inputs
+  sequence = re.sub("[^A-Z:/]", "", sequence.upper())
+  sequence = re.sub(":+",":",sequence)
+  sequence = re.sub("/+","/",sequence)
+  sequence = re.sub("^[:/]+","",sequence)
+  sequence = re.sub("[:/]+$","",sequence)
+  jobname = re.sub(r'\W+', '', jobname)
+  homooligomer = re.sub("[:/]+",":",homooligomer)
+  homooligomer = re.sub("^[:/]+","",homooligomer)
+  homooligomer = re.sub("[:/]+$","",homooligomer)
+
+  if len(homooligomer) == 0: homooligomer = "1"
+  homooligomer = re.sub("[^0-9:]", "", homooligomer)
+
+  # define inputs
+  I = {"ori_sequence":sequence,
+      "sequence":sequence.replace("/","").replace(":",""),
+      "seqs":sequence.replace("/","").split(":"),
+      "homooligomer":homooligomer,
+      "homooligomers":[int(h) for h in homooligomer.split(":")],
+      "msas":[], "deletion_matrices":[]}
+
+  # adjust homooligomer option
+  if len(I["seqs"]) != len(I["homooligomers"]):
+    if len(I["homooligomers"]) == 1:
+      I["homooligomers"] = [I["homooligomers"][0]] * len(I["seqs"])
+    else:
+      if verbose:
+        print("WARNING: Mismatch between number of breaks ':' in 'sequence' and 'homooligomer' definition")
+      while len(I["seqs"]) > len(I["homooligomers"]):
+        I["homooligomers"].append(1)
+      I["homooligomers"] = I["homooligomers"][:len(I["seqs"])]
+    I["homooligomer"] = ":".join([str(h) for h in I["homooligomers"]])
+
+  # define full sequence being modelled
+  I["full_sequence"] = ''.join([s*h for s,h in zip(I["seqs"],I["homooligomers"])])
+  I["lengths"] = [len(seq) for seq in I["seqs"]]
+
+  # prediction directory
+  I["output_dir"] = 'prediction_' + jobname + '_' + cf.get_hash(I["full_sequence"])[:5]
+  os.makedirs(I["output_dir"], exist_ok=True)
+
+  # delete existing files in working directory
+  if clean:
+    for f in os.listdir(I["output_dir"]):
+      os.remove(os.path.join(I["output_dir"], f))
+
+  if verbose and len(I["full_sequence"]) > 1400:
+    print(f"WARNING: For a typical Google-Colab-GPU (16G) session, the max total length is ~1400 residues. You are at {len(full_sequence)}!")
+    print(f"Run Alphafold may crash, unless you trim to the protein(s) to a short length. (See trim options below).")
+
+  if verbose:
+    print(f"homooligomer: {I['homooligomer']}")
+    print(f"total_length: {len(I['full_sequence'])}")
+    print(f"working_directory: {I['output_dir']}")
+    
+  return I
+
+#################################################################################################
+# prep_msa
+#################################################################################################
+
 def run_jackhmmer(sequence, prefix, jackhmmer_binary_path='jackhmmer'):
 
   fasta_path = f"{prefix}.fasta"
@@ -131,65 +198,6 @@ def run_jackhmmer(sequence, prefix, jackhmmer_binary_path='jackhmmer'):
                    "deletion_matrices":deletion_matrices,
                    "names":names}, open(pickled_msa_path,"wb"))
   return msas, deletion_matrices, names
-
-def prep_inputs(sequence, jobname, homooligomer="1", clean=False, verbose=True):
-  # process inputs
-  sequence = re.sub("[^A-Z:/]", "", sequence.upper())
-  sequence = re.sub(":+",":",sequence)
-  sequence = re.sub("/+","/",sequence)
-  sequence = re.sub("^[:/]+","",sequence)
-  sequence = re.sub("[:/]+$","",sequence)
-  jobname = re.sub(r'\W+', '', jobname)
-  homooligomer = re.sub("[:/]+",":",homooligomer)
-  homooligomer = re.sub("^[:/]+","",homooligomer)
-  homooligomer = re.sub("[:/]+$","",homooligomer)
-
-  if len(homooligomer) == 0: homooligomer = "1"
-  homooligomer = re.sub("[^0-9:]", "", homooligomer)
-
-  # define inputs
-  I = {"ori_sequence":sequence,
-      "sequence":sequence.replace("/","").replace(":",""),
-      "seqs":sequence.replace("/","").split(":"),
-      "homooligomer":homooligomer,
-      "homooligomers":[int(h) for h in homooligomer.split(":")],
-      "msas":[], "deletion_matrices":[]}
-
-  # adjust homooligomer option
-  if len(I["seqs"]) != len(I["homooligomers"]):
-    if len(I["homooligomers"]) == 1:
-      I["homooligomers"] = [I["homooligomers"][0]] * len(I["seqs"])
-    else:
-      if verbose:
-        print("WARNING: Mismatch between number of breaks ':' in 'sequence' and 'homooligomer' definition")
-      while len(I["seqs"]) > len(I["homooligomers"]):
-        I["homooligomers"].append(1)
-      I["homooligomers"] = I["homooligomers"][:len(I["seqs"])]
-    I["homooligomer"] = ":".join([str(h) for h in I["homooligomers"]])
-
-  # define full sequence being modelled
-  I["full_sequence"] = ''.join([s*h for s,h in zip(I["seqs"],I["homooligomers"])])
-  I["lengths"] = [len(seq) for seq in I["seqs"]]
-
-  # prediction directory
-  I["output_dir"] = 'prediction_' + jobname + '_' + cf.get_hash(I["full_sequence"])[:5]
-  os.makedirs(I["output_dir"], exist_ok=True)
-
-  # delete existing files in working directory
-  if clean:
-    for f in os.listdir(I["output_dir"]):
-      os.remove(os.path.join(I["output_dir"], f))
-
-  if verbose and len(I["full_sequence"]) > 1400:
-    print(f"WARNING: For a typical Google-Colab-GPU (16G) session, the max total length is ~1400 residues. You are at {len(full_sequence)}!")
-    print(f"Run Alphafold may crash, unless you trim to the protein(s) to a short length. (See trim options below).")
-
-  if verbose:
-    print(f"homooligomer: {I['homooligomer']}")
-    print(f"total_length: {len(I['full_sequence'])}")
-    print(f"working_directory: {I['output_dir']}")
-    
-  return I
 
 def prep_msa(I, msa_method="mmseqs2", add_custom_msa=False, msa_format="fas",
              pair_mode="unpaired", pair_cov=50, pair_qid=20,
@@ -349,12 +357,127 @@ def prep_msa(I, msa_method="mmseqs2", add_custom_msa=False, msa_format="fas",
                 I["msas"].append(msa)
                 I["deletion_matrices"].append(mtx)
       
-  ####################################################################################
-
   # save MSA as pickle
   pickle.dump({"msas":I["msas"],"deletion_matrices":I["deletion_matrices"]},
               open(os.path.join(I["output_dir"],"msa.pickle"),"wb"))
   return I
+
+#################################################################################################
+# prep_filter
+#################################################################################################
+
+def trim_inputs(trim, msas, deletion_matrices, ori_seq=None, inverse=False):
+  '''
+  input: trim, msas, deletion_matrices, ori_seq
+  output: msas, deletion_matrices, ori_seq
+  '''
+  if ori_seq is None: ori_seq = msas[0][0]
+  seqs = ori_seq.replace("/","").split(":")
+  L_ini = 0
+  chain_idx = {}
+  idx_chain = []
+  for chain,seq in zip(ascii_uppercase,seqs):
+    L = len(seq)
+    chain_idx[chain] = dict(zip(range(L),range(L_ini,L_ini+L)))
+    idx_chain += [f"{chain}{i+1}" for i in range(L)]
+    L_ini += L
+  global_idx = dict(zip(range(L_ini),range(L_ini)))
+
+  mode = "keeping" if inverse else "trimming"
+  trim_set = []
+  for idx in trim.split(","):
+
+    i,j = idx.split("-") if "-" in idx else (idx,"")
+
+    # set index reference frame
+    trim_idx_i = trim_idx_j = global_idx    
+    if i != "" and i[0] in ascii_uppercase:
+      trim_idx_i,i = chain_idx[i[0]], i[1:]
+    if j != "" and j[0] in ascii_uppercase:
+      trim_idx_j,j = chain_idx[j[0]], j[1:]
+
+    # set which positions to trim
+    if "-" in idx:
+      i = trim_idx_i[int(i)-1] if i != "" else trim_idx_i[0]
+      j = trim_idx_j[int(j)-1] if j != "" else trim_idx_j[len(trim_idx_j) - 1]
+      trim_set += list(range(i,j+1))
+      print(f"{mode} positions: {idx_chain[i]}-{idx_chain[j]}")
+    else:
+      i = trim_idx_i[int(i)-1]
+      trim_set.append(i)
+      print(f"{mode} position: {idx_chain[i]}")
+
+  # deduplicate list
+  trim_set = set(trim_set)
+  if inverse:
+    trim_set = set(range(L_ini)) ^ trim_set
+
+  trim_set = sorted(list(trim_set))
+
+  # trim MSA
+  mod_msas, mod_mtxs = [],[]
+  for msa, mtx in zip(msas, deletion_matrices):
+    mod_msa = np.delete([list(s) for s in msa], trim_set, 1)
+    ok = (mod_msa != "-").sum(-1) > 0
+    mod_msas.append(["".join(s) for s in mod_msa[ok]])
+    mod_mtx = np.asarray(mtx)[ok]
+    mod_mtxs.append(np.delete(mod_mtx, trim_set, 1).tolist())
+
+  # trim original sequence
+  mod_idx = []
+  mod_chain = []
+  mod_ori_seq = []
+  for n,a in enumerate(ori_seq.replace("/","").replace(":","")):
+    if n not in trim_set:
+      mod_ori_seq.append(a)
+      mod_idx.append(n)
+      mod_chain.append(idx_chain[n][0])
+      if len(mod_idx) > 1:
+        if mod_chain[-1] != mod_chain[-2]:
+          mod_ori_seq[-1] = ":"
+          mod_ori_seq.append(a)
+        elif (mod_idx[-1] - mod_idx[-2]) > 1:
+          mod_ori_seq[-1] = "/"
+          mod_ori_seq.append(a)
+
+  mod_ori_seq = "".join(mod_ori_seq)
+  chains = sorted([ascii_uppercase.index(a) for a in set(mod_chain)])
+  return {"msas":mod_msas, "deletion_matrices":mod_mtxs,
+          "ori_sequence":mod_ori_seq, "chains":chains}
+
+def cov_qid_filter(msas, deletion_matrices, ori_seq=None, cov=0, qid=0):
+  if ori_seq is None: ori_seq = msas[0][0]
+  seqs = ori_seq.replace("/","").split(":")
+  ref_seq_ = np.array(list("".join(seqs)))
+
+  new_msas,new_mtxs = [],[]
+  L = np.asarray([len(seq) for seq in seqs])
+  Ln = np.cumsum(np.append(0,L))
+  for msa, mtx in zip(msas, deletion_matrices):
+    msa_ = np.asarray([list(seq) for seq in msa])
+
+    # coverage (non-gap characters)
+    cov_ = msa_ != "-"
+    # sequence identity to query
+    qid_ = msa_ == ref_seq_
+
+    # split by protein (for protein complexes)
+    cov__ = np.stack([cov_[:,Ln[i]:Ln[i+1]].sum(-1) for i in range(len(seqs))],-1)
+    qid__ = np.stack([qid_[:,Ln[i]:Ln[i+1]].sum(-1) for i in range(len(seqs))],-1)
+
+    not_empty__ = cov__ > 0
+    ok = []
+    for n in range(len(msa)):
+      m = not_empty__[n]
+      if m.sum() > 0:
+        q = qid__[n][m].sum() / cov__[n][m].sum()
+        c = cov__[n][m].sum() / L[m].sum()
+        if q > qid and c > cov:
+         ok.append(n)
+
+    new_msas.append([msa[n] for n in ok])
+    new_mtxs.append([mtx[n] for n in ok])
+  return {"msas":new_msas, "deletion_matrices":new_mtxs}
 
 def prep_filter(I, trim="", trim_inverse=False, cov=0, qid=0, verbose=True):
   trim = re.sub("[^0-9A-Z,-]", "", trim.upper())
@@ -365,8 +488,8 @@ def prep_filter(I, trim="", trim_inverse=False, cov=0, qid=0, verbose=True):
     mod_I = dict(I)
     
     if trim != "":
-      mod_I.update(cf.trim_inputs(trim, mod_I["msas"], mod_I["deletion_matrices"],
-                                  mod_I["ori_sequence"], inverse=trim_inverse))
+      mod_I.update(trim_inputs(trim, mod_I["msas"], mod_I["deletion_matrices"],
+                               mod_I["ori_sequence"], inverse=trim_inverse))
       
       mod_I["homooligomers"] = [mod_I["homooligomers"][c] for c in mod_I["chains"]]
       mod_I["sequence"] = mod_I["ori_sequence"].replace("/","").replace(":","")
@@ -377,7 +500,7 @@ def prep_filter(I, trim="", trim_inverse=False, cov=0, qid=0, verbose=True):
         print(f"total_length: '{new_length}' after trimming")
 
     if cov > 0 or qid > 0:
-      mod_I.update(cf.cov_qid_filter(mod_I["msas"], mod_I["deletion_matrices"],
+      mod_I.update(cov_qid_filter(mod_I["msas"], mod_I["deletion_matrices"],
                                      mod_I["ori_sequence"], cov=cov/100, qid=qid/100))
     return mod_I
   else:
