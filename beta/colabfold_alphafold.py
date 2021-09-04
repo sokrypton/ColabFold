@@ -14,7 +14,6 @@ from alphafold.model import config
 from alphafold.model import model
 from alphafold.model import data
 
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -384,78 +383,16 @@ def prep_filter(I, trim="", trim_inverse=False, cov=0, qid=0, verbose=True):
   else:
     return I  
 
-##########################################################################################
-def _placeholder_template_feats(num_templates_, num_res_):
-  return {
-      'template_aatype': np.zeros([num_templates_, num_res_, 22], np.float32),
-      'template_all_atom_masks': np.zeros([num_templates_, num_res_, 37, 3], np.float32),
-      'template_all_atom_positions': np.zeros([num_templates_, num_res_, 37], np.float32),
-      'template_domain_names': np.zeros([num_templates_], np.float32),
-      'template_sum_probs': np.zeros([num_templates_], np.float32),
-  }
-
-def do_subsample_msa(F, random_seed=0):
-  '''subsample msa to avoid running out of memory'''
-  N = len(F["msa"])
-  L = len(F["residue_index"])
-  N_ = int(3E7/L)
-  if N > N_:
-    print(f"whhhaaa... too many sequences ({N}) subsampling to {N_}")
-    np.random.seed(random_seed)
-    idx = np.append(0,np.random.permutation(np.arange(1,N)))[:N_]
-    F_ = {}
-    F_["msa"] = F["msa"][idx]
-    F_["deletion_matrix_int"] = F["deletion_matrix_int"][idx]
-    F_["num_alignments"] = np.full_like(F["num_alignments"],N_)
-    for k in F.keys():
-      if k not in F_: F_[k] = F[k]      
-    return F_
-  else:
-    return F
-
-def parse_results(prediction_result, processed_feature_dict):
-  '''parse results and convert to numpy arrays'''
-  to_np = lambda a: np.asarray(a)
-  def class_to_np(c):
-    class dict2obj():
-      def __init__(self, d):
-        for k,v in d.items(): setattr(self, k, to_np(v))
-    return dict2obj(c.__dict__)
-
-  b_factors = prediction_result['plddt'][:,None] * prediction_result['structure_module']['final_atom_mask']  
-  dist_bins = jax.numpy.append(0,prediction_result["distogram"]["bin_edges"])
-  dist_mtx = dist_bins[prediction_result["distogram"]["logits"].argmax(-1)]
-  contact_mtx = jax.nn.softmax(prediction_result["distogram"]["logits"])[:,:,dist_bins < 8].sum(-1)
-  p = protein.from_prediction(processed_feature_dict, prediction_result, b_factors=b_factors)  
-  out = {"unrelaxed_protein": class_to_np(p),
-         "plddt": to_np(prediction_result['plddt']),
-         "pLDDT": to_np(prediction_result['plddt'].mean()),
-         "dists": to_np(dist_mtx),
-         "adj": to_np(contact_mtx)}
-  if "ptm" in prediction_result:
-    out["pae"] = to_np(prediction_result['predicted_aligned_error'])
-    out["pTMscore"] = to_np(prediction_result['ptm'])
-  return out
-
-def do_report(outs, key, Ls=None, show_images=True, output_dir=None):
-  o = outs[key]
-  line = f"{key} recycles:{o['recycles']} tol:{o['tol']:.2f} pLDDT:{o['pLDDT']:.2f}"
-
-  if 'pTMscore' in o:
-    line += f" pTMscore:{o['pTMscore']:.2f}"
-
-  print(line)
-
-  if show_images:
-    fig = cf.plot_protein(o['unrelaxed_protein'], Ls=Ls, dpi=100)
-    plt.show()  
-
-  if output_dir is not None:
-    tmp_pdb_path = os.path.join(output_dir,f'unranked_{key}_unrelaxed.pdb')
-    pdb_lines = protein.to_pdb(o['unrelaxed_protein'])
-    with open(tmp_pdb_path, 'w') as f: f.write(pdb_lines)
-
 def prep_feats(I, use_turbo=True, clean=False):
+
+  def _placeholder_template_feats(num_templates_, num_res_):
+    return {
+        'template_aatype': np.zeros([num_templates_, num_res_, 22], np.float32),
+        'template_all_atom_masks': np.zeros([num_templates_, num_res_, 37, 3], np.float32),
+        'template_all_atom_positions': np.zeros([num_templates_, num_res_, 37], np.float32),
+        'template_domain_names': np.zeros([num_templates_], np.float32),
+        'template_sum_probs': np.zeros([num_templates_], np.float32),
+    }
 
   # delete old files
   if clean:
@@ -518,13 +455,71 @@ def prep_model_runner(opt, model_name="model_5", use_turbo=True, old_runner=None
     return {"model":model.RunModel(cfg, params, is_training=opt["is_training"]), "opt":opt}
   else:
     return old_runner
-
+  
 def run_alphafold(feature_dict, opt, runner=None, num_models=5, num_samples=1, subsample_msa=True,
                   use_turbo=True, Ls=None, show_images=True, output_dir=None, params_loc='./alphafold/data'):
   
+  def do_subsample_msa(F, random_seed=0):
+    '''subsample msa to avoid running out of memory'''
+    N = len(F["msa"])
+    L = len(F["residue_index"])
+    N_ = int(3E7/L)
+    if N > N_:
+      print(f"whhhaaa... too many sequences ({N}) subsampling to {N_}")
+      np.random.seed(random_seed)
+      idx = np.append(0,np.random.permutation(np.arange(1,N)))[:N_]
+      F_ = {}
+      F_["msa"] = F["msa"][idx]
+      F_["deletion_matrix_int"] = F["deletion_matrix_int"][idx]
+      F_["num_alignments"] = np.full_like(F["num_alignments"],N_)
+      for k in F.keys():
+        if k not in F_: F_[k] = F[k]      
+      return F_
+    else:
+      return F
+
+  def parse_results(prediction_result, processed_feature_dict):
+    '''parse results and convert to numpy arrays'''
+    to_np = lambda a: np.asarray(a)
+    def class_to_np(c):
+      class dict2obj():
+        def __init__(self, d):
+          for k,v in d.items(): setattr(self, k, to_np(v))
+      return dict2obj(c.__dict__)
+
+    b_factors = prediction_result['plddt'][:,None] * prediction_result['structure_module']['final_atom_mask']  
+    dist_bins = jax.numpy.append(0,prediction_result["distogram"]["bin_edges"])
+    dist_mtx = dist_bins[prediction_result["distogram"]["logits"].argmax(-1)]
+    contact_mtx = jax.nn.softmax(prediction_result["distogram"]["logits"])[:,:,dist_bins < 8].sum(-1)
+    p = protein.from_prediction(processed_feature_dict, prediction_result, b_factors=b_factors)  
+    out = {"unrelaxed_protein": class_to_np(p),
+           "plddt": to_np(prediction_result['plddt']),
+           "pLDDT": to_np(prediction_result['plddt'].mean()),
+           "dists": to_np(dist_mtx),
+           "adj": to_np(contact_mtx)}
+    if "ptm" in prediction_result:
+      out["pae"] = to_np(prediction_result['predicted_aligned_error'])
+      out["pTMscore"] = to_np(prediction_result['ptm'])
+    return out
+
   model_names = ['model_1', 'model_2', 'model_3', 'model_4', 'model_5'][:num_models]
   total = len(model_names) * num_samples
   outs = {}
+
+  def do_report(key):
+    o = outs[key]
+    line = f"{key} recycles:{o['recycles']} tol:{o['tol']:.2f} pLDDT:{o['pLDDT']:.2f}"
+    if 'pTMscore' in o:
+      line += f" pTMscore:{o['pTMscore']:.2f}"
+    print(line)
+    if show_images:
+      fig = cf.plot_protein(o['unrelaxed_protein'], Ls=Ls, dpi=100)
+      plt.show()  
+    if output_dir is not None:
+      tmp_pdb_path = os.path.join(output_dir,f'unranked_{key}_unrelaxed.pdb')
+      pdb_lines = protein.to_pdb(o['unrelaxed_protein'])
+      with open(tmp_pdb_path, 'w') as f: f.write(pdb_lines)
+  
   with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
     if use_turbo:
       
@@ -554,8 +549,8 @@ def run_alphafold(feature_dict, opt, runner=None, num_models=5, num_samples=1, s
           outs[key].update({"recycles":r, "tol":t})
 
           # report
+          do_report(key)
           pbar.update(n=1)
-          do_report(outs, key, Ls, show_images, output_dir)
 
     else:  
       # go through each model
@@ -574,7 +569,7 @@ def run_alphafold(feature_dict, opt, runner=None, num_models=5, num_samples=1, s
           outs[key] = parse_results(prediction_result, processed_feature_dict)
           outs[key].update({"recycles":r, "tol":t})
 
-          # report
+          # report          
+          do_report(key)
           pbar.update(n=1)
-          do_report(outs, key, Ls, show_images, output_dir)
   return outs
