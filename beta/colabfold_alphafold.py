@@ -342,7 +342,7 @@ def prep_msa(I, msa_method="mmseqs2", add_custom_msa=False, msa_format="fas",
               for line in open(f"{TMP_DIR}/tmp.id90.fas","r"):
                 if line.startswith(">"): ok.append(int(line[1:]))
 
-                  if verbose:      
+              if verbose:      
                 print(f"found {len(_seq_a)} pairs ({len(ok)} after filtering)")
 
               if len(_seq_a) > 0:
