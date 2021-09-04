@@ -211,7 +211,7 @@ def prep_msa(I, msa_method="mmseqs2", add_custom_msa=False, msa_format="fas",
 
   if add_custom_msa:
     print(f"upload custom msa in '{msa_format}' format")
-    if IS_COLAB:
+    if IN_COLAB:
       msa_dict = files.upload()      
       lines = msa_dict[list(msa_dict.keys())[0]].decode()
 
@@ -233,7 +233,7 @@ def prep_msa(I, msa_method="mmseqs2", add_custom_msa=False, msa_format="fas",
       raise ValueError("upload is currently only supported in colab :(")
 
   if msa_method == "precomputed":
-    if IS_COLAB:
+    if IN_COLAB:
       print("upload precomputed pickled msa from previous run")
       uploaded_dict = files.upload()
       uploaded_filename = list(uploaded_dict.keys())[0]
