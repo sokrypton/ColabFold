@@ -36,7 +36,7 @@ TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaini
 # prep_inputs
 #######################################################################################################################################
 
-def prep_inputs(sequence, jobname, homooligomer="1", clean=False, verbose=True):
+def prep_inputs(sequence, jobname="test", homooligomer="1", output_dir=None, clean=False, verbose=True):
   # process inputs
   sequence = re.sub("[^A-Z:/]", "", sequence.upper())
   sequence = re.sub(":+",":",sequence)
@@ -76,9 +76,12 @@ def prep_inputs(sequence, jobname, homooligomer="1", clean=False, verbose=True):
   I["lengths"] = [len(seq) for seq in I["seqs"]]
 
   # prediction directory
-  I["output_dir"] = 'prediction_' + jobname + '_' + cf.get_hash(I["full_sequence"])[:5]
+  if output_dir is None:
+    I["output_dir"] = 'prediction_' + jobname + '_' + cf.get_hash(I["full_sequence"])[:5]
+  else:
+    I["output_dir"] = output_dir
   os.makedirs(I["output_dir"], exist_ok=True)
-
+    
   # delete existing files in working directory
   if clean:
     for f in os.listdir(I["output_dir"]):
@@ -91,7 +94,7 @@ def prep_inputs(sequence, jobname, homooligomer="1", clean=False, verbose=True):
   if verbose:
     print(f"homooligomer: {I['homooligomer']}")
     print(f"total_length: {len(I['full_sequence'])}")
-    print(f"working_directory: {I['output_dir']}")
+    print(f"output_dir: {I['output_dir']}")
     
   return I
 
@@ -508,7 +511,7 @@ def prep_filter(I, trim="", trim_inverse=False, cov=0, qid=0, verbose=True):
 # prep features
 #######################################################################################################################################
 
-def prep_feats(I, use_turbo=True, clean=False):
+def prep_feats(I, clean=False):
 
   def _placeholder_template_feats(num_templates_, num_res_):
     return {
@@ -523,6 +526,11 @@ def prep_feats(I, use_turbo=True, clean=False):
   if clean:
     for f in os.listdir(I["output_dir"]):
       if "rank_" in f: os.remove(os.path.join(I["output_dir"], f))
+        
+  if len(I["msas"]) == 0:
+    print("WARNING: no MSA found, switching to 'single_sequence' mode")
+    I["msas"].append([I["sequence"]])
+    I["deletion_matrices"].append([[0]*len(I["sequence"])])
 
   # homooligomerize
   lengths = [len(seq) for seq in I["seqs"]]
@@ -533,8 +541,7 @@ def prep_feats(I, use_turbo=True, clean=False):
   feature_dict = {}
   feature_dict.update(pipeline.make_sequence_features(I["full_sequence"], 'test', num_res))
   feature_dict.update(pipeline.make_msa_features(msas_mod, deletion_matrices=deletion_matrices_mod))
-  if not use_turbo:
-    feature_dict.update(_placeholder_template_feats(0, num_res))
+  feature_dict.update(_placeholder_template_feats(0, num_res))
 
   # set chainbreaks
   Ls = []
@@ -545,7 +552,9 @@ def prep_feats(I, use_turbo=True, clean=False):
     Ls_plot += [len(seq)] * h
 
   feature_dict['residue_index'] = cf.chain_break(feature_dict['residue_index'], Ls)
-  return feature_dict, Ls_plot
+  feature_dict['Ls'] = Ls_plot
+  feature_dict['output_dir'] = I["output_dir"]
+  return feature_dict
 
 #######################################################################################################################################
 # run alphafold
@@ -558,13 +567,13 @@ def clear_mem(device=None):
     for buf in backend.live_buffers():
       buf.delete()
 
-def prep_model_runner(opt, model_name="model_5", use_turbo=True, old_runner=None, params_loc='./alphafold/data'):
+def prep_model_runner(opt, model_name="model_5", old_runner=None, params_loc='./alphafold/data'):
   if old_runner is None or old_runner["opt"] != opt:
     clear_mem()
     name = f"{model_name}_ptm" if opt["use_ptm"] else model_name
     cfg = config.model_config(name)
 
-    if use_turbo:
+    if opt["use_turbo"]:
       msa_clusters = min(opt["N"], opt["max_msa_clusters"])
       cfg.data.eval.max_msa_clusters = msa_clusters
       cfg.data.common.max_extra_msa = max(min(opt["N"] - msa_clusters, opt["max_extra_msa"]),1)
@@ -579,8 +588,8 @@ def prep_model_runner(opt, model_name="model_5", use_turbo=True, old_runner=None
   else:
     return old_runner
   
-def run_alphafold(feature_dict, opt, runner=None, num_models=5, num_samples=1, subsample_msa=True,
-                  use_turbo=True, Ls=None, show_images=True, output_dir=None, params_loc='./alphafold/data'):
+def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples=1, subsample_msa=True,
+                  rank_by="pLDDT", show_images=True, params_loc='./alphafold/data'):
   
   def do_subsample_msa(F, random_seed=0):
     '''subsample msa to avoid running out of memory'''
@@ -601,8 +610,9 @@ def run_alphafold(feature_dict, opt, runner=None, num_models=5, num_samples=1, s
     else:
       return F
 
-  def parse_results(prediction_result, processed_feature_dict):
+  def parse_results(prediction_result, processed_feature_dict, r, t):
     '''parse results and convert to numpy arrays'''
+    
     to_np = lambda a: np.asarray(a)
     def class_to_np(c):
       class dict2obj():
@@ -619,12 +629,22 @@ def run_alphafold(feature_dict, opt, runner=None, num_models=5, num_samples=1, s
            "plddt": to_np(prediction_result['plddt']),
            "pLDDT": to_np(prediction_result['plddt'].mean()),
            "dists": to_np(dist_mtx),
-           "adj": to_np(contact_mtx)}
+           "adj": to_np(contact_mtx),
+           "recycles":to_np(r),
+           "tol":to_np(t)}
     if "ptm" in prediction_result:
       out["pae"] = to_np(prediction_result['predicted_aligned_error'])
-      out["pTMscore"] = to_np(prediction_result['ptm'])
+      out["pTMscore"] = to_np(prediction_result['ptm'])      
     return out
 
+  if opt is None:
+    opt = {"N":len(feature_dict["msa"]),
+           "L":len(feature_dict["residue_index"]),
+           "use_ptm":True, "use_turbo":True,
+           "max_recycles":3,"tol":0,"num_ensemble":1,
+           "max_msa_clusters":512,"max_extra_msa":1024,
+           "is_training":False}
+    
   model_names = ['model_1', 'model_2', 'model_3', 'model_4', 'model_5'][:num_models]
   total = len(model_names) * num_samples
   outs = {}
@@ -636,16 +656,14 @@ def run_alphafold(feature_dict, opt, runner=None, num_models=5, num_samples=1, s
       line += f" pTMscore:{o['pTMscore']:.2f}"
     print(line)
     if show_images:
-      fig = cf.plot_protein(o['unrelaxed_protein'], Ls=Ls, dpi=100)
+      fig = cf.plot_protein(o['unrelaxed_protein'], Ls=feature_dict["Ls"], dpi=100)
       plt.show()  
-    if output_dir is not None:
-      tmp_pdb_path = os.path.join(output_dir,f'unranked_{key}_unrelaxed.pdb')
-      pdb_lines = protein.to_pdb(o['unrelaxed_protein'])
-      with open(tmp_pdb_path, 'w') as f: f.write(pdb_lines)
+    tmp_pdb_path = os.path.join(feature_dict["output_dir"],f'unranked_{key}_unrelaxed.pdb')
+    pdb_lines = protein.to_pdb(o['unrelaxed_protein'])
+    with open(tmp_pdb_path, 'w') as f: f.write(pdb_lines)
   
   with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
-    if use_turbo:
-      
+    if opt["use_turbo"]:
       if runner is None:
         runner = prep_model_runner(opt)
       
@@ -668,8 +686,7 @@ def run_alphafold(feature_dict, opt, runner=None, num_models=5, num_samples=1, s
 
           # predict
           prediction_result, (r, t) = runner["model"].predict(processed_feature_dict, random_seed=seed)
-          outs[key] = parse_results(prediction_result, processed_feature_dict)
-          outs[key].update({"recycles":r, "tol":t})
+          outs[key] = parse_results(prediction_result, processed_feature_dict, r=r, t=t)
 
           # report
           do_report(key)
@@ -689,10 +706,33 @@ def run_alphafold(feature_dict, opt, runner=None, num_models=5, num_samples=1, s
           
           # predict
           prediction_result, (r, t) = model_runner.predict(processed_feature_dict, random_seed=seed)
-          outs[key] = parse_results(prediction_result, processed_feature_dict)
-          outs[key].update({"recycles":r, "tol":t})
+          outs[key] = parse_results(prediction_result, processed_feature_dict, r=r, t=t)
 
           # report          
           do_report(key)
           pbar.update(n=1)
-  return outs
+  
+  # Find the best model according to the mean pLDDT.
+  model_rank = list(outs.keys())
+  model_rank = [model_rank[i] for i in np.argsort([outs[x][rank_by] for x in model_rank])[::-1]]
+
+  # Write out the prediction
+  for n,key in enumerate(model_rank):
+    prefix = f"rank_{n+1}_{key}" 
+    pred_output_path = os.path.join(feature_dict["output_dir"],f'{prefix}_unrelaxed.pdb')
+    fig = cf.plot_protein(outs[key]["unrelaxed_protein"], Ls=feature_dict["Ls"], dpi=200)
+    plt.savefig(os.path.join(feature_dict["output_dir"],f'{prefix}.png'), bbox_inches = 'tight')
+    plt.close(fig)
+    pdb_lines = protein.to_pdb(outs[key]["unrelaxed_protein"])
+    with open(pred_output_path, 'w') as f:
+      f.write(pdb_lines)
+    
+    tmp_pdb_path = os.path.join(feature_dict["output_dir"],f'unranked_{key}_unrelaxed.pdb')
+    os.remove(tmp_pdb_path)
+
+  ############################################################
+  print(f"model rank based on {rank_by}")
+  for n,key in enumerate(model_rank):
+    print(f"rank_{n+1}_{key} {rank_by}:{outs[key][rank_by]:.2f}")
+
+  return outs, model_rank
