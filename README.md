@@ -59,6 +59,7 @@
 
 - [Run ColabFold (AlphaFold2_advanced) on your local computer](https://github.com/YoshitakaMo/localcolabfold) by Yoshitaka Moriwaki
 - [Colab for protein structure predictions for Discoba species](https://github.com/zephyris/discoba_alphafold) by Richard John Wheeler
+- [Cloud-based molecular simulations for everyone](https://github.com/pablo-arantes/Making-it-rain) by Pablo R. Arantes, Marcelo D. Polêto, Conrado Pedebos and Rodrigo Ligabue-Braun
 - [getmoonbear is a webserver to predict protein structures](https://www.getmoonbear.com/AlphaFold2) by Stephanie Zhang and Neil Deshmukh
 
 ### Acknowledgments
