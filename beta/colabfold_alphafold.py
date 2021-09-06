@@ -206,7 +206,9 @@ def run_jackhmmer(sequence, prefix, jackhmmer_binary_path='jackhmmer'):
 
 def prep_msa(I, msa_method="mmseqs2", add_custom_msa=False, msa_format="fas",
              pair_mode="unpaired", pair_cov=50, pair_qid=20,
-             hhfilter_loc="hhfilter", reformat_loc="reformat.pl", TMP_DIR="tmp", verbose=True):
+             hhfilter_loc="hhfilter", reformat_loc="reformat.pl", TMP_DIR="tmp",
+             mmseqs_host_url="https://a3m.mmseqs.com",
+             verbose=True):
 
   # clear previous inputs
   I["msas"] = []
@@ -268,7 +270,7 @@ def prep_msa(I, msa_method="mmseqs2", add_custom_msa=False, msa_format="fas",
         prefix = cf.get_hash(I["sequence"])
         prefix = os.path.join(TMP_DIR,prefix)
         print(f"running mmseqs2")
-        A3M_LINES = cf.run_mmseqs2(I["seqs"], prefix, filter=True)
+        A3M_LINES = cf.run_mmseqs2(I["seqs"], prefix, use_filter=True, host_url=mmseqs_host_url)
 
       for n, seq in enumerate(I["seqs"]):
         # tmp directory
@@ -304,7 +306,7 @@ def prep_msa(I, msa_method="mmseqs2", add_custom_msa=False, msa_format="fas",
         prefix = cf.get_hash(I["sequence"])
         prefix = os.path.join(TMP_DIR,prefix)
         print(f"running mmseqs2_noenv_nofilter on all seqs")
-        A3M_LINES = cf.run_mmseqs2(I["seqs"], prefix, use_env=False, use_filter=False)
+        A3M_LINES = cf.run_mmseqs2(I["seqs"], prefix, use_env=False, use_filter=False, host_url=mmseqs_host_url)
 
       _data = []
       for a in range(len(I["seqs"])):
