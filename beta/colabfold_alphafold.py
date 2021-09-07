@@ -690,9 +690,16 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
           prediction_result, (r, t) = runner["model"].predict(processed_feature_dict, random_seed=seed)
           outs[key] = parse_results(prediction_result, processed_feature_dict, r=r, t=t)
 
+          # cleanup
+          del prediction_result, params, r, t
+
           # report
           do_report(key)
           pbar.update(n=1)
+
+        # cleanup
+        del processed_feature_dict
+        if subsample_msa: del feat
 
     else:  
       # go through each model
@@ -710,9 +717,15 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
           prediction_result, (r, t) = model_runner.predict(processed_feature_dict, random_seed=seed)
           outs[key] = parse_results(prediction_result, processed_feature_dict, r=r, t=t)
 
+          # cleanup
+          del processed_feature_dict, prediction_result, r, t
+
           # report          
           do_report(key)
           pbar.update(n=1)
+        
+        # cleanup
+        del model_runner
   
   # Find the best model according to the mean pLDDT.
   model_rank = list(outs.keys())
