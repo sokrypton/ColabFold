@@ -207,45 +207,51 @@ def run_jackhmmer(sequence, prefix, jackhmmer_binary_path='jackhmmer'):
 def prep_msa(I, msa_method="mmseqs2", add_custom_msa=False, msa_format="fas",
              pair_mode="unpaired", pair_cov=50, pair_qid=20,
              hhfilter_loc="hhfilter", reformat_loc="reformat.pl", TMP_DIR="tmp",
+             custom_msa=None, precomputed=None,
              mmseqs_host_url="https://a3m.mmseqs.com",
              verbose=True):
+  
+  # make temp directory
+  os.makedirs(TMP_DIR, exist_ok=True)
 
   # clear previous inputs
   I["msas"] = []
   I["deletion_matrices"] = []
 
   if add_custom_msa:
-    print(f"upload custom msa in '{msa_format}' format")
     if IN_COLAB:
+      print(f"upload custom msa in '{msa_format}' format")
       msa_dict = files.upload()      
       lines = msa_dict[list(msa_dict.keys())[0]].decode()
-
-      # convert to a3m
-      input_file = os.path.join(TMP_DIR,f"upload.{msa_format}")
-      output_file = os.path.join(TMP_DIR,f"upload.a3m")
+      input_file = os.path.join(I["output_dir"],f"upload.{msa_format}")
       with open(input_file,"w") as tmp_upload:
         tmp_upload.write(lines)
+    else:
+      input_file = custom_msa
+    if input_file is None or not os.path.isfile(input_file):
+      raise ValueError("ERROR: `custom_msa` undefined")      
+    else:
+      # convert to a3m
+      output_file = os.path.join(I["output_dir"],f"upload.a3m")
       os.system(f"{reformat_loc} {msa_format} a3m {input_file} {output_file}")
-      a3m_lines = open(output_file,"r").read()
 
       # parse
-      msa, mtx = parsers.parse_a3m(a3m_lines)
+      msa, mtx = parsers.parse_a3m(open(output_file,"r").read())
       I["msas"].append(msa)
       I["deletion_matrices"].append(mtx)
       if len(I["msas"][0][0]) != len(I["sequence"]):
         raise ValueError("ERROR: the length of msa does not match input sequence")
-    else:
-      raise ValueError("upload is currently only supported in colab :(")
 
   if msa_method == "precomputed":
     if IN_COLAB:
       print("upload precomputed pickled msa from previous run")
       uploaded_dict = files.upload()
       uploaded_filename = list(uploaded_dict.keys())[0]
-      uploaded_content = pickle.loads(uploaded_dict[uploaded_filename])
-      I.update(uploaded_content)
+      I.update(pickle.loads(uploaded_dict[uploaded_filename]))
+    elif precomputed is None:
+      raise ValueError("ERROR: `precomputed` undefined")
     else:
-      raise ValueError("upload is currently only supported in colab :(")
+      I.update(pickle.load(open(precomputed,"rb")))
 
   elif msa_method == "single_sequence":
     if len(I["msas"]) == 0:
