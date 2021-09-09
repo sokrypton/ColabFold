@@ -51,6 +51,9 @@
   - For GPU: `Tesla T4` or `Tesla P100` with ~16G the max length is ~1400
   - For GPU: `Tesla K80` with ~12G the max length is ~1000
   - To check what GPU you got, open a new code cell and type `!nvidia-smi`
+- Is it okay to use the MMseqs2 MSA server (`cf.run_mmseqs2`) on a local computer?
+  - You can access the server from a local computer if you queries are serial from a single IP. Please do not use multiple computers to query the server.
+
 
 ### Tutorials & Presentations
 - ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI). 
