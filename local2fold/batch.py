@@ -6,7 +6,7 @@ import warnings
 from argparse import ArgumentParser
 from pathlib import Path
 from string import ascii_uppercase
-from typing import Any, Mapping, Dict, Tuple, List
+from typing import Any, Mapping, Dict, Tuple, List, Union
 
 import haiku
 import matplotlib.pyplot as plt
@@ -338,8 +338,8 @@ def run_model_cached(input_fix: dict, model_runner: model.RunModel, prefix: str)
 
 
 def run(
-    input_dir: Path,
-    result_dir: Path,
+    input_dir: Union[str, Path],
+    result_dir: Union[str, Path],
     use_templates: bool,
     use_amber: bool,
     use_env: bool,
@@ -353,6 +353,8 @@ def run(
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
     tf.get_logger().setLevel("ERROR")
 
+    input_dir = Path(input_dir)
+    result_dir = Path(result_dir)
     result_dir.mkdir(exist_ok=True)
     # TODO: What's going on with MSA mode?
     write_bibtex(True, use_env, use_templates, use_amber, result_dir)
@@ -464,10 +466,9 @@ def load_models_and_params(
     model_runner_1 = None
     model_runner_3 = None
     for model_number in range(1, num_models + 1):
-        model_name = f"model_{model_number}"
-        if any(str(m) in model_name for m in [1, 2]):
+        if model_number in [1, 2]:
             if not model_runner_1:
-                model_config = config.model_config(model_name + "_ptm")
+                model_config = config.model_config("model_1_ptm")
                 model_config.data.eval.num_ensemble = 1
                 model_runner_1 = model.RunModel(
                     model_config,
@@ -475,10 +476,10 @@ def load_models_and_params(
                 )
             model_runner = model_runner_1
         else:
-            assert any(str(m) in model_name for m in [3, 4, 5])
+            assert model_number in [3, 4, 5]
 
             if not model_runner_3:
-                model_config = config.model_config(model_name + "_ptm")
+                model_config = config.model_config("model_3_ptm")
                 model_config.data.eval.num_ensemble = 1
                 model_runner_3 = model.RunModel(
                     model_config,
@@ -486,6 +487,7 @@ def load_models_and_params(
                 )
             model_runner = model_runner_3
 
+        model_name = f"model_{model_number}"
         params = data.get_model_haiku_params(
             model_name=model_name + "_ptm", data_dir="."
         )
@@ -522,9 +524,12 @@ def main():
     )
     args = parser.parse_args()
 
+    assert args.msa_mode == "MMseqs2 (UniRef+Environmental)", "Unsupported"
+    assert args.homooligomer == 1, "Unsupported"
+
     run(
-        Path(args.input_dir),
-        Path(args.result_dir),
+        args.input_dir,
+        args.result_dir,
         args.use_templates,
         args.use_amber,
         args.use_env,

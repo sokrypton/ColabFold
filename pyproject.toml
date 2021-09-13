@@ -17,8 +17,12 @@ tqdm = "^4.62.2"
 tensorflow = "^2.6.0"
 
 [tool.poetry.dev-dependencies]
+# The latest version conflicts with tensorflow over typing-extensions
 black = "v21.7.b0"
 jupyter = "^1.0.0"
+
+[tool.poetry.scripts]
+local2fold_batch = 'local2fold.batch:main'
 
 [build-system]
 requires = ["poetry-core>=1.0.0,<2.0.0"]
