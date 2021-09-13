@@ -8,11 +8,10 @@ import tqdm
 logger = logging.getLogger(__name__)
 
 
-def download_alphafold_params(target=Path("params")):
+def download_alphafold_params(target: Path = Path("params")):
     success_marker = target.joinpath("download_finished.txt")
-
     if success_marker.is_file():
-        logger.info("")
+        return
 
     target.mkdir(exist_ok=True)
     url = "https://storage.googleapis.com/alphafold/alphafold_params_2021-07-14.tar"
