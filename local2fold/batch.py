@@ -25,6 +25,7 @@ from alphafold.model.tf import shape_placeholders
 
 from local2fold.citations import write_bibtex
 from local2fold.colabfold import run_mmseqs2
+from local2fold.download import download_alphafold_params
 from local2fold.utils import TqdmHandler
 
 NUM_RES = shape_placeholders.NUM_RES
@@ -549,4 +550,5 @@ def main():
 
 
 if __name__ == "__main__":
+    download_alphafold_params()
     main()
