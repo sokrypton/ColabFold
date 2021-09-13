@@ -9,6 +9,7 @@ from alphafold.data.tools import hhsearch
 from matplotlib import pyplot as plt
 
 from local2fold.colabfold import run_mmseqs2
+from local2fold.pdb import set_bfactor
 
 
 def mk_mock_template(query_sequence):
@@ -59,19 +60,6 @@ def mk_template(query_sequence, a3m_lines, template_paths):
         hits=hhsearch_hits,
     )
     return templates_result.features
-
-
-def set_bfactor(pdb_filename, bfac, idx_res, chains):
-    I = open(pdb_filename, "r").readlines()
-    O = open(pdb_filename, "w")
-    for line in I:
-        if line[0:6] == "ATOM  ":
-            seq_id = int(line[22:26].strip()) - 1
-            seq_id = np.where(idx_res == seq_id)[0][0]
-            O.write(
-                f"{line[:21]}{chains[seq_id]}{line[22:60]}{bfac[seq_id]:6.2f}{line[66:]}"
-            )
-    O.close()
 
 
 def predict_structure(
