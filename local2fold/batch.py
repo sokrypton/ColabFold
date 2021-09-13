@@ -258,7 +258,9 @@ def predict_structure(
         )  # template_mask (4, 4) second value
 
         if CACHE_COMPUTATION:
-            prediction_result = run_model_cached(input_fix, model_runner, prefix)
+            prediction_result = run_model_cached(
+                input_fix, model_name, model_runner, prefix
+            )
         else:
             prediction_result = model_runner.predict(input_fix)
 
@@ -312,7 +314,9 @@ def predict_structure(
     return out
 
 
-def run_model_cached(input_fix: dict, model_runner: model.RunModel, prefix: str):
+def run_model_cached(
+    input_fix: dict, model_name: str, model_runner: model.RunModel, prefix: str
+):
     """Caching the expensive compilation + prediction step - for development only
 
     We store both input and output to ensure that the input is actually the same that we cached
@@ -320,19 +324,24 @@ def run_model_cached(input_fix: dict, model_runner: model.RunModel, prefix: str)
     pickle_path = Path("pickle").joinpath(prefix)
     if pickle_path.is_dir():
         logger.info("Using cached computation")
-        with pickle_path.joinpath("input_fix.pkl").open("rb") as fp:
+        with pickle_path.joinpath(f"{model_name}_input_fix.pkl").open("rb") as fp:
             input_fix2 = pickle.load(fp)
+            # Make sure we're actually predicting the same input again
             numpy.testing.assert_equal(input_fix, input_fix2)
-        with pickle_path.joinpath("prediction_result.pkl").open("rb") as fp:
+        with pickle_path.joinpath(f"{model_name}_prediction_result.pkl").open(
+            "rb"
+        ) as fp:
             prediction_result = pickle.load(fp)
     else:
         # The actual operation that we cache
         prediction_result = model_runner.predict(input_fix)
 
         pickle_path.mkdir(parents=True)
-        with pickle_path.joinpath("input_fix.pkl").open("wb") as fp:
+        with pickle_path.joinpath(f"{model_name}_input_fix.pkl").open("wb") as fp:
             pickle.dump(input_fix, fp)
-        with pickle_path.joinpath("prediction_result.pkl").open("wb") as fp:
+        with pickle_path.joinpath(f"{model_name}_prediction_result.pkl").open(
+            "wb"
+        ) as fp:
             pickle.dump(prediction_result, fp)
     return prediction_result
 
