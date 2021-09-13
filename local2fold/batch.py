@@ -336,7 +336,7 @@ def run_model_cached(
         # The actual operation that we cache
         prediction_result = model_runner.predict(input_fix)
 
-        pickle_path.mkdir(parents=True)
+        pickle_path.mkdir(parents=True, exist_ok=True)
         with pickle_path.joinpath(f"{model_name}_input_fix.pkl").open("wb") as fp:
             pickle.dump(input_fix, fp)
         with pickle_path.joinpath(f"{model_name}_prediction_result.pkl").open(
