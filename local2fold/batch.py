@@ -385,7 +385,6 @@ def run(
             and result_dir.joinpath(jobname).with_suffix(".result.zip").is_file()
         ):
             continue
-        print(query_sequence)
         if use_templates:
             try:
                 a3m_lines, template_paths = run_mmseqs2(
