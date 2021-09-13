@@ -329,7 +329,7 @@ def run_model_cached(input_fix: dict, model_runner: model.RunModel, prefix: str)
         # The actual operation that we cache
         prediction_result = model_runner.predict(input_fix)
 
-        pickle_path.mkdir()
+        pickle_path.mkdir(parents=True)
         with pickle_path.joinpath("input_fix.pkl").open("wb") as fp:
             pickle.dump(input_fix, fp)
         with pickle_path.joinpath("prediction_result.pkl").open("wb") as fp:
@@ -409,6 +409,7 @@ def run(
                 a3m_lines = "".join(input_dir.joinpath(a3m_file).read_text())
             else:
                 try:
+                    print(query_sequence)
                     a3m_lines = cf.run_mmseqs2(
                         query_sequence, str(result_dir.joinpath(jobname)), use_env
                     )
