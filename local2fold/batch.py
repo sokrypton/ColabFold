@@ -23,8 +23,8 @@ from alphafold.model import data
 from alphafold.model import model
 from alphafold.model.tf import shape_placeholders
 
-import colabfold as cf
 from local2fold.citations import write_bibtex
+from local2fold.colabfold import run_mmseqs2
 from local2fold.utils import TqdmHandler
 
 NUM_RES = shape_placeholders.NUM_RES
@@ -388,7 +388,7 @@ def run(
         print(query_sequence)
         if use_templates:
             try:
-                a3m_lines, template_paths = cf.run_mmseqs2(
+                a3m_lines, template_paths = run_mmseqs2(
                     query_sequence,
                     str(result_dir.joinpath(jobname)),
                     use_env,
@@ -410,7 +410,7 @@ def run(
                 a3m_lines = "".join(input_dir.joinpath(a3m_file).read_text())
             else:
                 try:
-                    a3m_lines = cf.run_mmseqs2(
+                    a3m_lines = run_mmseqs2(
                         query_sequence, str(result_dir.joinpath(jobname)), use_env
                     )
                 except Exception as e:
