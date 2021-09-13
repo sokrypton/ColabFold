@@ -6,32 +6,26 @@ import warnings
 from argparse import ArgumentParser
 from pathlib import Path
 from string import ascii_uppercase
-from typing import Any, Mapping, Dict, Tuple, List, Union
+from typing import Any, Dict, Tuple, List, Union, Mapping
 
 import haiku
-import matplotlib.pyplot as plt
 import numpy
 import numpy as np
 import tensorflow as tf
 from absl import logging as absl_logging
 from alphafold.common import protein
-from alphafold.data import pipeline
-from alphafold.data import templates
+from alphafold.data import pipeline, templates
 from alphafold.data.tools import hhsearch
-from alphafold.model import config
-from alphafold.model import data
 from alphafold.model import model
-from alphafold.model.tf import shape_placeholders
 
 from local2fold.citations import write_bibtex
 from local2fold.colabfold import run_mmseqs2
 from local2fold.download import download_alphafold_params
+from local2fold.models import load_models_and_params
+from local2fold.msa import make_fixed_size
+from local2fold.pdb import set_bfactor
+from local2fold.plot import plot_predicted_alignment_error, plot_lddt
 from local2fold.utils import TqdmHandler
-
-NUM_RES = shape_placeholders.NUM_RES
-NUM_MSA_SEQ = shape_placeholders.NUM_MSA_SEQ
-NUM_EXTRA_SEQ = shape_placeholders.NUM_EXTRA_SEQ
-NUM_TEMPLATES = shape_placeholders.NUM_TEMPLATES
 
 CACHE_COMPUTATION = True
 
@@ -92,123 +86,6 @@ def mk_template(
         hits=hhsearch_hits,
     )
     return templates_result.features
-
-
-def make_fixed_size(
-    protein: Mapping[str, Any],
-    shape_schema,
-    msa_cluster_size: int,
-    extra_msa_size: int,
-    num_res: int,
-    num_templates: int = 0,
-):
-    """Guess at the MSA and sequence dimensions to make fixed size."""
-
-    pad_size_map = {
-        NUM_RES: num_res,
-        NUM_MSA_SEQ: msa_cluster_size,
-        NUM_EXTRA_SEQ: extra_msa_size,
-        NUM_TEMPLATES: num_templates,
-    }
-
-    for k, v in protein.items():
-        # Don't transfer this to the accelerator.
-        if k == "extra_cluster_assignment":
-            continue
-        shape = list(v.shape)
-
-        schema = shape_schema[k]
-
-        assert len(shape) == len(schema), (
-            f"Rank mismatch between shape and shape schema for {k}: "
-            f"{shape} vs {schema}"
-        )
-        pad_size = [pad_size_map.get(s2, None) or s1 for (s1, s2) in zip(shape, schema)]
-        padding = [(0, p - tf.shape(v)[i]) for i, p in enumerate(pad_size)]
-
-        if padding:
-            protein[k] = tf.pad(v, padding, name=f"pad_to_fixed_{k}")
-            protein[k].set_shape(pad_size)
-    return {k: np.asarray(v) for k, v in protein.items()}
-
-
-def set_bfactor(pdb_filename: str, bfac, idx_res, chains):
-    in_file = open(pdb_filename, "r").readlines()
-    out_file = open(pdb_filename, "w")
-    for line in in_file:
-        if line[0:6] == "ATOM  ":
-            seq_id = int(line[22:26].strip()) - 1
-            seq_id = np.where(idx_res == seq_id)[0][0]
-            out_file.write(
-                f"{line[:21]}{chains[seq_id]}{line[22:60]}{bfac[seq_id]:6.2f}{line[66:]}"
-            )
-    out_file.close()
-
-
-def plot_lddt(
-    homooligomer: int,
-    jobname: str,
-    msa,
-    outs: dict,
-    query_sequence: str,
-    result_dir: Path,
-):
-    # gather MSA info
-    deduped_full_msa = list(dict.fromkeys(msa))
-    msa_arr = np.array([list(seq) for seq in deduped_full_msa])
-    seqid = (np.array(list(query_sequence)) == msa_arr).mean(-1)
-    seqid_sort = seqid.argsort()  # [::-1]
-    non_gaps = (msa_arr != "-").astype(float)
-    non_gaps[non_gaps == 0] = np.nan
-
-    plt.figure(figsize=(14, 4), dpi=100)
-
-    plt.subplot(1, 2, 1)
-    plt.title("Sequence coverage")
-    plt.imshow(
-        non_gaps[seqid_sort] * seqid[seqid_sort, None],
-        interpolation="nearest",
-        aspect="auto",
-        cmap="rainbow_r",
-        vmin=0,
-        vmax=1,
-        origin="lower",
-    )
-    plt.plot((msa_arr != "-").sum(0), color="black")
-    plt.xlim(-0.5, msa_arr.shape[1] - 0.5)
-    plt.ylim(-0.5, msa_arr.shape[0] - 0.5)
-    plt.colorbar(
-        label="Sequence identity to query",
-    )
-    plt.xlabel("Positions")
-    plt.ylabel("Sequences")
-
-    plt.subplot(1, 2, 2)
-    plt.title("Predicted lDDT per position")
-    for model_name, value in outs.items():
-        plt.plot(value["plddt"], label=model_name)
-    if homooligomer > 0:
-        for n in range(homooligomer + 1):
-            x = n * (len(query_sequence) - 1)
-            plt.plot([x, x], [0, 100], color="black")
-    plt.legend()
-    plt.ylim(0, 100)
-    plt.ylabel("Predicted lDDT")
-    plt.xlabel("Positions")
-    plt.savefig(str(result_dir.joinpath(jobname + "_coverage_lDDT.png")))
-
-
-def plot_predicted_alignment_error(
-    jobname: str, num_models: int, outs: dict, result_dir: Path
-):
-    logger.info("Predicted Alignment Error")
-    plt.figure(figsize=(3 * num_models, 2), dpi=100)
-    for n, (model_name, value) in enumerate(outs.items()):
-        plt.subplot(1, num_models, n + 1)
-        plt.title(model_name)
-        plt.imshow(value["pae"], label=model_name, cmap="bwr", vmin=0, vmax=30)
-        plt.colorbar()
-    plt.savefig(str(result_dir.joinpath(jobname + "_PAE.png")))
 
 
 def predict_structure(
@@ -465,44 +342,6 @@ def run(
 
         plot_lddt(homooligomer, jobname, msa, outs, query_sequence, result_dir)
         plot_predicted_alignment_error(jobname, num_models, outs, result_dir)
-
-
-def load_models_and_params(
-    num_models: int,
-) -> Dict[str, Tuple[model.RunModel, haiku.Params]]:
-    # Use only two model and later swap params to avoid recompiling
-    # note: models 1,2 have diff number of params compared to models 3,4,5
-    model_runner_and_params: Dict[str, Tuple[model.RunModel, haiku.Params]] = dict()
-    model_runner_1 = None
-    model_runner_3 = None
-    for model_number in range(1, num_models + 1):
-        if model_number in [1, 2]:
-            if not model_runner_1:
-                model_config = config.model_config("model_1_ptm")
-                model_config.data.eval.num_ensemble = 1
-                model_runner_1 = model.RunModel(
-                    model_config,
-                    data.get_model_haiku_params(model_name="model_1_ptm", data_dir="."),
-                )
-            model_runner = model_runner_1
-        else:
-            assert model_number in [3, 4, 5]
-
-            if not model_runner_3:
-                model_config = config.model_config("model_3_ptm")
-                model_config.data.eval.num_ensemble = 1
-                model_runner_3 = model.RunModel(
-                    model_config,
-                    data.get_model_haiku_params(model_name="model_3_ptm", data_dir="."),
-                )
-            model_runner = model_runner_3
-
-        model_name = f"model_{model_number}"
-        params = data.get_model_haiku_params(
-            model_name=model_name + "_ptm", data_dir="."
-        )
-        model_runner_and_params[model_name] = (model_runner, params)
-    return model_runner_and_params
 
 
 def main():

@@ -113,3 +113,7 @@ def write_bibtex(
         for i in to_cite:
             writer.write(citations[i])
             writer.write("\n")
+
+    print(
+        f"Found {len(to_cite)} citation{'s' if len(to_cite) > 1 else ''} for tools or databases."
+    )

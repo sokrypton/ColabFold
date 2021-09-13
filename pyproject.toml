@@ -24,6 +24,20 @@ jupyter = "^1.0.0"
 [tool.poetry.scripts]
 local2fold_batch = 'local2fold.batch:main'
 
+[tool.black]
+# Format only the new package, don't touch the existing stuff
+include = '''
+/(
+  | local2fold
+)/
+'''
+extend-exclude = '''
+/(
+  | local2fold/__pycache__
+  | local2fold/colabfold.py
+)/
+'''
+
 [build-system]
 requires = ["poetry-core>=1.0.0,<2.0.0"]
 build-backend = "poetry.core.masonry.api"
