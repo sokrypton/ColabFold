@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "local2fold"
+version = "0.1.0"
+description = ""
+authors = ["konstin <konstin@mailbox.org>"]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+absl-py = "^0.13.0"
+alphafold = { git = "https://github.com/konstin/alphafold.git", branch = "main" }
+jax = "^0.2.20"
+matplotlib = "^3.4.3"
+numpy = "^1.19.0"
+requests = "^2.26.0"
+tensorflow-cpu = "^2.6.0"
+tqdm = "^4.62.2"
+tensorflow = "^2.6.0"
+
+[tool.poetry.dev-dependencies]
+black = "v21.7.b0"
+jupyter = "^1.0.0"
+
+[build-system]
+requires = ["poetry-core~=1.1.0"]
+build-backend = "poetry.core.masonry.api"
