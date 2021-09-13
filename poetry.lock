@@ -36,7 +36,7 @@ tensorflow-cpu = "*"
 type = "git"
 url = "https://github.com/konstin/alphafold.git"
 reference = "main"
-resolved_reference = "da66a091dabc26a668d5de20c5e36c9413470b03"
+resolved_reference = "130546470b79d2ebe5061f2999ae3bfe9d46e624"
 
 [[package]]
 name = "appdirs"

@@ -151,6 +151,9 @@ def predict_structure(
         paes.append(paes_res)
         if do_relax:
             from alphafold.relax import relax
+            from alphafold.common import residue_constants
+
+            residue_constants.stereo_chemical_props_path = "stereo_chemical_props.txt"
 
             # Relax the prediction.
             amber_relaxer = relax.AmberRelaxation(
