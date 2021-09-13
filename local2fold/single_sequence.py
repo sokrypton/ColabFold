@@ -6,7 +6,6 @@ from alphafold.common import protein
 from alphafold.data import pipeline
 from alphafold.data import templates
 from alphafold.data.tools import hhsearch
-from alphafold.relax import relax
 from matplotlib import pyplot as plt
 
 from local2fold.colabfold import run_mmseqs2
@@ -114,6 +113,8 @@ def predict_structure(
         paes.append(prediction_result["predicted_aligned_error"])
 
         if do_relax:
+            from alphafold.relax import relax
+
             # Relax the prediction.
             amber_relaxer = relax.AmberRelaxation(
                 max_iterations=0,
