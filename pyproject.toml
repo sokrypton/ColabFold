@@ -5,7 +5,7 @@ description = ""
 authors = ["konstin <konstin@mailbox.org>"]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = ">=3.7,<3.11"
 absl-py = "^0.13.0"
 alphafold = { git = "https://github.com/konstin/alphafold.git", branch = "main" }
 jax = "^0.2.20"
