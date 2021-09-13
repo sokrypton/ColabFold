@@ -322,7 +322,7 @@ def run_model_cached(
     We store both input and output to ensure that the input is actually the same that we cached
     """
     pickle_path = Path("pickle").joinpath(prefix)
-    if pickle_path.is_dir():
+    if pickle_path.joinpath(f"{model_name}_input_fix.pkl").is_file():
         logger.info("Using cached computation")
         with pickle_path.joinpath(f"{model_name}_input_fix.pkl").open("rb") as fp:
             input_fix2 = pickle.load(fp)
