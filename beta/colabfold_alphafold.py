@@ -38,12 +38,14 @@ TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaini
 
 def prep_inputs(sequence, jobname="test", homooligomer="1", output_dir=None, clean=False, verbose=True):
   # process inputs
+  sequence = str(sequence)
   sequence = re.sub("[^A-Z:/]", "", sequence.upper())
   sequence = re.sub(":+",":",sequence)
   sequence = re.sub("/+","/",sequence)
   sequence = re.sub("^[:/]+","",sequence)
   sequence = re.sub("[:/]+$","",sequence)
   jobname = re.sub(r'\W+', '', jobname)
+  homooligomer = str(homooligomer)
   homooligomer = re.sub("[:/]+",":",homooligomer)
   homooligomer = re.sub("^[:/]+","",homooligomer)
   homooligomer = re.sub("[:/]+$","",homooligomer)
@@ -53,11 +55,11 @@ def prep_inputs(sequence, jobname="test", homooligomer="1", output_dir=None, cle
 
   # define inputs
   I = {"ori_sequence":sequence,
-      "sequence":sequence.replace("/","").replace(":",""),
-      "seqs":sequence.replace("/","").split(":"),
-      "homooligomer":homooligomer,
-      "homooligomers":[int(h) for h in homooligomer.split(":")],
-      "msas":[], "deletion_matrices":[]}
+       "sequence":sequence.replace("/","").replace(":",""),
+       "seqs":sequence.replace("/","").split(":"),
+       "homooligomer":homooligomer,
+       "homooligomers":[int(h) for h in homooligomer.split(":")],
+       "msas":[], "deletion_matrices":[]}
 
   # adjust homooligomer option
   if len(I["seqs"]) != len(I["homooligomers"]):
@@ -603,7 +605,7 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
     '''subsample msa to avoid running out of memory'''
     N = len(F["msa"])
     L = len(F["residue_index"])
-    N_ = int(3E7/L)
+    N_ = int(6E7/L)
     if N > N_:
       print(f"whhhaaa... too many sequences ({N}) subsampling to {N_}")
       np.random.seed(random_seed)
@@ -645,13 +647,18 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
       out["pTMscore"] = to_np(prediction_result['ptm'])      
     return out
 
+  opt_default = {"N":len(feature_dict["msa"]),
+                 "L":len(feature_dict["residue_index"]),
+                 "use_ptm":True, "use_turbo":True,
+                 "max_recycles":3,"tol":0,"num_ensemble":1,
+                 "max_msa_clusters":512,"max_extra_msa":1024,
+                 "is_training":False}
   if opt is None:
-    opt = {"N":len(feature_dict["msa"]),
-           "L":len(feature_dict["residue_index"]),
-           "use_ptm":True, "use_turbo":True,
-           "max_recycles":3,"tol":0,"num_ensemble":1,
-           "max_msa_clusters":512,"max_extra_msa":1024,
-           "is_training":False}
+    opt = opt_default
+  else:
+    for k in opt_default.keys():
+      if k not in opt: opt[k] = opt_default[k]
+  
     
   model_names = ['model_1', 'model_2', 'model_3', 'model_4', 'model_5'][:num_models]
   total = len(model_names) * num_samples
@@ -673,7 +680,7 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
   with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
     if opt["use_turbo"]:
       if runner is None:
-        runner = prep_model_runner(opt)
+        runner = prep_model_runner(opt,params_loc=params_loc)
       
       # go through each random_seed
       for seed in range(num_samples):
@@ -711,7 +718,7 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
       # go through each model
       for num, model_name in enumerate(model_names):
         name = model_name+"_ptm" if opt["use_ptm"] else model_name
-        model_runner = prep_model_runner(opt, model_name=model_name, use_turbo=False)["model"]
+        model_runner = prep_model_runner(opt, model_name=model_name, use_turbo=False, params_loc=params_loc)["model"]
 
         # go through each random_seed
         for seed in range(num_samples):
