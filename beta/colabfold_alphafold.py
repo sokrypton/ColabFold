@@ -605,7 +605,7 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
     '''subsample msa to avoid running out of memory'''
     N = len(F["msa"])
     L = len(F["residue_index"])
-    N_ = int(6E7/L)
+    N_ = int(3E7/L)
     if N > N_:
       print(f"whhhaaa... too many sequences ({N}) subsampling to {N_}")
       np.random.seed(random_seed)
