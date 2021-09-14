@@ -397,6 +397,7 @@ def main():
         args.num_models,
         args.homooligomer,
         args.do_not_overwrite_results,
+        cache=args.cache,
     )
 
 
