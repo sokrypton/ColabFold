@@ -27,8 +27,6 @@ from local2fold.pdb import set_bfactor
 from local2fold.plot import plot_predicted_alignment_error, plot_lddt
 from local2fold.utils import TqdmHandler
 
-CACHE_COMPUTATION = True
-
 logger = logging.getLogger(__name__)
 
 
@@ -97,6 +95,7 @@ def predict_structure(
     model_runner_and_params: Dict[str, Tuple[model.RunModel, haiku.Params]],
     do_relax: bool = False,
     random_seed: int = 0,
+    cache: bool = False,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     # Run the models.
@@ -135,7 +134,7 @@ def predict_structure(
             num_templates=4,
         )  # template_mask (4, 4) second value
 
-        if CACHE_COMPUTATION:
+        if cache:
             prediction_result = run_model_cached(
                 input_fix, model_name, model_runner, prefix
             )
@@ -236,6 +235,7 @@ def run(
     num_models: int,
     homooligomer: int,
     do_not_overwrite_results: bool,
+    cache: bool = False,
 ):
     # hiding warning messages
     warnings.filterwarnings("ignore")
@@ -341,6 +341,7 @@ def run(
             crop_len=crop_len,
             model_runner_and_params=model_runner_and_params,
             do_relax=use_amber,
+            cache=cache,
         )
 
         plot_lddt(homooligomer, jobname, msa, outs, query_sequence, result_dir)
@@ -351,6 +352,8 @@ def main():
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(message)s", handlers=[TqdmHandler()]
     )
+
+    download_alphafold_params()
 
     parser = ArgumentParser()
     parser.add_argument("--input-dir", default="input")
@@ -369,6 +372,12 @@ def main():
     parser.add_argument("--use-amber", default=False, action="store_true")
     parser.add_argument("--use-templates", default=False, action="store_true")
     parser.add_argument("--use-env", default=False, action="store_true")
+    parser.add_argument(
+        "--cache",
+        default=False,
+        action="store_true",
+        help="Caches the model output. For development only",
+    )
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
     parser.add_argument("--homooligomer", type=int, default=1)
     parser.add_argument(
@@ -392,5 +401,4 @@ def main():
 
 
 if __name__ == "__main__":
-    download_alphafold_params()
     main()

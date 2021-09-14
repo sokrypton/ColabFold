@@ -15,7 +15,7 @@ def plot_predicted_alignment_error(
         plt.imshow(value["pae"], label=model_name, cmap="bwr", vmin=0, vmax=30)
         plt.colorbar()
     plt.savefig(result_dir.joinpath(jobname + "_PAE.png"))
-    if not show:
+    if show:
         plt.show()
 
 

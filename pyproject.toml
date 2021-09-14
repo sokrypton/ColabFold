@@ -14,7 +14,6 @@ numpy = "^1.19.0"
 requests = "^2.26.0"
 tensorflow-cpu = "^2.6.0"
 tqdm = "^4.62.2"
-tensorflow = "^2.6.0"
 
 [tool.poetry.dev-dependencies]
 # The latest version conflicts with tensorflow over typing-extensions
