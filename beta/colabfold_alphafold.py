@@ -19,7 +19,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import re
-from local2fold import colabfold as cf
+from colabfold import colabfold as cf
 import pairmsa
 
 try:

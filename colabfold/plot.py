@@ -7,7 +7,6 @@ from matplotlib import pyplot as plt
 def plot_predicted_alignment_error(
     jobname: str, num_models: int, outs: dict, result_dir: Path, show: bool = False
 ):
-    print("Predicted Alignment Error")
     plt.figure(figsize=(3 * num_models, 2), dpi=100)
     for n, (model_name, value) in enumerate(outs.items()):
         plt.subplot(1, num_models, n + 1)

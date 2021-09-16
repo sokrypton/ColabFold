@@ -1,4 +1,7 @@
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 citations = {
     "Mirdita2021": """@article{Mirdita2021,
@@ -109,11 +112,10 @@ def write_bibtex(
     if use_amber:
         to_cite += ["Eastman2017"]
 
-    with result_dir.joinpath(bibtex_file).open("w") as writer:
+    bibtex_file = result_dir.joinpath(bibtex_file)
+    with bibtex_file.open("w") as writer:
         for i in to_cite:
             writer.write(citations[i])
             writer.write("\n")
 
-    print(
-        f"Found {len(to_cite)} citation{'s' if len(to_cite) > 1 else ''} for tools or databases."
-    )
+    logger.info(f"Found {len(to_cite)} citations for tools or databases")

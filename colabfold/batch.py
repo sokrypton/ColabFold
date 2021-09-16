@@ -1,31 +1,30 @@
 import logging
 import math
-import os
 import pickle
-import warnings
+import sys
 from argparse import ArgumentParser
 from pathlib import Path
 from string import ascii_uppercase
-from typing import Any, Dict, Tuple, List, Union, Mapping
+from typing import Any, Dict, Tuple, List, Union, Mapping, Optional
 
 import haiku
 import numpy
 import numpy as np
-import tensorflow as tf
-from absl import logging as absl_logging
 from alphafold.common import protein
 from alphafold.data import pipeline, templates
 from alphafold.data.tools import hhsearch
 from alphafold.model import model
+from alphafold.model.features import FeatureDict
+from jax.lib import xla_bridge
 
-from local2fold.citations import write_bibtex
-from local2fold.colabfold import run_mmseqs2
-from local2fold.download import download_alphafold_params
-from local2fold.models import load_models_and_params
-from local2fold.msa import make_fixed_size
-from local2fold.pdb import set_bfactor
-from local2fold.plot import plot_predicted_alignment_error, plot_lddt
-from local2fold.utils import TqdmHandler
+from colabfold.citations import write_bibtex
+from colabfold.colabfold import run_mmseqs2
+from colabfold.download import download_alphafold_params
+from colabfold.models import load_models_and_params
+from colabfold.msa import make_fixed_size
+from colabfold.pdb import set_bfactor
+from colabfold.plot import plot_predicted_alignment_error, plot_lddt
+from colabfold.utils import setup_logging, NO_GPU_FOUND
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +94,7 @@ def predict_structure(
     model_runner_and_params: Dict[str, Tuple[model.RunModel, haiku.Params]],
     do_relax: bool = False,
     random_seed: int = 0,
-    cache: bool = False,
+    cache: Optional[str] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     # Run the models.
@@ -136,7 +135,7 @@ def predict_structure(
 
         if cache:
             prediction_result = run_model_cached(
-                input_fix, model_name, model_runner, prefix
+                input_fix, model_name, model_runner, prefix, cache
             )
         else:
             prediction_result = model_runner.predict(input_fix)
@@ -175,7 +174,7 @@ def predict_structure(
     out = {}
     logger.info("reranking models based on avg. predicted lDDT")
     for n, r in enumerate(lddt_rank):
-        logger.info(f"model_{n + 1} {np.mean(plddts[r])}")
+        logger.info(f"model_{n + 1} {np.mean(plddts[r]):.1f}")
 
         unrelaxed_pdb_path = result_dir.joinpath(
             f"{prefix}_unrelaxed_model_{n + 1}.pdb"
@@ -195,13 +194,17 @@ def predict_structure(
 
 
 def run_model_cached(
-    input_fix: dict, model_name: str, model_runner: model.RunModel, prefix: str
+    input_fix: FeatureDict,
+    model_name: str,
+    model_runner: model.RunModel,
+    prefix: str,
+    cache: str,
 ):
     """Caching the expensive compilation + prediction step - for development only
 
     We store both input and output to ensure that the input is actually the same that we cached
     """
-    pickle_path = Path("pickle").joinpath(prefix)
+    pickle_path = Path(cache).joinpath(prefix)
     if pickle_path.joinpath(f"{model_name}_input_fix.pkl").is_file():
         logger.info("Using cached computation")
         with pickle_path.joinpath(f"{model_name}_input_fix.pkl").open("rb") as fp:
@@ -226,29 +229,7 @@ def run_model_cached(
     return prediction_result
 
 
-def run(
-    input_dir: Union[str, Path],
-    result_dir: Union[str, Path],
-    use_templates: bool,
-    use_amber: bool,
-    use_env: bool,
-    num_models: int,
-    homooligomer: int,
-    do_not_overwrite_results: bool,
-    cache: bool = False,
-):
-    # hiding warning messages
-    warnings.filterwarnings("ignore")
-    absl_logging.set_verbosity("error")
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-    tf.get_logger().setLevel("ERROR")
-
-    input_dir = Path(input_dir)
-    result_dir = Path(result_dir)
-    result_dir.mkdir(exist_ok=True)
-    # TODO: What's going on with MSA mode?
-    write_bibtex(True, use_env, use_templates, use_amber, result_dir)
-
+def get_queries(input_dir: Path) -> List[Tuple[str, str, str]]:
     queries = []
     for file in input_dir.iterdir():
         if not file.is_file():
@@ -262,11 +243,37 @@ def run(
         queries.append((file.stem, query_sequence, file.suffix))
     # sort by seq. len
     queries.sort(key=lambda t: len(t[1]))
+    return queries
+
+
+def run(
+    input_dir: Union[str, Path],
+    result_dir: Union[str, Path],
+    use_templates: bool,
+    use_amber: bool,
+    msa_mode: str,
+    num_models: int,
+    homooligomer: int,
+    data_dir: Union[str, Path],
+    do_not_overwrite_results: bool,
+    cache: Optional[str] = None,
+):
+    input_dir = Path(input_dir)
+    result_dir = Path(result_dir)
+    result_dir.mkdir(exist_ok=True)
+    data_dir = Path(data_dir)
+
+    use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
+
+    # TODO: What's going on with MSA mode?
+    write_bibtex(True, use_env, use_templates, use_amber, result_dir)
+
+    queries = get_queries(input_dir)
+    logger.info(f"Predicting {len(queries)} structures")
+
+    model_runner_and_params = load_models_and_params(num_models, data_dir)
 
     crop_len = math.ceil(len(queries[0][1]) * 1.1)
-
-    model_runner_and_params = load_models_and_params(num_models)
-
     for jobname, query_sequence, extension in queries:
         a3m_file = f"{jobname}.a3m"
         if len(query_sequence) > crop_len:
@@ -349,15 +356,13 @@ def run(
 
 
 def main():
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(message)s", handlers=[TqdmHandler()]
-    )
-
-    download_alphafold_params()
+    setup_logging()
 
     parser = ArgumentParser()
-    parser.add_argument("--input-dir", default="input")
-    parser.add_argument("--result-dir", default="results")
+    parser.add_argument("--input", default="input", help="Directory with fasta files")
+    parser.add_argument(
+        "--results", default="results", help="Directory to write the results to"
+    )
     # TODO: This currently isn't actually used
     parser.add_argument(
         "--msa-mode",
@@ -369,33 +374,56 @@ def main():
             "custom",
         ],
     )
-    parser.add_argument("--use-amber", default=False, action="store_true")
-    parser.add_argument("--use-templates", default=False, action="store_true")
-    parser.add_argument("--use-env", default=False, action="store_true")
     parser.add_argument(
-        "--cache",
+        "--amber",
         default=False,
         action="store_true",
+        help="Use amber for structure refinement",
+    )
+    parser.add_argument(
+        "--templates",
+        default=False,
+        action="store_true",
+        help="Use templates from pdb",
+    )
+    parser.add_argument("--env", default=False, action="store_true")
+    parser.add_argument(
+        "--cpu",
+        default=False,
+        action="store_true",
+        help="Allow running on the cpu, which is very slow",
+    )
+    parser.add_argument(
+        "--cache",
         help="Caches the model output. For development only",
     )
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
     parser.add_argument("--homooligomer", type=int, default=1)
+    parser.add_argument("--data", default=".")
     parser.add_argument(
         "--do-not-overwrite-results", default=True, action="store_false"
     )
     args = parser.parse_args()
 
+    download_alphafold_params(Path(args.data).joinpath("params"))
+
     assert args.msa_mode == "MMseqs2 (UniRef+Environmental)", "Unsupported"
     assert args.homooligomer == 1, "Unsupported"
 
+    # Prevent people from accidentally running on the cpu, which is really slow
+    if not args.cpu and xla_bridge.get_backend().platform == "cpu":
+        print(NO_GPU_FOUND, file=sys.stderr)
+        sys.exit(1)
+
     run(
-        args.input_dir,
-        args.result_dir,
-        args.use_templates,
-        args.use_amber,
-        args.use_env,
+        args.input,
+        args.results,
+        args.templates,
+        args.amber,
+        args.msa_mode,
         args.num_models,
         args.homooligomer,
+        args.data,
         args.do_not_overwrite_results,
         cache=args.cache,
     )

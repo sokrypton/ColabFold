@@ -8,8 +8,8 @@ from alphafold.data import templates
 from alphafold.data.tools import hhsearch
 from matplotlib import pyplot as plt
 
-from local2fold.colabfold import run_mmseqs2
-from local2fold.pdb import set_bfactor
+from colabfold.colabfold import run_mmseqs2
+from colabfold.pdb import set_bfactor
 
 
 def mk_mock_template(query_sequence):

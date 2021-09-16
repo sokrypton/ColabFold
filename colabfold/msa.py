@@ -3,6 +3,7 @@ from typing import Mapping, Any
 import numpy as np
 import tensorflow as tf
 from alphafold.model.tf import shape_placeholders
+from alphafold.model.features import FeatureDict
 
 NUM_RES = shape_placeholders.NUM_RES
 NUM_MSA_SEQ = shape_placeholders.NUM_MSA_SEQ
@@ -17,7 +18,7 @@ def make_fixed_size(
     extra_msa_size: int,
     num_res: int,
     num_templates: int = 0,
-):
+) -> FeatureDict:
     """Guess at the MSA and sequence dimensions to make fixed size."""
 
     pad_size_map = {
@@ -43,6 +44,7 @@ def make_fixed_size(
         padding = [(0, p - tf.shape(v)[i]) for i, p in enumerate(pad_size)]
 
         if padding:
+            # TODO: alphafold's typing is wrong
             protein[k] = tf.pad(v, padding, name=f"pad_to_fixed_{k}")
             protein[k].set_shape(pad_size)
     return {k: np.asarray(v) for k, v in protein.items()}
