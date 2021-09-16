@@ -381,10 +381,7 @@ def main():
         help="Use amber for structure refinement",
     )
     parser.add_argument(
-        "--templates",
-        default=False,
-        action="store_true",
-        help="Use templates from pdb",
+        "--templates", default=False, action="store_true", help="Use templates from pdb"
     )
     parser.add_argument("--env", default=False, action="store_true")
     parser.add_argument(
@@ -393,10 +390,7 @@ def main():
         action="store_true",
         help="Allow running on the cpu, which is very slow",
     )
-    parser.add_argument(
-        "--cache",
-        help="Caches the model output. For development only",
-    )
+    parser.add_argument("--cache", help="Caches the model output. For development only")
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
     parser.add_argument("--homooligomer", type=int, default=1)
     parser.add_argument("--data", default=".")

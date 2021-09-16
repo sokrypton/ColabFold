@@ -1,11 +1,11 @@
 import logging
 import pickle
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import Any, Mapping, List, Tuple
 from unittest import mock
 
 import numpy
+from absl import logging as absl_logging
 from alphafold.model.features import FeatureDict
 
 from colabfold.batch import run
@@ -53,7 +53,7 @@ def mock_run_mmseqs2(
         prefix
         and use_filter
         and not use_templates
-        and not use_env
+        and use_env
         and not filter
         and host_url == "https://a3m.mmseqs.com"
     )
@@ -65,42 +65,55 @@ def mock_run_mmseqs2(
         assert False, x
 
 
-def test_batch(pytestconfig, caplog):
+def test_batch(pytestconfig, caplog, tmp_path):
     caplog.set_level(logging.INFO)
+    # otherwise jax will tell us about its search for devices
+    absl_logging.set_verbosity("error")
+
     data_dir = pytestconfig.rootpath
+    input_dir = tmp_path.joinpath("input")
+    input_dir.mkdir()
+    result_dir = tmp_path.joinpath("result")
+    result_dir.mkdir()
 
     # We'll also want to mock that out later
     download_alphafold_params(data_dir.joinpath("params"))
 
     known_inputs = load_known_input(pytestconfig.rootpath)
 
-    with TemporaryDirectory() as input_dir, TemporaryDirectory() as result_dir:
-        Path(input_dir).joinpath("7_to_be_renamed.fasta").write_text(
-            ">5AWL_1\nYYDPETGTWY"
-        )
-        Path(input_dir).joinpath("6BGN.fasta").write_text(">6A5J\nIKKILSKIKKLLK")
+    input_dir.joinpath("5AWL_1.fasta").write_text(">5AWL_1\nYYDPETGTWY")
+    input_dir.joinpath("6A5J.fasta").write_text(">6A5J\nIKKILSKIKKLLK")
 
-        with mock.patch(
-            "alphafold.model.model.RunModel.predict",
-            lambda self, feat: predict(known_inputs, feat),
-        ), mock.patch(
-            "colabfold_.batch.run_mmseqs2",
-            mock_run_mmseqs2,
-        ):
-            run(
-                input_dir,
-                result_dir,
-                use_templates=False,
-                use_amber=False,
-                use_env=False,
-                num_models=1,
-                homooligomer=1,
-                data_dir=data_dir,
-                do_not_overwrite_results=False,
-            )
+    with mock.patch(
+        "alphafold.model.model.RunModel.predict",
+        lambda self, feat: predict(known_inputs, feat),
+    ), mock.patch("colabfold.batch.run_mmseqs2", mock_run_mmseqs2):
+        run(
+            input_dir,
+            result_dir,
+            use_templates=False,
+            use_amber=False,
+            msa_mode="MMseqs2 (UniRef+Environmental)",
+            num_models=1,
+            homooligomer=1,
+            data_dir=data_dir,
+            do_not_overwrite_results=False,
+        )
+
+    # Very simple test, it would be better to check coordinates
+    assert (
+        len(
+            result_dir.joinpath("5AWL_1_unrelaxed_model_1.pdb").read_text().splitlines()
+        )
+        == 92
+    )
+    assert (
+        len(result_dir.joinpath("6A5J_unrelaxed_model_1.pdb").read_text().splitlines())
+        == 108
+    )
 
     assert caplog.messages == [
-        "Found 4 citations for tools or databases",
+        "Found 5 citations for tools or databases",
         "Predicting 2 structures",
         "Running: 5AWL_1",
         "running model_1",

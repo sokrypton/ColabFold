@@ -51,9 +51,7 @@ def plot_lddt(
     plt.plot((msa_arr != "-").sum(0), color="black")
     plt.xlim(-0.5, msa_arr.shape[1] - 0.5)
     plt.ylim(-0.5, msa_arr.shape[0] - 0.5)
-    plt.colorbar(
-        label="Sequence identity to query",
-    )
+    plt.colorbar(label="Sequence identity to query")
     plt.xlabel("Positions")
     plt.ylabel("Sequences")
 
