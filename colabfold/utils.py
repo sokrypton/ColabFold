@@ -11,6 +11,7 @@ See https://github.com/google/jax/#pip-installation-gpu-cuda for more details.
 
 If you're sure you want to run without a GPU, pass `--cpu`"""
 
+
 class TqdmHandler(logging.StreamHandler):
     """https://stackoverflow.com/a/38895482/3549270"""
 
@@ -31,5 +32,3 @@ def setup_logging():
     )
     # otherwise jax will tell us about its search for devices
     absl_logging.set_verbosity("error")
-
-
