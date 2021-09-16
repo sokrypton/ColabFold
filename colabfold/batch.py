@@ -24,7 +24,12 @@ from colabfold.models import load_models_and_params
 from colabfold.msa import make_fixed_size
 from colabfold.pdb import set_bfactor
 from colabfold.plot import plot_predicted_alignment_error, plot_lddt
-from colabfold.utils import setup_logging, NO_GPU_FOUND
+from colabfold.utils import (
+    setup_logging,
+    NO_GPU_FOUND,
+    ACCEPT_DEFAULT_TERMS,
+    DEFAULT_API_SERVER,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -256,6 +261,7 @@ def run(
     homooligomer: int,
     data_dir: Union[str, Path],
     do_not_overwrite_results: bool,
+    host_url: str = DEFAULT_API_SERVER,
     cache: Optional[str] = None,
 ):
     input_dir = Path(input_dir)
@@ -291,6 +297,7 @@ def run(
                     str(result_dir.joinpath(jobname)),
                     use_env,
                     use_templates=True,
+                    host_url=host_url,
                 )
             except Exception as e:
                 logger.exception(f"{jobname} could not be processed: {e}")
@@ -309,7 +316,10 @@ def run(
             else:
                 try:
                     a3m_lines = run_mmseqs2(
-                        query_sequence, str(result_dir.joinpath(jobname)), use_env
+                        query_sequence,
+                        str(result_dir.joinpath(jobname)),
+                        use_env,
+                        host_url=host_url,
                     )
                 except Exception as e:
                     logger.exception(f"{jobname} could not be processed: {e}")
@@ -397,12 +407,17 @@ def main():
     parser.add_argument(
         "--do-not-overwrite-results", default=True, action="store_false"
     )
+
+    parser.add_argument("--host-url", default=DEFAULT_API_SERVER)
     args = parser.parse_args()
 
     download_alphafold_params(Path(args.data).joinpath("params"))
 
     assert args.msa_mode == "MMseqs2 (UniRef+Environmental)", "Unsupported"
     assert args.homooligomer == 1, "Unsupported"
+
+    if args.host_url == DEFAULT_API_SERVER:
+        print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
 
     # Prevent people from accidentally running on the cpu, which is really slow
     if not args.cpu and xla_bridge.get_backend().platform == "cpu":
@@ -419,6 +434,7 @@ def main():
         args.homooligomer,
         args.data,
         args.do_not_overwrite_results,
+        args.host_url,
         cache=args.cache,
     )
 
