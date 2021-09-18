@@ -13,6 +13,9 @@ from alphafold.common import protein
 from alphafold.model import config
 from alphafold.model import model
 from alphafold.model import data
+from alphafold.model.tf import shape_placeholders
+
+import tensorflow as tf
 
 from string import ascii_uppercase
 
@@ -104,7 +107,7 @@ def prep_inputs(sequence, jobname="test", homooligomer="1", output_dir=None, cle
 # prep_msa
 #######################################################################################################################################
 
-def run_jackhmmer(sequence, prefix, jackhmmer_binary_path='jackhmmer'):
+def run_jackhmmer(sequence, prefix, jackhmmer_binary_path='jackhmmer', verbose=True):
 
   fasta_path = f"{prefix}.fasta"
   with open(fasta_path, 'wt') as f:
@@ -135,7 +138,8 @@ def run_jackhmmer(sequence, prefix, jackhmmer_binary_path='jackhmmer'):
 
     num_jackhmmer_chunks = {'uniref90': 59, 'smallbfd': 17, 'mgnify': 71}
     total_jackhmmer_chunks = sum(num_jackhmmer_chunks.values())
-    with tqdm.notebook.tqdm(total=total_jackhmmer_chunks, bar_format=TQDM_BAR_FORMAT) as pbar:
+    disable_tqdm = not verbose
+    with tqdm.notebook.tqdm(total=total_jackhmmer_chunks, bar_format=TQDM_BAR_FORMAT, disable=disable_tqdm) as pbar:
       def jackhmmer_chunk_callback(i):
         pbar.update(n=1)
 
@@ -522,7 +526,6 @@ def prep_filter(I, trim="", trim_inverse=False, cov=0, qid=0, verbose=True):
 #######################################################################################################################################
 
 def prep_feats(I, clean=False):
-
   def _placeholder_template_feats(num_templates_, num_res_):
     return {
         'template_aatype': np.zeros([num_templates_, num_res_, 22], np.float32),
@@ -531,7 +534,6 @@ def prep_feats(I, clean=False):
         'template_domain_names': np.zeros([num_templates_], np.float32),
         'template_sum_probs': np.zeros([num_templates_], np.float32),
     }
-
   # delete old files
   if clean:
     for f in os.listdir(I["output_dir"]):
@@ -566,6 +568,33 @@ def prep_feats(I, clean=False):
   feature_dict['output_dir'] = I["output_dir"]
   return feature_dict
 
+def make_fixed_size(feat, runner):
+  '''pad input features'''
+  opt = runner["opt"]
+  cfg = runner["model"].config
+  shape_schema = {k:[None]+v for k,v in dict(cfg.data.eval.feat).items()}   
+  pad_size_map = {
+      shape_placeholders.NUM_RES: opt["L"],
+      shape_placeholders.NUM_MSA_SEQ: cfg.data.eval.max_msa_clusters,
+      shape_placeholders.NUM_EXTRA_SEQ: cfg.data.common.max_extra_msa,
+      shape_placeholders.NUM_TEMPLATES: 0,
+  }
+  for k, v in feat.items():
+    # Don't transfer this to the accelerator.
+    if k == 'extra_cluster_assignment':
+      continue
+    shape = list(v.shape)
+    schema = shape_schema[k]
+    assert len(shape) == len(schema), (
+        f'Rank mismatch between shape and shape schema for {k}: '
+        f'{shape} vs {schema}')
+    pad_size = [pad_size_map.get(s2, None) or s1 for (s1, s2) in zip(shape, schema)]
+    padding = [(0, p - tf.shape(v)[i]) for i, p in enumerate(pad_size)]
+    if padding:
+      feat[k] = tf.pad(v, padding, name=f'pad_to_fixed_{k}')
+      feat[k].set_shape(pad_size)
+  return {k:np.asarray(v) for k,v in feat.items()}
+
 #######################################################################################################################################
 # run alphafold
 #######################################################################################################################################
@@ -577,16 +606,35 @@ def clear_mem(device=None):
     for buf in backend.live_buffers():
       buf.delete()
 
-def prep_model_runner(opt, model_name="model_5", old_runner=None, params_loc='./alphafold/data'):
+OPT_DEFAULT = {"N":None, "L":None,
+               "use_ptm":True, "use_turbo":True,
+               "max_recycles":3, "tol":0, "num_ensemble":1,
+               "max_msa_clusters":512, "max_extra_msa":1024,
+               "is_training":False}
+
+def prep_model_runner(opt=None, model_name="model_5", old_runner=None, params_loc='./alphafold/data'):
+  
+  # setup the [opt]ions
+  if opt is None:
+    opt = OPT_DEFAULT.copy()
+  else:
+    for k in OPT_DEFAULT:
+      if k not in opt: opt[k] = OPT_DEFAULT[k]
+
+  # if old_runner not defined or [opt]ions changed, start new runner
   if old_runner is None or old_runner["opt"] != opt:
     clear_mem()
     name = f"{model_name}_ptm" if opt["use_ptm"] else model_name
     cfg = config.model_config(name)
 
     if opt["use_turbo"]:
-      msa_clusters = min(opt["N"], opt["max_msa_clusters"])
-      cfg.data.eval.max_msa_clusters = msa_clusters
-      cfg.data.common.max_extra_msa = max(min(opt["N"] - msa_clusters, opt["max_extra_msa"]),1)
+      if opt["N"] is None:
+        cfg.data.eval.max_msa_clusters = opt["max_msa_clusters"]
+        cfg.data.common.max_extra_msa = opt["max_extra_msa"]
+      else:
+        msa_clusters = min(opt["N"], opt["max_msa_clusters"])
+        cfg.data.eval.max_msa_clusters = msa_clusters
+        cfg.data.common.max_extra_msa = max(min(opt["N"] - msa_clusters, opt["max_extra_msa"]),1)
 
     cfg.data.common.num_recycle = opt["max_recycles"]
     cfg.model.num_recycle = opt["max_recycles"]
@@ -599,7 +647,7 @@ def prep_model_runner(opt, model_name="model_5", old_runner=None, params_loc='./
     return old_runner
   
 def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples=1, subsample_msa=True,
-                  rank_by="pLDDT", show_images=True, params_loc='./alphafold/data'):
+                  pad_feats=False, rank_by="pLDDT", show_images=True, params_loc='./alphafold/data', verbose=True):
   
   def do_subsample_msa(F, random_seed=0):
     '''subsample msa to avoid running out of memory'''
@@ -607,7 +655,8 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
     L = len(F["residue_index"])
     N_ = int(3E7/L)
     if N > N_:
-      print(f"whhhaaa... too many sequences ({N}) subsampling to {N_}")
+      if verbose:
+        print(f"whhhaaa... too many sequences ({N}) subsampling to {N_}")
       np.random.seed(random_seed)
       idx = np.append(0,np.random.permutation(np.arange(1,N)))[:N_]
       F_ = {}
@@ -620,7 +669,7 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
     else:
       return F
 
-  def parse_results(prediction_result, processed_feature_dict, r, t):
+  def parse_results(prediction_result, processed_feature_dict, r, t, num_res):
     '''parse results and convert to numpy arrays'''
     
     to_np = lambda a: np.asarray(a)
@@ -630,46 +679,48 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
           for k,v in d.items(): setattr(self, k, to_np(v))
       return dict2obj(c.__dict__)
 
-    b_factors = prediction_result['plddt'][:,None] * prediction_result['structure_module']['final_atom_mask']  
     dist_bins = jax.numpy.append(0,prediction_result["distogram"]["bin_edges"])
-    dist_mtx = dist_bins[prediction_result["distogram"]["logits"].argmax(-1)]
-    contact_mtx = jax.nn.softmax(prediction_result["distogram"]["logits"])[:,:,dist_bins < 8].sum(-1)
+    dist_logits = prediction_result["distogram"]["logits"][:num_res,:][:,:num_res]
+    dist_mtx = dist_bins[dist_logits.argmax(-1)]
+    contact_mtx = jax.nn.softmax(dist_logits)[:,:,dist_bins < 8].sum(-1)
+
+    b_factors = prediction_result['plddt'][:,None] * prediction_result['structure_module']['final_atom_mask']
     p = protein.from_prediction(processed_feature_dict, prediction_result, b_factors=b_factors)  
+    plddt = prediction_result['plddt'][:num_res]
     out = {"unrelaxed_protein": class_to_np(p),
-           "plddt": to_np(prediction_result['plddt']),
-           "pLDDT": to_np(prediction_result['plddt'].mean()),
+           "plddt": to_np(plddt),
+           "pLDDT": to_np(plddt.mean()),
            "dists": to_np(dist_mtx),
            "adj": to_np(contact_mtx),
            "recycles":to_np(r),
            "tol":to_np(t)}
     if "ptm" in prediction_result:
-      out["pae"] = to_np(prediction_result['predicted_aligned_error'])
+      out["pae"] = to_np(prediction_result['predicted_aligned_error'][:num_res,:][:,:num_res])
       out["pTMscore"] = to_np(prediction_result['ptm'])      
     return out
 
-  opt_default = {"N":len(feature_dict["msa"]),
-                 "L":len(feature_dict["residue_index"]),
-                 "use_ptm":True, "use_turbo":True,
-                 "max_recycles":3,"tol":0,"num_ensemble":1,
-                 "max_msa_clusters":512,"max_extra_msa":1024,
-                 "is_training":False}
+  num_res = len(feature_dict["residue_index"])
+
+  # if [opt]ions not defined
   if opt is None:
-    opt = opt_default
+    opt = OPT_DEFAULT.copy()
+    opt["N"] = len(feature_dict["msa"])
+    opt["L"] = num_res
   else:
-    for k in opt_default.keys():
-      if k not in opt: opt[k] = opt_default[k]
-  
-    
+    for k in OPT_DEFAULT.keys():
+      if k not in opt: opt[k] = OPT_DEFAULT[k]
+          
   model_names = ['model_1', 'model_2', 'model_3', 'model_4', 'model_5'][:num_models]
   total = len(model_names) * num_samples
   outs = {}
 
   def do_report(key):
     o = outs[key]
-    line = f"{key} recycles:{o['recycles']} tol:{o['tol']:.2f} pLDDT:{o['pLDDT']:.2f}"
-    if 'pTMscore' in o:
-      line += f" pTMscore:{o['pTMscore']:.2f}"
-    print(line)
+    if verbose:
+      line = f"{key} recycles:{o['recycles']} tol:{o['tol']:.2f} pLDDT:{o['pLDDT']:.2f}"
+      if 'pTMscore' in o:
+        line += f" pTMscore:{o['pTMscore']:.2f}"
+      print(line)
     if show_images:
       fig = cf.plot_protein(o['unrelaxed_protein'], Ls=feature_dict["Ls"], dpi=100)
       plt.show()  
@@ -677,7 +728,8 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
     pdb_lines = protein.to_pdb(o['unrelaxed_protein'])
     with open(tmp_pdb_path, 'w') as f: f.write(pdb_lines)
   
-  with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
+  disable_tqdm = not verbose
+  with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT, disable=disable_tqdm) as pbar:
     if opt["use_turbo"]:
       if runner is None:
         runner = prep_model_runner(opt,params_loc=params_loc)
@@ -687,6 +739,8 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
         # prep input features
         feat = do_subsample_msa(feature_dict, random_seed=seed) if subsample_msa else feature_dict
         processed_feature_dict = runner["model"].process_features(feat, random_seed=seed)
+        if pad_feats:
+          processed_feature_dict = make_fixed_size(processed_feature_dict, runner)
 
         # go through each model
         for num, model_name in enumerate(model_names):
@@ -701,7 +755,7 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
 
           # predict
           prediction_result, (r, t) = runner["model"].predict(processed_feature_dict, random_seed=seed)
-          outs[key] = parse_results(prediction_result, processed_feature_dict, r=r, t=t)
+          outs[key] = parse_results(prediction_result, processed_feature_dict, r=r, t=t, num_res=num_res)            
 
           # cleanup
           del prediction_result, params, r, t
@@ -728,7 +782,7 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
           
           # predict
           prediction_result, (r, t) = model_runner.predict(processed_feature_dict, random_seed=seed)
-          outs[key] = parse_results(prediction_result, processed_feature_dict, r=r, t=t)
+          outs[key] = parse_results(prediction_result, processed_feature_dict, r=r, t=t, num_res=num_res)
 
           # cleanup
           del processed_feature_dict, prediction_result, r, t
@@ -756,11 +810,13 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
       f.write(pdb_lines)
     
     tmp_pdb_path = os.path.join(feature_dict["output_dir"],f'unranked_{key}_unrelaxed.pdb')
-    os.remove(tmp_pdb_path)
+    if os.path.isfile(tmp_pdb_path):
+      os.remove(tmp_pdb_path)
 
   ############################################################
-  print(f"model rank based on {rank_by}")
-  for n,key in enumerate(model_rank):
-    print(f"rank_{n+1}_{key} {rank_by}:{outs[key][rank_by]:.2f}")
+  if verbose:
+    print(f"model rank based on {rank_by}")
+    for n,key in enumerate(model_rank):
+      print(f"rank_{n+1}_{key} {rank_by}:{outs[key][rank_by]:.2f}")
 
   return outs, model_rank
