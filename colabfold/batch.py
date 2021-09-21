@@ -234,25 +234,91 @@ def run_model_cached(
     return prediction_result
 
 
-def get_queries(input_dir: Path) -> List[Tuple[str, str, str]]:
-    queries = []
-    for file in input_dir.iterdir():
-        if not file.is_file():
-            continue
-        (seqs, header) = pipeline.parsers.parse_fasta(file.read_text())
-        query_sequence = seqs[0]
-        if len(seqs) > 1:
-            logger.warning(
-                f"More than one sequence in {file}, ignoring all but the first sequence"
-            )
-        queries.append((file.stem, query_sequence, file.suffix))
+def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[str]]]:
+    """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
+    of job name, sequence and the optional a3m lines"""
+    input_path = Path(input_path)
+    if input_path.is_file():
+        if input_path.suffix == ".csv":
+            try:
+                import pandas
+            except ImportError:
+                # TODO: Do we want to make pandas mandatory?
+                raise ImportError("Please install pandas to use csv import")
+            df = pandas.read_csv(input_path)
+            assert "id" in df.columns and "sequence" in df.columns
+            queries = [
+                (seq_id, sequence, None)
+                for seq_id, sequence in df[["id", "sequence"]].itertuples(index=False)
+            ]
+        elif input_path.suffix == ".fasta":
+            (sequences, headers) = pipeline.parsers.parse_fasta(input_path.read_text())
+            queries = [
+                (header, sequence, None) for sequence, header in zip(sequences, headers)
+            ]
+        else:
+            raise ValueError(f"Unknown file format {input_path.suffix}")
+    else:
+        queries = []
+        for file in input_path.iterdir():
+            if not file.is_file():
+                continue
+            (seqs, header) = pipeline.parsers.parse_fasta(file.read_text())
+            query_sequence = seqs[0]
+            if len(seqs) > 1 and file.suffix == ".fasta":
+                logger.warning(
+                    f"More than one sequence in {file}, ignoring all but the first sequence"
+                )
+
+            if file.suffix.lower() == ".a3m":
+                a3m_lines = "".join(input_path.joinpath(file).read_text())
+            else:
+                a3m_lines = None
+            queries.append((file.stem, query_sequence, a3m_lines))
     # sort by seq. len
     queries.sort(key=lambda t: len(t[1]))
     return queries
 
 
+def get_msa_and_templates(
+    a3m_lines: Optional[str],
+    jobname: str,
+    query_sequence: str,
+    result_dir: Path,
+    use_env: bool,
+    use_templates: bool,
+    host_url: str = DEFAULT_API_SERVER,
+) -> Tuple[str, Mapping[str, Any]]:
+    if use_templates:
+        a3m_lines_mmseqs2, template_paths = run_mmseqs2(
+            query_sequence,
+            str(result_dir.joinpath(jobname)),
+            use_env,
+            use_templates=True,
+            host_url=host_url,
+        )
+        if template_paths is None:
+            template_features = mk_mock_template(query_sequence, 100)
+        else:
+            template_features = mk_template(
+                a3m_lines_mmseqs2, template_paths, query_sequence
+            )
+        if not a3m_lines:
+            a3m_lines = a3m_lines_mmseqs2
+    else:
+        if not a3m_lines:
+            a3m_lines = run_mmseqs2(
+                query_sequence,
+                str(result_dir.joinpath(jobname)),
+                use_env,
+                host_url=host_url,
+            )
+        template_features = mk_mock_template(query_sequence, 100)
+    return a3m_lines, template_features
+
+
 def run(
-    input_dir: Union[str, Path],
+    queries: List[Tuple[str, str, Optional[str]]],
     result_dir: Union[str, Path],
     use_templates: bool,
     use_amber: bool,
@@ -264,7 +330,6 @@ def run(
     host_url: str = DEFAULT_API_SERVER,
     cache: Optional[str] = None,
 ):
-    input_dir = Path(input_dir)
     result_dir = Path(result_dir)
     result_dir.mkdir(exist_ok=True)
     data_dir = Path(data_dir)
@@ -274,58 +339,35 @@ def run(
     # TODO: What's going on with MSA mode?
     write_bibtex(True, use_env, use_templates, use_amber, result_dir)
 
-    queries = get_queries(input_dir)
     logger.info(f"Predicting {len(queries)} structures")
 
     model_runner_and_params = load_models_and_params(num_models, data_dir)
 
     crop_len = math.ceil(len(queries[0][1]) * 1.1)
-    for jobname, query_sequence, extension in queries:
-        a3m_file = f"{jobname}.a3m"
-        if len(query_sequence) > crop_len:
-            crop_len = math.ceil(len(query_sequence) * 1.1)
+    for jobname, query_sequence, a3m_lines in queries:
         logger.info(f"Running: {jobname}")
         if (
             do_not_overwrite_results
             and result_dir.joinpath(jobname).with_suffix(".result.zip").is_file()
         ):
             continue
-        if use_templates:
-            try:
-                a3m_lines, template_paths = run_mmseqs2(
-                    query_sequence,
-                    str(result_dir.joinpath(jobname)),
-                    use_env,
-                    use_templates=True,
-                    host_url=host_url,
-                )
-            except Exception as e:
-                logger.exception(f"{jobname} could not be processed: {e}")
-                continue
-            if template_paths is None:
-                template_features = mk_mock_template(query_sequence, 100)
-            else:
-                template_features = mk_template(
-                    a3m_lines, template_paths, query_sequence
-                )
-            if extension.lower() == ".a3m":
-                a3m_lines = "".join(input_dir.joinpath(a3m_file).read_text())
-        else:
-            if extension.lower() == ".a3m":
-                a3m_lines = "".join(input_dir.joinpath(a3m_file).read_text())
-            else:
-                try:
-                    a3m_lines = run_mmseqs2(
-                        query_sequence,
-                        str(result_dir.joinpath(jobname)),
-                        use_env,
-                        host_url=host_url,
-                    )
-                except Exception as e:
-                    logger.exception(f"{jobname} could not be processed: {e}")
-                    continue
-            template_features = mk_mock_template(query_sequence, 100)
 
+        a3m_file = f"{jobname}.a3m"
+        if len(query_sequence) > crop_len:
+            crop_len = math.ceil(len(query_sequence) * 1.1)
+        try:
+            a3m_lines, template_features = get_msa_and_templates(
+                a3m_lines,
+                jobname,
+                query_sequence,
+                result_dir,
+                use_env,
+                use_templates,
+                host_url,
+            )
+        except Exception as e:
+            logger.exception(f"{jobname} could not be processed: {e}")
+            continue
         result_dir.joinpath(a3m_file).write_text(a3m_lines)
         # parse MSA
         msa, deletion_matrix = pipeline.parsers.parse_a3m(a3m_lines)
@@ -424,8 +466,9 @@ def main():
         print(NO_GPU_FOUND, file=sys.stderr)
         sys.exit(1)
 
+    queries = get_queries(args.input)
     run(
-        args.input,
+        queries,
         args.results,
         args.templates,
         args.amber,

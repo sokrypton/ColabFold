@@ -43,6 +43,19 @@
 | [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb) |
 | [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb) |
 
+### Running locally
+
+Please checkout the [jax documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to make jax work on your GPU
+
+```shell
+pip install -q git+https://github.com/konstin/ColabFold
+pip install --upgrade "jax[cuda111]" -f https://storage.googleapis.com/jax-releases/jax_releases.html  # Note: wheels only available on linux.
+```
+
+```shell
+colabfold_batch --input <directory_with_fasta_files> --result <result_dir> 
+```
+
 ### FAQ
 - Can I use the models for **Molecular Replacement**?
   - Yes, but be **CAREFUL**, the bfactor column is populated with pLDDT confidence values (higher = better). Phenix.phaser expects a "real" bfactor, where (lower = better). See [post](https://twitter.com/cheshireminima/status/1423929241675120643) from Claudia Millán.

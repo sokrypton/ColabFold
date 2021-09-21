@@ -8,8 +8,17 @@ import numpy
 from absl import logging as absl_logging
 from alphafold.model.features import FeatureDict
 
-from colabfold.batch import run
+from colabfold.batch import run, get_queries
 from colabfold.download import download_alphafold_params
+
+
+def test_get_queries(caplog, tmp_path):
+    tmp_path.joinpath("5AWL_1.fasta").write_text(">5AWL_1\nYYDPETGTWY")
+    tmp_path.joinpath("6A5J.fasta").write_text(">6A5J\nIKKILSKIKKLLK")
+
+    queries = get_queries(tmp_path)
+    assert queries == [("5AWL_1", "YYDPETGTWY", None), ("6A5J", "IKKILSKIKKLLK", None)]
+    assert caplog.messages == []
 
 
 def predict(
@@ -71,26 +80,20 @@ def test_batch(pytestconfig, caplog, tmp_path):
     absl_logging.set_verbosity("error")
 
     data_dir = pytestconfig.rootpath
-    input_dir = tmp_path.joinpath("input")
-    input_dir.mkdir()
-    result_dir = tmp_path.joinpath("result")
-    result_dir.mkdir()
 
     # We'll also want to mock that out later
     download_alphafold_params(data_dir.joinpath("params"))
 
     known_inputs = load_known_input(pytestconfig.rootpath)
-
-    input_dir.joinpath("5AWL_1.fasta").write_text(">5AWL_1\nYYDPETGTWY")
-    input_dir.joinpath("6A5J.fasta").write_text(">6A5J\nIKKILSKIKKLLK")
+    queries = [("5AWL_1", "YYDPETGTWY", None), ("6A5J", "IKKILSKIKKLLK", None)]
 
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
         lambda self, feat: predict(known_inputs, feat),
     ), mock.patch("colabfold.batch.run_mmseqs2", mock_run_mmseqs2):
         run(
-            input_dir,
-            result_dir,
+            queries,
+            tmp_path,
             use_templates=False,
             use_amber=False,
             msa_mode="MMseqs2 (UniRef+Environmental)",
@@ -102,13 +105,11 @@ def test_batch(pytestconfig, caplog, tmp_path):
 
     # Very simple test, it would be better to check coordinates
     assert (
-        len(
-            result_dir.joinpath("5AWL_1_unrelaxed_model_1.pdb").read_text().splitlines()
-        )
+        len(tmp_path.joinpath("5AWL_1_unrelaxed_model_1.pdb").read_text().splitlines())
         == 92
     )
     assert (
-        len(result_dir.joinpath("6A5J_unrelaxed_model_1.pdb").read_text().splitlines())
+        len(tmp_path.joinpath("6A5J_unrelaxed_model_1.pdb").read_text().splitlines())
         == 108
     )
 
