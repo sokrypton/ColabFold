@@ -10,6 +10,7 @@ from typing import Any, Dict, Tuple, List, Union, Mapping, Optional
 import haiku
 import numpy
 import numpy as np
+import pandas
 from alphafold.common import protein
 from alphafold.common.protein import Protein
 from alphafold.data import pipeline, templates
@@ -251,12 +252,7 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
     of job name, sequence and the optional a3m lines"""
     input_path = Path(input_path)
     if input_path.is_file():
-        if input_path.suffix == ".csv" and input_path.suffix == ".tsv":
-            try:
-                import pandas
-            except ImportError:
-                # TODO: Do we want to make pandas mandatory?
-                raise ImportError("Please install pandas to use csv import")
+        if input_path.suffix == ".csv" or input_path.suffix == ".tsv":
             sep = "\t" if input_path.suffix == ".tsv" else ","
             df = pandas.read_csv(input_path, sep=sep)
             assert "id" in df.columns and "sequence" in df.columns
