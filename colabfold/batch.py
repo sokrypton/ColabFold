@@ -160,6 +160,16 @@ def predict_structure(
             # Hack so that we don't need to download into the alphafold package itself
             residue_constants.stereo_chemical_props_path = "stereo_chemical_props.txt"
 
+            # Remove the padding because unlike to_pdb() amber doesn't handle that
+            remove_padding_mask = unrelaxed_protein.atom_mask.sum(axis=-1) > 0
+            unrelaxed_protein = Protein(
+                atom_mask=unrelaxed_protein.atom_mask[remove_padding_mask],
+                atom_positions=unrelaxed_protein.atom_positions[remove_padding_mask],
+                aatype=unrelaxed_protein.aatype[remove_padding_mask],
+                residue_index=unrelaxed_protein.residue_index[remove_padding_mask],
+                b_factors=unrelaxed_protein.b_factors[remove_padding_mask],
+            )
+
             # Relax the prediction.
             amber_relaxer = relax.AmberRelaxation(
                 max_iterations=0,
@@ -167,15 +177,6 @@ def predict_structure(
                 stiffness=10.0,
                 exclude_residues=[],
                 max_outer_iterations=20,
-            )
-            # Remove the padding because unlike to_pdb() amber doesn't handle that
-            remove_padding_mask = unrelaxed_protein.atom_mask.sum(axis=-1) > 0
-            unrelaxed_protein = Protein(
-                atom_mask=unrelaxed_protein.atom_mask[remove_padding_mask],
-                atom_positions=unrelaxed_protein.atom_positions[remove_padding_mask],
-                aatype=unrelaxed_protein.atom_positions[remove_padding_mask],
-                residue_index=unrelaxed_protein.residue_index[remove_padding_mask],
-                b_factors=unrelaxed_protein.b_factors[remove_padding_mask],
             )
             relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
             relaxed_pdb_lines.append(relaxed_pdb_str)
