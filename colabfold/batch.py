@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 def mk_mock_template(query_sequence: str, num_temp: int = 1) -> Mapping[str, Any]:
-    ln = len(query_sequence)
+    ln = len(query_sequence) if isinstance(query_sequence, str) else sum(len(s) for s in query_sequence)
     output_templates_sequence = "A" * ln
     output_confidence_scores = np.full(ln, 1.0)
     templates_all_atom_positions = np.zeros(
@@ -109,6 +109,19 @@ def predict_structure(
     unrelaxed_pdb_lines = []
     relaxed_pdb_lines = []
     seq_len = feature_dict["seq_length"][0]
+
+    # Minkyung's code
+    # add big enough number to residue index to indicate chain breaks
+    idx_res = feature_dict['residue_index']
+    L_prev = 0
+    # Ls: number of residues in each chain
+    for L_i in sequences_lengths[:-1]:
+        idx_res[L_prev + L_i:] += 200
+        L_prev += L_i
+
+    chains = list("".join([ascii_uppercase[n] * L for n, L in enumerate(sequences_lengths)]))
+    feature_dict['residue_index'] = idx_res
+
     for model_name, (model_runner, params) in model_runner_and_params.items():
         logger.info(f"running {model_name}")
         # swap params to avoid recompiling
@@ -182,11 +195,6 @@ def predict_structure(
             relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
             relaxed_pdb_lines.append(relaxed_pdb_str)
 
-    idx_res = feature_dict["residue_index"]
-    chains = list(
-        "".join([ascii_uppercase[n] * L for n, L in enumerate(sequences_lengths)])
-    )
-
     # rerank models based on predicted lddt
     lddt_rank = np.mean(plddts, -1).argsort()[::-1]
     out = {}
@@ -257,9 +265,12 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
             df = pandas.read_csv(input_path, sep=sep)
             assert "id" in df.columns and "sequence" in df.columns
             queries = [
-                (seq_id, sequence, None)
+                (seq_id, sequence.split(":"), None)
                 for seq_id, sequence in df[["id", "sequence"]].itertuples(index=False)
             ]
+            for i in range(len(queries)):
+                if len(queries[i][1]) == 1:
+                    queries[i] = (queries[i][0], queries[i][1][0], None)
         elif input_path.suffix == ".fasta":
             (sequences, headers) = pipeline.parsers.parse_fasta(input_path.read_text())
             queries = [
@@ -296,7 +307,7 @@ def get_msa_and_templates(
     result_dir: Path,
     use_env: bool,
     use_templates: bool,
-    host_url: str = DEFAULT_API_SERVER,
+    host_url: str = DEFAULT_API_SERVER
 ) -> Tuple[str, Mapping[str, Any]]:
     if use_templates:
         a3m_lines_mmseqs2, template_paths = run_mmseqs2(
@@ -316,10 +327,12 @@ def get_msa_and_templates(
             a3m_lines = a3m_lines_mmseqs2
     else:
         if not a3m_lines:
+            use_pairing = False if isinstance(query_sequence, str) or len(query_sequence) == 1 else True
             a3m_lines = run_mmseqs2(
                 query_sequence,
                 str(result_dir.joinpath(jobname)),
                 use_env,
+                use_pairing=use_pairing,
                 host_url=host_url,
             )
         template_features = mk_mock_template(query_sequence, 100)
@@ -352,7 +365,7 @@ def run(
 
     model_runner_and_params = load_models_and_params(num_models, data_dir)
 
-    crop_len = math.ceil(len(queries[0][1]) * 1.1)
+    crop_len = 0
     for jobname, query_sequence, a3m_lines in queries:
         logger.info(f"Running: {jobname}")
         if (
@@ -362,8 +375,9 @@ def run(
             continue
 
         a3m_file = f"{jobname}.a3m"
-        if len(query_sequence) > crop_len:
-            crop_len = math.ceil(len(query_sequence) * 1.1)
+        query_sequence_len = len(query_sequence) if isinstance(query_sequence, str) else sum(len(s) for s in query_sequence)
+        if query_sequence_len > crop_len:
+            crop_len = math.ceil(query_sequence_len * 1.1)
         try:
             a3m_lines, template_features = get_msa_and_templates(
                 a3m_lines,
@@ -377,6 +391,7 @@ def run(
         except Exception as e:
             logger.exception(f"{jobname} could not be processed: {e}")
             continue
+
         result_dir.joinpath(a3m_file).write_text(a3m_lines)
         # parse MSA
         msa, deletion_matrix = pipeline.parsers.parse_a3m(a3m_lines)
@@ -388,9 +403,9 @@ def run(
             # gather features
             feature_dict = {
                 **pipeline.make_sequence_features(
-                    sequence=query_sequence,
+                    sequence=query_sequence if isinstance(query_sequence, str) else "".join(query_sequence),
                     description="none",
-                    num_res=len(query_sequence),
+                    num_res=query_sequence_len,
                 ),
                 **pipeline.make_msa_features(
                     msas=msas, deletion_matrices=deletion_matrices
@@ -405,7 +420,7 @@ def run(
             jobname,
             result_dir,
             feature_dict,
-            sequences_lengths=[len(query_sequence)],
+            sequences_lengths=[len(query_sequence)] if isinstance(query_sequence, str) else [len(q) for q in query_sequence],
             crop_len=crop_len,
             model_runner_and_params=model_runner_and_params,
             do_relax=use_amber,
