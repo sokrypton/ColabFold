@@ -56,6 +56,7 @@ def mock_run_mmseqs2(
     use_filter=True,
     use_templates=False,
     filter=None,
+    use_pairing=False,
     host_url="https://a3m.mmseqs.com",
 ):
     assert (

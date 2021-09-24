@@ -23,14 +23,22 @@ def plot_lddt(
     jobname: str,
     msa,
     outs: dict,
-    query_sequence: str,
+    query_sequence,
     result_dir: Path,
     show: bool = False,
 ):
     # gather MSA info
     deduped_full_msa = list(dict.fromkeys(msa))
     msa_arr = np.array([list(seq) for seq in deduped_full_msa])
-    seqid = (np.array(list(query_sequence)) == msa_arr).mean(-1)
+
+    if isinstance(query_sequence, str):
+        query_str = query_sequence
+        query_len = len(query_sequence)
+    else:
+        query_str = "".join(query_sequence)
+        query_len = sum(len(s) for s in query_sequence)
+
+    seqid = (np.array(list(query_str)) == msa_arr).mean(-1)
     seqid_sort = seqid.argsort()  # [::-1]
     non_gaps = (msa_arr != "-").astype(float)
     non_gaps[non_gaps == 0] = np.nan
@@ -61,7 +69,7 @@ def plot_lddt(
         plt.plot(value["plddt"], label=model_name)
     if homooligomer > 0:
         for n in range(homooligomer + 1):
-            x = n * (len(query_sequence) - 1)
+            x = n * (query_len - 1)
             plt.plot([x, x], [0, 100], color="black")
     plt.legend()
     plt.ylim(0, 100)
