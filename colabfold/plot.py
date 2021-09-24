@@ -16,6 +16,7 @@ def plot_predicted_alignment_error(
     plt.savefig(result_dir.joinpath(jobname + "_PAE.png"))
     if show:
         plt.show()
+    plt.clf()
 
 
 def plot_lddt(
@@ -78,3 +79,4 @@ def plot_lddt(
     plt.savefig(str(result_dir.joinpath(jobname + "_coverage_lDDT.png")))
     if show:
         plt.show()
+    plt.clf()
