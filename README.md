@@ -48,7 +48,7 @@
 Please checkout the [jax documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to make jax work on your GPU
 
 ```shell
-pip install -q git+https://github.com/konstin/ColabFold
+pip install git+https://github.com/konstin/ColabFold
 pip install --upgrade "jax[cuda111]" -f https://storage.googleapis.com/jax-releases/jax_releases.html  # Note: wheels only available on linux.
 ```
 

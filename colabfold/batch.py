@@ -37,7 +37,11 @@ logger = logging.getLogger(__name__)
 
 
 def mk_mock_template(query_sequence: str, num_temp: int = 1) -> Mapping[str, Any]:
-    ln = len(query_sequence) if isinstance(query_sequence, str) else sum(len(s) for s in query_sequence)
+    ln = (
+        len(query_sequence)
+        if isinstance(query_sequence, str)
+        else sum(len(s) for s in query_sequence)
+    )
     output_templates_sequence = "A" * ln
     output_confidence_scores = np.full(ln, 1.0)
     templates_all_atom_positions = np.zeros(
@@ -112,15 +116,17 @@ def predict_structure(
 
     # Minkyung's code
     # add big enough number to residue index to indicate chain breaks
-    idx_res = feature_dict['residue_index']
+    idx_res = feature_dict["residue_index"]
     L_prev = 0
     # Ls: number of residues in each chain
     for L_i in sequences_lengths[:-1]:
-        idx_res[L_prev + L_i:] += 200
+        idx_res[L_prev + L_i :] += 200
         L_prev += L_i
 
-    chains = list("".join([ascii_uppercase[n] * L for n, L in enumerate(sequences_lengths)]))
-    feature_dict['residue_index'] = idx_res
+    chains = list(
+        "".join([ascii_uppercase[n] * L for n, L in enumerate(sequences_lengths)])
+    )
+    feature_dict["residue_index"] = idx_res
 
     for model_name, (model_runner, params) in model_runner_and_params.items():
         logger.info(f"running {model_name}")
@@ -307,7 +313,7 @@ def get_msa_and_templates(
     result_dir: Path,
     use_env: bool,
     use_templates: bool,
-    host_url: str = DEFAULT_API_SERVER
+    host_url: str = DEFAULT_API_SERVER,
 ) -> Tuple[str, Mapping[str, Any]]:
     if use_templates:
         a3m_lines_mmseqs2, template_paths = run_mmseqs2(
@@ -327,7 +333,11 @@ def get_msa_and_templates(
             a3m_lines = a3m_lines_mmseqs2
     else:
         if not a3m_lines:
-            use_pairing = False if isinstance(query_sequence, str) or len(query_sequence) == 1 else True
+            use_pairing = (
+                False
+                if isinstance(query_sequence, str) or len(query_sequence) == 1
+                else True
+            )
             a3m_lines = run_mmseqs2(
                 query_sequence,
                 str(result_dir.joinpath(jobname)),
@@ -375,7 +385,11 @@ def run(
             continue
 
         a3m_file = f"{jobname}.a3m"
-        query_sequence_len = len(query_sequence) if isinstance(query_sequence, str) else sum(len(s) for s in query_sequence)
+        query_sequence_len = (
+            len(query_sequence)
+            if isinstance(query_sequence, str)
+            else sum(len(s) for s in query_sequence)
+        )
         if query_sequence_len > crop_len:
             crop_len = math.ceil(query_sequence_len * 1.1)
         try:
@@ -403,7 +417,9 @@ def run(
             # gather features
             feature_dict = {
                 **pipeline.make_sequence_features(
-                    sequence=query_sequence if isinstance(query_sequence, str) else "".join(query_sequence),
+                    sequence=query_sequence
+                    if isinstance(query_sequence, str)
+                    else "".join(query_sequence),
                     description="none",
                     num_res=query_sequence_len,
                 ),
@@ -420,7 +436,9 @@ def run(
             jobname,
             result_dir,
             feature_dict,
-            sequences_lengths=[len(query_sequence)] if isinstance(query_sequence, str) else [len(q) for q in query_sequence],
+            sequences_lengths=[len(query_sequence)]
+            if isinstance(query_sequence, str)
+            else [len(q) for q in query_sequence],
             crop_len=crop_len,
             model_runner_and_params=model_runner_and_params,
             do_relax=use_amber,
