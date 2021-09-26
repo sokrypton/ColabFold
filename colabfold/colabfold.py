@@ -65,7 +65,8 @@ TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaini
 
 
 def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
-                use_templates=False, filter=None, use_pairing=False, host_url="https://a3m.mmseqs.com"):
+                use_templates=False, filter=None, use_pairing=False,
+                host_url="https://a3m.mmseqs.com"):
   submission_endpoint = "ticket/pair" if use_pairing else "ticket/msa"
 
   def submit(seqs, mode, N=101):

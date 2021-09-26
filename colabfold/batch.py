@@ -36,7 +36,7 @@ from colabfold.utils import (
 logger = logging.getLogger(__name__)
 
 
-def mk_mock_template(query_sequence: str, num_temp: int = 1) -> Mapping[str, Any]:
+def mk_mock_template(query_sequence, num_temp: int = 1) -> Mapping[str, Any]:
     ln = (
         len(query_sequence)
         if isinstance(query_sequence, str)
@@ -104,12 +104,13 @@ def predict_structure(
     crop_len: int,
     model_runner_and_params: Dict[str, Tuple[model.RunModel, haiku.Params]],
     do_relax: bool = False,
+    rank_by: str = "plddt",
     random_seed: int = 0,
     cache: Optional[str] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     # Run the models.
-    plddts, paes = [], []
+    plddts, paes, ptmscore = [], [], []
     unrelaxed_pdb_lines = []
     relaxed_pdb_lines = []
     seq_len = feature_dict["seq_length"][0]
@@ -169,6 +170,7 @@ def predict_structure(
         unrelaxed_protein = protein.from_prediction(input_fix, prediction_result)
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
+        ptmscore.append(prediction_result["ptm"])
         paes_res = []
         for i in range(seq_len):
             paes_res.append(prediction_result["predicted_aligned_error"][i][:seq_len])
@@ -202,10 +204,13 @@ def predict_structure(
             relaxed_pdb_lines.append(relaxed_pdb_str)
 
     # rerank models based on predicted lddt
-    lddt_rank = np.mean(plddts, -1).argsort()[::-1]
+    if rank_by == "ptmscore":
+        model_rank = np.array(ptmscore).argsort()[::-1]
+    else:
+        model_rank = np.mean(plddts, -1).argsort()[::-1]
     out = {}
     logger.info("reranking models based on avg. predicted lDDT")
-    for n, r in enumerate(lddt_rank):
+    for n, r in enumerate(model_rank):
         logger.info(f"model_{n + 1} {np.mean(plddts[r]):.1f}")
 
         unrelaxed_pdb_path = result_dir.joinpath(
@@ -221,7 +226,11 @@ def predict_structure(
             relaxed_pdb_path.write_text(unrelaxed_pdb_lines[r])
             set_bfactor(relaxed_pdb_path, plddts[r], idx_res, chains)
 
-        out[f"model_{n + 1}"] = {"plddt": plddts[r], "pae": paes[r]}
+        out[f"model_{n + 1}"] = {
+            "plddt": plddts[r],
+            "pae": paes[r],
+            "pTMscore": ptmscore,
+        }
     return out
 
 
@@ -309,25 +318,26 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
 def get_msa_and_templates(
     a3m_lines: Optional[str],
     jobname: str,
-    query_sequence: str,
+    query_sequences,
     result_dir: Path,
     use_env: bool,
     use_templates: bool,
+    pair_mode: str,
     host_url: str = DEFAULT_API_SERVER,
 ) -> Tuple[str, Mapping[str, Any]]:
     if use_templates:
         a3m_lines_mmseqs2, template_paths = run_mmseqs2(
-            query_sequence,
+            query_sequences,
             str(result_dir.joinpath(jobname)),
             use_env,
             use_templates=True,
             host_url=host_url,
         )
         if template_paths is None:
-            template_features = mk_mock_template(query_sequence, 100)
+            template_features = mk_mock_template(query_sequences, 100)
         else:
             template_features = mk_template(
-                a3m_lines_mmseqs2, template_paths, query_sequence
+                a3m_lines_mmseqs2, template_paths, query_sequences
             )
         if not a3m_lines:
             a3m_lines = a3m_lines_mmseqs2
@@ -335,17 +345,63 @@ def get_msa_and_templates(
         if not a3m_lines:
             use_pairing = (
                 False
-                if isinstance(query_sequence, str) or len(query_sequence) == 1
+                if isinstance(query_sequences, str) or len(query_sequences) == 1
                 else True
             )
-            a3m_lines = run_mmseqs2(
-                query_sequence,
-                str(result_dir.joinpath(jobname)),
-                use_env,
-                use_pairing=use_pairing,
-                host_url=host_url,
-            )
-        template_features = mk_mock_template(query_sequence, 100)
+            # find normal a3ms
+            if (
+                not use_pairing
+                or pair_mode == "unpaired"
+                or pair_mode == "unpaired+paired"
+            ):
+                a3m_lines = run_mmseqs2(
+                    query_sequences,
+                    str(result_dir.joinpath(jobname)),
+                    use_env,
+                    use_pairing=False,
+                    host_url=host_url,
+                )
+
+            if use_pairing:
+                if pair_mode == "paired" or pair_mode == "unpaired+paired":
+                    # find paired a3m
+                    paired_a3m_lines = run_mmseqs2(
+                        query_sequences,
+                        str(result_dir.joinpath(jobname)),
+                        use_env,
+                        use_pairing=True,
+                        host_url=host_url,
+                    )
+
+                if pair_mode == "unpaired" or pair_mode == "unpaired+paired":
+                    # pad sequences
+                    _blank_seq = ["-" * len(seq) for seq in query_sequences]
+                    a3m_lines_combined = []
+                    for n, seq in enumerate(query_sequences):
+                        lines = a3m_lines[n].split("\n")
+                        for a3m_line in lines:
+                            if len(a3m_line) == 0:
+                                continue
+                            if a3m_line.startswith(">"):
+                                a3m_lines_combined.append(a3m_line)
+                            else:
+                                a3m_lines_combined.append(
+                                    "".join(
+                                        _blank_seq[:n]
+                                        + [a3m_line]
+                                        + _blank_seq[n + 1 :]
+                                    )
+                                )
+                    if pair_mode == "unpaired":
+                        a3m_lines = "\n".join(a3m_lines_combined)
+                    else:
+                        a3m_lines = (
+                            paired_a3m_lines + "\n" + "\n".join(a3m_lines_combined)
+                        )
+                else:
+                    a3m_lines = paired_a3m_lines
+
+        template_features = mk_mock_template(query_sequences, 100)
     return a3m_lines, template_features
 
 
@@ -359,6 +415,8 @@ def run(
     homooligomer: int,
     data_dir: Union[str, Path],
     do_not_overwrite_results: bool,
+    rank_mode: str,
+    pair_mode: str,
     host_url: str = DEFAULT_API_SERVER,
     cache: Optional[str] = None,
 ):
@@ -390,6 +448,18 @@ def run(
             if isinstance(query_sequence, str)
             else sum(len(s) for s in query_sequence)
         )
+        query_sequence_len_array = (
+            [len(query_sequence)]
+            if isinstance(query_sequence, str)
+            else [len(q) for q in query_sequence]
+        )
+        if rank_mode == "auto":
+            # score complexes by ptmscore and sequences by plddt
+            rank_mode = (
+                "plddt"
+                if isinstance(query_sequence, str) or len(query_sequence) == 1
+                else "ptmscore"
+            )
         if query_sequence_len > crop_len:
             crop_len = math.ceil(query_sequence_len * 1.1)
         try:
@@ -400,6 +470,7 @@ def run(
                 result_dir,
                 use_env,
                 use_templates,
+                pair_mode,
                 host_url,
             )
         except Exception as e:
@@ -436,12 +507,11 @@ def run(
             jobname,
             result_dir,
             feature_dict,
-            sequences_lengths=[len(query_sequence)]
-            if isinstance(query_sequence, str)
-            else [len(q) for q in query_sequence],
+            sequences_lengths=query_sequence_len_array,
             crop_len=crop_len,
             model_runner_and_params=model_runner_and_params,
             do_relax=use_amber,
+            rank_by=rank_mode,
             cache=cache,
         )
 
@@ -486,7 +556,22 @@ def main():
     )
     parser.add_argument("--cache", help="Caches the model output. For development only")
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
+    parser.add_argument(
+        "--rank",
+        help="rank models by auto, plddt or ptmscore",
+        type=str,
+        default="auto",
+        choices=["auto", "plddt", "ptmscore"],
+    )
     parser.add_argument("--homooligomer", type=int, default=1)
+    parser.add_argument(
+        "--pair-mode",
+        help="rank models by auto, unpaired, paired, unpaired+paired",
+        type=str,
+        default="unpaired+paired",
+        choices=["unpaired", "paired", "unpaired+paired"],
+    )
+
     parser.add_argument("--data", default=".")
     parser.add_argument(
         "--do-not-overwrite-results", default=True, action="store_false"
@@ -519,6 +604,8 @@ def main():
         args.homooligomer,
         args.data,
         args.do_not_overwrite_results,
+        args.rank,
+        args.pair_mode,
         args.host_url,
         cache=args.cache,
     )
