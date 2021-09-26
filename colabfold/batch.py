@@ -170,7 +170,7 @@ def predict_structure(
         unrelaxed_protein = protein.from_prediction(input_fix, prediction_result)
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
-        ptmscore.append(prediction_result['ptm'])
+        ptmscore.append(prediction_result["ptm"])
         paes_res = []
         for i in range(seq_len):
             paes_res.append(prediction_result["predicted_aligned_error"][i][:seq_len])
@@ -226,7 +226,11 @@ def predict_structure(
             relaxed_pdb_path.write_text(unrelaxed_pdb_lines[r])
             set_bfactor(relaxed_pdb_path, plddts[r], idx_res, chains)
 
-        out[f"model_{n + 1}"] = {"plddt": plddts[r], "pae": paes[r], "pTMscore" : ptmscore}
+        out[f"model_{n + 1}"] = {
+            "plddt": plddts[r],
+            "pae": paes[r],
+            "pTMscore": ptmscore,
+        }
     return out
 
 
@@ -345,7 +349,11 @@ def get_msa_and_templates(
                 else True
             )
             # find normal a3ms
-            if not use_pairing or pair_mode == "unpaired" or pair_mode == "unpaired+paired":
+            if (
+                not use_pairing
+                or pair_mode == "unpaired"
+                or pair_mode == "unpaired+paired"
+            ):
                 a3m_lines = run_mmseqs2(
                     query_sequence,
                     str(result_dir.joinpath(jobname)),
@@ -366,6 +374,7 @@ def get_msa_and_templates(
                     )
 
                 _blank_seq = ["-" * len(seq) for seq in query_sequence]
+
                 def _pad(ns, vals):
                     _blank = _blank_seq.copy()
                     _blank[ns] = vals
@@ -375,7 +384,7 @@ def get_msa_and_templates(
                     # pad sequences
                     a3m_lines_combined = []
                     for n, seq in enumerate(query_sequence):
-                        lines = a3m_lines[n].split('\n')
+                        lines = a3m_lines[n].split("\n")
                         for a3m_line in lines:
                             if len(a3m_line) == 0:
                                 continue
@@ -386,7 +395,9 @@ def get_msa_and_templates(
                     if pair_mode == "unpaired":
                         a3m_lines = "\n".join(a3m_lines_combined)
                     else:
-                        a3m_lines = paired_a3m_lines + "\n" + "\n".join(a3m_lines_combined)
+                        a3m_lines = (
+                            paired_a3m_lines + "\n" + "\n".join(a3m_lines_combined)
+                        )
                 else:
                     a3m_lines = paired_a3m_lines
 
@@ -437,11 +448,19 @@ def run(
             if isinstance(query_sequence, str)
             else sum(len(s) for s in query_sequence)
         )
-        query_sequence_len_array = [len(query_sequence)] if isinstance(query_sequence, str) else [len(q) for q in query_sequence]
+        query_sequence_len_array = (
+            [len(query_sequence)]
+            if isinstance(query_sequence, str)
+            else [len(q) for q in query_sequence]
+        )
         rank_mode = rank
         if rank == "auto":
             # score complexes by ptmscore and sequences by plddt
-            rank_mode = "plddt" if isinstance(query_sequence, str) or len(query_sequence) == 1 else "ptmscore"
+            rank_mode = (
+                "plddt"
+                if isinstance(query_sequence, str) or len(query_sequence) == 1
+                else "ptmscore"
+            )
         if query_sequence_len > crop_len:
             crop_len = math.ceil(query_sequence_len * 1.1)
         try:
@@ -538,10 +557,20 @@ def main():
     )
     parser.add_argument("--cache", help="Caches the model output. For development only")
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
-    parser.add_argument("--rank", help="rank models by 0: auto, 1: plddt or ptmscore", type=str, default="auto", choices=["auto", "plddt", "ptmscore"])
+    parser.add_argument(
+        "--rank",
+        help="rank models by 0: auto, 1: plddt or ptmscore",
+        type=str,
+        default="auto",
+        choices=["auto", "plddt", "ptmscore"],
+    )
     parser.add_argument("--homooligomer", type=int, default=1)
     parser.add_argument(
-        "--pair-mode", help="rank models by auto, unpaired, paired, unpaired+paired", type=str, default="unpaired+paired", choices=["unpaired", "paired", "unpaired+paired"]
+        "--pair-mode",
+        help="rank models by auto, unpaired, paired, unpaired+paired",
+        type=str,
+        default="unpaired+paired",
+        choices=["unpaired", "paired", "unpaired+paired"],
     )
 
     parser.add_argument("--data", default=".")

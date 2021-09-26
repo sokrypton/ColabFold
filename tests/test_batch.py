@@ -103,7 +103,7 @@ def test_batch(pytestconfig, caplog, tmp_path):
             data_dir=data_dir,
             do_not_overwrite_results=False,
             rank=0,
-            pair_mode="unpaired+paired"
+            pair_mode="unpaired+paired",
         )
 
     # Very simple test, it would be better to check coordinates
