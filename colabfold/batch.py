@@ -553,7 +553,7 @@ def main():
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
     parser.add_argument(
         "--rank",
-        help="rank models by 0: auto, 1: plddt or ptmscore",
+        help="rank models by auto, plddt or ptmscore",
         type=str,
         default="auto",
         choices=["auto", "plddt", "ptmscore"],
