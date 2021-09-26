@@ -455,12 +455,13 @@ def read_pdb_renum(pdb_filename, Ls=None):
   return "".join(pdb_out)
 
 def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False,
-             color="lDDT", chains=None, Ls=None, vmin=50, vmax=90):
+             color="lDDT", chains=None, Ls=None, vmin=50, vmax=90,
+             color_HP=False, size=(800,480)):
   
   if chains is None:
     chains = 1 if Ls is None else len(Ls)
 
-  view = py3Dmol.view(js='https://3dmol.org/build/3Dmol.js',)
+  view = py3Dmol.view(js='https://3dmol.org/build/3Dmol.js', width=size[0], height=size[1])
   view.addModel(read_pdb_renum(pred_output_path, Ls),'pdb')
   if color == "lDDT":
     view.setStyle({'cartoon': {'colorscheme': {'prop':'b','gradient': 'roygb','min':vmin,'max':vmax}}})
@@ -471,12 +472,23 @@ def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False,
        view.setStyle({'chain':chain},{'cartoon': {'color':color}})
   if show_sidechains:
     BB = ['C','O','N']
-    view.addStyle({'and':[{'resn':["GLY","PRO"],'invert':True},{'atom':BB,'invert':True}]},
-                        {'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
-    view.addStyle({'and':[{'resn':"GLY"},{'atom':'CA'}]},
-                        {'sphere':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
-    view.addStyle({'and':[{'resn':"PRO"},{'atom':['C','O'],'invert':True}]},
-                        {'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})  
+    HP = ["ALA","GLY","VAL","ILE","LEU","PHE","MET","PRO","TRP","CYS","TYR"]
+    if color_HP:
+      view.addStyle({'and':[{'resn':HP},{'atom':BB,'invert':True}]},
+                    {'stick':{'colorscheme':"yellowCarbon",'radius':0.3}})
+      view.addStyle({'and':[{'resn':HP,'invert':True},{'atom':BB,'invert':True}]},
+                    {'stick':{'colorscheme':"whiteCarbon",'radius':0.3}})
+      view.addStyle({'and':[{'resn':"GLY"},{'atom':'CA'}]},
+                    {'sphere':{'colorscheme':"yellowCarbon",'radius':0.3}})
+      view.addStyle({'and':[{'resn':"PRO"},{'atom':['C','O'],'invert':True}]},
+                    {'stick':{'colorscheme':"yellowCarbon",'radius':0.3}})
+    else:
+      view.addStyle({'and':[{'resn':["GLY","PRO"],'invert':True},{'atom':BB,'invert':True}]},
+                    {'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
+      view.addStyle({'and':[{'resn':"GLY"},{'atom':'CA'}]},
+                    {'sphere':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
+      view.addStyle({'and':[{'resn':"PRO"},{'atom':['C','O'],'invert':True}]},
+                    {'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})  
   if show_mainchains:
     BB = ['C','O','N','CA']
     view.addStyle({'atom':BB},{'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
