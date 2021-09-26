@@ -415,7 +415,7 @@ def run(
     homooligomer: int,
     data_dir: Union[str, Path],
     do_not_overwrite_results: bool,
-    rank: str,
+    rank_mode: str,
     pair_mode: str,
     host_url: str = DEFAULT_API_SERVER,
     cache: Optional[str] = None,
@@ -453,8 +453,7 @@ def run(
             if isinstance(query_sequence, str)
             else [len(q) for q in query_sequence]
         )
-        rank_mode = rank
-        if rank == "auto":
+        if rank_mode == "auto":
             # score complexes by ptmscore and sequences by plddt
             rank_mode = (
                 "plddt"
