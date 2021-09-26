@@ -104,12 +104,13 @@ def predict_structure(
     crop_len: int,
     model_runner_and_params: Dict[str, Tuple[model.RunModel, haiku.Params]],
     do_relax: bool = False,
+    rank_by: str = "plddt",
     random_seed: int = 0,
     cache: Optional[str] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     # Run the models.
-    plddts, paes = [], []
+    plddts, paes, ptmscore = [], [], []
     unrelaxed_pdb_lines = []
     relaxed_pdb_lines = []
     seq_len = feature_dict["seq_length"][0]
@@ -169,6 +170,7 @@ def predict_structure(
         unrelaxed_protein = protein.from_prediction(input_fix, prediction_result)
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
+        ptmscore.append(prediction_result['ptm'])
         paes_res = []
         for i in range(seq_len):
             paes_res.append(prediction_result["predicted_aligned_error"][i][:seq_len])
@@ -202,10 +204,13 @@ def predict_structure(
             relaxed_pdb_lines.append(relaxed_pdb_str)
 
     # rerank models based on predicted lddt
-    lddt_rank = np.mean(plddts, -1).argsort()[::-1]
+    if rank_by == "ptmscore":
+        model_rank = np.array(ptmscore).argsort()[::-1]
+    else:
+        model_rank = np.mean(plddts, -1).argsort()[::-1]
     out = {}
     logger.info("reranking models based on avg. predicted lDDT")
-    for n, r in enumerate(lddt_rank):
+    for n, r in enumerate(model_rank):
         logger.info(f"model_{n + 1} {np.mean(plddts[r]):.1f}")
 
         unrelaxed_pdb_path = result_dir.joinpath(
@@ -221,7 +226,7 @@ def predict_structure(
             relaxed_pdb_path.write_text(unrelaxed_pdb_lines[r])
             set_bfactor(relaxed_pdb_path, plddts[r], idx_res, chains)
 
-        out[f"model_{n + 1}"] = {"plddt": plddts[r], "pae": paes[r]}
+        out[f"model_{n + 1}"] = {"plddt": plddts[r], "pae": paes[r], "pTMscore" : ptmscore}
     return out
 
 
@@ -390,6 +395,8 @@ def run(
             if isinstance(query_sequence, str)
             else sum(len(s) for s in query_sequence)
         )
+        query_sequence_len_array = [len(query_sequence)] if isinstance(query_sequence, str) else [len(q) for q in query_sequence]
+        rank_mode = "plddt" if isinstance(query_sequence, str) or len(query_sequence) == 1 else "ptmscore"
         if query_sequence_len > crop_len:
             crop_len = math.ceil(query_sequence_len * 1.1)
         try:
@@ -436,12 +443,11 @@ def run(
             jobname,
             result_dir,
             feature_dict,
-            sequences_lengths=[len(query_sequence)]
-            if isinstance(query_sequence, str)
-            else [len(q) for q in query_sequence],
+            sequences_lengths=query_sequence_len_array,
             crop_len=crop_len,
             model_runner_and_params=model_runner_and_params,
             do_relax=use_amber,
+            rank_by=rank_mode,
             cache=cache,
         )
 
