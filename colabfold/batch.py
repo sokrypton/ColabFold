@@ -385,7 +385,13 @@ def get_msa_and_templates(
                             if a3m_line.startswith(">"):
                                 a3m_lines_combined.append(a3m_line)
                             else:
-                                a3m_lines_combined.append("".join(_blank_seq[:n] + [a3m_line] + _blank_seq[n + 1:]))
+                                a3m_lines_combined.append(
+                                    "".join(
+                                        _blank_seq[:n]
+                                        + [a3m_line]
+                                        + _blank_seq[n + 1 :]
+                                    )
+                                )
                     if pair_mode == "unpaired":
                         a3m_lines = "\n".join(a3m_lines_combined)
                     else:
