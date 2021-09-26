@@ -102,6 +102,7 @@ def test_batch(pytestconfig, caplog, tmp_path):
             homooligomer=1,
             data_dir=data_dir,
             do_not_overwrite_results=False,
+            rank=0
         )
 
     # Very simple test, it would be better to check coordinates

@@ -364,6 +364,7 @@ def run(
     homooligomer: int,
     data_dir: Union[str, Path],
     do_not_overwrite_results: bool,
+    rank: int,
     host_url: str = DEFAULT_API_SERVER,
     cache: Optional[str] = None,
 ):
@@ -396,7 +397,11 @@ def run(
             else sum(len(s) for s in query_sequence)
         )
         query_sequence_len_array = [len(query_sequence)] if isinstance(query_sequence, str) else [len(q) for q in query_sequence]
-        rank_mode = "plddt" if isinstance(query_sequence, str) or len(query_sequence) == 1 else "ptmscore"
+        if rank == 0:
+            # score complexes by ptmscore and sequences by plddt
+            rank_mode = "plddt" if isinstance(query_sequence, str) or len(query_sequence) == 1 else "ptmscore"
+        else:
+            rank_mode = "plddt" if rank == 1 else "ptmscore"
         if query_sequence_len > crop_len:
             crop_len = math.ceil(query_sequence_len * 1.1)
         try:
@@ -492,6 +497,7 @@ def main():
     )
     parser.add_argument("--cache", help="Caches the model output. For development only")
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
+    parser.add_argument("--rank", help="rank models by 0: auto, 1: pLDDT or 2: pTMscore", type=int, default=0, choices=[0, 1, 2])
     parser.add_argument("--homooligomer", type=int, default=1)
     parser.add_argument("--data", default=".")
     parser.add_argument(
@@ -525,6 +531,7 @@ def main():
         args.homooligomer,
         args.data,
         args.do_not_overwrite_results,
+        args.rank,
         args.host_url,
         cache=args.cache,
     )
