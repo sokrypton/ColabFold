@@ -102,7 +102,7 @@ def test_batch(pytestconfig, caplog, tmp_path):
             homooligomer=1,
             data_dir=data_dir,
             do_not_overwrite_results=False,
-            rank=0,
+            rank_mode=0,
             pair_mode="unpaired+paired",
         )
 
