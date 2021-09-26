@@ -318,7 +318,7 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
 def get_msa_and_templates(
     a3m_lines: Optional[str],
     jobname: str,
-    query_sequence: str,
+    query_sequences,
     result_dir: Path,
     use_env: bool,
     use_templates: bool,
@@ -327,17 +327,17 @@ def get_msa_and_templates(
 ) -> Tuple[str, Mapping[str, Any]]:
     if use_templates:
         a3m_lines_mmseqs2, template_paths = run_mmseqs2(
-            query_sequence,
+            query_sequences,
             str(result_dir.joinpath(jobname)),
             use_env,
             use_templates=True,
             host_url=host_url,
         )
         if template_paths is None:
-            template_features = mk_mock_template(query_sequence, 100)
+            template_features = mk_mock_template(query_sequences, 100)
         else:
             template_features = mk_template(
-                a3m_lines_mmseqs2, template_paths, query_sequence
+                a3m_lines_mmseqs2, template_paths, query_sequences
             )
         if not a3m_lines:
             a3m_lines = a3m_lines_mmseqs2
@@ -345,7 +345,7 @@ def get_msa_and_templates(
         if not a3m_lines:
             use_pairing = (
                 False
-                if isinstance(query_sequence, str) or len(query_sequence) == 1
+                if isinstance(query_sequences, str) or len(query_sequences) == 1
                 else True
             )
             # find normal a3ms
@@ -355,7 +355,7 @@ def get_msa_and_templates(
                 or pair_mode == "unpaired+paired"
             ):
                 a3m_lines = run_mmseqs2(
-                    query_sequence,
+                    query_sequences,
                     str(result_dir.joinpath(jobname)),
                     use_env,
                     use_pairing=False,
@@ -366,24 +366,18 @@ def get_msa_and_templates(
                 if pair_mode == "paired" or pair_mode == "unpaired+paired":
                     # find paired a3m
                     paired_a3m_lines = run_mmseqs2(
-                        query_sequence,
+                        query_sequences,
                         str(result_dir.joinpath(jobname)),
                         use_env,
                         use_pairing=True,
                         host_url=host_url,
                     )
 
-                _blank_seq = ["-" * len(seq) for seq in query_sequence]
-
-                def _pad(ns, vals):
-                    _blank = _blank_seq.copy()
-                    _blank[ns] = vals
-                    return "".join(_blank)
-
                 if pair_mode == "unpaired" or pair_mode == "unpaired+paired":
                     # pad sequences
+                    _blank_seq = ["-" * len(seq) for seq in query_sequences]
                     a3m_lines_combined = []
-                    for n, seq in enumerate(query_sequence):
+                    for n, seq in enumerate(query_sequences):
                         lines = a3m_lines[n].split("\n")
                         for a3m_line in lines:
                             if len(a3m_line) == 0:
@@ -391,7 +385,7 @@ def get_msa_and_templates(
                             if a3m_line.startswith(">"):
                                 a3m_lines_combined.append(a3m_line)
                             else:
-                                a3m_lines_combined.append(_pad(n, a3m_line))
+                                a3m_lines_combined.append("".join(_blank_seq[:n] + [a3m_line] + _blank_seq[n + 1:]))
                     if pair_mode == "unpaired":
                         a3m_lines = "\n".join(a3m_lines_combined)
                     else:
@@ -401,7 +395,7 @@ def get_msa_and_templates(
                 else:
                     a3m_lines = paired_a3m_lines
 
-        template_features = mk_mock_template(query_sequence, 100)
+        template_features = mk_mock_template(query_sequences, 100)
     return a3m_lines, template_features
 
 
