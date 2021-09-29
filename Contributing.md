@@ -34,23 +34,36 @@ black .
 
 ## Colab dev setup
 
-**Note: This is work in progress**
+We clone to _directory to avoid python from importing from the directory.
 
-```shell
+```
 %%bash
 
-#curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -
-#/root/.local/bin/poetry config virtualenvs.create false # Install in the colab env
-git clone https://github.com/konstin/Colabfold
-(cd Colabfold; pip install .; cd ..)
+git clone https://github.com/konstin/Colabfold _colabfold
+pip install --use-feature=in-tree-build _colabfold
+# Unholy Hack: Use the files from our cloned git repository instead of installed copy
+site_packages=$(python -c 'import site; print(site.getsitepackages()[0])')
+rm -r ${site_packages}/colabfold
+ln -s $(pwd)/_colabfold/colabfold ${site_packages}/colabfold
 ```
 
 If you also need to patch alphafold:
 
-```shell
+```
 %%bash
 
 pip uninstall -y alphafold
-git clone https://github.com/konstin/alphafold
-(cd alphafold; python setup.py develop; cd ..)
+git clone https://github.com/konstin/alphafold _alphafold
+pip install -e ./_alphafold
+```
+
+After that, restart the runtime.
+
+When you changed a file in the `colabfold` package, you need to reload the modules you were using with `importlib.reload()`, e.g.
+
+```python
+import colabfold.batch
+import importlib
+
+importlib.reload(colabfold.batch)
 ```
