@@ -104,12 +104,16 @@ def predict_structure(
     crop_len: int,
     model_runner_and_params: Dict[str, Tuple[model.RunModel, haiku.Params]],
     do_relax: bool = False,
-    rank_by: str = "plddt",
+    rank_by: str = "auto",
     random_seed: int = 0,
     cache: Optional[str] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     # Run the models.
+    if rank_by == "auto":
+        # score complexes by ptmscore and sequences by plddt
+        rank_by = "plddt" if len(sequences_lengths) == 1 else "ptmscore"
+
     plddts, paes, ptmscore = [], [], []
     unrelaxed_pdb_lines = []
     relaxed_pdb_lines = []
@@ -453,13 +457,6 @@ def run(
             if isinstance(query_sequence, str)
             else [len(q) for q in query_sequence]
         )
-        if rank_mode == "auto":
-            # score complexes by ptmscore and sequences by plddt
-            rank_mode = (
-                "plddt"
-                if isinstance(query_sequence, str) or len(query_sequence) == 1
-                else "ptmscore"
-            )
         if query_sequence_len > crop_len:
             crop_len = math.ceil(query_sequence_len * 1.1)
         try:
