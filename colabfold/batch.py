@@ -520,10 +520,8 @@ def main():
     setup_logging()
 
     parser = ArgumentParser()
-    parser.add_argument("--input", default="input", help="Directory with fasta files")
-    parser.add_argument(
-        "--results", default="results", help="Directory to write the results to"
-    )
+    parser.add_argument("input", default="input", help="Directory with fasta files")
+    parser.add_argument("results", help="Directory to write the results to")
     # TODO: This currently isn't actually used
     parser.add_argument(
         "--msa-mode",
