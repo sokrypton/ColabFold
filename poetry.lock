@@ -42,7 +42,7 @@ resolved_reference = "60cfed260ec77db620638a688228da116b684eec"
 name = "appdirs"
 version = "1.4.4"
 description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -1652,7 +1652,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.1,<3.11"
-content-hash = "10ff0066afd7d6d13621339336f44792ee4a1592ec2a50908940b3d1e8f694c8"
+content-hash = "32b21acf7cd74f1d51e1b270de12cc1088afdf5b804f2265bdbc4af49bbd4188"
 
 [metadata.files]
 absl-py = [

@@ -4,11 +4,15 @@ from pathlib import Path
 
 import requests
 import tqdm
+import appdirs
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
-def download_alphafold_params(target: Path = Path("params")):
+def download_alphafold_params(target: Optional[Path] = None):
+    if not target:
+        target = Path(appdirs.user_cache_dir("colabfold"))
     success_marker = target.joinpath("download_finished.txt")
     if success_marker.is_file():
         return
