@@ -292,7 +292,7 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
             df = pandas.read_csv(input_path, sep=sep)
             assert "id" in df.columns and "sequence" in df.columns
             queries = [
-                (seq_id, sequence.split(":"), None)
+                (seq_id, sequence.upper().split(":"), None)
                 for seq_id, sequence in df[["id", "sequence"]].itertuples(index=False)
             ]
             for i in range(len(queries)):
@@ -301,7 +301,8 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
         elif input_path.suffix == ".fasta":
             (sequences, headers) = pipeline.parsers.parse_fasta(input_path.read_text())
             queries = [
-                (header, sequence, None) for sequence, header in zip(sequences, headers)
+                (header, sequence.upper(), None)
+                for sequence, header in zip(sequences, headers)
             ]
         else:
             raise ValueError(f"Unknown file format {input_path.suffix}")
@@ -321,7 +322,7 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
                 a3m_lines = "".join(input_path.joinpath(file).read_text())
             else:
                 a3m_lines = None
-            queries.append((file.stem, query_sequence, a3m_lines))
+            queries.append((file.stem, query_sequence.upper(), a3m_lines))
     # sort by seq. len
     queries.sort(key=lambda t: len(t[1]))
     return queries
@@ -584,6 +585,8 @@ def main():
     parser.add_argument("--host-url", default=DEFAULT_API_SERVER)
     args = parser.parse_args()
 
+    setup_logging(Path(args.results).joinpath("log.txt"))
+
     download_alphafold_params(Path(args.data).joinpath("params"))
 
     assert args.msa_mode == "MMseqs2 (UniRef+Environmental)", "Unsupported"
@@ -596,8 +599,6 @@ def main():
     if not args.cpu and xla_bridge.get_backend().platform == "cpu":
         print(NO_GPU_FOUND, file=sys.stderr)
         sys.exit(1)
-
-    setup_logging(Path(args.results).joinpath("log.txt"))
 
     queries = get_queries(args.input)
     run(
