@@ -2,6 +2,7 @@ import logging
 import math
 import pickle
 import sys
+import time
 from argparse import ArgumentParser
 from pathlib import Path
 from string import ascii_uppercase
@@ -117,6 +118,7 @@ def predict_structure(
     plddts, paes, ptmscore = [], [], []
     unrelaxed_pdb_lines = []
     relaxed_pdb_lines = []
+    prediction_times = []
     seq_len = feature_dict["seq_length"][0]
 
     # Minkyung's code
@@ -134,7 +136,7 @@ def predict_structure(
     feature_dict["residue_index"] = idx_res
 
     for model_name, (model_runner, params) in model_runner_and_params.items():
-        logger.info(f"running {model_name}")
+        logger.info(f"Running {model_name}")
         # swap params to avoid recompiling
         # note: models 1,2 have diff number of params compared to models 3,4,5 (this was handled on construction)
         model_runner.params = params
@@ -169,7 +171,13 @@ def predict_structure(
                 input_fix, model_name, model_runner, prefix, cache
             )
         else:
+            start = time.time()
             prediction_result = model_runner.predict(input_fix)
+            prediction_time = time.time() - start
+            prediction_times.append(prediction_time)
+            logger.info(
+                f"Running {model_name} took {prediction_time:.1f}s with pLDDT {np.mean(prediction_result['plddt'][:seq_len]):.1f}"
+            )
 
         unrelaxed_protein = protein.from_prediction(input_fix, prediction_result)
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
@@ -215,8 +223,6 @@ def predict_structure(
     out = {}
     logger.info("reranking models based on avg. predicted lDDT")
     for n, r in enumerate(model_rank):
-        logger.info(f"model_{n + 1} {np.mean(plddts[r]):.1f}")
-
         unrelaxed_pdb_path = result_dir.joinpath(
             f"{prefix}_unrelaxed_model_{n + 1}.pdb"
         )
@@ -234,6 +240,8 @@ def predict_structure(
             "plddt": plddts[r],
             "pae": paes[r],
             "pTMscore": ptmscore,
+            "ptm": n,
+            "time": prediction_times[r],
         }
     return out
 
@@ -439,12 +447,19 @@ def run(
 
     crop_len = 0
     for jobname, query_sequence, a3m_lines in queries:
-        logger.info(f"Running: {jobname}")
         if (
             do_not_overwrite_results
             and result_dir.joinpath(jobname).with_suffix(".result.zip").is_file()
         ):
+            logger.info(f"Skipping {jobname}")
             continue
+        query_sequence_len_array = (
+            [len(query_sequence)]
+            if isinstance(query_sequence, str)
+            else [len(q) for q in query_sequence]
+        )
+
+        logger.info(f"Running {jobname} (length {sum(query_sequence_len_array)})")
 
         a3m_file = f"{jobname}.a3m"
         query_sequence_len = (
@@ -452,11 +467,7 @@ def run(
             if isinstance(query_sequence, str)
             else sum(len(s) for s in query_sequence)
         )
-        query_sequence_len_array = (
-            [len(query_sequence)]
-            if isinstance(query_sequence, str)
-            else [len(q) for q in query_sequence]
-        )
+
         if query_sequence_len > crop_len:
             crop_len = math.ceil(query_sequence_len * 1.1)
         try:
@@ -517,8 +528,6 @@ def run(
 
 
 def main():
-    setup_logging()
-
     parser = ArgumentParser()
     parser.add_argument("input", default="input", help="Directory with fasta files")
     parser.add_argument("results", help="Directory to write the results to")
@@ -587,6 +596,8 @@ def main():
     if not args.cpu and xla_bridge.get_backend().platform == "cpu":
         print(NO_GPU_FOUND, file=sys.stderr)
         sys.exit(1)
+
+    setup_logging(Path(args.results).joinpath("log.txt"))
 
     queries = get_queries(args.input)
     run(

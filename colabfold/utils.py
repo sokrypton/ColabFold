@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from absl import logging as absl_logging
 
@@ -32,9 +33,12 @@ class TqdmHandler(logging.StreamHandler):
         tqdm.write(msg)
 
 
-def setup_logging():
+def setup_logging(log_file: Path):
+    log_file.parent.mkdir(exist_ok=True, parents=True)
     logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(message)s", handlers=[TqdmHandler()]
+        level=logging.INFO,
+        format="%(asctime)s %(message)s",
+        handlers=[TqdmHandler(), logging.FileHandler(log_file)],
     )
     # otherwise jax will tell us about its search for devices
     absl_logging.set_verbosity("error")

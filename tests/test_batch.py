@@ -65,6 +65,7 @@ def mock_run_mmseqs2(
         and not use_templates
         and use_env
         and not filter
+        and not use_pairing
         and host_url == "https://a3m.mmseqs.com"
     )
     if x == "YYDPETGTWY":
@@ -102,7 +103,7 @@ def test_batch(pytestconfig, caplog, tmp_path):
             homooligomer=1,
             data_dir=data_dir,
             do_not_overwrite_results=False,
-            rank_mode=0,
+            rank_mode="auto",
             pair_mode="unpaired+paired",
         )
 
@@ -119,12 +120,12 @@ def test_batch(pytestconfig, caplog, tmp_path):
     assert caplog.messages == [
         "Found 5 citations for tools or databases",
         "Predicting 2 structures",
-        "Running: 5AWL_1",
-        "running model_1",
+        "Running 5AWL_1 (length 10)",
+        "Running model_1",
+        "Running model_1 took 0.0s with pLDDT 94.2",
         "reranking models based on avg. predicted lDDT",
-        "model_1 94.2",
-        "Running: 6A5J",
-        "running model_1",
+        "Running 6A5J (length 13)",
+        "Running model_1",
+        "Running model_1 took 0.0s with pLDDT 89.5",
         "reranking models based on avg. predicted lDDT",
-        "model_1 89.5",
     ]
