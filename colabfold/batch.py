@@ -240,8 +240,6 @@ def predict_structure(
             "plddt": plddts[r],
             "pae": paes[r],
             "pTMscore": ptmscore,
-            "ptm": n,
-            "time": prediction_times[r],
         }
     return out
 
