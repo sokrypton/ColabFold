@@ -1,3 +1,4 @@
+import argparse
 import logging
 import math
 import pickle
@@ -557,7 +558,8 @@ def main():
         action="store_true",
         help="Allow running on the cpu, which is very slow",
     )
-    parser.add_argument("--cache", help="Caches the model output. For development only")
+    # Caches the model output. For development only
+    parser.add_argument("--cache", help=argparse.SUPPRESS)
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
     parser.add_argument(
         "--rank",
