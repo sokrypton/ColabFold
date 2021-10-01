@@ -119,13 +119,12 @@ def test_batch(pytestconfig, caplog, tmp_path):
 
     assert caplog.messages == [
         "Found 5 citations for tools or databases",
-        "Predicting 2 structures",
-        "Running 5AWL_1 (length 10)",
+        "Query 1/2: 5AWL_1 (length 10)",
         "Running model_1",
-        "Running model_1 took 0.0s with pLDDT 94.2",
+        "model_1 took 0.0s with pLDDT 94.2",
         "reranking models based on avg. predicted lDDT",
-        "Running 6A5J (length 13)",
+        "Query 2/2: 6A5J (length 13)",
         "Running model_1",
-        "Running model_1 took 0.0s with pLDDT 89.5",
+        "model_1 took 0.0s with pLDDT 89.5",
         "reranking models based on avg. predicted lDDT",
     ]

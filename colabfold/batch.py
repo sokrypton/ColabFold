@@ -177,7 +177,7 @@ def predict_structure(
             prediction_time = time.time() - start
             prediction_times.append(prediction_time)
             logger.info(
-                f"Running {model_name} took {prediction_time:.1f}s with pLDDT {np.mean(prediction_result['plddt'][:seq_len]):.1f}"
+                f"{model_name} took {prediction_time:.1f}s with pLDDT {np.mean(prediction_result['plddt'][:seq_len]):.1f}"
             )
 
         unrelaxed_protein = protein.from_prediction(input_fix, prediction_result)
@@ -441,12 +441,10 @@ def run(
     # TODO: What's going on with MSA mode?
     write_bibtex(True, use_env, use_templates, use_amber, result_dir)
 
-    logger.info(f"Predicting {len(queries)} structures")
-
     model_runner_and_params = load_models_and_params(num_models, data_dir)
 
     crop_len = 0
-    for jobname, query_sequence, a3m_lines in queries:
+    for job_number, (jobname, query_sequence, a3m_lines) in enumerate(queries):
         if (
             do_not_overwrite_results
             and result_dir.joinpath(jobname).with_suffix(".result.zip").is_file()
@@ -459,7 +457,9 @@ def run(
             else [len(q) for q in query_sequence]
         )
 
-        logger.info(f"Running {jobname} (length {sum(query_sequence_len_array)})")
+        logger.info(
+            f"Query {job_number + 1}/{len(queries)}: {jobname} (length {sum(query_sequence_len_array)})"
+        )
 
         a3m_file = f"{jobname}.a3m"
         query_sequence_len = (
