@@ -99,7 +99,9 @@ class MockRunModel:
                 # noinspection PyUnresolvedReferences
                 del feat["msa_feat"]
                 pickle.dump(feat, fp)
-            with lzma.open(folder.joinpath(f"model_prediction_result.pkl.xz"), "wb") as fp:
+            with lzma.open(
+                folder.joinpath(f"model_prediction_result.pkl.xz"), "wb"
+            ) as fp:
                 pickle.dump(prediction, fp)
             return prediction
         else:
