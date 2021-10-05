@@ -23,7 +23,7 @@ from jax.lib import xla_bridge
 
 from colabfold.citations import write_bibtex
 from colabfold.colabfold import run_mmseqs2
-from colabfold.download import download_alphafold_params
+from colabfold.download import download_alphafold_params, default_data_dir
 from colabfold.models import load_models_and_params
 from colabfold.msa import make_fixed_size
 from colabfold.pdb import set_bfactor
@@ -306,6 +306,7 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
         else:
             raise ValueError(f"Unknown file format {input_path.suffix}")
     else:
+        assert input_path.is_dir(), "Expected either an input file or a input directory"
         queries = []
         for file in input_path.iterdir():
             if not file.is_file():
@@ -318,7 +319,7 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
                 )
 
             if file.suffix.lower() == ".a3m":
-                a3m_lines = "".join(input_path.joinpath(file).read_text())
+                a3m_lines = "".join(file.read_text())
             else:
                 a3m_lines = None
             queries.append((file.stem, query_sequence.upper(), a3m_lines))
@@ -356,9 +357,7 @@ def get_msa_and_templates(
     else:
         if not a3m_lines:
             use_pairing = (
-                False
-                if isinstance(query_sequences, str) or len(query_sequences) == 1
-                else True
+                not isinstance(query_sequences, str) and len(query_sequences) > 1
             )
             # find normal a3ms
             if (
@@ -418,17 +417,17 @@ def get_msa_and_templates(
 
 
 def run(
-    queries: List[Tuple[str, str, Optional[str]]],
+    queries: List[Tuple[str, Union[str, List[str]], Optional[str]]],
     result_dir: Union[str, Path],
     use_templates: bool,
     use_amber: bool,
     msa_mode: str,
     num_models: int,
     homooligomer: int,
-    data_dir: Union[str, Path],
     do_not_overwrite_results: bool,
     rank_mode: str,
     pair_mode: str,
+    data_dir: Union[str, Path] = default_data_dir,
     host_url: str = DEFAULT_API_SERVER,
     cache: Optional[str] = None,
 ):
@@ -482,7 +481,7 @@ def run(
                 host_url,
             )
         except Exception as e:
-            logger.exception(f"{jobname} could not be processed: {e}")
+            logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
             continue
 
         result_dir.joinpath(a3m_file).write_text(a3m_lines)
@@ -508,7 +507,7 @@ def run(
                 **template_features,
             }
         except Exception as e:
-            logger.exception(f"{jobname} could not be processed: {e}")
+            logger.exception(f"Could not predict {jobname}: {e}")
             continue
 
         outs = predict_structure(
@@ -577,7 +576,7 @@ def main():
         choices=["unpaired", "paired", "unpaired+paired"],
     )
 
-    parser.add_argument("--data", default=".")
+    parser.add_argument("--data")
     parser.add_argument(
         "--do-not-overwrite-results", default=True, action="store_false"
     )
@@ -587,7 +586,8 @@ def main():
 
     setup_logging(Path(args.results).joinpath("log.txt"))
 
-    download_alphafold_params(Path(args.data).joinpath("params"))
+    data_dir = Path(args.data or default_data_dir)
+    download_alphafold_params(data_dir)
 
     assert args.msa_mode == "MMseqs2 (UniRef+Environmental)", "Unsupported"
     assert args.homooligomer == 1, "Unsupported"
@@ -602,18 +602,18 @@ def main():
 
     queries = get_queries(args.input)
     run(
-        queries,
-        args.results,
-        args.templates,
-        args.amber,
-        args.msa_mode,
-        args.num_models,
-        args.homooligomer,
-        args.data,
-        args.do_not_overwrite_results,
-        args.rank,
-        args.pair_mode,
-        args.host_url,
+        queries=queries,
+        result_dir=args.results,
+        use_templates=args.templates,
+        use_amber=args.amber,
+        msa_mode=args.msa_mode,
+        num_models=args.num_models,
+        homooligomer=args.homooligomer,
+        do_not_overwrite_results=args.do_not_overwrite_results,
+        rank_mode=args.rank,
+        pair_mode=args.pair_mode,
+        data_dir=data_dir,
+        host_url=args.host_url,
         cache=args.cache,
     )
 
