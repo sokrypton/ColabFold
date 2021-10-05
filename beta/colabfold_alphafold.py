@@ -22,7 +22,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import re
-from colabfold import colabfold as cf
+import colabfold as cf
 import pairmsa
 
 try:
