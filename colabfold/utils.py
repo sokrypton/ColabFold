@@ -42,3 +42,7 @@ def setup_logging(log_file: Path):
     )
     # otherwise jax will tell us about its search for devices
     absl_logging.set_verbosity("error")
+
+
+def safe_filename(file: str) -> str:
+    return "".join([c if c.isalnum() or c in ["_", ".", "-"] else "_" for c in file])

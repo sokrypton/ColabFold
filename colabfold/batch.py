@@ -30,6 +30,7 @@ from colabfold.pdb import set_bfactor
 from colabfold.plot import plot_predicted_alignment_error, plot_lddt
 from colabfold.utils import (
     setup_logging,
+    safe_filename,
     NO_GPU_FOUND,
     ACCEPT_DEFAULT_TERMS,
     DEFAULT_API_SERVER,
@@ -443,7 +444,8 @@ def run(
     model_runner_and_params = load_models_and_params(num_models, data_dir)
 
     crop_len = 0
-    for job_number, (jobname, query_sequence, a3m_lines) in enumerate(queries):
+    for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
+        jobname = safe_filename(raw_jobname)
         if (
             do_not_overwrite_results
             and result_dir.joinpath(jobname).with_suffix(".result.zip").is_file()
