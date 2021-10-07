@@ -177,8 +177,9 @@ def predict_structure(
             prediction_result = model_runner.predict(input_fix)
             prediction_time = time.time() - start
             prediction_times.append(prediction_time)
+            mean_plddt = np.mean(prediction_result["plddt"][:seq_len])
             logger.info(
-                f"{model_name} took {prediction_time:.1f}s with pLDDT {np.mean(prediction_result['plddt'][:seq_len]):.1f}"
+                f"{model_name} took {prediction_time:.1f}s with pLDDT {mean_plddt :.1f}"
             )
 
         unrelaxed_protein = protein.from_prediction(input_fix, prediction_result)
@@ -336,6 +337,23 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
     return queries
 
 
+def pad_sequences(a3m_lines: List[str], query_sequences: List[str]) -> str:
+    _blank_seq = ["-" * len(seq) for seq in query_sequences]
+    a3m_lines_combined = []
+    for n, seq in enumerate(query_sequences):
+        lines = a3m_lines[n].split("\n")
+        for a3m_line in lines:
+            if len(a3m_line) == 0:
+                continue
+            if a3m_line.startswith(">"):
+                a3m_lines_combined.append(a3m_line)
+            else:
+                a3m_lines_combined.append(
+                    "".join(_blank_seq[:n] + [a3m_line] + _blank_seq[n + 1 :])
+                )
+    return "\n".join(a3m_lines_combined)
+
+
 def get_msa_and_templates(
     a3m_lines: Optional[str],
     jobname: str,
@@ -363,64 +381,53 @@ def get_msa_and_templates(
         if not a3m_lines:
             a3m_lines = a3m_lines_mmseqs2
     else:
-        if not a3m_lines:
-            use_pairing = (
-                not isinstance(query_sequences, str) and len(query_sequences) > 1
-            )
-            # find normal a3ms
-            if (
-                not use_pairing
-                or pair_mode == "unpaired"
-                or pair_mode == "unpaired+paired"
-            ):
-                a3m_lines = run_mmseqs2(
-                    query_sequences,
-                    str(result_dir.joinpath(jobname)),
-                    use_env,
-                    use_pairing=False,
-                    host_url=host_url,
-                )
-
-            if use_pairing:
-                if pair_mode == "paired" or pair_mode == "unpaired+paired":
-                    # find paired a3m
-                    paired_a3m_lines = run_mmseqs2(
-                        query_sequences,
-                        str(result_dir.joinpath(jobname)),
-                        use_env,
-                        use_pairing=True,
-                        host_url=host_url,
-                    )
-
-                if pair_mode == "unpaired" or pair_mode == "unpaired+paired":
-                    # pad sequences
-                    _blank_seq = ["-" * len(seq) for seq in query_sequences]
-                    a3m_lines_combined = []
-                    for n, seq in enumerate(query_sequences):
-                        lines = a3m_lines[n].split("\n")
-                        for a3m_line in lines:
-                            if len(a3m_line) == 0:
-                                continue
-                            if a3m_line.startswith(">"):
-                                a3m_lines_combined.append(a3m_line)
-                            else:
-                                a3m_lines_combined.append(
-                                    "".join(
-                                        _blank_seq[:n]
-                                        + [a3m_line]
-                                        + _blank_seq[n + 1 :]
-                                    )
-                                )
-                    if pair_mode == "unpaired":
-                        a3m_lines = "\n".join(a3m_lines_combined)
-                    else:
-                        a3m_lines = (
-                            paired_a3m_lines + "\n" + "\n".join(a3m_lines_combined)
-                        )
-                else:
-                    a3m_lines = paired_a3m_lines
-
         template_features = mk_mock_template(query_sequences, 100)
+
+    if not a3m_lines:
+        if isinstance(query_sequences, str) or len(query_sequences) == 1:
+            pair_mode = "none"
+
+        if (
+            pair_mode == "none"
+            or pair_mode == "unpaired"
+            or pair_mode == "unpaired+paired"
+        ):
+            # find normal a3ms
+            a3m_lines = run_mmseqs2(
+                query_sequences,
+                str(result_dir.joinpath(jobname)),
+                use_env,
+                use_pairing=False,
+                host_url=host_url,
+            )
+        else:
+            a3m_lines = None
+
+        if pair_mode == "paired" or pair_mode == "unpaired+paired":
+            # find paired a3m
+            paired_a3m_lines = run_mmseqs2(
+                query_sequences,
+                str(result_dir.joinpath(jobname)),
+                use_env,
+                use_pairing=True,
+                host_url=host_url,
+            )
+        else:
+            paired_a3m_lines = None
+
+        if pair_mode == "none":
+            assert a3m_lines
+        elif pair_mode == "unpaired":
+            a3m_lines = pad_sequences(a3m_lines, query_sequences)
+        elif pair_mode == "unpaired+paired":
+            a3m_lines = (
+                paired_a3m_lines + "\n" + pad_sequences(a3m_lines, query_sequences)
+            )
+        elif pair_mode == "paired":
+            a3m_lines = paired_a3m_lines
+        else:
+            raise ValueError(f"Invalid pair_mod: {pair_mode}")
+
     return a3m_lines, template_features
 
 
