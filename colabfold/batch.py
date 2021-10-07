@@ -526,6 +526,7 @@ def run(
 
         plot_lddt(homooligomer, jobname, msa, outs, query_sequence, result_dir)
         plot_predicted_alignment_error(jobname, num_models, outs, result_dir)
+    logger.info("DONE")
 
 
 def main():

@@ -9,7 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 def run_mmseqs(mmseqs, params: List[Union[str, Path]]):
-    logger.info(f"Running {mmseqs} {params}")
+    params_log = " ".join(str(i) for i in params)
+    logger.info(f"Running {mmseqs} {params_log}")
     subprocess.check_call([mmseqs] + params)
 
 
@@ -73,7 +74,7 @@ def mmseqs_search(
         run_mmseqs(mmseqs, ["lndb", base.joinpath("qdb_h"), base.joinpath("prof_res_h")])
         run_mmseqs(mmseqs, ["align", base.joinpath("prof_res"), dbbase.joinpath(f"{db1}.idx"), base.joinpath("res_exp"), base.joinpath("res_exp_realign"), "--db-load-mode", str(db_load_mode), "-e", str(align_eval), "--max-accept", str(max_accept), "--alt-ali", "10", "-a"])
         run_mmseqs(mmseqs, ["filterresult", base.joinpath("qdb"), dbbase.joinpath(f"{db1}.idx"), base.joinpath("res_exp_realign"), base.joinpath("res_exp_realign_filter"), "--db-load-mode", str(db_load_mode), "--qid","0","--qsc", str(qsc), "--diff", "0", "--max-seq-id", "1.0", "--filter-min-enable", "100"])
-        run_mmseqs(mmseqs, ["result2msa", base.joinpath("qdb"), dbbase.joinpath(f"{db1}.idx"), base.joinpath("res_exp_realign_filter"), base.joinpath("unirefa3m"),"--msa-format-mode", "6", "--db-load-mode", str(db_load_mode)] + filter_param)
+        run_mmseqs(mmseqs, ["result2msa", base.joinpath("qdb"), dbbase.joinpath(f"{db1}.idx"), base.joinpath("res_exp_realign_filter"), base.joinpath("uniref.a3m"),"--msa-format-mode", "6", "--db-load-mode", str(db_load_mode)] + filter_param)
     finally:
         # Clean up the intermediary database in case of an error
         subprocess.run([mmseqs] + ["rmdb", base.joinpath("res_exp_realign")])
