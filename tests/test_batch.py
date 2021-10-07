@@ -243,6 +243,7 @@ def test_batch(pytestconfig, caplog, tmp_path):
         "Running model_1",
         "model_1 took 0.0s with pLDDT 89.5",
         "reranking models based on avg. predicted lDDT",
+        "Done",
     ]
 
     # Very simple test, it would be better to check coordinates
@@ -283,6 +284,7 @@ def test_complex(pytestconfig, caplog, tmp_path):
         )
 
     messages = list(caplog.messages)
+    # noinspection PyUnresolvedReferences
     messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
     assert messages == [
         "Found 5 citations for tools or databases",
@@ -290,4 +292,5 @@ def test_complex(pytestconfig, caplog, tmp_path):
         "Running model_1",
         "model_1 took 0.0s with pLDDT 91.9",
         "reranking models based on avg. predicted lDDT",
+        "Done",
     ]

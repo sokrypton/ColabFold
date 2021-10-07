@@ -32,8 +32,8 @@ from colabfold.utils import (
     setup_logging,
     safe_filename,
     NO_GPU_FOUND,
-    ACCEPT_DEFAULT_TERMS,
     DEFAULT_API_SERVER,
+    ACCEPT_DEFAULT_TERMS,
 )
 
 logger = logging.getLogger(__name__)
@@ -285,6 +285,7 @@ def run_model_cached(
 def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[str]]]:
     """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
     of job name, sequence and the optional a3m lines"""
+
     input_path = Path(input_path)
     if input_path.is_file():
         if input_path.suffix == ".csv" or input_path.suffix == ".tsv":
@@ -298,6 +299,11 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
             for i in range(len(queries)):
                 if len(queries[i][1]) == 1:
                     queries[i] = (queries[i][0], queries[i][1][0], None)
+        elif input_path.suffix == ".a3m":
+            (seqs, header) = pipeline.parsers.parse_fasta(input_path.read_text())
+            query_sequence = seqs[0]
+            a3m_lines = "".join(input_path.read_text())
+            queries = [(input_path.stem, query_sequence, a3m_lines)]
         elif input_path.suffix == ".fasta":
             (sequences, headers) = pipeline.parsers.parse_fasta(input_path.read_text())
             queries = [
@@ -324,6 +330,7 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
             else:
                 a3m_lines = None
             queries.append((file.stem, query_sequence.upper(), a3m_lines))
+
     # sort by seq. len
     queries.sort(key=lambda t: len(t[1]))
     return queries
@@ -526,12 +533,17 @@ def run(
 
         plot_lddt(homooligomer, jobname, msa, outs, query_sequence, result_dir)
         plot_predicted_alignment_error(jobname, num_models, outs, result_dir)
-    logger.info("DONE")
+    logger.info("Done")
 
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument("input", default="input", help="Directory with fasta files")
+    parser.add_argument(
+        "input",
+        default="input",
+        help="Can be one of the following: "
+        "Directory with fasta/a3m files, a csv/tsv file, a fasta file or an a3m file",
+    )
     parser.add_argument("results", help="Directory to write the results to")
     # TODO: This currently isn't actually used
     parser.add_argument(
@@ -595,15 +607,16 @@ def main():
     assert args.msa_mode == "MMseqs2 (UniRef+Environmental)", "Unsupported"
     assert args.homooligomer == 1, "Unsupported"
 
-    if args.host_url == DEFAULT_API_SERVER:
-        print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
-
     # Prevent people from accidentally running on the cpu, which is really slow
     if not args.cpu and xla_bridge.get_backend().platform == "cpu":
         print(NO_GPU_FOUND, file=sys.stderr)
         sys.exit(1)
 
     queries = get_queries(args.input)
+    uses_api = any((query[2] is None for query in queries))
+    if uses_api and args.host_url == DEFAULT_API_SERVER:
+        print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
+
     run(
         queries=queries,
         result_dir=args.results,
