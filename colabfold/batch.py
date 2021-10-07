@@ -302,7 +302,7 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
         elif input_path.suffix == ".a3m":
             (seqs, header) = pipeline.parsers.parse_fasta(input_path.read_text())
             query_sequence = seqs[0]
-            a3m_lines = "".join(input_path.read_text())
+            a3m_lines = input_path.read_text().upper()
             queries = [(input_path.stem, query_sequence, a3m_lines)]
         elif input_path.suffix == ".fasta":
             (sequences, headers) = pipeline.parsers.parse_fasta(input_path.read_text())
@@ -326,7 +326,7 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
                 )
 
             if file.suffix.lower() == ".a3m":
-                a3m_lines = "".join(file.read_text())
+                a3m_lines = file.read_text().upper()
             else:
                 a3m_lines = None
             queries.append((file.stem, query_sequence.upper(), a3m_lines))
