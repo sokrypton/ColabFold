@@ -460,11 +460,17 @@ def run(
     crop_len = 0
     for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
         jobname = safe_filename(raw_jobname)
+        # In the colab version we know we're done when a zip file has been written
         if (
             do_not_overwrite_results
             and result_dir.joinpath(jobname).with_suffix(".result.zip").is_file()
         ):
-            logger.info(f"Skipping {jobname}")
+            logger.info(f"Skipping {jobname} (result.zip)")
+            continue
+        # In the local version we don't zip the files, so assume we're done if the last unrelaxed pdb file exists
+        last_pdb_file = f"{jobname}_unrelaxed_model_{num_models}.pdb"
+        if do_not_overwrite_results and result_dir.joinpath(last_pdb_file).is_file():
+            logger.info(f"Skipping {jobname} (pdb)")
             continue
         query_sequence_len_array = (
             [len(query_sequence)]
