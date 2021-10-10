@@ -772,7 +772,7 @@ def run_alphafold(feature_dict, opt=None, runner=None, num_models=5, num_samples
       # go through each model
       for num, model_name in enumerate(model_names):
         name = model_name+"_ptm" if opt["use_ptm"] else model_name
-        model_runner = prep_model_runner(opt, model_name=model_name, use_turbo=False, params_loc=params_loc)["model"]
+        model_runner = prep_model_runner(opt, model_name=model_name, params_loc=params_loc)["model"]
 
         # go through each random_seed
         for seed in range(num_samples):
