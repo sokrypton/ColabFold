@@ -60,15 +60,14 @@ class MockRunModel:
     def __init__(self, fixtures: Path):
         self.fixtures = fixtures
         self.known_inputs = []
-        for input_fix_file in fixtures.glob("*/*_input_fix.pkl.xz"):
-            prediction_file = input_fix_file.with_name(
-                input_fix_file.name.replace("input_fix", "prediction_result")
+        for prediction_file in fixtures.glob("*/*_prediction_result.pkl.xz"):
+            input_fix_file = prediction_file.with_name(
+                prediction_file.name.replace("prediction_result", "input_fix")
             )
-            with lzma.open(input_fix_file, "rb") as input_fix_fp, lzma.open(
+            with lzma.open(input_fix_file) as input_fix_fp, lzma.open(
                 prediction_file, "rb"
             ) as prediction_fp:
                 input_fix = pickle.load(input_fix_fp)
-                # There is some variance in msa_feat, which we ignore
                 self.known_inputs.append((input_fix, pickle.load(prediction_fp)))
 
     def predict(self, model_runner: RunModel, feat: FeatureDict) -> Mapping[str, Any]:
@@ -90,21 +89,25 @@ class MockRunModel:
                 counter += 1
             folder = self.fixtures.joinpath(str(counter))
             folder.mkdir(exist_ok=True, parents=True)
+            with lzma.open(folder.joinpath(f"model_input_fix.pkl.xz"), "wb") as fp:
+                pickle.dump(feat, fp)
             # Put msa_feat back, we need it for the prediction
             # noinspection PyUnresolvedReferences
             feat["msa_feat"] = msa_feat
             prediction = original_run_model(model_runner, feat)
             self.known_inputs.append((feat, prediction))
-            with lzma.open(folder.joinpath(f"model_input_fix.pkl.xz"), "wb") as fp:
-                # noinspection PyUnresolvedReferences
-                del feat["msa_feat"]
-                pickle.dump(feat, fp)
             with lzma.open(
                 folder.joinpath(f"model_prediction_result.pkl.xz"), "wb"
             ) as fp:
                 pickle.dump(prediction, fp)
             return prediction
         else:
+            for input_fix, prediction in self.known_inputs:
+                try:
+                    numpy.testing.assert_equal(feat, input_fix)
+                    return prediction
+                except AssertionError as e:
+                    print(e)
             raise AssertionError("input not stored")
 
 

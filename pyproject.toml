@@ -43,7 +43,7 @@ include = '''
   | tests
 )/
 '''
-# The colabfold_.py exclude doesn't work, but the "fmt: off" inside of it does
+# The colabfold.py exclude doesn't work, but the "fmt: off" inside of it does
 extend-exclude = '''
 /(
   | __pycache__
