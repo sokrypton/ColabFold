@@ -36,7 +36,7 @@ tensorflow-cpu = "*"
 type = "git"
 url = "https://github.com/konstin/alphafold.git"
 reference = "main"
-resolved_reference = "60cfed260ec77db620638a688228da116b684eec"
+resolved_reference = "ce1c7949a062f4565c12eb2bea5a85bd6d9a61ee"
 
 [[package]]
 name = "appdirs"
@@ -1130,6 +1130,17 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
+name = "py3dmol"
+version = "1.7.0"
+description = "An IPython interface for embedding 3Dmol.js views"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.extras]
+ipython = ["ipython"]
+
+[[package]]
 name = "pyasn1"
 version = "0.4.8"
 description = "ASN.1 types and codecs"
@@ -1652,7 +1663,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.1,<3.11"
-content-hash = "32b21acf7cd74f1d51e1b270de12cc1088afdf5b804f2265bdbc4af49bbd4188"
+content-hash = "a99fc8fa610c3cdafebdf415e938cd48065b5fcccdb5f582aa5dad9cbe99b4c1"
 
 [metadata.files]
 absl-py = [
@@ -2322,6 +2333,10 @@ ptyprocess = [
 py = [
     {file = "py-1.10.0-py2.py3-none-any.whl", hash = "sha256:3b80836aa6d1feeaa108e046da6423ab8f6ceda6468545ae8d02d9d58d18818a"},
     {file = "py-1.10.0.tar.gz", hash = "sha256:21b81bda15b66ef5e1a777a21c4dcd9c20ad3efd0b3f817e7a809035269e1bd3"},
+]
+py3dmol = [
+    {file = "py3Dmol-1.7.0-py2.py3-none-any.whl", hash = "sha256:ff35bd17ed23a795a06faf13284280504cc8d6860ce916450975a313267ff88f"},
+    {file = "py3Dmol-1.7.0.tar.gz", hash = "sha256:612c6f42251987c12fe0b932460963d6669ebc596ab77af6d697baa7ce421add"},
 ]
 pyasn1 = [
     {file = "pyasn1-0.4.8-py2.4.egg", hash = "sha256:fec3e9d8e36808a28efb59b489e4528c10ad0f480e57dcc32b4de5c9d8c9fdf3"},

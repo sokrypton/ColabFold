@@ -320,6 +320,7 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
             if not file.is_file():
                 continue
             (seqs, header) = pipeline.parsers.parse_fasta(file.read_text())
+            print(file, file=sys.stderr)
             query_sequence = seqs[0]
             if len(seqs) > 1 and file.suffix == ".fasta":
                 logger.warning(

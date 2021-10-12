@@ -14,6 +14,8 @@ def main():
     output_folder = Path(args.output_folder)
     output_folder.mkdir(exist_ok=True)
     for msa in tqdm(Path(args.mmseqs_msa).read_text().split("\0")):
+        if not msa.strip():
+            continue
         filename = msa.split("\n", 1)[0][1:].split(" ")[0] + ".a3m"
         output_folder.joinpath(filename).write_text(msa)
 

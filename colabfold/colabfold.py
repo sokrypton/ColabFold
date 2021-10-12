@@ -1,4 +1,5 @@
 # fmt: off
+# @formatter:off
 
 ############################################
 # imports
@@ -63,7 +64,6 @@ def clear_mem(device="gpu"):
 
 TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
 
-
 def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
                 use_templates=False, filter=None, use_pairing=False,
                 host_url="https://a3m.mmseqs.com"):
@@ -75,24 +75,20 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
       query += f">{n}\n{seq}\n"
       n += 1
 
-    res = requests.post(f'{host_url}/{submission_endpoint}', data={'q': query, 'mode': mode})
-    try:
-      out = res.json()
-    except ValueError:
-      out = {"status": "UNKNOWN"}
+    res = requests.post(f'{host_url}/ticket/msa', data={'q':query,'mode': mode})
+    try: out = res.json()
+    except ValueError: out = {"status":"UNKNOWN"}
     return out
 
   def status(ID):
     res = requests.get(f'{host_url}/ticket/{ID}')
-    try:
-      out = res.json()
-    except ValueError:
-      out = {"status": "UNKNOWN"}
+    try: out = res.json()
+    except ValueError: out = {"status":"UNKNOWN"}
     return out
 
   def download(ID, path):
     res = requests.get(f'{host_url}/result/download/{ID}')
-    with open(path, "wb") as out: out.write(res.content)
+    with open(path,"wb") as out: out.write(res.content)
 
   # process input x
   seqs = [x] if isinstance(x, str) else x
@@ -118,7 +114,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
 
   # call mmseqs2 api
   tar_gz_file = f'{path}/out.tar.gz'
-  N, REDO = 101, True
+  N,REDO = 101,True
 
   # deduplicate and keep track of order
   seqs_unique = []
@@ -144,30 +140,29 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
           out = submit(seqs_unique, mode, N)
 
         # wait for job to finish
-        ID, TIME = out["id"], 0
+        ID,TIME = out["id"],0
         pbar.set_description(out["status"])
-        while out["status"] in ["UNKNOWN", "RUNNING", "PENDING"]:
-          t = 5 + random.randint(0, 5)
+        while out["status"] in ["UNKNOWN","RUNNING","PENDING"]:
+          t = 5 + random.randint(0,5)
           time.sleep(t)
           out = status(ID)
           pbar.set_description(out["status"])
           if out["status"] == "RUNNING":
             TIME += t
             pbar.update(n=t)
-          # if TIME > 900 and out["status"] != "COMPLETE":
+          #if TIME > 900 and out["status"] != "COMPLETE":
           #  # something failed on the server side, need to resubmit
           #  N += 1
           #  break
 
         if out["status"] == "COMPLETE":
           if TIME < TIME_ESTIMATE:
-            pbar.update(n=(TIME_ESTIMATE - TIME))
+            pbar.update(n=(TIME_ESTIMATE-TIME))
           REDO = False
 
         if out["status"] == "ERROR":
           REDO = False
-          raise Exception(
-            f'MMseqs2 API is giving errors. Please confirm your input is a valid protein sequence. If error persists, please try again an hour later.')
+          raise Exception(f'MMseqs2 API is giving errors. Please confirm your input is a valid protein sequence. If error persists, please try again an hour later.')
 
       # Download results
       download(ID, tar_gz_file)
@@ -184,21 +179,21 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
     with tarfile.open(tar_gz_file) as tar_gz:
       tar_gz.extractall(path)
 
-      # templates
+  # templates
   if use_templates:
     templates = {}
     print("seq\tpdb\tcid\tevalue")
-    for line in open(f"{path}/pdb70.m8", "r"):
+    for line in open(f"{path}/pdb70.m8","r"):
       p = line.rstrip().split()
-      M, pdb, qid, e_value = p[0], p[1], p[2], p[10]
+      M,pdb,qid,e_value = p[0],p[1],p[2],p[10]
       M = int(M)
       if M not in templates: templates[M] = []
       templates[M].append(pdb)
       if len(templates[M]) <= 20:
-        print(f"{int(M) - N}\t{pdb}\t{qid}\t{e_value}")
+        print(f"{int(M)-N}\t{pdb}\t{qid}\t{e_value}")
 
     template_paths = {}
-    for k, TMPL in templates.items():
+    for k,TMPL in templates.items():
       TMPL_PATH = f"{prefix}_{mode}/templates_{k}"
       if not os.path.isdir(TMPL_PATH):
         os.mkdir(TMPL_PATH)
@@ -211,11 +206,11 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
   # gather a3m lines
   a3m_lines = {}
   for a3m_file in a3m_files:
-    update_M, M = True, None
-    for line in open(a3m_file, "r"):
+    update_M,M = True,None
+    for line in open(a3m_file,"r"):
       if len(line) > 0:
         if "\x00" in line:
-          line = line.replace("\x00", "")
+          line = line.replace("\x00","")
           update_M = True
         if line.startswith(">") and update_M:
           M = int(line[1:].rstrip())
@@ -239,7 +234,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
     for n in Ms:
       if n not in template_paths:
         template_paths_.append(None)
-        print(f"{n - N}\tno_templates_found")
+        print(f"{n-N}\tno_templates_found")
       else:
         template_paths_.append(template_paths[n])
     template_paths = template_paths_
@@ -484,12 +479,13 @@ def read_pdb_renum(pdb_filename, Ls=None):
   return "".join(pdb_out)
 
 def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False,
-             color="lDDT", chains=None, Ls=None, vmin=50, vmax=90):
+             color="lDDT", chains=None, Ls=None, vmin=50, vmax=90,
+             color_HP=False, size=(800,480)):
   
   if chains is None:
     chains = 1 if Ls is None else len(Ls)
 
-  view = py3Dmol.view(js='https://3dmol.org/build/3Dmol.js',)
+  view = py3Dmol.view(js='https://3dmol.org/build/3Dmol.js', width=size[0], height=size[1])
   view.addModel(read_pdb_renum(pred_output_path, Ls),'pdb')
   if color == "lDDT":
     view.setStyle({'cartoon': {'colorscheme': {'prop':'b','gradient': 'roygb','min':vmin,'max':vmax}}})
@@ -500,12 +496,23 @@ def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False,
        view.setStyle({'chain':chain},{'cartoon': {'color':color}})
   if show_sidechains:
     BB = ['C','O','N']
-    view.addStyle({'and':[{'resn':["GLY","PRO"],'invert':True},{'atom':BB,'invert':True}]},
-                        {'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
-    view.addStyle({'and':[{'resn':"GLY"},{'atom':'CA'}]},
-                        {'sphere':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
-    view.addStyle({'and':[{'resn':"PRO"},{'atom':['C','O'],'invert':True}]},
-                        {'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})  
+    HP = ["ALA","GLY","VAL","ILE","LEU","PHE","MET","PRO","TRP","CYS","TYR"]
+    if color_HP:
+      view.addStyle({'and':[{'resn':HP},{'atom':BB,'invert':True}]},
+                    {'stick':{'colorscheme':"yellowCarbon",'radius':0.3}})
+      view.addStyle({'and':[{'resn':HP,'invert':True},{'atom':BB,'invert':True}]},
+                    {'stick':{'colorscheme':"whiteCarbon",'radius':0.3}})
+      view.addStyle({'and':[{'resn':"GLY"},{'atom':'CA'}]},
+                    {'sphere':{'colorscheme':"yellowCarbon",'radius':0.3}})
+      view.addStyle({'and':[{'resn':"PRO"},{'atom':['C','O'],'invert':True}]},
+                    {'stick':{'colorscheme':"yellowCarbon",'radius':0.3}})
+    else:
+      view.addStyle({'and':[{'resn':["GLY","PRO"],'invert':True},{'atom':BB,'invert':True}]},
+                    {'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
+      view.addStyle({'and':[{'resn':"GLY"},{'atom':'CA'}]},
+                    {'sphere':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
+      view.addStyle({'and':[{'resn':"PRO"},{'atom':['C','O'],'invert':True}]},
+                    {'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
   if show_mainchains:
     BB = ['C','O','N','CA']
     view.addStyle({'atom':BB},{'stick':{'colorscheme':f"WhiteCarbon",'radius':0.3}})
