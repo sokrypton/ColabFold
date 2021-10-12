@@ -105,10 +105,11 @@ def predict_structure(
     feature_dict: Dict[str, Any],
     sequences_lengths: List[int],
     crop_len: int,
-    model_runner_and_params: Dict[str, Tuple[model.RunModel, haiku.Params]],
+    model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
     do_relax: bool = False,
     rank_by: str = "auto",
     random_seed: int = 0,
+    stop_at_score: float = 100,
     cache: Optional[str] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
@@ -136,9 +137,10 @@ def predict_structure(
         "".join([ascii_uppercase[n] * L for n, L in enumerate(sequences_lengths)])
     )
     feature_dict["residue_index"] = idx_res
-
-    for model_name, (model_runner, params) in model_runner_and_params.items():
+    model_names = []
+    for (model_name, model_runner, params) in model_runner_and_params:
         logger.info(f"Running {model_name}")
+        model_names.append(model_name)
         # swap params to avoid recompiling
         # note: models 1,2 have diff number of params compared to models 3,4,5 (this was handled on construction)
         model_runner.params = params
@@ -187,6 +189,7 @@ def predict_structure(
         plddts.append(prediction_result["plddt"][:seq_len])
         ptmscore.append(prediction_result["ptm"])
         paes_res = []
+
         for i in range(seq_len):
             paes_res.append(prediction_result["predicted_aligned_error"][i][:seq_len])
         paes.append(paes_res)
@@ -217,7 +220,9 @@ def predict_structure(
             )
             relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
             relaxed_pdb_lines.append(relaxed_pdb_str)
-
+        # early stop criteria fulfilled
+        if np.mean(prediction_result["plddt"][:seq_len]) > stop_at_score:
+            break
     # rerank models based on predicted lddt
     if rank_by == "ptmscore":
         model_rank = np.array(ptmscore).argsort()[::-1]
@@ -227,14 +232,14 @@ def predict_structure(
     logger.info("reranking models based on avg. predicted lDDT")
     for n, r in enumerate(model_rank):
         unrelaxed_pdb_path = result_dir.joinpath(
-            f"{prefix}_unrelaxed_model_{n + 1}.pdb"
+            f"{prefix}_unrelaxed_{model_names[r]}_rank_{n + 1}.pdb"
         )
         unrelaxed_pdb_path.write_text(unrelaxed_pdb_lines[r])
         set_bfactor(unrelaxed_pdb_path, plddts[r], idx_res, chains)
 
         if do_relax:
             relaxed_pdb_path = result_dir.joinpath(
-                f"{prefix}_relaxed_model_{n + 1}.pdb"
+                f"{prefix}_relaxed_{model_names[r]}_rank_{n + 1}.pdb"
             )
             relaxed_pdb_path.write_text(unrelaxed_pdb_lines[r])
             set_bfactor(relaxed_pdb_path, plddts[r], idx_res, chains)
@@ -338,8 +343,28 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
     return queries
 
 
-def pad_sequences(a3m_lines: List[str], query_sequences: List[str]) -> str:
-    _blank_seq = ["-" * len(seq) for seq in query_sequences]
+def pair_sequences(
+    a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
+) -> str:
+    a3m_line_paired = [""] * len(a3m_lines[0].splitlines())
+    for n, seq in enumerate(query_sequences):
+        lines = a3m_lines[n].splitlines()
+        for i, line in enumerate(lines):
+            if line.startswith(">"):
+                if n != 0:
+                    line = line.replace(">", "_", 1)
+                a3m_line_paired[i] = a3m_line_paired[i] + line
+            else:
+                a3m_line_paired[i] = a3m_line_paired[i] + line * query_cardinality[n]
+    return "\n".join(a3m_line_paired)
+
+
+def pad_sequences(
+    a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
+) -> str:
+    _blank_seq = [
+        ("-" * len(seq)) * query_cardinality[n] for n, seq in enumerate(query_sequences)
+    ]
     a3m_lines_combined = []
     for n, seq in enumerate(query_sequences):
         lines = a3m_lines[n].split("\n")
@@ -350,7 +375,11 @@ def pad_sequences(a3m_lines: List[str], query_sequences: List[str]) -> str:
                 a3m_lines_combined.append(a3m_line)
             else:
                 a3m_lines_combined.append(
-                    "".join(_blank_seq[:n] + [a3m_line] + _blank_seq[n + 1 :])
+                    "".join(
+                        _blank_seq[:n]
+                        + [a3m_line] * query_cardinality[n]
+                        + _blank_seq[n + 1 :]
+                    )
                 )
     return "\n".join(a3m_lines_combined)
 
@@ -365,9 +394,21 @@ def get_msa_and_templates(
     pair_mode: str,
     host_url: str = DEFAULT_API_SERVER,
 ) -> Tuple[str, Mapping[str, Any]]:
+
+    # remove duplicates before searching
+    query_sequences = (
+        [query_sequences] if isinstance(query_sequences, str) else query_sequences
+    )
+    query_seqs_unique = []
+    [query_seqs_unique.append(x) for x in query_sequences if x not in query_seqs_unique]
+    query_seqs_cardinality = [0] * len(query_seqs_unique)
+    for seq in query_sequences:
+        seq_idx = query_seqs_unique.index(seq)
+        query_seqs_cardinality[seq_idx] += 1
+
     if use_templates:
         a3m_lines_mmseqs2, template_paths = run_mmseqs2(
-            query_sequences,
+            query_seqs_unique,
             str(result_dir.joinpath(jobname)),
             use_env,
             use_templates=True,
@@ -377,7 +418,7 @@ def get_msa_and_templates(
             template_features = mk_mock_template(query_sequences, 100)
         else:
             template_features = mk_template(
-                a3m_lines_mmseqs2, template_paths, query_sequences
+                a3m_lines_mmseqs2, template_paths, query_seqs_unique
             )
         if not a3m_lines:
             a3m_lines = a3m_lines_mmseqs2
@@ -385,9 +426,8 @@ def get_msa_and_templates(
         template_features = mk_mock_template(query_sequences, 100)
 
     if not a3m_lines:
-        if isinstance(query_sequences, str) or len(query_sequences) == 1:
+        if len(query_sequences) == 1:
             pair_mode = "none"
-
         if (
             pair_mode == "none"
             or pair_mode == "unpaired"
@@ -395,7 +435,7 @@ def get_msa_and_templates(
         ):
             # find normal a3ms
             a3m_lines = run_mmseqs2(
-                query_sequences,
+                query_seqs_unique,
                 str(result_dir.joinpath(jobname)),
                 use_env,
                 use_pairing=False,
@@ -407,7 +447,7 @@ def get_msa_and_templates(
         if pair_mode == "paired" or pair_mode == "unpaired+paired":
             # find paired a3m
             paired_a3m_lines = run_mmseqs2(
-                query_sequences,
+                query_seqs_unique,
                 str(result_dir.joinpath(jobname)),
                 use_env,
                 use_pairing=True,
@@ -419,13 +459,21 @@ def get_msa_and_templates(
         if pair_mode == "none":
             assert a3m_lines
         elif pair_mode == "unpaired":
-            a3m_lines = pad_sequences(a3m_lines, query_sequences)
+            a3m_lines = pad_sequences(
+                a3m_lines, query_seqs_unique, query_seqs_cardinality
+            )
         elif pair_mode == "unpaired+paired":
             a3m_lines = (
-                paired_a3m_lines + "\n" + pad_sequences(a3m_lines, query_sequences)
+                pair_sequences(
+                    paired_a3m_lines, query_seqs_unique, query_seqs_cardinality
+                )
+                + "\n"
+                + pad_sequences(a3m_lines, query_seqs_unique, query_seqs_cardinality)
             )
         elif pair_mode == "paired":
-            a3m_lines = paired_a3m_lines
+            a3m_lines = pair_sequences(
+                paired_a3m_lines, query_seqs_unique, query_seqs_cardinality
+            )
         else:
             raise ValueError(f"Invalid pair_mod: {pair_mode}")
 
@@ -439,6 +487,7 @@ def run(
     use_amber: bool,
     msa_mode: str,
     num_models: int,
+    model_order: List[int],
     homooligomer: int,
     do_not_overwrite_results: bool,
     rank_mode: str,
@@ -446,6 +495,7 @@ def run(
     data_dir: Union[str, Path] = default_data_dir,
     host_url: str = DEFAULT_API_SERVER,
     cache: Optional[str] = None,
+    stop_at_score: float = 100,
 ):
     result_dir = Path(result_dir)
     result_dir.mkdir(exist_ok=True)
@@ -456,7 +506,7 @@ def run(
     # TODO: What's going on with MSA mode?
     write_bibtex(True, use_env, use_templates, use_amber, result_dir)
 
-    model_runner_and_params = load_models_and_params(num_models, data_dir)
+    model_runner_and_params = load_models_and_params(num_models, model_order, data_dir)
 
     crop_len = 0
     for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
@@ -542,6 +592,7 @@ def run(
             model_runner_and_params=model_runner_and_params,
             do_relax=use_amber,
             rank_by=rank_mode,
+            stop_at_score=stop_at_score,
             cache=cache,
         )
 
@@ -589,6 +640,7 @@ def main():
     # Caches the model output. For development only
     parser.add_argument("--cache", help=argparse.SUPPRESS)
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
+    parser.add_argument("--model-order", default="3,4,5,1,2", type=str)
     parser.add_argument(
         "--rank",
         help="rank models by auto, plddt or ptmscore",
@@ -608,6 +660,13 @@ def main():
     parser.add_argument("--data")
     parser.add_argument(
         "--do-not-overwrite-results", default=True, action="store_false"
+    )
+
+    parser.add_argument(
+        "--stop-at-score",
+        help="compute model until plddt or ptmscore > threshold is reached",
+        type=float,
+        default=0,
     )
 
     parser.add_argument("--host-url", default=DEFAULT_API_SERVER)
@@ -638,6 +697,7 @@ def main():
         use_amber=args.amber,
         msa_mode=args.msa_mode,
         num_models=args.num_models,
+        model_order=args.model_order.split(","),
         homooligomer=args.homooligomer,
         do_not_overwrite_results=args.do_not_overwrite_results,
         rank_mode=args.rank,
@@ -645,6 +705,7 @@ def main():
         data_dir=data_dir,
         host_url=args.host_url,
         cache=args.cache,
+        stop_at_score=args.stop_at_score,
     )
 
 

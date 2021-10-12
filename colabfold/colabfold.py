@@ -219,15 +219,8 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
         a3m_lines[M].append(line)
 
   # return results
-  if use_pairing:
-    it = iter(Ms)
-    for n1, n2 in zip(it, it):
-      n1it = iter(a3m_lines[n1])
-      n2it = iter(a3m_lines[n2])
-      a3m_lines = ["".join([l1.strip(),l2.strip().replace(">", "_")]) for l1,l2 in zip(n1it, n2it)]
-      a3m_lines = "\n".join(a3m_lines)
-  else:
-    a3m_lines = ["".join(a3m_lines[n]) for n in Ms]
+
+  a3m_lines = ["".join(a3m_lines[n]) for n in Ms]
 
   if use_templates:
     template_paths_ = []
