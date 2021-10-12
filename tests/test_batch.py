@@ -305,7 +305,7 @@ def test_complex(pytestconfig, caplog, tmp_path):
         "Found 5 citations for tools or databases",
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 91.8",
+        "model_1 took 0.0s with pLDDT 91.9",
         "reranking models based on avg. predicted lDDT",
         "Done",
     ]
