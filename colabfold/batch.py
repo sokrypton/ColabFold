@@ -105,7 +105,7 @@ def predict_structure(
     feature_dict: Dict[str, Any],
     sequences_lengths: List[int],
     crop_len: int,
-    model_runner_and_params: List[Tuple[str,model.RunModel, haiku.Params]],
+    model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
     do_relax: bool = False,
     rank_by: str = "auto",
     random_seed: int = 0,
@@ -222,7 +222,7 @@ def predict_structure(
             relaxed_pdb_lines.append(relaxed_pdb_str)
         # early stop criteria fulfilled
         if np.mean(prediction_result["plddt"][:seq_len]) > stop_at_score:
-            break;
+            break
     # rerank models based on predicted lddt
     if rank_by == "ptmscore":
         model_rank = np.array(ptmscore).argsort()[::-1]
@@ -342,21 +342,29 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
     queries.sort(key=lambda t: len(t[1]))
     return queries
 
-def pair_sequences(a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]) -> str:
-    a3m_line_paired = [''] * len(a3m_lines[0].splitlines())
+
+def pair_sequences(
+    a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
+) -> str:
+    a3m_line_paired = [""] * len(a3m_lines[0].splitlines())
     for n, seq in enumerate(query_sequences):
         lines = a3m_lines[n].splitlines()
         for i, line in enumerate(lines):
             if line.startswith(">"):
                 if n != 0:
-                    line = line.replace('>', '_', 1)
+                    line = line.replace(">", "_", 1)
                 a3m_line_paired[i] = a3m_line_paired[i] + line
             else:
                 a3m_line_paired[i] = a3m_line_paired[i] + line * query_cardinality[n]
     return "\n".join(a3m_line_paired)
 
-def pad_sequences(a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]) -> str:
-    _blank_seq = [("-" * len(seq)) * query_cardinality[n] for n, seq in enumerate(query_sequences)]
+
+def pad_sequences(
+    a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
+) -> str:
+    _blank_seq = [
+        ("-" * len(seq)) * query_cardinality[n] for n, seq in enumerate(query_sequences)
+    ]
     a3m_lines_combined = []
     for n, seq in enumerate(query_sequences):
         lines = a3m_lines[n].split("\n")
@@ -367,9 +375,14 @@ def pad_sequences(a3m_lines: List[str], query_sequences: List[str], query_cardin
                 a3m_lines_combined.append(a3m_line)
             else:
                 a3m_lines_combined.append(
-                    "".join(_blank_seq[:n] + [a3m_line] * query_cardinality[n] + _blank_seq[n + 1 :])
+                    "".join(
+                        _blank_seq[:n]
+                        + [a3m_line] * query_cardinality[n]
+                        + _blank_seq[n + 1 :]
+                    )
                 )
     return "\n".join(a3m_lines_combined)
+
 
 def get_msa_and_templates(
     a3m_lines: Optional[str],
@@ -383,7 +396,9 @@ def get_msa_and_templates(
 ) -> Tuple[str, Mapping[str, Any]]:
 
     # remove duplicates before searching
-    query_sequences = [query_sequences] if isinstance(query_sequences, str) else query_sequences
+    query_sequences = (
+        [query_sequences] if isinstance(query_sequences, str) else query_sequences
+    )
     query_seqs_unique = []
     [query_seqs_unique.append(x) for x in query_sequences if x not in query_seqs_unique]
     query_seqs_cardinality = [0] * len(query_seqs_unique)
@@ -444,13 +459,21 @@ def get_msa_and_templates(
         if pair_mode == "none":
             assert a3m_lines
         elif pair_mode == "unpaired":
-            a3m_lines = pad_sequences(a3m_lines, query_seqs_unique, query_seqs_cardinality)
+            a3m_lines = pad_sequences(
+                a3m_lines, query_seqs_unique, query_seqs_cardinality
+            )
         elif pair_mode == "unpaired+paired":
             a3m_lines = (
-                pair_sequences(paired_a3m_lines, query_seqs_unique, query_seqs_cardinality) + "\n" + pad_sequences(a3m_lines, query_seqs_unique, query_seqs_cardinality)
+                pair_sequences(
+                    paired_a3m_lines, query_seqs_unique, query_seqs_cardinality
+                )
+                + "\n"
+                + pad_sequences(a3m_lines, query_seqs_unique, query_seqs_cardinality)
             )
         elif pair_mode == "paired":
-            a3m_lines = pair_sequences(paired_a3m_lines, query_seqs_unique, query_seqs_cardinality)
+            a3m_lines = pair_sequences(
+                paired_a3m_lines, query_seqs_unique, query_seqs_cardinality
+            )
         else:
             raise ValueError(f"Invalid pair_mod: {pair_mode}")
 
@@ -617,7 +640,7 @@ def main():
     # Caches the model output. For development only
     parser.add_argument("--cache", help=argparse.SUPPRESS)
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
-    parser.add_argument('--model-order', default="3,4,5,1,2", type=str)
+    parser.add_argument("--model-order", default="3,4,5,1,2", type=str)
     parser.add_argument(
         "--rank",
         help="rank models by auto, plddt or ptmscore",
@@ -639,9 +662,12 @@ def main():
         "--do-not-overwrite-results", default=True, action="store_false"
     )
 
-    parser.add_argument("--stop-at-score",
-                        help="compute model until plddt or ptmscore > threshold is reached",
-                        type=float, default=0)
+    parser.add_argument(
+        "--stop-at-score",
+        help="compute model until plddt or ptmscore > threshold is reached",
+        type=float,
+        default=0,
+    )
 
     parser.add_argument("--host-url", default=DEFAULT_API_SERVER)
     args = parser.parse_args()

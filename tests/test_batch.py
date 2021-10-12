@@ -253,11 +253,19 @@ def test_batch(pytestconfig, caplog, tmp_path):
 
     # Very simple test, it would be better to check coordinates
     assert (
-        len(tmp_path.joinpath("5AWL_1_unrelaxed_model_1_rank_1.pdb").read_text().splitlines())
+        len(
+            tmp_path.joinpath("5AWL_1_unrelaxed_model_1_rank_1.pdb")
+            .read_text()
+            .splitlines()
+        )
         == 92
     )
     assert (
-        len(tmp_path.joinpath("6A5J_unrelaxed_model_1_rank_1.pdb").read_text().splitlines())
+        len(
+            tmp_path.joinpath("6A5J_unrelaxed_model_1_rank_1.pdb")
+            .read_text()
+            .splitlines()
+        )
         == 108
     )
 
