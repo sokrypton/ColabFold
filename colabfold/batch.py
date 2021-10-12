@@ -488,7 +488,6 @@ def run(
     msa_mode: str,
     num_models: int,
     model_order: List[int],
-    homooligomer: int,
     do_not_overwrite_results: bool,
     rank_mode: str,
     pair_mode: str,
@@ -596,7 +595,7 @@ def run(
             cache=cache,
         )
 
-        plot_lddt(homooligomer, jobname, msa, outs, query_sequence, result_dir)
+        plot_lddt(jobname, msa, outs, query_sequence, result_dir)
         plot_predicted_alignment_error(jobname, num_models, outs, result_dir)
     logger.info("Done")
 
@@ -648,7 +647,6 @@ def main():
         default="auto",
         choices=["auto", "plddt", "ptmscore"],
     )
-    parser.add_argument("--homooligomer", type=int, default=1)
     parser.add_argument(
         "--pair-mode",
         help="rank models by auto, unpaired, paired, unpaired+paired",
@@ -678,7 +676,6 @@ def main():
     download_alphafold_params(data_dir)
 
     assert args.msa_mode == "MMseqs2 (UniRef+Environmental)", "Unsupported"
-    assert args.homooligomer == 1, "Unsupported"
 
     # Prevent people from accidentally running on the cpu, which is really slow
     if not args.cpu and xla_bridge.get_backend().platform == "cpu":
@@ -698,7 +695,6 @@ def main():
         msa_mode=args.msa_mode,
         num_models=args.num_models,
         model_order=args.model_order.split(","),
-        homooligomer=args.homooligomer,
         do_not_overwrite_results=args.do_not_overwrite_results,
         rank_mode=args.rank,
         pair_mode=args.pair_mode,

@@ -20,7 +20,6 @@ def plot_predicted_alignment_error(
 
 
 def plot_lddt(
-    homooligomer: int,
     jobname: str,
     msa,
     outs: dict,
@@ -68,10 +67,7 @@ def plot_lddt(
     plt.title("Predicted lDDT per position")
     for model_name, value in outs.items():
         plt.plot(value["plddt"], label=model_name)
-    if homooligomer > 0:
-        for n in range(homooligomer + 1):
-            x = n * (query_len - 1)
-            plt.plot([x, x], [0, 100], color="black")
+
     plt.legend()
     plt.ylim(0, 100)
     plt.ylabel("Predicted lDDT")
