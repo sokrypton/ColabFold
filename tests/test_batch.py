@@ -230,10 +230,12 @@ def test_batch(pytestconfig, caplog, tmp_path):
             use_amber=False,
             msa_mode="MMseqs2 (UniRef+Environmental)",
             num_models=1,
+            model_order=[1, 2, 3, 4, 5],
             homooligomer=1,
             do_not_overwrite_results=False,
             rank_mode="auto",
             pair_mode="unpaired+paired",
+            stop_at_score=100,
         )
 
     assert caplog.messages == [
@@ -251,11 +253,11 @@ def test_batch(pytestconfig, caplog, tmp_path):
 
     # Very simple test, it would be better to check coordinates
     assert (
-        len(tmp_path.joinpath("5AWL_1_unrelaxed_model_1.pdb").read_text().splitlines())
+        len(tmp_path.joinpath("5AWL_1_unrelaxed_model_1_rank_1.pdb").read_text().splitlines())
         == 92
     )
     assert (
-        len(tmp_path.joinpath("6A5J_unrelaxed_model_1.pdb").read_text().splitlines())
+        len(tmp_path.joinpath("6A5J_unrelaxed_model_1_rank_1.pdb").read_text().splitlines())
         == 108
     )
 
@@ -280,10 +282,12 @@ def test_complex(pytestconfig, caplog, tmp_path):
             use_amber=False,
             msa_mode="MMseqs2 (UniRef+Environmental)",
             num_models=1,
+            model_order=[1, 2, 3, 4, 5],
             homooligomer=1,
             do_not_overwrite_results=False,
             rank_mode="auto",
             pair_mode="unpaired+paired",
+            stop_at_score=100,
         )
 
     messages = list(caplog.messages)
@@ -293,7 +297,7 @@ def test_complex(pytestconfig, caplog, tmp_path):
         "Found 5 citations for tools or databases",
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 91.9",
+        "model_1 took 0.0s with pLDDT 91.8",
         "reranking models based on avg. predicted lDDT",
         "Done",
     ]
