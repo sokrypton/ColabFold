@@ -321,7 +321,7 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
     else:
         assert input_path.is_dir(), "Expected either an input file or a input directory"
         queries = []
-        for file in input_path.iterdir():
+        for file in sorted(input_path.iterdir()):
             if not file.is_file():
                 continue
             (seqs, header) = pipeline.parsers.parse_fasta(file.read_text())
