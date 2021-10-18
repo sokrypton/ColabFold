@@ -393,7 +393,6 @@ def get_msa_and_templates(
     pair_mode: str,
     host_url: str = DEFAULT_API_SERVER,
 ) -> Tuple[str, Mapping[str, Any]]:
-
     # remove duplicates before searching
     query_sequences = (
         [query_sequences] if isinstance(query_sequences, str) else query_sequences
@@ -686,6 +685,8 @@ def main():
     if uses_api and args.host_url == DEFAULT_API_SERVER:
         print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
 
+    model_order = [int(i) for i in args.model_order.split(",")]
+
     run(
         queries=queries,
         result_dir=args.results,
@@ -693,7 +694,7 @@ def main():
         use_amber=args.amber,
         msa_mode=args.msa_mode,
         num_models=args.num_models,
-        model_order=args.model_order.split(","),
+        model_order=model_order,
         do_not_overwrite_results=args.do_not_overwrite_results,
         rank_mode=args.rank,
         pair_mode=args.pair_mode,

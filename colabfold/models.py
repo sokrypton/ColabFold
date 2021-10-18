@@ -32,7 +32,7 @@ def load_models_and_params(
                 )
             model_runner = model_runner_1
         else:
-            assert model_number in [3, 4, 5]
+            assert model_number in [3, 4, 5], model_number
 
             if not model_runner_3:
                 model_config = config.model_config("model_3_ptm")
