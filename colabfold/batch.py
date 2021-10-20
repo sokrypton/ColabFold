@@ -398,7 +398,9 @@ def get_msa_and_templates(
         [query_sequences] if isinstance(query_sequences, str) else query_sequences
     )
     query_seqs_unique = []
-    [query_seqs_unique.append(x) for x in query_sequences if x not in query_seqs_unique]
+    for x in query_sequences:
+        if x not in query_seqs_unique:
+            query_seqs_unique.append(x)
     query_seqs_cardinality = [0] * len(query_seqs_unique)
     for seq in query_sequences:
         seq_idx = query_seqs_unique.index(seq)
@@ -415,8 +417,12 @@ def get_msa_and_templates(
         if template_paths is None:
             template_features = mk_mock_template(query_sequences, 100)
         else:
+            if len(a3m_lines_mmseqs2) != 1 or len(query_seqs_unique) != 1:
+                raise ValueError(
+                    "Templates are currently only supported for one sequences"
+                )
             template_features = mk_template(
-                a3m_lines_mmseqs2, template_paths, query_seqs_unique
+                a3m_lines_mmseqs2[0], template_paths, query_seqs_unique[0]
             )
         if not a3m_lines:
             a3m_lines = a3m_lines_mmseqs2
@@ -455,7 +461,8 @@ def get_msa_and_templates(
             paired_a3m_lines = None
 
         if pair_mode == "none":
-            assert a3m_lines
+            assert isinstance(a3m_lines, list) and len(a3m_lines) == 1
+            [a3m_lines] = a3m_lines
         elif pair_mode == "unpaired":
             a3m_lines = pad_sequences(
                 a3m_lines, query_seqs_unique, query_seqs_cardinality

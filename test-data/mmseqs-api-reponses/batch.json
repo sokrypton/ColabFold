@@ -1,7 +1,9 @@
 [
   {
     "config": {
-      "query": ["YYDPETGTWY"],
+      "query": [
+        "YYDPETGTWY"
+      ],
       "use_env": true,
       "use_filter": true,
       "use_templates": false,
@@ -9,13 +11,17 @@
       "use_pairing": false
     },
     "response": [
-      ">101",
-      "YYDPETGTWY"
+      [
+        ">101",
+        "YYDPETGTWY"
+      ]
     ]
   },
   {
     "config": {
-      "query": ["IKKILSKIKKLLK"],
+      "query": [
+        "IKKILSKIKKLLK"
+      ],
       "use_env": true,
       "use_filter": true,
       "use_templates": false,
@@ -23,8 +29,12 @@
       "use_pairing": false
     },
     "response": [
-      ">101",
-      "IKKILSKIKKLLK"
+      [
+        ">101",
+        "IKKILSKIKKLLK",
+        ">101",
+        "IKKILSKIKKLLK"
+      ]
     ]
   }
 ]
