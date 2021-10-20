@@ -486,13 +486,14 @@ def run(
     msa_mode: str,
     num_models: int,
     model_order: List[int],
-    do_not_overwrite_results: bool,
+    keep_existing_results: bool,
     rank_mode: str,
     pair_mode: str,
     data_dir: Union[str, Path] = default_data_dir,
     host_url: str = DEFAULT_API_SERVER,
     cache: Optional[str] = None,
     stop_at_score: float = 100,
+    recompile_padding: float = 1.1,
 ):
     result_dir = Path(result_dir)
     result_dir.mkdir(exist_ok=True)
@@ -510,14 +511,14 @@ def run(
         jobname = safe_filename(raw_jobname)
         # In the colab version we know we're done when a zip file has been written
         if (
-            do_not_overwrite_results
+            keep_existing_results
             and result_dir.joinpath(jobname).with_suffix(".result.zip").is_file()
         ):
             logger.info(f"Skipping {jobname} (result.zip)")
             continue
         # In the local version we don't zip the files, so assume we're done if the last unrelaxed pdb file exists
         last_pdb_file = f"{jobname}_unrelaxed_model_{num_models}.pdb"
-        if do_not_overwrite_results and result_dir.joinpath(last_pdb_file).is_file():
+        if keep_existing_results and result_dir.joinpath(last_pdb_file).is_file():
             logger.info(f"Skipping {jobname} (pdb)")
             continue
         query_sequence_len_array = (
@@ -538,7 +539,7 @@ def run(
         )
 
         if query_sequence_len > crop_len:
-            crop_len = math.ceil(query_sequence_len * 1.1)
+            crop_len = math.ceil(query_sequence_len * recompile_padding)
         try:
             a3m_lines, template_features = get_msa_and_templates(
                 a3m_lines,
@@ -607,6 +608,31 @@ def main():
         "Directory with fasta/a3m files, a csv/tsv file, a fasta file or an a3m file",
     )
     parser.add_argument("results", help="Directory to write the results to")
+
+    # Main performance parameter
+    parser.add_argument(
+        "--stop-at-score",
+        help="Compute models until plddt or ptmscore > threshold is reached. "
+        "This can make colabfold much faster by only running the first model for easy queries.",
+        type=float,
+        default=0,
+    )
+    parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
+    parser.add_argument(
+        "--recompile-padding",
+        type=float,
+        default=1.1,
+        help="Whenever the input length changes, the model needs to be recompiled, which is slow. "
+        "We pad sequences by this factor, so we can e.g. compute sequence from length 100 to 110 without recompiling. "
+        "The prediction will become marginally slower for the longer input, "
+        "but overall performance increases due to not recompiling. "
+        "Set to 1 to disable.",
+    )
+
+    parser.add_argument("--model-order", default="3,4,5,1,2", type=str)
+    parser.add_argument("--host-url", default=DEFAULT_API_SERVER)
+    parser.add_argument("--data")
+
     # TODO: This currently isn't actually used
     parser.add_argument(
         "--msa-mode",
@@ -634,10 +660,6 @@ def main():
         action="store_true",
         help="Allow running on the cpu, which is very slow",
     )
-    # Caches the model output. For development only
-    parser.add_argument("--cache", help=argparse.SUPPRESS)
-    parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
-    parser.add_argument("--model-order", default="3,4,5,1,2", type=str)
     parser.add_argument(
         "--rank",
         help="rank models by auto, plddt or ptmscore",
@@ -652,20 +674,13 @@ def main():
         default="unpaired+paired",
         choices=["unpaired", "paired", "unpaired+paired"],
     )
-
-    parser.add_argument("--data")
     parser.add_argument(
-        "--do-not-overwrite-results", default=True, action="store_false"
+        "--overwrite-existing-results", default=False, action="store_true"
     )
 
-    parser.add_argument(
-        "--stop-at-score",
-        help="compute model until plddt or ptmscore > threshold is reached",
-        type=float,
-        default=0,
-    )
+    # Caches the model output. For development only. Remove eventually
+    parser.add_argument("--cache", help=argparse.SUPPRESS)
 
-    parser.add_argument("--host-url", default=DEFAULT_API_SERVER)
     args = parser.parse_args()
 
     setup_logging(Path(args.results).joinpath("log.txt"))
@@ -687,6 +702,8 @@ def main():
 
     model_order = [int(i) for i in args.model_order.split(",")]
 
+    assert 1 <= args.recompile_padding, "Can't apply negative padding"
+
     run(
         queries=queries,
         result_dir=args.results,
@@ -695,13 +712,14 @@ def main():
         msa_mode=args.msa_mode,
         num_models=args.num_models,
         model_order=model_order,
-        do_not_overwrite_results=args.do_not_overwrite_results,
+        keep_existing_results=not args.overwrite_existing_results,
         rank_mode=args.rank,
         pair_mode=args.pair_mode,
         data_dir=data_dir,
         host_url=args.host_url,
         cache=args.cache,
         stop_at_score=args.stop_at_score,
+        recompile_padding=args.recompile_padding,
     )
 
 
