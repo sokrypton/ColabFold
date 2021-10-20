@@ -615,7 +615,7 @@ def main():
         help="Compute models until plddt or ptmscore > threshold is reached. "
         "This can make colabfold much faster by only running the first model for easy queries.",
         type=float,
-        default=0,
+        default=100,
     )
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
     parser.add_argument(
