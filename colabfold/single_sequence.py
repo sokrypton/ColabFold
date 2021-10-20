@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 
 from colabfold.colabfold import run_mmseqs2
 from colabfold.pdb import set_bfactor
+from colabfold.utils import DEFAULT_API_SERVER
 
 
 def mk_mock_template(query_sequence):
@@ -172,17 +173,18 @@ def get_msa(
     use_msa: bool,
     use_env: bool,
     a3m_file: str,
+    host_url: str = DEFAULT_API_SERVER,
 ) -> Tuple[Any, Any, Any]:
     if use_templates:
         a3m_lines, template_paths = run_mmseqs2(
-            query_sequence, jobname, use_env, use_templates=True
+            query_sequence, jobname, use_env, use_templates=True, host_url=host_url
         )
         if template_paths is None:
             template_features = mk_mock_template(query_sequence * homooligomer)
         else:
             template_features = mk_template(query_sequence, a3m_lines, template_paths)
     elif use_msa:
-        a3m_lines = run_mmseqs2(query_sequence, jobname, use_env)
+        a3m_lines = run_mmseqs2(query_sequence, jobname, use_env, host_url=host_url)
         with open(a3m_file, "w") as text_file:
             text_file.write(a3m_lines)
         template_features = mk_mock_template(query_sequence * homooligomer)
