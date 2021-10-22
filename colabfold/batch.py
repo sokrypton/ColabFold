@@ -4,6 +4,7 @@ import math
 import pickle
 import sys
 import time
+import random
 from argparse import ArgumentParser
 from pathlib import Path
 from string import ascii_uppercase
@@ -288,7 +289,7 @@ def run_model_cached(
     return prediction_result
 
 
-def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[str]]]:
+def get_queries(input_path: Union[str, Path], sort_queries_by: str = "length") -> List[Tuple[str, str, Optional[str]]]:
     """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
     of job name, sequence and the optional a3m lines"""
 
@@ -338,7 +339,10 @@ def get_queries(input_path: Union[str, Path]) -> List[Tuple[str, str, Optional[s
             queries.append((file.stem, query_sequence.upper(), a3m_lines))
 
     # sort by seq. len
-    queries.sort(key=lambda t: len(t[1]))
+    if sort_queries_by == "length":
+        queries.sort(key=lambda t: len(t[1]))
+    elif sort_queries_by == "random":
+        random.shuffle(queries)
     return queries
 
 
@@ -501,6 +505,7 @@ def run(
     cache: Optional[str] = None,
     stop_at_score: float = 100,
     recompile_padding: float = 1.1,
+    recompile_all_models: bool = False
 ):
     result_dir = Path(result_dir)
     result_dir.mkdir(exist_ok=True)
@@ -511,7 +516,7 @@ def run(
     # TODO: What's going on with MSA mode?
     write_bibtex(True, use_env, use_templates, use_amber, result_dir)
 
-    model_runner_and_params = load_models_and_params(num_models, model_order, data_dir)
+    model_runner_and_params = load_models_and_params(num_models, model_order, data_dir, recompile_all_models)
 
     crop_len = 0
     for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
@@ -682,6 +687,20 @@ def main():
         choices=["unpaired", "paired", "unpaired+paired"],
     )
     parser.add_argument(
+        "--recompile-all-models",
+        help="recompile all models instead of just model 1 ane 3",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "--sort-queries-by",
+        help="sort queries by: none, length, random",
+        type=str,
+        default="length",
+        choices=["none", "length", "random"],
+    )
+
+    parser.add_argument(
         "--overwrite-existing-results", default=False, action="store_true"
     )
 
@@ -702,7 +721,7 @@ def main():
         print(NO_GPU_FOUND, file=sys.stderr)
         sys.exit(1)
 
-    queries = get_queries(args.input)
+    queries = get_queries(args.input, args.sort_queries_by)
     uses_api = any((query[2] is None for query in queries))
     if uses_api and args.host_url == DEFAULT_API_SERVER:
         print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
@@ -727,6 +746,7 @@ def main():
         cache=args.cache,
         stop_at_score=args.stop_at_score,
         recompile_padding=args.recompile_padding,
+        recompile_all_models=args.recompile_all_models
     )
 
 
