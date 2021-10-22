@@ -6,8 +6,10 @@ from alphafold.model import model, config, data
 
 
 def load_models_and_params(
-    num_models: int, model_order: List[int],
-    data_dir: Path = Path("."), recompile_all_models: bool = False
+    num_models: int,
+    model_order: List[int],
+    data_dir: Path = Path("."),
+    recompile_all_models: bool = False,
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -25,7 +27,9 @@ def load_models_and_params(
                 model_name=model_name + "_ptm", data_dir=str(data_dir)
             )
             cfg = config.model_config(model_name + "_ptm")
-            model_runner_and_params.append((model_name, model.RunModel(cfg, params), params))
+            model_runner_and_params.append(
+                (model_name, model.RunModel(cfg, params), params)
+            )
         return model_runner_and_params
     else:
         for n, model_number in enumerate(model_order):

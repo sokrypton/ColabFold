@@ -289,7 +289,9 @@ def run_model_cached(
     return prediction_result
 
 
-def get_queries(input_path: Union[str, Path], sort_queries_by: str = "length") -> List[Tuple[str, str, Optional[str]]]:
+def get_queries(
+    input_path: Union[str, Path], sort_queries_by: str = "length"
+) -> List[Tuple[str, str, Optional[str]]]:
     """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
     of job name, sequence and the optional a3m lines"""
 
@@ -505,7 +507,7 @@ def run(
     cache: Optional[str] = None,
     stop_at_score: float = 100,
     recompile_padding: float = 1.1,
-    recompile_all_models: bool = False
+    recompile_all_models: bool = False,
 ):
     result_dir = Path(result_dir)
     result_dir.mkdir(exist_ok=True)
@@ -516,7 +518,9 @@ def run(
     # TODO: What's going on with MSA mode?
     write_bibtex(True, use_env, use_templates, use_amber, result_dir)
 
-    model_runner_and_params = load_models_and_params(num_models, model_order, data_dir, recompile_all_models)
+    model_runner_and_params = load_models_and_params(
+        num_models, model_order, data_dir, recompile_all_models
+    )
 
     crop_len = 0
     for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
@@ -746,7 +750,7 @@ def main():
         cache=args.cache,
         stop_at_score=args.stop_at_score,
         recompile_padding=args.recompile_padding,
-        recompile_all_models=args.recompile_all_models
+        recompile_all_models=args.recompile_all_models,
     )
 
 
