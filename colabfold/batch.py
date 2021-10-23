@@ -1,10 +1,11 @@
 import argparse
+import json
 import logging
 import math
 import pickle
+import random
 import sys
 import time
-import random
 from argparse import ArgumentParser
 from pathlib import Path
 from string import ascii_uppercase
@@ -220,6 +221,7 @@ def predict_structure(
                 max_outer_iterations=20,
             )
             relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
+            # TODO: Those aren't actually used in batch
             relaxed_pdb_lines.append(relaxed_pdb_str)
         # early stop criteria fulfilled
         if np.mean(prediction_result["plddt"][:seq_len]) > stop_at_score:
@@ -509,9 +511,30 @@ def run(
     recompile_padding: float = 1.1,
     recompile_all_models: bool = False,
 ):
+    data_dir = Path(data_dir)
     result_dir = Path(result_dir)
     result_dir.mkdir(exist_ok=True)
-    data_dir = Path(data_dir)
+
+    # Record the parameters of this run
+    result_dir.joinpath("config.json").write_text(
+        json.dumps(
+            {
+                "num_queries": len(queries),
+                "use_templates": use_templates,
+                "use_amber": use_amber,
+                "msa_mode": msa_mode,
+                "num_models": num_models,
+                "model_order": model_order,
+                "keep_existing_results": keep_existing_results,
+                "rank_mode": rank_mode,
+                "pair_mode": pair_mode,
+                "host_url": host_url,
+                "stop_at_score": stop_at_score,
+                "recompile_padding": recompile_padding,
+                "recompile_all_models": recompile_all_models,
+            }
+        )
+    )
 
     use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
 

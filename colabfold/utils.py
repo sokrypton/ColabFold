@@ -1,7 +1,9 @@
 import logging
+import warnings
 from pathlib import Path
 
 from absl import logging as absl_logging
+from tqdm import TqdmExperimentalWarning
 
 NO_GPU_FOUND = """ERROR: Jax could not find GPU. This can be either because your machine doesn't have a GPU
 or because jax can't find it. You might need to run
@@ -42,6 +44,7 @@ def setup_logging(log_file: Path):
     )
     # otherwise jax will tell us about its search for devices
     absl_logging.set_verbosity("error")
+    warnings.simplefilter(action='ignore', category=TqdmExperimentalWarning)
 
 
 def safe_filename(file: str) -> str:
