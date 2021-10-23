@@ -44,7 +44,7 @@ def setup_logging(log_file: Path):
     )
     # otherwise jax will tell us about its search for devices
     absl_logging.set_verbosity("error")
-    warnings.simplefilter(action='ignore', category=TqdmExperimentalWarning)
+    warnings.simplefilter(action="ignore", category=TqdmExperimentalWarning)
 
 
 def safe_filename(file: str) -> str:
