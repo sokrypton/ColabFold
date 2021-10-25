@@ -267,6 +267,7 @@ def test_batch(pytestconfig, caplog, tmp_path):
         )
         == 108
     )
+    assert tmp_path.joinpath("config.json").is_file()
 
 
 def test_complex(pytestconfig, caplog, tmp_path):

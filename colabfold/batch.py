@@ -620,18 +620,23 @@ def run(
             logger.exception(f"Could not predict {jobname}: {e}")
             continue
 
-        outs = predict_structure(
-            jobname,
-            result_dir,
-            feature_dict,
-            sequences_lengths=query_sequence_len_array,
-            crop_len=crop_len,
-            model_runner_and_params=model_runner_and_params,
-            do_relax=use_amber,
-            rank_by=rank_mode,
-            stop_at_score=stop_at_score,
-            cache=cache,
-        )
+        try:
+            outs = predict_structure(
+                jobname,
+                result_dir,
+                feature_dict,
+                sequences_lengths=query_sequence_len_array,
+                crop_len=crop_len,
+                model_runner_and_params=model_runner_and_params,
+                do_relax=use_amber,
+                rank_by=rank_mode,
+                stop_at_score=stop_at_score,
+                cache=cache,
+            )
+        except RuntimeError as e:
+            # This normally happens on OOM. TODO: Filter for the specific OOM error message
+            logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
+            continue
 
         plot_lddt(jobname, msa, outs, query_sequence, result_dir)
         plot_predicted_alignment_error(jobname, num_models, outs, result_dir)
