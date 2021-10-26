@@ -20,12 +20,7 @@ def plot_predicted_alignment_error(
 
 
 def plot_lddt(
-    jobname: str,
-    msa,
-    outs: dict,
-    query_sequence,
-    result_dir: Path,
-    show: bool = False,
+    jobname: str, msa, outs: dict, query_sequence, result_dir: Path, show: bool = False
 ):
     # gather MSA info
     deduped_full_msa = list(dict.fromkeys(msa))

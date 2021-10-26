@@ -49,7 +49,7 @@ Please checkout the [jax documentation](https://github.com/google/jax#pip-instal
 
 ```shell
 pip install colabfold
-pip install --upgrade "jax[cuda111]" -f https://storage.googleapis.com/jax-releases/jax_releases.html  # Note: wheels only available on linux.
+pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_releases.html  # Note: wheels only available on linux.
 ```
 
 ```shell

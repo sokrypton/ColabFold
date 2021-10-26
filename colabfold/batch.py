@@ -1,8 +1,6 @@
-import argparse
 import json
 import logging
 import math
-import pickle
 import random
 import sys
 import time
@@ -12,7 +10,6 @@ from string import ascii_uppercase
 from typing import Any, Dict, Tuple, List, Union, Mapping, Optional
 
 import haiku
-import numpy
 import numpy as np
 import pandas
 from alphafold.common import protein
@@ -20,7 +17,6 @@ from alphafold.common.protein import Protein
 from alphafold.data import pipeline, templates
 from alphafold.data.tools import hhsearch
 from alphafold.model import model
-from alphafold.model.features import FeatureDict
 from jax.lib import xla_bridge
 
 from colabfold.citations import write_bibtex
@@ -112,7 +108,6 @@ def predict_structure(
     rank_by: str = "auto",
     random_seed: int = 0,
     stop_at_score: float = 100,
-    cache: Optional[str] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     # Run the models.
@@ -134,11 +129,16 @@ def predict_structure(
     for L_i in sequences_lengths[:-1]:
         idx_res[L_prev + L_i :] += 200
         L_prev += L_i
+    feature_dict["residue_index"] = idx_res
 
     chains = list(
-        "".join([ascii_uppercase[n] * L for n, L in enumerate(sequences_lengths)])
+        "".join(
+            [
+                ascii_uppercase[chain_number] * chain_length
+                for chain_number, chain_length in enumerate(sequences_lengths)
+            ]
+        )
     )
-    feature_dict["residue_index"] = idx_res
     model_names = []
     for (model_name, model_runner, params) in model_runner_and_params:
         logger.info(f"Running {model_name}")
@@ -172,19 +172,17 @@ def predict_structure(
             num_templates=4,
         )  # template_mask (4, 4) second value
 
-        if cache:
-            prediction_result = run_model_cached(
-                input_fix, model_name, model_runner, prefix, cache
-            )
-        else:
-            start = time.time()
-            prediction_result = model_runner.predict(input_fix)
-            prediction_time = time.time() - start
-            prediction_times.append(prediction_time)
-            mean_plddt = np.mean(prediction_result["plddt"][:seq_len])
-            logger.info(
-                f"{model_name} took {prediction_time:.1f}s with pLDDT {mean_plddt :.1f}"
-            )
+        start = time.time()
+        # The original alphafold only returns the prediction_result,
+        # but our patched alphafold also returns a tuple (recycles,tol)
+        prediction_result, (_, _) = model_runner.predict(input_fix)
+        prediction_time = time.time() - start
+        prediction_times.append(prediction_time)
+
+        mean_plddt = np.mean(prediction_result["plddt"][:seq_len])
+        logger.info(
+            f"{model_name} took {prediction_time:.1f}s with pLDDT {mean_plddt :.1f}"
+        )
 
         unrelaxed_protein = protein.from_prediction(input_fix, prediction_result)
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
@@ -253,42 +251,6 @@ def predict_structure(
             "pTMscore": ptmscore,
         }
     return out
-
-
-def run_model_cached(
-    input_fix: FeatureDict,
-    model_name: str,
-    model_runner: model.RunModel,
-    prefix: str,
-    cache: str,
-):
-    """Caching the expensive compilation + prediction step - for development only
-
-    We store both input and output to ensure that the input is actually the same that we cached
-    """
-    pickle_path = Path(cache).joinpath(prefix)
-    if pickle_path.joinpath(f"{model_name}_input_fix.pkl").is_file():
-        logger.info("Using cached computation")
-        with pickle_path.joinpath(f"{model_name}_input_fix.pkl").open("rb") as fp:
-            input_fix2 = pickle.load(fp)
-            # Make sure we're actually predicting the same input again
-            numpy.testing.assert_equal(input_fix, input_fix2)
-        with pickle_path.joinpath(f"{model_name}_prediction_result.pkl").open(
-            "rb"
-        ) as fp:
-            prediction_result = pickle.load(fp)
-    else:
-        # The actual operation that we cache
-        prediction_result = model_runner.predict(input_fix)
-
-        pickle_path.mkdir(parents=True, exist_ok=True)
-        with pickle_path.joinpath(f"{model_name}_input_fix.pkl").open("wb") as fp:
-            pickle.dump(input_fix, fp)
-        with pickle_path.joinpath(f"{model_name}_prediction_result.pkl").open(
-            "wb"
-        ) as fp:
-            pickle.dump(prediction_result, fp)
-    return prediction_result
 
 
 def get_queries(
@@ -506,7 +468,6 @@ def run(
     pair_mode: str,
     data_dir: Union[str, Path] = default_data_dir,
     host_url: str = DEFAULT_API_SERVER,
-    cache: Optional[str] = None,
     stop_at_score: float = 100,
     recompile_padding: float = 1.1,
     recompile_all_models: bool = False,
@@ -631,7 +592,6 @@ def run(
                 do_relax=use_amber,
                 rank_by=rank_mode,
                 stop_at_score=stop_at_score,
-                cache=cache,
             )
         except RuntimeError as e:
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
@@ -736,9 +696,6 @@ def main():
         "--overwrite-existing-results", default=False, action="store_true"
     )
 
-    # Caches the model output. For development only. Remove eventually
-    parser.add_argument("--cache", help=argparse.SUPPRESS)
-
     args = parser.parse_args()
 
     setup_logging(Path(args.results).joinpath("log.txt"))
@@ -775,7 +732,6 @@ def main():
         pair_mode=args.pair_mode,
         data_dir=data_dir,
         host_url=args.host_url,
-        cache=args.cache,
         stop_at_score=args.stop_at_score,
         recompile_padding=args.recompile_padding,
         recompile_all_models=args.recompile_all_models,

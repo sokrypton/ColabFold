@@ -70,14 +70,17 @@ class MockRunModel:
                 input_fix = pickle.load(input_fix_fp)
                 self.known_inputs.append((input_fix, pickle.load(prediction_fp)))
 
-    def predict(self, model_runner: RunModel, feat: FeatureDict) -> Mapping[str, Any]:
+    def predict(
+        self, model_runner: RunModel, feat: FeatureDict
+    ) -> Tuple[Mapping[str, Any], Tuple[Any, Any]]:
         msa_feat = feat["msa_feat"]
         # noinspection PyUnresolvedReferences
         del feat["msa_feat"]
         for input_fix, prediction in self.known_inputs:
             try:
                 numpy.testing.assert_equal(feat, input_fix)
-                return prediction
+                # TODO: Also mock (recycles,tol) from the patches
+                return prediction, (None, None)
             except AssertionError:
                 continue
 
@@ -94,18 +97,18 @@ class MockRunModel:
             # Put msa_feat back, we need it for the prediction
             # noinspection PyUnresolvedReferences
             feat["msa_feat"] = msa_feat
-            prediction = original_run_model(model_runner, feat)
+            prediction, (_, _) = original_run_model(model_runner, feat)
             self.known_inputs.append((feat, prediction))
             with lzma.open(
                 folder.joinpath(f"model_prediction_result.pkl.xz"), "wb"
             ) as fp:
                 pickle.dump(prediction, fp)
-            return prediction
+            return prediction, (None, None)
         else:
             for input_fix, prediction in self.known_inputs:
                 try:
                     numpy.testing.assert_equal(feat, input_fix)
-                    return prediction
+                    return prediction, (None, None)
                 except AssertionError as e:
                     print(e)
             raise AssertionError("input not stored")
