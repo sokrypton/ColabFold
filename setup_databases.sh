@@ -1,6 +1,9 @@
 #!/bin/bash
 # Setup everything for using mmseqs locally
-# TODO: Target directory as parameter?
+
+set -ex
+
+cd "$1"
 
 if ! [ -x "$(command -v aria2c)" ]; then
   alias download="wget"

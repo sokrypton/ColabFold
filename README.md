@@ -43,18 +43,6 @@
 | [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb) |
 | [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb) |
 
-### Running locally
-
-Please checkout the [jax documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to make jax work on your GPU
-
-```shell
-pip install colabfold
-pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_releases.html  # Note: wheels only available on linux.
-```
-
-```shell
-colabfold_batch --input <directory_with_fasta_files> --result <result_dir> 
-```
 
 ### FAQ
 - Can I use the models for **Molecular Replacement**?
@@ -68,6 +56,40 @@ colabfold_batch --input <directory_with_fasta_files> --result <result_dir>
   - You can access the server from a local computer if you queries are serial from a single IP. Please do not use multiple computers to query the server.
 - Where can I download the databases used by ColabFold?
   - The databases are available [here](https://colabfold.mmseqs.com/)
+
+### Running locally
+
+Please checkout the [jax documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to make jax work on your GPU or TPU
+
+```shell
+pip install colabfold
+pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_releases.html  # Note: wheels only available on linux.
+```
+
+```shell
+colabfold_batch <directory_with_fasta_files> <result_dir> 
+```
+
+### Generating MSAs
+
+First create a directory for the databases on a disk with sufficient storage (940GB (!)). Depending on where you are, this will take a couple of hours: 
+
+```shell
+./setup_databases.sh /path/to/db_folder
+```
+
+Download and unpack mmseqs (Note: The required features aren't in a release yet, so currently, you need to compile the latest version from source yourself). If mmseqs is not in your `PATH`, replace `mmseqs` below with the path to your mmseqs:
+
+```shell
+# This needs a lot of CPU
+colabfold_search.sh mmseqs input_sequences.fasta /path/to/db_folder search_results uniref30_2103_db "" colabfold_envdb_202108_db 1 0 1
+# This just does a bit of IO
+python /home/konsti/ColabFold/colabfold/merge_and_split_msas.py search_results msas
+# This needs a GPU
+colabfold_batch msas predictions
+```
+
+This will create intermediate folders `search_results` and `msas` that you can eventually delete, and a `predictions` folder with all pdb files. 
 
 ### Tutorials & Presentations
 - ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI). 
