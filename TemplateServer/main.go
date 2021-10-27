@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -81,6 +82,9 @@ func GatherResults(w io.Writer, templates []string, a3m Reader, hhm Reader, cif 
 	}
 	uniques = unique(uniques)
 	uniquesWithoutChains = unique(uniquesWithoutChains)
+
+	sort.Strings(uniques)
+	sort.Strings(uniquesWithoutChains)
 
 	a3mOffset := 0
 	a3mData := strings.Builder{}
