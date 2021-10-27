@@ -66,8 +66,8 @@ func AddTarEntry(tw *tar.Writer, name string, s string, now time.Time) error {
 }
 
 func GatherResults(w io.Writer, templates []string, a3m Reader, hhm Reader, cif Reader) (err error) {
-    gw := gzip.NewWriter(w)
-    tw := tar.NewWriter(gw)
+	gw := gzip.NewWriter(w)
+	tw := tar.NewWriter(gw)
 
 	uniques := make([]string, len(templates))
 	uniquesWithoutChains := make([]string, len(templates))
@@ -143,19 +143,19 @@ func GatherResults(w io.Writer, templates []string, a3m Reader, hhm Reader, cif 
 		}
 	}
 
-    if err := tw.Close(); err != nil {
-        return err
-    }
+	if err := tw.Close(); err != nil {
+		return err
+	}
 
-    if err := gw.Close(); err != nil {
-        return err
-    }
+	if err := gw.Close(); err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func main() {
-    configFile, args := ParseConfigName(os.Args[1:])
+	configFile, args := ParseConfigName(os.Args[1:])
 
 	var config ConfigRoot
 	var err error
@@ -192,13 +192,13 @@ func main() {
 	cifreader.Make(dbpaths(config.Paths.DatabasePrefix + "_cif"))
 
 	r.HandleFunc("/template/{list}", func(w http.ResponseWriter, req *http.Request) {
-        templates := strings.Split(mux.Vars(req)["list"], ",")
-        w.Header().Set("Content-Disposition", "attachment; filename=\"templates.tar.gz\"")
-        w.Header().Set("Content-Type", "application/octet-stream")
-        if err != GatherResults(w, templates, a3mreader, hhmreader, cifreader) {
-            http.Error(w, err.Error(), http.StatusBadRequest)
-            return
-        }
+		templates := strings.Split(mux.Vars(req)["list"], ",")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"templates.tar.gz\"")
+		w.Header().Set("Content-Type", "application/octet-stream")
+		if err != GatherResults(w, templates, a3mreader, hhmreader, cifreader) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}).Methods("GET")
 
 	h := http.Handler(r)
