@@ -19,11 +19,11 @@ from alphafold.data.tools import hhsearch
 from alphafold.model import model
 from jax.lib import xla_bridge
 
+from colabfold.alphafold.models import load_models_and_params
 from colabfold.citations import write_bibtex
 from colabfold.colabfold import run_mmseqs2
 from colabfold.download import download_alphafold_params, default_data_dir
-from colabfold.models import load_models_and_params
-from colabfold.msa import make_fixed_size
+from colabfold.alphafold.msa import make_fixed_size
 from colabfold.pdb import set_bfactor
 from colabfold.plot import plot_predicted_alignment_error, plot_lddt
 from colabfold.utils import (

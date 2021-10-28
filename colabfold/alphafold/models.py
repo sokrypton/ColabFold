@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Tuple, List
+from typing import Tuple, List
 
 import haiku
 from alphafold.model import model, config, data

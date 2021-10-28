@@ -12,7 +12,7 @@ from tqdm import tqdm
 logger = logging.getLogger(__name__)
 
 
-def merge_msa(mmseqs: str = "mmseqs", cwd: Path = Path(".")):
+def merge_msa(mmseqs: str = "mmseqs", cwd: Path = Path("..")):
     check_call(
         [
             mmseqs,
