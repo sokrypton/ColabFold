@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 import haiku
 from alphafold.model import model, config, data
@@ -7,7 +7,7 @@ from alphafold.model import model, config, data
 
 def load_models_and_params(
     num_models: int,
-    model_order: List[int],
+    model_order: Optional[List[int]]=None,
     data_dir: Path = Path("."),
     recompile_all_models: bool = False,
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
@@ -16,6 +16,9 @@ def load_models_and_params(
     Note that models 1 and 2 have a different number of parameters compared to models 3, 4 and 5,
     so we load model 1 and model 3.
     """
+    if not model_order:
+        model_order = [3, 4, 5, 1, 2]
+
     # Use only two model and later swap params to avoid recompiling
     model_runner_and_params: [Tuple[str, model.RunModel, haiku.Params]] = []
     model_runner_1 = None

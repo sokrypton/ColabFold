@@ -8,7 +8,7 @@ from tqdm import TqdmExperimentalWarning
 NO_GPU_FOUND = """ERROR: Jax could not find GPU. This can be either because your machine doesn't have a GPU
 or because jax can't find it. You might need to run
 
-pip install --upgrade "jax[cuda111]" -f https://storage.googleapis.com/jax-releases/jax_releases.html  # Note: wheels only available on linux.
+pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_releases.html  # Note: wheels only available on linux.
 
 See https://github.com/google/jax/#pip-installation-gpu-cuda for more details.
 

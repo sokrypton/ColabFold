@@ -28,10 +28,8 @@ def plot_lddt(
 
     if isinstance(query_sequence, str):
         query_str = query_sequence
-        query_len = len(query_sequence)
     else:
         query_str = "".join(query_sequence)
-        query_len = sum(len(s) for s in query_sequence)
 
     seqid = (np.array(list(query_str)) == msa_arr).mean(-1)
     seqid_sort = seqid.argsort()  # [::-1]
