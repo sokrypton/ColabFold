@@ -7,7 +7,7 @@ from alphafold.model import model, config, data
 
 def load_models_and_params(
     num_models: int,
-    model_order: Optional[List[int]]=None,
+    model_order: Optional[List[int]] = None,
     data_dir: Path = Path("."),
     recompile_all_models: bool = False,
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
