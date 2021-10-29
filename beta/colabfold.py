@@ -124,6 +124,14 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
           time.sleep(5 + random.randint(0,5))
           out = submit(seqs_unique, mode, N)
 
+        if out["status"] == "ERROR":
+          REDO = False
+          raise Exception(f'MMseqs2 API is giving errors. Please confirm your input is a valid protein sequence. If error persists, please try again an hour later.')
+
+        if out["status"] == "MAINTENANCE":
+          REDO = False
+          raise Exception(f'MMseqs2 API is undergoing maintanance. Please try again in a few minutes.')
+
         # wait for job to finish
         ID,TIME = out["id"],0
         pbar.set_description(out["status"])
@@ -144,15 +152,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
           if TIME < TIME_ESTIMATE:
             pbar.update(n=(TIME_ESTIMATE-TIME))
           REDO = False
-          
-        if out["status"] == "ERROR":
-          REDO = False
-          raise Exception(f'MMseqs2 API is giving errors. Please confirm your input is a valid protein sequence. If error persists, please try again an hour later.')
 
-        if out["status"] == "MAINTENANCE":
-          REDO = False
-          raise Exception(f'MMseqs2 API is undergoing maintanance. Please try again in a few minutes.')
-          
       # Download results
       download(ID, tar_gz_file)
 
