@@ -130,11 +130,11 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
 
         # Resubmit job until it goes through
         out = submit(seqs_unique, mode, N)
-        while out["status"] in ["UNKNOWN", "RATELIMIT"]:
+        while out["status"] in ["UNKNOWN", "RATELIMIT", "MAINTENANCE"]:
           sleep_time = 5 + random.randint(0, 5)
           import logging
           logger = logging.getLogger(__name__)
-          logger.error(f"Sleeping for {sleep_time}s")
+          logger.error(f"Sleeping for {sleep_time}s. Reason: {out['status']}")
           # resubmit
           time.sleep(sleep_time)
           out = submit(seqs_unique, mode, N)
