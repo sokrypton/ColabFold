@@ -22,6 +22,9 @@ import matplotlib
 import matplotlib.patheffects
 from matplotlib import collections as mcoll
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:
   import py3Dmol
 except:
@@ -76,14 +79,20 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
       n += 1
 
     res = requests.post(f'{host_url}/{submission_endpoint}', data={'q':query,'mode': mode})
-    try: out = res.json()
-    except ValueError: out = {"status":"UNKNOWN"}
+    try:
+      out = res.json()
+    except ValueError:
+      logger.error(f"Server didn't reply with json: {res.text}")
+      out = {"status":"ERROR"}
     return out
 
   def status(ID):
     res = requests.get(f'{host_url}/ticket/{ID}')
-    try: out = res.json()
-    except ValueError: out = {"status":"UNKNOWN"}
+    try:
+      out = res.json()
+    except ValueError:
+      logger.error(f"Server didn't reply with json: {res.text}")
+      out = {"status":"ERROR"}
     return out
 
   def download(ID, path):
@@ -132,8 +141,6 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
         out = submit(seqs_unique, mode, N)
         while out["status"] in ["UNKNOWN", "RATELIMIT"]:
           sleep_time = 5 + random.randint(0, 5)
-          import logging
-          logger = logging.getLogger(__name__)
           logger.error(f"Sleeping for {sleep_time}s. Reason: {out['status']}")
           # resubmit
           time.sleep(sleep_time)
