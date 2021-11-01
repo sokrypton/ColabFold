@@ -10,7 +10,8 @@ def set_bfactor(pdb_filename: Union[str, Path], bfac, idx_res, chains):
     for line in in_file:
         if line[0:6] == "ATOM  ":
             seq_id = int(line[22:26].strip()) - 1
-            seq_id = np.where(idx_res == seq_id)[0][0]
+            # FIXME: This is broken somehow but I don't understand how
+            #seq_id = np.where(idx_res == seq_id)[0][0]
             out_file.write(
                 f"{line[:21]}{chains[seq_id]}{line[22:60]}{bfac[seq_id]:6.2f}{line[66:]}"
             )
