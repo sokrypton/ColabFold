@@ -1,30 +1,4 @@
 # ColabFold
------------------
-**MMseqs2 API status**
-```diff
-  16Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
-  17Aug2021: If you see any errors, please report them.
-  17Aug2021: We are still debugging the MSA generation procedure...
-  20Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
-             To avoid Google Colab from crashing, for large MSA we did -diff 1000 to get 
-             1K most diverse sequences. This caused some large MSA to degrade in quality,
-             as sequences close to query were being merged to single representive.
-             We are working on updating the server (today) to fix this, by making sure
-             that both diverse and sequences close to query are included in the final MSA.
-             We'll post update here when update is complete.
-+ 21Aug2021  The MSA issues should now be resolved! Please report any errors you see.
-+            In short, to reduce MSA size we filter (qsc > 0.8, id > 0.95) and take 3K
-+            most diverse sequences at different qid (sequence identity to query) intervals 
-+            and merge them. More specifically 3K sequences at qid at (0→0.2),(0.2→0.4),
-+            (0.4→0.6),(0.6→0.8) and (0.8→1). If you submitted your sequence between
-+            16Aug2021 and 20Aug2021, we recommend submitting again for best results!
-  21Aug2021  The use_templates option in AlphaFold2_mmseqs2 is not properly working. We are
-             working on fixing this. If you are not using templates, this does not affect the
-             the results. Other notebooks that do not use_templates are unaffected.
-+ 21Aug2021  The templates issue is resolved!
-```
------------------
-
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
 ### Making Protein folding accessible to all via Google Colab!
@@ -56,6 +30,9 @@
   - You can access the server from a local computer if you queries are serial from a single IP. Please do not use multiple computers to query the server.
 - Where can I download the databases used by ColabFold?
   - The databases are available [here](https://colabfold.mmseqs.com/)
+- I want to render my own images of the predicted structures, how do I color by pLDDT?
+  - In pymol for AlphaFold structures: `spectrum b, red_yellow_green_cyan_blue, minimum=50, maximum=90`
+  - In pymol for RoseTTAFold structures: `spectrum b, red_yellow_green_cyan_blue, minimum=0.5, maximum=0.9`
 
 ### Running locally
 
@@ -119,3 +96,30 @@ This will create intermediate folders `search_results` and `msas` that you can e
   Science (2021) doi: [10.1126/science.abj8754](https://doi.org/10.1126/science.abj8754)
 
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.5123296.svg)](https://doi.org/10.5281/zenodo.5123296)
+
+-----------------
+**MMseqs2 API status**
+```diff
+  16Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
+  17Aug2021: If you see any errors, please report them.
+  17Aug2021: We are still debugging the MSA generation procedure...
+  20Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
+             To avoid Google Colab from crashing, for large MSA we did -diff 1000 to get 
+             1K most diverse sequences. This caused some large MSA to degrade in quality,
+             as sequences close to query were being merged to single representive.
+             We are working on updating the server (today) to fix this, by making sure
+             that both diverse and sequences close to query are included in the final MSA.
+             We'll post update here when update is complete.
++ 21Aug2021  The MSA issues should now be resolved! Please report any errors you see.
++            In short, to reduce MSA size we filter (qsc > 0.8, id > 0.95) and take 3K
++            most diverse sequences at different qid (sequence identity to query) intervals 
++            and merge them. More specifically 3K sequences at qid at (0→0.2),(0.2→0.4),
++            (0.4→0.6),(0.6→0.8) and (0.8→1). If you submitted your sequence between
++            16Aug2021 and 20Aug2021, we recommend submitting again for best results!
+  21Aug2021  The use_templates option in AlphaFold2_mmseqs2 is not properly working. We are
+             working on fixing this. If you are not using templates, this does not affect the
+             the results. Other notebooks that do not use_templates are unaffected.
++ 21Aug2021  The templates issue is resolved!
+```
+-----------------
+
