@@ -75,7 +75,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
       query += f">{n}\n{seq}\n"
       n += 1
 
-    res = requests.post(f'{host_url}/ticket/msa', data={'q':query,'mode': mode})
+    res = requests.post(f'{host_url}/{submission_endpoint}', data={'q':query,'mode': mode})
     try: out = res.json()
     except ValueError: out = {"status":"UNKNOWN"}
     return out
