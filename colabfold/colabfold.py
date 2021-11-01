@@ -130,7 +130,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
 
         # Resubmit job until it goes through
         out = submit(seqs_unique, mode, N)
-        while out["status"] in ["UNKNOWN", "RATELIMIT", "MAINTENANCE"]:
+        while out["status"] in ["UNKNOWN", "RATELIMIT"]:
           sleep_time = 5 + random.randint(0, 5)
           import logging
           logger = logging.getLogger(__name__)
@@ -138,6 +138,12 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
           # resubmit
           time.sleep(sleep_time)
           out = submit(seqs_unique, mode, N)
+
+        if out["status"] == "ERROR":
+          raise Exception(f'MMseqs2 API is giving errors. Please confirm your input is a valid protein sequence. If error persists, please try again an hour later.')
+
+        if out["status"] == "MAINTENANCE":
+          raise Exception(f'MMseqs2 API is undergoing maintenance. Please try again in a few minutes.')
 
         # wait for job to finish
         ID,TIME = out["id"],0

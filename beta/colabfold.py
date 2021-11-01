@@ -127,12 +127,10 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
           out = submit(seqs_unique, mode, N)
 
         if out["status"] == "ERROR":
-          REDO = False
           raise Exception(f'MMseqs2 API is giving errors. Please confirm your input is a valid protein sequence. If error persists, please try again an hour later.')
 
         if out["status"] == "MAINTENANCE":
-          REDO = False
-          raise Exception(f'MMseqs2 API is undergoing maintanance. Please try again in a few minutes.')
+          raise Exception(f'MMseqs2 API is undergoing maintenance. Please try again in a few minutes.')
 
         # wait for job to finish
         ID,TIME = out["id"],0
