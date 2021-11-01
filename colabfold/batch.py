@@ -540,20 +540,20 @@ def run(
 
         if query_sequence_len > crop_len:
             crop_len = math.ceil(query_sequence_len * recompile_padding)
-        # try:
-        a3m_lines, template_features = get_msa_and_templates(
-            a3m_lines,
-            jobname,
-            query_sequence,
-            result_dir,
-            use_env,
-            use_templates,
-            pair_mode,
-            host_url,
-        )
-        # except Exception as e:
-        #    logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
-        #    continue
+        try:
+            a3m_lines, template_features = get_msa_and_templates(
+                a3m_lines,
+                jobname,
+                query_sequence,
+                result_dir,
+                use_env,
+                use_templates,
+                pair_mode,
+                host_url,
+            )
+        except Exception as e:
+            logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
+            continue
 
         result_dir.joinpath(a3m_file).write_text(a3m_lines)
         # parse MSA
