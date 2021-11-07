@@ -20,7 +20,7 @@ def download_alphafold_params(data_dir: Path = default_data_dir):
         return
 
     params_dir.mkdir(parents=True, exist_ok=True)
-    url = "https://storage.googleapis.com/alphafold/alphafold_params_2021-07-14.tar"
+    url = "https://storage.googleapis.com/alphafold/alphafold_params_colab_2021-10-27.tar"
     response = requests.get(url, stream=True)
     file_size = int(response.headers.get("Content-Length", 0))
     with tqdm.tqdm.wrapattr(
