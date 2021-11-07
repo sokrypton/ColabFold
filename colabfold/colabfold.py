@@ -12,6 +12,7 @@ import time
 import pickle
 import os
 import re
+from typing import Tuple, List
 
 import random
 from tqdm.autonotebook import tqdm
@@ -69,7 +70,7 @@ TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaini
 
 def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
                 use_templates=False, filter=None, use_pairing=False,
-                host_url="https://a3m.mmseqs.com"):
+                host_url="https://a3m.mmseqs.com") -> Tuple[List[str], List[str]]:
   submission_endpoint = "ticket/pair" if use_pairing else "ticket/msa"
 
   def submit(seqs, mode, N=101):
@@ -245,10 +246,8 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
         template_paths_.append(template_paths[n])
     template_paths = template_paths_
 
-  if isinstance(x, str):
-    return (a3m_lines[0], template_paths[0]) if use_templates else a3m_lines[0]
-  else:
-    return (a3m_lines, template_paths) if use_templates else a3m_lines
+
+  return (a3m_lines, template_paths) if use_templates else a3m_lines
 
 
 #########################################################################
