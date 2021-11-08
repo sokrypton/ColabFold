@@ -26,6 +26,6 @@ jobs:
           restore-keys: |
             poetry-${{ runner.os }}-${{ matrix.python-version }}-
       - name: Install depencies
-        run: $HOME/.local/bin/poetry install
+        run: $HOME/.local/bin/poetry install -E alphafold
       - name: Run tests
         run: .venv/bin/pytest

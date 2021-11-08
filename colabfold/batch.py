@@ -14,9 +14,16 @@ import numpy as np
 import pandas
 from alphafold.common import protein
 from alphafold.common.protein import Protein
-from alphafold.data import pipeline, templates
+from alphafold.data import (
+    pipeline,
+    msa_pairing,
+    pipeline_multimer,
+    templates,
+    feature_processing,
+)
 from alphafold.data.tools import hhsearch
 from alphafold.model import model
+
 from jax.lib import xla_bridge
 
 from colabfold.alphafold.models import load_models_and_params
@@ -97,10 +104,41 @@ def mk_template(
     return templates_result.features
 
 
+def batch_input(
+    input: model.features.FeatureDict,
+    model_runner: model.RunModel,
+    model_name: str,
+    crop_len: int,
+) -> model.features.FeatureDict:
+    model_config = model_runner.config
+    eval_cfg = model_config.data.eval
+    crop_feats = {k: [None] + v for k, v in dict(eval_cfg.feat).items()}
+
+    # templates models
+    if model_name == "model_1" or model_name == "model_2":
+        pad_msa_clusters = eval_cfg.max_msa_clusters - eval_cfg.max_templates
+    else:
+        pad_msa_clusters = eval_cfg.max_msa_clusters
+
+    max_msa_clusters = pad_msa_clusters
+
+    # let's try pad (num_res + X)
+    input_fix = make_fixed_size(
+        input,
+        crop_feats,
+        msa_cluster_size=max_msa_clusters,  # true_msa (4, 512, 68)
+        extra_msa_size=5120,  # extra_msa (4, 5120, 68)
+        num_res=crop_len,  # aatype (4, 68)
+        num_templates=4,
+    )  # template_mask (4, 4) second value
+    return input_fix
+
+
 def predict_structure(
     prefix: str,
     result_dir: Path,
     feature_dict: Dict[str, Any],
+    is_complex: bool,
     sequences_lengths: List[int],
     crop_len: int,
     model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
@@ -119,17 +157,7 @@ def predict_structure(
     unrelaxed_pdb_lines = []
     relaxed_pdb_lines = []
     prediction_times = []
-    seq_len = feature_dict["seq_length"][0]
-
-    # Minkyung's code
-    # add big enough number to residue index to indicate chain breaks
-    idx_res = feature_dict["residue_index"]
-    L_prev = 0
-    # Ls: number of residues in each chain
-    for L_i in sequences_lengths[:-1]:
-        idx_res[L_prev + L_i :] += 200
-        L_prev += L_i
-    feature_dict["residue_index"] = idx_res
+    seq_len = sum(sequences_lengths)
 
     chains = list(
         "".join(
@@ -139,6 +167,7 @@ def predict_structure(
             ]
         )
     )
+
     model_names = []
     for (model_name, model_runner, params) in model_runner_and_params:
         logger.info(f"Running {model_name}")
@@ -150,32 +179,19 @@ def predict_structure(
         processed_feature_dict = model_runner.process_features(
             feature_dict, random_seed=random_seed
         )
-        model_config = model_runner.config
-        eval_cfg = model_config.data.eval
-        crop_feats = {k: [None] + v for k, v in dict(eval_cfg.feat).items()}
-
-        # templates models
-        if model_name == "model_1" or model_name == "model_2":
-            pad_msa_clusters = eval_cfg.max_msa_clusters - eval_cfg.max_templates
+        if is_complex == False:
+            input = batch_input(
+                processed_feature_dict, model_runner, model_name, crop_len
+            )
         else:
-            pad_msa_clusters = eval_cfg.max_msa_clusters
+            input = processed_feature_dict
 
-        max_msa_clusters = pad_msa_clusters
-
-        # let's try pad (num_res + X)
-        input_fix = make_fixed_size(
-            processed_feature_dict,
-            crop_feats,
-            msa_cluster_size=max_msa_clusters,  # true_msa (4, 512, 68)
-            extra_msa_size=5120,  # extra_msa (4, 5120, 68)
-            num_res=crop_len,  # aatype (4, 68)
-            num_templates=4,
-        )  # template_mask (4, 4) second value
+        prediction_result, (_, _) = model_runner.predict(input)
 
         start = time.time()
         # The original alphafold only returns the prediction_result,
         # but our patched alphafold also returns a tuple (recycles,tol)
-        prediction_result, (_, _) = model_runner.predict(input_fix)
+
         prediction_time = time.time() - start
         prediction_times.append(prediction_time)
 
@@ -183,8 +199,14 @@ def predict_structure(
         logger.info(
             f"{model_name} took {prediction_time:.1f}s with pLDDT {mean_plddt :.1f}"
         )
-
-        unrelaxed_protein = protein.from_prediction(input_fix, prediction_result)
+        final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
+        b_factors = prediction_result["plddt"][:, None] * final_atom_mask
+        unrelaxed_protein = protein.from_prediction(
+            features=input,
+            result=prediction_result,
+            b_factors=b_factors,
+            remove_leading_feature_dimension=not model_runner.multimer_mode,
+        )
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
         ptmscore.append(prediction_result["ptm"])
@@ -236,14 +258,18 @@ def predict_structure(
             f"{prefix}_unrelaxed_{model_names[r]}_rank_{n + 1}.pdb"
         )
         unrelaxed_pdb_path.write_text(unrelaxed_pdb_lines[r])
-        set_bfactor(unrelaxed_pdb_path, plddts[r], idx_res, chains)
+        set_bfactor(
+            unrelaxed_pdb_path, plddts[r], feature_dict["residue_index"], chains
+        )
 
         if do_relax:
             relaxed_pdb_path = result_dir.joinpath(
                 f"{prefix}_relaxed_{model_names[r]}_rank_{n + 1}.pdb"
             )
             relaxed_pdb_path.write_text(unrelaxed_pdb_lines[r])
-            set_bfactor(relaxed_pdb_path, plddts[r], idx_res, chains)
+            set_bfactor(
+                relaxed_pdb_path, plddts[r], feature_dict["residue_index"], chains
+            )
 
         out[f"model_{n + 1}"] = {
             "plddt": plddts[r],
@@ -255,7 +281,7 @@ def predict_structure(
 
 def get_queries(
     input_path: Union[str, Path], sort_queries_by: str = "length"
-) -> List[Tuple[str, str, Optional[str]]]:
+) -> Tuple[List[Tuple[str, str, Optional[str]]], bool]:
     """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
     of job name, sequence and the optional a3m lines"""
 
@@ -309,7 +335,12 @@ def get_queries(
         queries.sort(key=lambda t: len(t[1]))
     elif sort_queries_by == "random":
         random.shuffle(queries)
-    return queries
+    is_complex = False
+    for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
+        if isinstance(query_sequence, list):
+            is_complex = True
+            break
+    return queries, is_complex
 
 
 def pair_sequences(
@@ -362,7 +393,9 @@ def get_msa_and_templates(
     use_templates: bool,
     pair_mode: str,
     host_url: str = DEFAULT_API_SERVER,
-) -> Tuple[str, Mapping[str, Any]]:
+) -> Tuple[
+    Optional[List[str]], Optional[List[str]], List[str], List[int], Mapping[str, Any]
+]:
     # remove duplicates before searching
     query_sequences = (
         [query_sequences] if isinstance(query_sequences, str) else query_sequences
@@ -399,9 +432,10 @@ def get_msa_and_templates(
     else:
         template_features = mk_mock_template(query_sequences, 100)
 
+    if len(query_sequences) == 1:
+        pair_mode = "none"
+
     if not a3m_lines:
-        if len(query_sequences) == 1:
-            pair_mode = "none"
         if (
             pair_mode == "none"
             or pair_mode == "unpaired"
@@ -418,41 +452,25 @@ def get_msa_and_templates(
         else:
             a3m_lines = None
 
-        if pair_mode == "paired" or pair_mode == "unpaired+paired":
-            # find paired a3m
-            paired_a3m_lines = run_mmseqs2(
-                query_seqs_unique,
-                str(result_dir.joinpath(jobname)),
-                use_env,
-                use_pairing=True,
-                host_url=host_url,
-            )
-        else:
-            paired_a3m_lines = None
+    if pair_mode == "paired" or pair_mode == "unpaired+paired":
+        # find paired a3m
+        paired_a3m_lines = run_mmseqs2(
+            query_seqs_unique,
+            str(result_dir.joinpath(jobname)),
+            use_env,
+            use_pairing=True,
+            host_url=host_url,
+        )
+    else:
+        paired_a3m_lines = None
 
-        if pair_mode == "none":
-            assert isinstance(a3m_lines, list) and len(a3m_lines) == 1
-            [a3m_lines] = a3m_lines
-        elif pair_mode == "unpaired":
-            a3m_lines = pad_sequences(
-                a3m_lines, query_seqs_unique, query_seqs_cardinality
-            )
-        elif pair_mode == "unpaired+paired":
-            a3m_lines = (
-                pair_sequences(
-                    paired_a3m_lines, query_seqs_unique, query_seqs_cardinality
-                )
-                + "\n"
-                + pad_sequences(a3m_lines, query_seqs_unique, query_seqs_cardinality)
-            )
-        elif pair_mode == "paired":
-            a3m_lines = pair_sequences(
-                paired_a3m_lines, query_seqs_unique, query_seqs_cardinality
-            )
-        else:
-            raise ValueError(f"Invalid pair_mod: {pair_mode}")
-
-    return a3m_lines, template_features
+    return (
+        a3m_lines,
+        paired_a3m_lines,
+        query_seqs_unique,
+        query_seqs_cardinality,
+        template_features,
+    )
 
 
 def run(
@@ -463,6 +481,7 @@ def run(
     msa_mode: str,
     num_models: int,
     model_order: List[int],
+    is_complex: bool,
     keep_existing_results: bool,
     rank_mode: str,
     pair_mode: str,
@@ -503,7 +522,11 @@ def run(
     write_bibtex(True, use_env, use_templates, use_amber, result_dir)
 
     model_runner_and_params = load_models_and_params(
-        num_models, model_order, data_dir, recompile_all_models
+        num_models,
+        model_order,
+        "_multimer" if is_complex else "_ptm",
+        data_dir,
+        recompile_all_models,
     )
 
     crop_len = 0
@@ -541,7 +564,13 @@ def run(
         if query_sequence_len > crop_len:
             crop_len = math.ceil(query_sequence_len * recompile_padding)
         try:
-            a3m_lines, template_features = get_msa_and_templates(
+            (
+                unpaired_msa,
+                paired_msa,
+                query_seqs_unique,
+                query_seqs_cardinality,
+                template_features,
+            ) = get_msa_and_templates(
                 a3m_lines,
                 jobname,
                 query_sequence,
@@ -555,37 +584,97 @@ def run(
             logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
             continue
 
-        result_dir.joinpath(a3m_file).write_text(a3m_lines)
-        # parse MSA
-        msa, deletion_matrix = pipeline.parsers.parse_a3m(a3m_lines)
+        features_for_chain = {}
+        chain_cnt = 0
+        for sequence_index, sequence in enumerate(query_seqs_unique):
+            for cardinality in range(0, query_seqs_cardinality[sequence_index]):
+                try:
+                    msa = pipeline.parsers.parse_a3m(unpaired_msa[sequence_index])
+                    # gather features
+                    feature_dict = {
+                        **pipeline.make_sequence_features(
+                            sequence=sequence,
+                            description="none",
+                            num_res=len(sequence),
+                        ),
+                        **pipeline.make_msa_features([msa]),
+                        **mk_mock_template(sequence),
+                    }
+                    if is_complex:
+                        parsed_paired_msa = pipeline.parsers.parse_a3m(
+                            paired_msa[sequence_index]
+                        )
+                        all_seq_features = {
+                            f"{k}_all_seq": v
+                            for k, v in pipeline.make_msa_features(
+                                [parsed_paired_msa]
+                            ).items()
+                        }
+                        feature_dict.update(all_seq_features)
+                    features_for_chain[protein.PDB_CHAIN_IDS[chain_cnt]] = feature_dict
+                    chain_cnt += 1
+                except Exception as e:
+                    logger.exception(f"Could not predict {jobname}: {e}")
+                    continue
 
-        # Gather input features, predict structure
-        msas = [msa]
-        deletion_matrices = [deletion_matrix]
-        try:
-            # gather features
-            feature_dict = {
-                **pipeline.make_sequence_features(
-                    sequence=query_sequence
-                    if isinstance(query_sequence, str)
-                    else "".join(query_sequence),
-                    description="none",
-                    num_res=query_sequence_len,
-                ),
-                **pipeline.make_msa_features(
-                    msas=msas, deletion_matrices=deletion_matrices
-                ),
-                **template_features,
-            }
-        except Exception as e:
-            logger.exception(f"Could not predict {jobname}: {e}")
-            continue
+        # Do further feature post-processing depending on the model type.
+        if not is_complex:
+            np_example = features_for_chain[protein.PDB_CHAIN_IDS[0]]
+        else:
+            all_chain_features = {}
+            for chain_id, chain_features in features_for_chain.items():
+                all_chain_features[
+                    chain_id
+                ] = pipeline_multimer.convert_monomer_features(chain_features, chain_id)
+
+            all_chain_features = pipeline_multimer.add_assembly_features(
+                all_chain_features
+            )
+            # np_example = feature_processing.pair_and_merge(
+            #    all_chain_features=all_chain_features, is_prokaryote=is_prokaryote)
+            feature_processing.process_unmerged_features(all_chain_features)
+            np_chains_list = list(all_chain_features.values())
+            pair_msa_sequences = not feature_processing._is_homomer_or_monomer(
+                np_chains_list
+            )
+            chains = list(np_chains_list)
+            chain_keys = chains[0].keys()
+            updated_chains = []
+            for chain_num, chain in enumerate(chains):
+                new_chain = {k: v for k, v in chain.items() if "_all_seq" not in k}
+                for feature_name in chain_keys:
+                    if feature_name.endswith("_all_seq"):
+                        feats_padded = msa_pairing.pad_features(
+                            chain[feature_name], feature_name
+                        )
+                        new_chain[feature_name] = feats_padded
+                new_chain["num_alignments_all_seq"] = np.asarray(
+                    len(np_chains_list[chain_num]["msa_all_seq"])
+                )
+                updated_chains.append(new_chain)
+            np_chains_list = updated_chains
+            np_chains_list = feature_processing.crop_chains(
+                np_chains_list,
+                msa_crop_size=feature_processing.MSA_CROP_SIZE,
+                pair_msa_sequences=pair_msa_sequences,
+                max_templates=feature_processing.MAX_TEMPLATES,
+            )
+            np_example = feature_processing.msa_pairing.merge_chain_features(
+                np_chains_list=np_chains_list,
+                pair_msa_sequences=pair_msa_sequences,
+                max_templates=feature_processing.MAX_TEMPLATES,
+            )
+            np_example = feature_processing.process_final(np_example)
+
+            # Pad MSA to avoid zero-sized extra_msa.
+            np_example = pipeline_multimer.pad_msa(np_example, min_num_seq=512)
 
         try:
             outs = predict_structure(
                 jobname,
                 result_dir,
-                feature_dict,
+                np_example,
+                is_complex,
                 sequences_lengths=query_sequence_len_array,
                 crop_len=crop_len,
                 model_runner_and_params=model_runner_and_params,
@@ -597,8 +686,7 @@ def run(
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
             logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
             continue
-
-        plot_lddt(jobname, msa, outs, query_sequence, result_dir)
+        plot_lddt(jobname, np_example["msa"], outs, np_example["msa"][0], result_dir)
         plot_predicted_alignment_error(jobname, num_models, outs, result_dir)
     logger.info("Done")
 
@@ -701,7 +789,6 @@ def main():
     setup_logging(Path(args.results).joinpath("log.txt"))
 
     data_dir = Path(args.data or default_data_dir)
-    download_alphafold_params(data_dir)
 
     assert args.msa_mode == "MMseqs2 (UniRef+Environmental)", "Unsupported"
 
@@ -710,7 +797,8 @@ def main():
         print(NO_GPU_FOUND, file=sys.stderr)
         sys.exit(1)
 
-    queries = get_queries(args.input, args.sort_queries_by)
+    queries, is_complex = get_queries(args.input, args.sort_queries_by)
+    download_alphafold_params(is_complex, data_dir)
     uses_api = any((query[2] is None for query in queries))
     if uses_api and args.host_url == DEFAULT_API_SERVER:
         print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
@@ -727,6 +815,7 @@ def main():
         msa_mode=args.msa_mode,
         num_models=args.num_models,
         model_order=model_order,
+        is_complex=is_complex,
         keep_existing_results=not args.overwrite_existing_results,
         rank_mode=args.rank,
         pair_mode=args.pair_mode,
