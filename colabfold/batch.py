@@ -97,8 +97,6 @@ def mk_template(
     hhsearch_hits = pipeline.parsers.parse_hhr(hhsearch_result)
     templates_result = template_featurizer.get_templates(
         query_sequence=query_sequence,
-        query_pdb_code=None,
-        query_release_date=None,
         hits=hhsearch_hits,
     )
     return templates_result.features
@@ -230,6 +228,7 @@ def predict_structure(
                 aatype=unrelaxed_protein.aatype[remove_padding_mask],
                 residue_index=unrelaxed_protein.residue_index[remove_padding_mask],
                 b_factors=unrelaxed_protein.b_factors[remove_padding_mask],
+                chain_index=unrelaxed_protein.chain_index[remove_padding_mask],
             )
 
             # Relax the prediction.
