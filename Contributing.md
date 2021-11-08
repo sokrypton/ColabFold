@@ -39,8 +39,9 @@ We clone to _directory to avoid python from importing from the directory.
 ```
 %%bash
 
+pip install -U pip
 git clone https://github.com/konstin/Colabfold _colabfold
-pip install --use-feature=in-tree-build _colabfold
+pip install _colabfold
 # Unholy Hack: Use the files from our cloned git repository instead of installed copy
 site_packages=$(python -c 'import site; print(site.getsitepackages()[0])')
 rm -r ${site_packages}/colabfold

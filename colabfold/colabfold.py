@@ -157,6 +157,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
         pbar.set_description(out["status"])
         while out["status"] in ["UNKNOWN","RUNNING","PENDING"]:
           t = 5 + random.randint(0,5)
+          logger.error(f"Sleeping for {t}s. Reason: {out['status']}")
           time.sleep(t)
           out = status(ID)
           pbar.set_description(out["status"])
@@ -188,7 +189,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
     if use_env: a3m_files.append(f"{path}/bfd.mgnify30.metaeuk30.smag30.a3m")
 
   # extract a3m files
-  if not os.path.isfile(a3m_files[0]):
+  if any(not os.path.isfile(a3m_file) for a3m_file in a3m_files):
     with tarfile.open(tar_gz_file) as tar_gz:
       tar_gz.extractall(path)
 
