@@ -25,7 +25,7 @@ def test_get_queries_fasta_dir(caplog, tmp_path):
 
     queries, is_complex = get_queries(tmp_path)
     assert queries == [("5AWL_1", "YYDPETGTWY", None), ("6A5J", "IKKILSKIKKLLK", None)]
-    assert is_complex == False
+    assert not is_complex
     assert caplog.messages == []
 
 
@@ -44,7 +44,7 @@ def test_get_queries_csv(pytestconfig, caplog, tmp_path):
         ),
         ("5AWL_1", "YYDPETGTWY", None),
     ]
-    assert is_complex == True
+    assert is_complex
     assert caplog.messages == []
 
 
@@ -77,23 +77,30 @@ class MockRunModel:
     def predict(
         self, model_runner: RunModel, feat: FeatureDict
     ) -> Tuple[Mapping[str, Any], Tuple[Any, Any]]:
+        """feat["msa"] or feat["msa_feat"] for normal/complexes is non-deterministic, so we remove it before storing,
+        but add it back before prediction or returning, as we need it for plotting"""
         is_complex = False
         if "msa_feat" in feat.keys():
             msa_feat = feat["msa_feat"]
+            # noinspection PyUnresolvedReferences
             del feat["msa_feat"]
         elif "msa" in feat.keys():
             msa_feat = feat["msa"]
+            # noinspection PyUnresolvedReferences
             del feat["msa"]
             is_complex = True
-        # noinspection PyUnresolvedReferences
+        else:
+            raise AssertionError("neither msa nor msa_feat in feat")
 
         for input_fix, prediction in self.known_inputs:
             try:
                 numpy.testing.assert_equal(feat, input_fix)
                 # TODO: Also mock (recycles,tol) from the patches
                 if is_complex:
+                    # noinspection PyUnresolvedReferences
                     feat["msa"] = msa_feat
                 else:
+                    # noinspection PyUnresolvedReferences
                     feat["msa_feat"] = msa_feat
                 return prediction, (None, None)
             except AssertionError:
@@ -110,10 +117,11 @@ class MockRunModel:
             with lzma.open(folder.joinpath(f"model_input_fix.pkl.xz"), "wb") as fp:
                 pickle.dump(feat, fp)
             # Put msa_feat back, we need it for the prediction
-            # noinspection PyUnresolvedReferences
             if is_complex:
+                # noinspection PyUnresolvedReferences
                 feat["msa"] = msa_feat
             else:
+                # noinspection PyUnresolvedReferences
                 feat["msa_feat"] = msa_feat
             prediction, (_, _) = original_run_model(model_runner, feat)
             self.known_inputs.append((feat, prediction))
@@ -226,7 +234,8 @@ def prepare_prediction_test(caplog):
     # otherwise jax will tell us about its search for devices
     absl_logging.set_verbosity("error")
     # We'll also want to mock that out later
-    download_alphafold_params()
+    download_alphafold_params(True)
+    download_alphafold_params(False)
     # alphafold uses a method called `make_random_seed`, which deterministically starts with a seed
     # of zero and increases it by one for each protein. This means the input features would become
     # dependent on the number and order of tests. Here we just reset the seed to 0

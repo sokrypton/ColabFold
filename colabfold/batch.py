@@ -786,7 +786,6 @@ def main():
     setup_logging(Path(args.results).joinpath("log.txt"))
 
     data_dir = Path(args.data or default_data_dir)
-    download_alphafold_params(data_dir)
 
     assert args.msa_mode == "MMseqs2 (UniRef+Environmental)", "Unsupported"
 
@@ -796,6 +795,7 @@ def main():
         sys.exit(1)
 
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
+    download_alphafold_params(is_complex, data_dir)
     uses_api = any((query[2] is None for query in queries))
     if uses_api and args.host_url == DEFAULT_API_SERVER:
         print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
