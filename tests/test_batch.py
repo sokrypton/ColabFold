@@ -23,13 +23,16 @@ def test_get_queries_fasta_dir(caplog, tmp_path):
     tmp_path.joinpath("5AWL_1.fasta").write_text(">5AWL_1\nYYDPETGTWY")
     tmp_path.joinpath("6A5J.fasta").write_text(">6A5J\nIKKILSKIKKLLK")
 
-    queries = get_queries(tmp_path)
+    queries, is_complex = get_queries(tmp_path)
     assert queries == [("5AWL_1", "YYDPETGTWY", None), ("6A5J", "IKKILSKIKKLLK", None)]
+    assert not is_complex
     assert caplog.messages == []
 
 
 def test_get_queries_csv(pytestconfig, caplog, tmp_path):
-    queries = get_queries(pytestconfig.rootpath.joinpath("test-data/complex.csv"))
+    queries, is_complex = get_queries(
+        pytestconfig.rootpath.joinpath("test-data/complex.csv")
+    )
     assert queries == [
         (
             "3G5O_A_3G5O_B",
@@ -41,6 +44,7 @@ def test_get_queries_csv(pytestconfig, caplog, tmp_path):
         ),
         ("5AWL_1", "YYDPETGTWY", None),
     ]
+    assert is_complex
     assert caplog.messages == []
 
 
@@ -73,13 +77,31 @@ class MockRunModel:
     def predict(
         self, model_runner: RunModel, feat: FeatureDict
     ) -> Tuple[Mapping[str, Any], Tuple[Any, Any]]:
-        msa_feat = feat["msa_feat"]
-        # noinspection PyUnresolvedReferences
-        del feat["msa_feat"]
+        """feat["msa"] or feat["msa_feat"] for normal/complexes is non-deterministic, so we remove it before storing,
+        but add it back before prediction or returning, as we need it for plotting"""
+        is_complex = False
+        if "msa_feat" in feat.keys():
+            msa_feat = feat["msa_feat"]
+            # noinspection PyUnresolvedReferences
+            del feat["msa_feat"]
+        elif "msa" in feat.keys():
+            msa_feat = feat["msa"]
+            # noinspection PyUnresolvedReferences
+            del feat["msa"]
+            is_complex = True
+        else:
+            raise AssertionError("neither msa nor msa_feat in feat")
+
         for input_fix, prediction in self.known_inputs:
             try:
                 numpy.testing.assert_equal(feat, input_fix)
                 # TODO: Also mock (recycles,tol) from the patches
+                if is_complex:
+                    # noinspection PyUnresolvedReferences
+                    feat["msa"] = msa_feat
+                else:
+                    # noinspection PyUnresolvedReferences
+                    feat["msa_feat"] = msa_feat
                 return prediction, (None, None)
             except AssertionError:
                 continue
@@ -95,8 +117,12 @@ class MockRunModel:
             with lzma.open(folder.joinpath(f"model_input_fix.pkl.xz"), "wb") as fp:
                 pickle.dump(feat, fp)
             # Put msa_feat back, we need it for the prediction
-            # noinspection PyUnresolvedReferences
-            feat["msa_feat"] = msa_feat
+            if is_complex:
+                # noinspection PyUnresolvedReferences
+                feat["msa"] = msa_feat
+            else:
+                # noinspection PyUnresolvedReferences
+                feat["msa_feat"] = msa_feat
             prediction, (_, _) = original_run_model(model_runner, feat)
             self.known_inputs.append((feat, prediction))
             with lzma.open(
@@ -208,7 +234,8 @@ def prepare_prediction_test(caplog):
     # otherwise jax will tell us about its search for devices
     absl_logging.set_verbosity("error")
     # We'll also want to mock that out later
-    download_alphafold_params()
+    download_alphafold_params(True)
+    download_alphafold_params(False)
     # alphafold uses a method called `make_random_seed`, which deterministically starts with a seed
     # of zero and increases it by one for each protein. This means the input features would become
     # dependent on the number and order of tests. Here we just reset the seed to 0
@@ -234,6 +261,7 @@ def test_batch(pytestconfig, caplog, tmp_path):
             msa_mode="MMseqs2 (UniRef+Environmental)",
             num_models=1,
             model_order=[1, 2, 3, 4, 5],
+            is_complex=False,
             keep_existing_results=False,
             rank_mode="auto",
             pair_mode="unpaired+paired",
@@ -248,7 +276,7 @@ def test_batch(pytestconfig, caplog, tmp_path):
         "reranking models based on avg. predicted lDDT",
         "Query 2/2: 6A5J (length 13)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 89.5",
+        "model_1 took 0.0s with pLDDT 90.8",
         "reranking models based on avg. predicted lDDT",
         "Done",
     ]
@@ -294,6 +322,7 @@ def test_complex(pytestconfig, caplog, tmp_path):
             msa_mode="MMseqs2 (UniRef+Environmental)",
             num_models=1,
             model_order=[1, 2, 3, 4, 5],
+            is_complex=True,
             keep_existing_results=False,
             rank_mode="auto",
             pair_mode="unpaired+paired",
@@ -307,7 +336,7 @@ def test_complex(pytestconfig, caplog, tmp_path):
         "Found 5 citations for tools or databases",
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 91.9",
+        "model_1 took 0.0s with pLDDT 94.4",
         "reranking models based on avg. predicted lDDT",
         "Done",
     ]

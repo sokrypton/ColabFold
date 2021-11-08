@@ -23,17 +23,9 @@ def plot_lddt(
     jobname: str, msa, outs: dict, query_sequence, result_dir: Path, show: bool = False
 ):
     # gather MSA info
-    deduped_full_msa = list(dict.fromkeys(msa))
-    msa_arr = np.array([list(seq) for seq in deduped_full_msa])
-
-    if isinstance(query_sequence, str):
-        query_str = query_sequence
-    else:
-        query_str = "".join(query_sequence)
-
-    seqid = (np.array(list(query_str)) == msa_arr).mean(-1)
+    seqid = (query_sequence == msa).mean(-1)
     seqid_sort = seqid.argsort()  # [::-1]
-    non_gaps = (msa_arr != "-").astype(float)
+    non_gaps = (msa != 21).astype(float)
     non_gaps[non_gaps == 0] = np.nan
 
     plt.figure(figsize=(14, 4), dpi=100)
@@ -49,9 +41,9 @@ def plot_lddt(
         vmax=1,
         origin="lower",
     )
-    plt.plot((msa_arr != "-").sum(0), color="black")
-    plt.xlim(-0.5, msa_arr.shape[1] - 0.5)
-    plt.ylim(-0.5, msa_arr.shape[0] - 0.5)
+    plt.plot((msa != 21).sum(0), color="black")
+    plt.xlim(-0.5, msa.shape[1] - 0.5)
+    plt.ylim(-0.5, msa.shape[0] - 0.5)
     plt.colorbar(label="Sequence identity to query")
     plt.xlabel("Positions")
     plt.ylabel("Sequences")
