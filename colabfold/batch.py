@@ -281,7 +281,7 @@ def predict_structure(
 
 def get_queries(
     input_path: Union[str, Path], sort_queries_by: str = "length"
-) -> List[Tuple[str, str, Optional[str]]]:
+) -> Tuple[List[Tuple[str, str, Optional[str]]], bool]:
     """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
     of job name, sequence and the optional a3m lines"""
 
@@ -393,7 +393,9 @@ def get_msa_and_templates(
     use_templates: bool,
     pair_mode: str,
     host_url: str = DEFAULT_API_SERVER,
-) -> Tuple[List[str], List[str], List[str], List[int], Mapping[str, Any]]:
+) -> Tuple[
+    Optional[List[str]], Optional[List[str]], List[str], List[int], Mapping[str, Any]
+]:
     # remove duplicates before searching
     query_sequences = (
         [query_sequences] if isinstance(query_sequences, str) else query_sequences
@@ -430,9 +432,10 @@ def get_msa_and_templates(
     else:
         template_features = mk_mock_template(query_sequences, 100)
 
+    if len(query_sequences) == 1:
+        pair_mode = "none"
+
     if not a3m_lines:
-        if len(query_sequences) == 1:
-            pair_mode = "none"
         if (
             pair_mode == "none"
             or pair_mode == "unpaired"
@@ -449,17 +452,17 @@ def get_msa_and_templates(
         else:
             a3m_lines = None
 
-        if pair_mode == "paired" or pair_mode == "unpaired+paired":
-            # find paired a3m
-            paired_a3m_lines = run_mmseqs2(
-                query_seqs_unique,
-                str(result_dir.joinpath(jobname)),
-                use_env,
-                use_pairing=True,
-                host_url=host_url,
-            )
-        else:
-            paired_a3m_lines = None
+    if pair_mode == "paired" or pair_mode == "unpaired+paired":
+        # find paired a3m
+        paired_a3m_lines = run_mmseqs2(
+            query_seqs_unique,
+            str(result_dir.joinpath(jobname)),
+            use_env,
+            use_pairing=True,
+            host_url=host_url,
+        )
+    else:
+        paired_a3m_lines = None
 
     return (
         a3m_lines,
@@ -615,9 +618,9 @@ def run(
                     continue
 
         # Do further feature post-processing depending on the model type.
-        if is_complex == False:
+        if not is_complex:
             np_example = features_for_chain[protein.PDB_CHAIN_IDS[0]]
-        elif is_complex == True:
+        else:
             all_chain_features = {}
             for chain_id, chain_features in features_for_chain.items():
                 all_chain_features[
