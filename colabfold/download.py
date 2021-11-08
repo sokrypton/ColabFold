@@ -17,10 +17,11 @@ def download_alphafold_params(is_complex: bool, data_dir: Path = default_data_di
     params_dir = data_dir.joinpath("params")
     if is_complex:
         url = "https://storage.googleapis.com/alphafold/alphafold_params_colab_2021-10-27.tar"
+        success_marker = params_dir.joinpath("download_complexes_finished.txt")
     else:
         url = "https://storage.googleapis.com/alphafold/alphafold_params_2021-07-14.tar"
+        success_marker = params_dir.joinpath("download_finished.txt")
 
-    success_marker = params_dir.joinpath("download_finished.txt")
     if success_marker.is_file():
         return
 
