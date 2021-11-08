@@ -340,3 +340,47 @@ def test_complex(pytestconfig, caplog, tmp_path):
         "reranking models based on avg. predicted lDDT",
         "Done",
     ]
+
+
+def test_complex_monomer(pytestconfig, caplog, tmp_path):
+    prepare_prediction_test(caplog)
+
+    A = "PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK"
+    queries = [("A_A", [A, A], None)]
+
+    mock_run_model = MockRunModel(
+        pytestconfig.rootpath.joinpath("test-data/complex_monomer")
+    )
+    mock_run_mmseqs2 = MMseqs2Mock(
+        pytestconfig.rootpath, "complex_monomer"
+    ).mock_run_mmseqs2
+    with mock.patch(
+        "alphafold.model.model.RunModel.predict",
+        lambda model_runner, feat: mock_run_model.predict(model_runner, feat),
+    ), mock.patch("colabfold.batch.run_mmseqs2", mock_run_mmseqs2):
+        run(
+            queries,
+            tmp_path,
+            use_templates=False,
+            use_amber=False,
+            msa_mode="MMseqs2 (UniRef+Environmental)",
+            num_models=1,
+            model_order=[1, 2, 3, 4, 5],
+            is_complex=True,
+            keep_existing_results=False,
+            rank_mode="auto",
+            pair_mode="unpaired+paired",
+            stop_at_score=100,
+        )
+
+    messages = list(caplog.messages)
+    # noinspection PyUnresolvedReferences
+    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
+    assert messages == [
+        "Found 5 citations for tools or databases",
+        "Query 1/1: A_A (length 118)",
+        "Running model_1",
+        "model_1 took 0.0s with pLDDT 95.0",
+        "reranking models based on avg. predicted lDDT",
+        "Done",
+    ]

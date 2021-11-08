@@ -452,14 +452,22 @@ def get_msa_and_templates(
             a3m_lines = None
 
     if pair_mode == "paired" or pair_mode == "unpaired+paired":
-        # find paired a3m
-        paired_a3m_lines = run_mmseqs2(
-            query_seqs_unique,
-            str(result_dir.joinpath(jobname)),
-            use_env,
-            use_pairing=True,
-            host_url=host_url,
-        )
+        # find paired a3m if not a monomer
+        if len(query_seqs_unique) > 1:
+            paired_a3m_lines = run_mmseqs2(
+                query_seqs_unique,
+                str(result_dir.joinpath(jobname)),
+                use_env,
+                use_pairing=True,
+                host_url=host_url,
+            )
+        else:
+            num = 101
+            paired_a3m_lines = []
+            for i in range(0, query_seqs_cardinality[0]):
+                paired_a3m_lines.append(
+                    ">" + str(num + i) + "\n" + query_seqs_unique[0] + "\n"
+                )
     else:
         paired_a3m_lines = None
 
@@ -633,9 +641,7 @@ def run(
             #    all_chain_features=all_chain_features, is_prokaryote=is_prokaryote)
             feature_processing.process_unmerged_features(all_chain_features)
             np_chains_list = list(all_chain_features.values())
-            pair_msa_sequences = not feature_processing._is_homomer_or_monomer(
-                np_chains_list
-            )
+            pair_msa_sequences = True
             chains = list(np_chains_list)
             chain_keys = chains[0].keys()
             updated_chains = []
