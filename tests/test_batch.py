@@ -276,7 +276,7 @@ def test_batch(pytestconfig, caplog, tmp_path):
         "reranking models based on avg. predicted lDDT",
         "Query 2/2: 6A5J (length 13)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 89.5",
+        "model_1 took 0.0s with pLDDT 90.8",
         "reranking models based on avg. predicted lDDT",
         "Done",
     ]
@@ -336,7 +336,7 @@ def test_complex(pytestconfig, caplog, tmp_path):
         "Found 5 citations for tools or databases",
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 91.9",
+        "model_1 took 0.0s with pLDDT 94.4",
         "reranking models based on avg. predicted lDDT",
         "Done",
     ]
