@@ -380,7 +380,7 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path):
         "Found 5 citations for tools or databases",
         "Query 1/1: A_A (length 118)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 95.0",
+        "model_1 took 0.0s with pLDDT 95.3",
         "reranking models based on avg. predicted lDDT",
         "Done",
     ]
