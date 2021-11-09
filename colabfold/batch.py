@@ -31,7 +31,6 @@ from colabfold.alphafold.msa import make_fixed_size
 from colabfold.citations import write_bibtex
 from colabfold.colabfold import run_mmseqs2
 from colabfold.download import download_alphafold_params, default_data_dir
-from colabfold.pdb import set_bfactor
 from colabfold.plot import plot_predicted_alignment_error, plot_lddt
 from colabfold.utils import (
     setup_logging,
@@ -157,14 +156,6 @@ def predict_structure(
     prediction_times = []
     seq_len = sum(sequences_lengths)
 
-    chains = list(
-        "".join(
-            [
-                ascii_uppercase[chain_number] * chain_length
-                for chain_number, chain_length in enumerate(sequences_lengths)
-            ]
-        )
-    )
 
     model_names = []
     for (model_name, model_runner, params) in model_runner_and_params:
@@ -257,18 +248,13 @@ def predict_structure(
             f"{prefix}_unrelaxed_{model_names[r]}_rank_{n + 1}.pdb"
         )
         unrelaxed_pdb_path.write_text(unrelaxed_pdb_lines[r])
-        set_bfactor(
-            unrelaxed_pdb_path, plddts[r], feature_dict["residue_index"], chains
-        )
 
         if do_relax:
             relaxed_pdb_path = result_dir.joinpath(
                 f"{prefix}_relaxed_{model_names[r]}_rank_{n + 1}.pdb"
             )
             relaxed_pdb_path.write_text(unrelaxed_pdb_lines[r])
-            set_bfactor(
-                relaxed_pdb_path, plddts[r], feature_dict["residue_index"], chains
-            )
+
 
         out[f"model_{n + 1}"] = {
             "plddt": plddts[r],
