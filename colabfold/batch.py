@@ -156,7 +156,6 @@ def predict_structure(
     prediction_times = []
     seq_len = sum(sequences_lengths)
 
-
     model_names = []
     for (model_name, model_runner, params) in model_runner_and_params:
         logger.info(f"Running {model_name}")
@@ -254,7 +253,6 @@ def predict_structure(
                 f"{prefix}_relaxed_{model_names[r]}_rank_{n + 1}.pdb"
             )
             relaxed_pdb_path.write_text(unrelaxed_pdb_lines[r])
-
 
         out[f"model_{n + 1}"] = {
             "plddt": plddts[r],
