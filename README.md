@@ -29,14 +29,14 @@
 - Is it okay to use the MMseqs2 MSA server (`cf.run_mmseqs2`) on a local computer?
   - You can access the server from a local computer if you queries are serial from a single IP. Please do not use multiple computers to query the server.
 - Where can I download the databases used by ColabFold?
-  - The databases are available [here](https://colabfold.mmseqs.com/)
+  - The databases are available at [colabfold.mmseqs.com](https://colabfold.mmseqs.com)
 - I want to render my own images of the predicted structures, how do I color by pLDDT?
   - In pymol for AlphaFold structures: `spectrum b, red_yellow_green_cyan_blue, minimum=50, maximum=90`
   - In pymol for RoseTTAFold structures: `spectrum b, red_yellow_green_cyan_blue, minimum=0.5, maximum=0.9`
 
 ### Running locally
 
-Please checkout the [jax documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to make jax work on your GPU or TPU
+Install ColabFold using the `pip` commands below. `pip` will resolvei and install all required dependencies and ColabFold should be ready within a few minutes to use. Please check the [JAX documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to get JAX to work on your GPU or TPU.
 
 ```shell
 pip install "colabfold[alphafold] @ git+https://github.com/konstin/ColabFold"
@@ -46,6 +46,8 @@ pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases
 ```shell
 colabfold_batch <directory_with_fasta_files> <result_dir> 
 ```
+
+If no GPU or TPU is present, `colabfold_batch` can be executed (slowly) using only a CPU with the `--cpu` parameter.
 
 ### Generating MSAs
 
@@ -86,8 +88,8 @@ This will create intermediate folders `search_results` and `msas` that you can e
 
 ### How do I reference this work?
 
-- Mirdita M, Ovchinnikov S and Steinegger M. ColabFold - Making protein folding accessible to all. <br />
-  bioRxiv (2021) doi: [10.1101/2021.08.15.456425](https://www.biorxiv.org/content/10.1101/2021.08.15.456425v1)
+- Mirdita M, Schütze K, Moriwaki Y, Heo L, Ovchinnikov S and Steinegger M. ColabFold - Making protein folding accessible to all. <br />
+  bioRxiv (2021) doi: [10.1101/2021.08.15.456425](https://www.biorxiv.org/content/10.1101/2021.08.15.456425v2)
 - If you’re using **AlphaFold**, please also cite: <br />
   Jumper et al. "Highly accurate protein structure prediction with AlphaFold." <br />
   Nature (2021) doi: [10.1038/s41586-021-03819-2](https://doi.org/10.1038/s41586-021-03819-2)
