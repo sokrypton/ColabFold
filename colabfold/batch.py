@@ -625,7 +625,9 @@ def run(
             #    all_chain_features=all_chain_features, is_prokaryote=is_prokaryote)
             feature_processing.process_unmerged_features(all_chain_features)
             np_chains_list = list(all_chain_features.values())
-            pair_msa_sequences = True
+            pair_msa_sequences = not feature_processing._is_homomer_or_monomer(
+                np_chains_list
+            )
             chains = list(np_chains_list)
             chain_keys = chains[0].keys()
             updated_chains = []

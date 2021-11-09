@@ -288,7 +288,7 @@ def test_batch(pytestconfig, caplog, tmp_path):
             .read_text()
             .splitlines()
         )
-        == 92
+        == 96
     )
     assert (
         len(
@@ -296,7 +296,7 @@ def test_batch(pytestconfig, caplog, tmp_path):
             .read_text()
             .splitlines()
         )
-        == 108
+        == 112
     )
     assert tmp_path.joinpath("config.json").is_file()
 
