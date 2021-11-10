@@ -1,0 +1,45 @@
+--- model.py	2021-08-09 14:09:12.655392517 +0000
++++ alphafold/alphafold/model/model.py	2021-08-09 14:08:27.335446573 +0000
+@@ -50,7 +50,8 @@
+ 
+   def __init__(self,
+                config: ml_collections.ConfigDict,
+-               params: Optional[Mapping[str, Mapping[str, np.ndarray]]] = None):
++               params: Optional[Mapping[str, Mapping[str, np.ndarray]]] = None,
++               is_training = False):
+     self.config = config
+     self.params = params
+ 
+@@ -58,7 +59,7 @@
+       model = modules.AlphaFold(self.config.model)
+       return model(
+           batch,
+-          is_training=False,
++          is_training=is_training,
+           compute_loss=False,
+           ensemble_representations=True)
+ 
+@@ -117,7 +118,7 @@
+     logging.info('Output shape was %s', shape)
+     return shape
+ 
+-  def predict(self, feat: features.FeatureDict) -> Mapping[str, Any]:
++  def predict(self, feat: features.FeatureDict, random_seed=0) -> Mapping[str, Any]:
+     """Makes a prediction by inferencing the model on the provided features.
+ 
+     Args:
+@@ -130,7 +131,7 @@
+     self.init_params(feat)
+     logging.info('Running predict with shape(feat) = %s',
+                  tree.map_structure(lambda x: x.shape, feat))
+-    result = self.apply(self.params, jax.random.PRNGKey(0), feat)
++    result, recycles = self.apply(self.params, jax.random.PRNGKey(random_seed), feat)
+     # This block is to ensure benchmark timings are accurate. Some blocking is
+     # already happening when computing get_confidence_metrics, and this ensures
+     # all outputs are blocked on.
+@@ -138,4 +139,4 @@
+     result.update(get_confidence_metrics(result))
+     logging.info('Output shape was %s',
+                  tree.map_structure(lambda x: x.shape, result))
+-    return result
++    return result, recycles

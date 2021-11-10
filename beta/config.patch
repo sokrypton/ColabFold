@@ -1,0 +1,10 @@
+--- /usr/local/lib/python3.7/dist-packages/alphafold/model/config.py	2021-08-01 22:46:44.442240295 +0000
++++ config.py	2021-08-01 22:52:08.519886454 +0000
+@@ -397,6 +397,7 @@
+             },
+         },
+         'num_recycle': 3,
++        'recycle_tol': 0.0,
+         'resample_msa_in_recycling': True
+     },
+ })
