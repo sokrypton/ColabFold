@@ -16,7 +16,9 @@ from jax.lib import xla_bridge
 try:
     import alphafold
 except ModuleNotFoundError:
-    raise RuntimeError("\n\nalphafold is not installed. Please run `pip install colabfold[alphafold]`\n")
+    raise RuntimeError(
+        "\n\nalphafold is not installed. Please run `pip install colabfold[alphafold]`\n"
+    )
 
 from alphafold.common import protein
 from alphafold.common.protein import Protein
