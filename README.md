@@ -39,7 +39,7 @@
 Install ColabFold using the `pip` commands below. `pip` will resolvei and install all required dependencies and ColabFold should be ready within a few minutes to use. Please check the [JAX documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to get JAX to work on your GPU or TPU.
 
 ```shell
-pip install "colabfold[alphafold] @ git+https://github.com/konstin/ColabFold"
+pip install "colabfold[alphafold] @ git+https://github.com/sokrypton/ColabFold"
 pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_releases.html  # Note: wheels only available on linux.
 ```
 
@@ -93,6 +93,9 @@ This will create intermediate folders `search_results` and `msas` that you can e
 - If you’re using **AlphaFold**, please also cite: <br />
   Jumper et al. "Highly accurate protein structure prediction with AlphaFold." <br />
   Nature (2021) doi: [10.1038/s41586-021-03819-2](https://doi.org/10.1038/s41586-021-03819-2)
+- If you’re using **AlphaFold-multimer**, please also cite: <br />
+  Evans et al. "Protein complex prediction with AlphaFold-Multimer." <br />
+  biorxiv (2021) doi: [10.1101/2021.10.04.463034v1](https://www.biorxiv.org/content/10.1101/2021.10.04.463034v1)
 - If you are using **RoseTTAFold**, please also cite: <br />
   Minkyung et al. "Accurate prediction of protein structures and interactions using a three-track neural network." <br />
   Science (2021) doi: [10.1126/science.abj8754](https://doi.org/10.1126/science.abj8754)
