@@ -2,6 +2,7 @@ from typing import Mapping, Any
 
 import numpy as np
 import tensorflow as tf
+
 from alphafold.model.features import FeatureDict
 from alphafold.model.tf import shape_placeholders
 

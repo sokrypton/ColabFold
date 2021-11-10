@@ -1,15 +1,19 @@
+"""
+Deprecated, most likely broken, to be removed
+"""
+
+from pathlib import Path
 from string import ascii_uppercase
-from typing import Tuple, Any
+from typing import Tuple, Any, Union
 
 import numpy as np
+from matplotlib import pyplot as plt
+
 from alphafold.common import protein
 from alphafold.data import pipeline
 from alphafold.data import templates
 from alphafold.data.tools import hhsearch
-from matplotlib import pyplot as plt
-
 from colabfold.colabfold import run_mmseqs2
-from colabfold.pdb import set_bfactor
 from colabfold.utils import DEFAULT_API_SERVER
 
 
@@ -55,10 +59,7 @@ def mk_template(query_sequence, a3m_lines, template_paths):
     hhsearch_result = hhsearch_pdb70_runner.query(a3m_lines)
     hhsearch_hits = pipeline.parsers.parse_hhr(hhsearch_result)
     templates_result = template_featurizer.get_templates(
-        query_sequence=query_sequence,
-        query_pdb_code=None,
-        query_release_date=None,
-        hits=hhsearch_hits,
+        query_sequence=query_sequence, hits=hhsearch_hits
     )
     return templates_result.features
 
@@ -245,3 +246,17 @@ def plot_confidence(outs, homooligomer: int, query_sequence: str, model_num=1):
     plt.ylabel("Aligned residue")
 
     return plt
+
+
+def set_bfactor(pdb_filename: Union[str, Path], bfac, idx_res, chains):
+    in_file = open(pdb_filename, "r").readlines()
+    out_file = open(pdb_filename, "w")
+    for line in in_file:
+        if line[0:6] == "ATOM  ":
+            seq_id = int(line[22:26].strip()) - 1
+            # FIXME: This is broken somehow but I don't understand how
+            # seq_id = np.where(idx_res == seq_id)[0][0]
+            out_file.write(
+                f"{line[:21]}{chains[seq_id]}{line[22:60]}{bfac[seq_id]:6.2f}{line[66:]}"
+            )
+    out_file.close()

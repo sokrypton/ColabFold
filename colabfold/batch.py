@@ -6,12 +6,18 @@ import sys
 import time
 from argparse import ArgumentParser
 from pathlib import Path
-from string import ascii_uppercase
 from typing import Any, Dict, Tuple, List, Union, Mapping, Optional
 
 import haiku
 import numpy as np
 import pandas
+from jax.lib import xla_bridge
+
+try:
+    import alphafold
+except ModuleNotFoundError:
+    raise RuntimeError("\n\nalphafold is not installed. Please run `pip install colabfold[alphafold]`\n")
+
 from alphafold.common import protein
 from alphafold.common.protein import Protein
 from alphafold.data import (
@@ -23,9 +29,6 @@ from alphafold.data import (
 )
 from alphafold.data.tools import hhsearch
 from alphafold.model import model
-
-from jax.lib import xla_bridge
-
 from colabfold.alphafold.models import load_models_and_params
 from colabfold.alphafold.msa import make_fixed_size
 from colabfold.citations import write_bibtex
@@ -95,8 +98,7 @@ def mk_template(
     hhsearch_result = hhsearch_pdb70_runner.query(a3m_lines)
     hhsearch_hits = pipeline.parsers.parse_hhr(hhsearch_result)
     templates_result = template_featurizer.get_templates(
-        query_sequence=query_sequence,
-        hits=hhsearch_hits,
+        query_sequence=query_sequence, hits=hhsearch_hits
     )
     return templates_result.features
 
@@ -584,9 +586,7 @@ def run(
                     # gather features
                     feature_dict = {
                         **pipeline.make_sequence_features(
-                            sequence=sequence,
-                            description="none",
-                            num_res=len(sequence),
+                            sequence=sequence, description="none", num_res=len(sequence)
                         ),
                         **pipeline.make_msa_features([msa]),
                         **mk_mock_template(sequence),

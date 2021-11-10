@@ -1,3 +1,9 @@
+"""
+Functionality for running mmseqs locally
+
+Note: Untested and needs mmseqs compiled from source
+"""
+
 import logging
 import math
 import subprocess

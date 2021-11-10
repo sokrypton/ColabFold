@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Tuple, List, Optional
 
 import haiku
+
 from alphafold.model import model, config, data
 
 
