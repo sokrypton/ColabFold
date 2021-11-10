@@ -5,7 +5,7 @@
 
 | Notebooks | monomers | complexes | mmseqs2 | jackhmmer | templates   |
 | :-------- | -------  | --------- | ------- | --------- | ----------- |
-| [AlphaFold2_mmseqs2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb) | Yes | No | Yes | No | Yes | 
+| [AlphaFold2_mmseqs2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb) | Yes | Yes | Yes | No | Yes | 
 | [AlphaFold2_advanced](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold2_advanced.ipynb) | Yes | Yes | Yes | Yes | No |
 | [AlphaFold2_batch](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/batch/AlphaFold2_batch.ipynb) | Yes | No | Yes | No | Yes | 
 | [RoseTTAFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold.ipynb) | Yes | No | Yes | No | No | 
@@ -115,16 +115,20 @@ This will create intermediate folders `search_results` and `msas` that you can e
              We are working on updating the server (today) to fix this, by making sure
              that both diverse and sequences close to query are included in the final MSA.
              We'll post update here when update is complete.
-+ 21Aug2021  The MSA issues should now be resolved! Please report any errors you see.
-+            In short, to reduce MSA size we filter (qsc > 0.8, id > 0.95) and take 3K
-+            most diverse sequences at different qid (sequence identity to query) intervals 
-+            and merge them. More specifically 3K sequences at qid at (0→0.2),(0.2→0.4),
-+            (0.4→0.6),(0.6→0.8) and (0.8→1). If you submitted your sequence between
-+            16Aug2021 and 20Aug2021, we recommend submitting again for best results!
+  21Aug2021  The MSA issues should now be resolved! Please report any errors you see.
+             In short, to reduce MSA size we filter (qsc > 0.8, id > 0.95) and take 3K
+             most diverse sequences at different qid (sequence identity to query) intervals 
+             and merge them. More specifically 3K sequences at qid at (0→0.2),(0.2→0.4),
+             (0.4→0.6),(0.6→0.8) and (0.8→1). If you submitted your sequence between
+             16Aug2021 and 20Aug2021, we recommend submitting again for best results!
   21Aug2021  The use_templates option in AlphaFold2_mmseqs2 is not properly working. We are
              working on fixing this. If you are not using templates, this does not affect the
              the results. Other notebooks that do not use_templates are unaffected.
-+ 21Aug2021  The templates issue is resolved!
+  21Aug2021  The templates issue is resolved!
++ 11Nov2021  Alphafold2 notebook supports now to complex predictions using Alphafold-multimer. 
++            Template predictions are temporary not possible in the Alphafold2 notebook.
++            Advanced (Advaned_beta) notebooks still offer the old complex predictions logic. 
+
 ```
 -----------------
 
