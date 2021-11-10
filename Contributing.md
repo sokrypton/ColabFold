@@ -40,7 +40,7 @@ We clone to _directory to avoid python from importing from the directory.
 %%bash
 
 pip install -U pip
-git clone https://github.com/konstin/Colabfold _colabfold
+git clone https://github.com/sokrypton/Colabfold _colabfold
 pip install _colabfold
 # Unholy Hack: Use the files from our cloned git repository instead of installed copy
 site_packages=$(python -c 'import site; print(site.getsitepackages()[0])')
@@ -54,7 +54,7 @@ If you also need to patch alphafold:
 %%bash
 
 pip uninstall -y alphafold
-git clone https://github.com/konstin/alphafold _alphafold
+git clone https://github.com/sokrypton/alphafold _alphafold
 pip install -e ./_alphafold
 ```
 
