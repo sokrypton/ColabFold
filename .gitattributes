@@ -1,0 +1,1 @@
+test-data/mmseqs-api-reponses/*.json -diff -text

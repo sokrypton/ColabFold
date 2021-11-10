@@ -1,0 +1,40 @@
+[
+  {
+    "config": {
+      "query": [
+        "YYDPETGTWY"
+      ],
+      "use_env": true,
+      "use_filter": true,
+      "use_templates": false,
+      "filter": null,
+      "use_pairing": false
+    },
+    "response": [
+      [
+        ">101",
+        "YYDPETGTWY"
+      ]
+    ]
+  },
+  {
+    "config": {
+      "query": [
+        "IKKILSKIKKLLK"
+      ],
+      "use_env": true,
+      "use_filter": true,
+      "use_templates": false,
+      "filter": null,
+      "use_pairing": false
+    },
+    "response": [
+      [
+        ">101",
+        "IKKILSKIKKLLK",
+        ">101",
+        "IKKILSKIKKLLK"
+      ]
+    ]
+  }
+]

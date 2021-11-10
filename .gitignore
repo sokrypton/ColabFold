@@ -1,0 +1,8 @@
+.pytest_cache
+/dist
+/input
+/params
+/pickle
+/results
+/tmalign
+__pycache__

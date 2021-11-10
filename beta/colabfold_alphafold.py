@@ -5,7 +5,6 @@ from concurrent import futures
 import pickle
 
 import jax
-import jax.numpy as jnp
 from alphafold.data.tools import jackhmmer
 from alphafold.data import parsers
 from alphafold.data import pipeline

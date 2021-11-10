@@ -1,3 +1,5 @@
+# fmt: off
+
 ############################################
 # imports
 ############################################
@@ -11,7 +13,7 @@ import os
 import re
 
 import random
-import tqdm.notebook
+from tqdm.autonotebook import tqdm
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -113,7 +115,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
   # lets do it!
   if not os.path.isfile(tar_gz_file):
     TIME_ESTIMATE = 150 * len(seqs_unique)
-    with tqdm.notebook.tqdm(total=TIME_ESTIMATE, bar_format=TQDM_BAR_FORMAT) as pbar:
+    with tqdm(total=TIME_ESTIMATE, bar_format=TQDM_BAR_FORMAT) as pbar:
       while REDO:
         pbar.set_description("SUBMIT")
         
@@ -125,12 +127,10 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
           out = submit(seqs_unique, mode, N)
 
         if out["status"] == "ERROR":
-          REDO = False
           raise Exception(f'MMseqs2 API is giving errors. Please confirm your input is a valid protein sequence. If error persists, please try again an hour later.')
 
         if out["status"] == "MAINTENANCE":
-          REDO = False
-          raise Exception(f'MMseqs2 API is undergoing maintanance. Please try again in a few minutes.')
+          raise Exception(f'MMseqs2 API is undergoing maintenance. Please try again in a few minutes.')
 
         # wait for job to finish
         ID,TIME = out["id"],0
