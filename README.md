@@ -125,9 +125,10 @@ This will create intermediate folders `search_results` and `msas` that you can e
              working on fixing this. If you are not using templates, this does not affect the
              the results. Other notebooks that do not use_templates are unaffected.
   21Aug2021  The templates issue is resolved!
-+ 11Nov2021  Alphafold2 notebook supports now to complex predictions using Alphafold-multimer. 
-+            Template predictions are temporary not possible in the Alphafold2 notebook.
++ 11Nov2021  Alphafold2_mmseqs2 supports now to complex predictions using Alphafold-multimer. 
++            Template predictions are temporary not possible in the Alphafold2_mmseqs2 notebook.
 +            Advanced (Advaned_beta) notebooks still offer the old complex predictions logic. 
++            ColabFold can be installed locally using pip!
 
 ```
 -----------------
