@@ -59,7 +59,12 @@ def mmseqs_search(
         used_dbs.append(metagenomic_db)
 
     for db in used_dbs:
-        if not dbbase.joinpath(f"{db}.idx").is_file():
+        if not dbbase.joinpath(f"{db}.dbtype").is_file():
+            raise FileNotFoundError(f"Database {db} does not exist")
+        if (
+            not dbbase.joinpath(f"{db}.idx").is_file()
+            and not dbbase.joinpath(f"{db}.idx.index").is_file()
+        ):
             raise RuntimeError(
                 f"Please run `{mmseqs} createindex {db}` to create {db}.idx"
             )
@@ -109,16 +114,17 @@ def mmseqs_search(
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument("mmseqs", type=Path)
     parser.add_argument("query", type=Path)
     parser.add_argument("dbbase", type=Path)
     parser.add_argument("base", type=Path)
-    parser.add_argument("db1", type=Path)
-    parser.add_argument("db2", type=Path)
-    parser.add_argument("db3", type=Path)
-    parser.add_argument("use-env", type=bool)
-    parser.add_argument("use-templates", type=bool)
-    parser.add_argument("filter", type=bool)
+    parser.add_argument("--db1", type=Path, default=Path("uniref30_2103_db"))
+    parser.add_argument("--db2", type=Path, default=Path(""))
+    parser.add_argument("--db3", type=Path, default=Path("colabfold_envdb_202108_db"))
+    # poor man's boolean arguments
+    parser.add_argument("--use-env", type=int, default=1, choices=[0, 1])
+    parser.add_argument("--use-templates", type=int, default=0, choices=[0, 1])
+    parser.add_argument("--filter", type=int, default=1, choices=[0, 1])
+    parser.add_argument("--mmseqs", type=Path, default=Path("mmseqs"))
     parser.add_argument("--expand-eval", type=float, default=math.inf)
     parser.add_argument("--align-eval", type=int, default=10)
     parser.add_argument("--diff", type=int, default=3000)

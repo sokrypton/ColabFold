@@ -268,11 +268,14 @@ def predict_structure(
 
 def get_queries(
     input_path: Union[str, Path], sort_queries_by: str = "length"
-) -> Tuple[List[Tuple[str, str, Optional[str]]], bool]:
+) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
     """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
     of job name, sequence and the optional a3m lines"""
 
     input_path = Path(input_path)
+    if not input_path.exists():
+        raise OSError(f"{input_path} could not be found")
+
     if input_path.is_file():
         if input_path.suffix == ".csv" or input_path.suffix == ".tsv":
             sep = "\t" if input_path.suffix == ".tsv" else ","
@@ -288,7 +291,8 @@ def get_queries(
         elif input_path.suffix == ".a3m":
             (seqs, header) = pipeline.parsers.parse_fasta(input_path.read_text())
             query_sequence = seqs[0]
-            a3m_lines = input_path.read_text()
+            # Use a list so we can easily extend this to multiple msas later
+            a3m_lines = [input_path.read_text()]
             queries = [(input_path.stem, query_sequence, a3m_lines)]
         elif input_path.suffix == ".fasta":
             (sequences, headers) = pipeline.parsers.parse_fasta(input_path.read_text())
@@ -312,7 +316,7 @@ def get_queries(
                 )
 
             if file.suffix.lower() == ".a3m":
-                a3m_lines = file.read_text()
+                a3m_lines = [file.read_text()]
             else:
                 a3m_lines = None
             queries.append((file.stem, query_sequence.upper(), a3m_lines))
@@ -374,7 +378,7 @@ def pad_sequences(
 def get_msa_and_templates(
     a3m_lines: Optional[str],
     jobname: str,
-    query_sequences,
+    query_sequences: Union[str, List[str]],
     result_dir: Path,
     use_env: bool,
     use_templates: bool,
@@ -549,7 +553,6 @@ def run(
             f"Query {job_number + 1}/{len(queries)}: {jobname} (length {sum(query_sequence_len_array)})"
         )
 
-        a3m_file = f"{jobname}.a3m"
         query_sequence_len = (
             len(query_sequence)
             if isinstance(query_sequence, str)
