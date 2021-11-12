@@ -14,39 +14,9 @@ from alphafold.model.features import FeatureDict
 from alphafold.model.model import RunModel
 from alphafold.model.tf import utils
 
-from colabfold.batch import run, get_queries
+from colabfold.batch import run
 from colabfold.colabfold import run_mmseqs2
 from colabfold.download import download_alphafold_params
-
-
-def test_get_queries_fasta_dir(caplog, tmp_path):
-    tmp_path.joinpath("5AWL_1.fasta").write_text(">5AWL_1\nYYDPETGTWY")
-    tmp_path.joinpath("6A5J.fasta").write_text(">6A5J\nIKKILSKIKKLLK")
-
-    queries, is_complex = get_queries(tmp_path)
-    assert queries == [("5AWL_1", "YYDPETGTWY", None), ("6A5J", "IKKILSKIKKLLK", None)]
-    assert not is_complex
-    assert caplog.messages == []
-
-
-def test_get_queries_csv(pytestconfig, caplog, tmp_path):
-    queries, is_complex = get_queries(
-        pytestconfig.rootpath.joinpath("test-data/complex.csv")
-    )
-    assert queries == [
-        (
-            "3G5O_A_3G5O_B",
-            [
-                "MRILPISTIKGKLNEFVDAVSSTQDQITITKNGAPAAVLVGADEWESLQETLYWLAQPGIRESIAEADADIASGRTYGEDEIRAEFGVPRRPH",
-                "MPYTVRFTTTARRDLHKLPPRILAAVVEFAFGDLSREPLRVGKPLRRELAGTFSARRGTYRLLYRIDDEHTTVVILRVDHRADIYRR",
-            ],
-            None,
-        ),
-        ("5AWL_1", "YYDPETGTWY", None),
-    ]
-    assert is_complex
-    assert caplog.messages == []
-
 
 # Copy the original method before mocking
 original_run_model = RunModel.predict
