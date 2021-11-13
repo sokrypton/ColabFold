@@ -8,6 +8,7 @@ from alphafold.model import model, config, data
 
 def load_models_and_params(
     num_models: int,
+    num_recycle: bool = 3,
     model_order: Optional[List[int]] = None,
     model_suffix: str = "_ptm",
     data_dir: Path = Path("."),
@@ -49,8 +50,12 @@ def load_models_and_params(
                     model_config = config.model_config("model_1" + model_suffix)
                     if model_suffix == "_ptm":
                         model_config.data.eval.num_ensemble = 1
+                        model_config.data.common.num_recycle = num_recycle
+                        model_config.model.num_recycle = num_recycle
                     elif model_suffix == "_multimer":
                         model_config.model.num_ensemble_eval = 1
+                        model_config.model.num_recycle = num_recycle
+
                     model_runner_1 = model.RunModel(
                         model_config,
                         data.get_model_haiku_params(

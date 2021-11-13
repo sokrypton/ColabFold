@@ -479,6 +479,7 @@ def run(
     use_amber: bool,
     msa_mode: str,
     num_models: int,
+    num_recycles: int,
     model_order: List[int],
     is_complex: bool,
     keep_existing_results: bool,
@@ -503,6 +504,7 @@ def run(
                 "use_amber": use_amber,
                 "msa_mode": msa_mode,
                 "num_models": num_models,
+                "num_recycles": num_recycles,
                 "model_order": model_order,
                 "keep_existing_results": keep_existing_results,
                 "rank_mode": rank_mode,
@@ -522,6 +524,7 @@ def run(
 
     model_runner_and_params = load_models_and_params(
         num_models,
+        num_recycles,
         model_order,
         "_multimer" if is_complex else "_ptm",
         data_dir,
@@ -705,6 +708,15 @@ def main():
         type=float,
         default=100,
     )
+
+    parser.add_argument(
+        "--num-recycle",
+        help="Number of prediction cycles."
+        "Increasing recycles can improve the quality but slows down the prediction.",
+        type=int,
+        default=3,
+    )
+
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
     parser.add_argument(
         "--recompile-padding",
@@ -810,6 +822,7 @@ def main():
         use_amber=args.amber,
         msa_mode=args.msa_mode,
         num_models=args.num_models,
+        num_recycles=args.num_recycle,
         model_order=model_order,
         is_complex=is_complex,
         keep_existing_results=not args.overwrite_existing_results,
