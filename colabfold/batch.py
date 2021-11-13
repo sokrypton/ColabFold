@@ -93,7 +93,6 @@ def mk_template(
         obsolete_pdbs_path=None,
     )
 
-
     hhsearch_pdb70_runner = hhsearch.HHSearch(
         binary_path="hhsearch", databases=[f"{template_path}/pdb70"]
     )
@@ -412,19 +411,21 @@ def get_msa_and_templates(
         )
         if template_paths is None:
             for index in range(0, len(query_seqs_unique)):
-                template_feature = mk_mock_template(query_seqs_unique[index], 100)
+                template_feature = mk_mock_template(query_seqs_unique[index])
                 template_features.append(template_feature)
         else:
             for index in range(0, len(query_seqs_unique)):
                 template_feature = mk_template(
-                    a3m_lines_mmseqs2[index], template_paths[index], query_seqs_unique[index]
+                    a3m_lines_mmseqs2[index],
+                    template_paths[index],
+                    query_seqs_unique[index],
                 )
                 template_features.append(template_feature)
         if not a3m_lines:
             a3m_lines = a3m_lines_mmseqs2
     else:
         for index in range(0, len(query_seqs_unique)):
-            template_feature = mk_mock_template(query_seqs_unique[index], 100)
+            template_feature = mk_mock_template(query_seqs_unique[index])
             template_features.append(template_feature)
 
     if len(query_sequences) == 1:
