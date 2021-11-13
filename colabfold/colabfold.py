@@ -197,15 +197,15 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
   # templates
   if use_templates:
     templates = {}
-    print("seq\tpdb\tcid\tevalue")
+    #print("seq\tpdb\tcid\tevalue")
     for line in open(f"{path}/pdb70.m8","r"):
       p = line.rstrip().split()
       M,pdb,qid,e_value = p[0],p[1],p[2],p[10]
       M = int(M)
       if M not in templates: templates[M] = []
       templates[M].append(pdb)
-      if len(templates[M]) <= 20:
-        print(f"{int(M)-N}\t{pdb}\t{qid}\t{e_value}")
+      #if len(templates[M]) <= 20:
+      #  print(f"{int(M)-N}\t{pdb}\t{qid}\t{e_value}")
 
     template_paths = {}
     for k,TMPL in templates.items():

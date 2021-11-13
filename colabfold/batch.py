@@ -82,10 +82,10 @@ def mk_mock_template(query_sequence, num_temp: int = 1) -> Mapping[str, Any]:
 
 
 def mk_template(
-    a3m_lines: str, template_paths: str, query_sequence: str
+    a3m_lines: str, template_path: str, query_sequence: str
 ) -> Mapping[str, Any]:
-    template_featurizer = templates.TemplateHitFeaturizer(
-        mmcif_dir=template_paths,
+    template_featurizer = templates.HhsearchHitFeaturizer(
+        mmcif_dir=template_path,
         max_template_date="2100-01-01",
         max_hits=20,
         kalign_binary_path="kalign",
@@ -93,8 +93,9 @@ def mk_template(
         obsolete_pdbs_path=None,
     )
 
+
     hhsearch_pdb70_runner = hhsearch.HHSearch(
-        binary_path="hhsearch", databases=[f"{template_paths}/pdb70"]
+        binary_path="hhsearch", databases=[f"{template_path}/pdb70"]
     )
 
     hhsearch_result = hhsearch_pdb70_runner.query(a3m_lines)
@@ -400,6 +401,7 @@ def get_msa_and_templates(
         seq_idx = query_seqs_unique.index(seq)
         query_seqs_cardinality[seq_idx] += 1
 
+    template_features = []
     if use_templates:
         a3m_lines_mmseqs2, template_paths = run_mmseqs2(
             query_seqs_unique,
@@ -409,19 +411,21 @@ def get_msa_and_templates(
             host_url=host_url,
         )
         if template_paths is None:
-            template_features = mk_mock_template(query_sequences, 100)
+            for index in range(0, len(query_seqs_unique)):
+                template_feature = mk_mock_template(query_seqs_unique[index], 100)
+                template_features.append(template_feature)
         else:
-            if len(a3m_lines_mmseqs2) != 1 or len(query_seqs_unique) != 1:
-                raise ValueError(
-                    "Templates are currently only supported for one sequences"
+            for index in range(0, len(query_seqs_unique)):
+                template_feature = mk_template(
+                    a3m_lines_mmseqs2[index], template_paths[index], query_seqs_unique[index]
                 )
-            template_features = mk_template(
-                a3m_lines_mmseqs2[0], template_paths, query_seqs_unique[0]
-            )
+                template_features.append(template_feature)
         if not a3m_lines:
             a3m_lines = a3m_lines_mmseqs2
     else:
-        template_features = mk_mock_template(query_sequences, 100)
+        for index in range(0, len(query_seqs_unique)):
+            template_feature = mk_mock_template(query_seqs_unique[index], 100)
+            template_features.append(template_feature)
 
     if len(query_sequences) == 1:
         pair_mode = "none"
@@ -597,7 +601,7 @@ def run(
                             sequence=sequence, description="none", num_res=len(sequence)
                         ),
                         **pipeline.make_msa_features([msa]),
-                        **mk_mock_template(sequence),
+                        **template_features[sequence_index],
                     }
                     if is_complex:
                         parsed_paired_msa = pipeline.parsers.parse_a3m(
