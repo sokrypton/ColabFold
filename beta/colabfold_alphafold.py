@@ -528,8 +528,8 @@ def prep_feats(I, clean=False):
   def _placeholder_template_feats(num_templates_, num_res_):
     return {
         'template_aatype': np.zeros([num_templates_, num_res_, 22], np.float32),
-        'template_all_atom_masks': np.zeros([num_templates_, num_res_, 37, 3], np.float32),
-        'template_all_atom_positions': np.zeros([num_templates_, num_res_, 37], np.float32),
+        'template_all_atom_masks': np.zeros([num_templates_, num_res_, 37], np.float32),
+        'template_all_atom_positions': np.zeros([num_templates_, num_res_, 37, 3], np.float32),
         'template_domain_names': np.zeros([num_templates_], np.float32),
         'template_sum_probs': np.zeros([num_templates_], np.float32),
     }
