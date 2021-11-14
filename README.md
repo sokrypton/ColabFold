@@ -46,10 +46,10 @@
 - I want to render my own images of the predicted structures, how do I color by pLDDT?
   - In pymol for AlphaFold structures: `spectrum b, red_yellow_green_cyan_blue, minimum=50, maximum=90`
   - In pymol for RoseTTAFold structures: `spectrum b, red_yellow_green_cyan_blue, minimum=0.5, maximum=0.9`
-- How does each notebook model complexes? 
-  - We currently have two differnt to models to predict protein complexes (1) AlphaFold2 with residue index jump and (2) AlphaFold2-multimer. AlphaFold2_advanced supports (1) and AlphaFold2_mmseqs2, AlphaFold2_batch (2).
+- What is the difference between the AlphaFold2_advanced and AlphaFold2_mmseqs2 (_batch) notebook for complex prediction? 
+  - We currently have two different ways to predict protein complexes: (1) using the AlphaFold2 model with residue index jump and (2) using the AlphaFold2-multimer model. AlphaFold2_advanced supports (1) and AlphaFold2_mmseqs2 (_batch) (2).
 - What is the difference between localcolabfold and the pip installable colabfold_batch?
-  -  localcolabfold is a command line interface for our advanced notebooks. pip is the backend of the alphafold_mmseqs2 and alphafold_batch notebook. 
+  -  localcolabfold is a command line interface for our advanced notebooks. pip is a command line version of the alphafold_mmseqs2 and alphafold_batch notebook.
 
 
 ### Running locally
