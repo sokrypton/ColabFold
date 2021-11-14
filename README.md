@@ -2,14 +2,14 @@
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
 -----------------
-**New Updatess*
+**New Updates**
 ```diff
 + 11Nov2021  Alphafold2_mmseqs2 supports now to complex predictions using Alphafold-multimer. 
 +            Advanced notebooks still offer the old complex predictions logic. 
 +            ColabFold can be installed locally using pip!
 + 14Nov2021  Template based predictions works again in the Alphafold2_mmseqs2 notebook.
-- 14Nov2021  WARNING "Single-sequence" mode in AlphaFold2_mmseqs2 is broken (starting 11Nov2021). The MMseqs2 MSA is being used.
-
+- 14Nov2021  WARNING "Single-sequence" mode in AlphaFold2_mmseqs2 is broken (starting 11Nov2021)
+-            The MMseqs2 MSA is being used.
 ```
 -----------------
 
