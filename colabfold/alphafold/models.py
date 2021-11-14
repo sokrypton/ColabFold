@@ -32,16 +32,16 @@ def load_models_and_params(
             params = data.get_model_haiku_params(
                 model_name=model_name + model_suffix, data_dir=str(data_dir)
             )
-            cfg = config.model_config(model_name + model_suffix)
+            model_config = config.model_config(model_name + model_suffix)
             if model_suffix == "_ptm":
-                cfg.data.eval.num_ensemble = 1
-                cfg.data.common.num_recycle = num_recycle
-                cfg.model.num_recycle = num_recycle
+                model_config.data.eval.num_ensemble = 1
+                model_config.data.common.num_recycle = num_recycle
+                model_config.model.num_recycle = num_recycle
             elif model_suffix == "_multimer":
-                cfg.model.num_recycle = num_recycle
-                cfg.model.num_ensemble_eval = 1
+                model_config.model.num_recycle = num_recycle
+                model_config.model.num_ensemble_eval = 1
             model_runner_and_params.append(
-                (model_name, model.RunModel(cfg, params), params)
+                (model_name, model.RunModel(model_config, params), params)
             )
         return model_runner_and_params
     else:
