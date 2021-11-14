@@ -82,7 +82,7 @@ def mk_mock_template(query_sequence, num_temp: int = 1) -> Mapping[str, Any]:
 
 
 def mk_template(
-    a3m_lines: str, template_path: str, query_sequence: str
+        a3m_lines: str, template_path: str, query_sequence: str
 ) -> Mapping[str, Any]:
     template_featurizer = templates.HhsearchHitFeaturizer(
         mmcif_dir=template_path,
@@ -106,10 +106,10 @@ def mk_template(
 
 
 def batch_input(
-    input: model.features.FeatureDict,
-    model_runner: model.RunModel,
-    model_name: str,
-    crop_len: int,
+        input: model.features.FeatureDict,
+        model_runner: model.RunModel,
+        model_name: str,
+        crop_len: int,
 ) -> model.features.FeatureDict:
     model_config = model_runner.config
     eval_cfg = model_config.data.eval
@@ -136,17 +136,17 @@ def batch_input(
 
 
 def predict_structure(
-    prefix: str,
-    result_dir: Path,
-    feature_dict: Dict[str, Any],
-    is_complex: bool,
-    sequences_lengths: List[int],
-    crop_len: int,
-    model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
-    do_relax: bool = False,
-    rank_by: str = "auto",
-    random_seed: int = 0,
-    stop_at_score: float = 100,
+        prefix: str,
+        result_dir: Path,
+        feature_dict: Dict[str, Any],
+        is_complex: bool,
+        sequences_lengths: List[int],
+        crop_len: int,
+        model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
+        do_relax: bool = False,
+        rank_by: str = "auto",
+        random_seed: int = 0,
+        stop_at_score: float = 100,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     # Run the models.
@@ -267,7 +267,7 @@ def predict_structure(
 
 
 def get_queries(
-    input_path: Union[str, Path], sort_queries_by: str = "length"
+        input_path: Union[str, Path], sort_queries_by: str = "length"
 ) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
     """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
     of job name, sequence and the optional a3m lines"""
@@ -343,7 +343,7 @@ def get_queries(
 
 
 def pair_sequences(
-    a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
+        a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
 ) -> str:
     a3m_line_paired = [""] * len(a3m_lines[0].splitlines())
     for n, seq in enumerate(query_sequences):
@@ -359,7 +359,7 @@ def pair_sequences(
 
 
 def pad_sequences(
-    a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
+        a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
 ) -> str:
     _blank_seq = [
         ("-" * len(seq)) * query_cardinality[n] for n, seq in enumerate(query_sequences)
@@ -377,7 +377,7 @@ def pad_sequences(
                     "".join(
                         _blank_seq[:n]
                         + [a3m_line] * query_cardinality[n]
-                        + _blank_seq[n + 1 :]
+                        + _blank_seq[n + 1:]
                     )
                 )
     return "\n".join(a3m_lines_combined)
@@ -443,9 +443,9 @@ def get_msa_and_templates(
 
     if not a3m_lines:
         if (
-            pair_mode == "none"
-            or pair_mode == "unpaired"
-            or pair_mode == "unpaired+paired"
+                pair_mode == "none"
+                or pair_mode == "unpaired"
+                or pair_mode == "unpaired+paired"
         ):
             if msa_mode == "single_sequence":
                 a3m_lines = []
@@ -494,28 +494,163 @@ def get_msa_and_templates(
     )
 
 
+def build_monomer_feature(sequence, unpaired_msa, template_features):
+    msa = pipeline.parsers.parse_a3m(unpaired_msa)
+    # gather features
+    return {
+        **pipeline.make_sequence_features(
+            sequence=sequence, description="none", num_res=len(sequence)
+        ),
+        **pipeline.make_msa_features([msa]),
+        **template_features,
+    }
+
+
+def build_multimer_feature(paired_msa):
+    parsed_paired_msa = pipeline.parsers.parse_a3m(paired_msa)
+    return {
+        f"{k}_all_seq": v
+        for k, v in pipeline.make_msa_features(
+            [parsed_paired_msa]
+        ).items()
+    }
+
+
+def process_multimer_features(features_for_chain):
+    all_chain_features = {}
+    for chain_id, chain_features in features_for_chain.items():
+        all_chain_features[
+            chain_id
+        ] = pipeline_multimer.convert_monomer_features(chain_features, chain_id)
+
+    all_chain_features = pipeline_multimer.add_assembly_features(
+        all_chain_features
+    )
+    # np_example = feature_processing.pair_and_merge(
+    #    all_chain_features=all_chain_features, is_prokaryote=is_prokaryote)
+    feature_processing.process_unmerged_features(all_chain_features)
+    np_chains_list = list(all_chain_features.values())
+    pair_msa_sequences = not feature_processing._is_homomer_or_monomer(
+        np_chains_list
+    )
+    chains = list(np_chains_list)
+    chain_keys = chains[0].keys()
+    updated_chains = []
+    for chain_num, chain in enumerate(chains):
+        new_chain = {k: v for k, v in chain.items() if "_all_seq" not in k}
+        for feature_name in chain_keys:
+            if feature_name.endswith("_all_seq"):
+                feats_padded = msa_pairing.pad_features(
+                    chain[feature_name], feature_name
+                )
+                new_chain[feature_name] = feats_padded
+        new_chain["num_alignments_all_seq"] = np.asarray(
+            len(np_chains_list[chain_num]["msa_all_seq"])
+        )
+        updated_chains.append(new_chain)
+    np_chains_list = updated_chains
+    np_chains_list = feature_processing.crop_chains(
+        np_chains_list,
+        msa_crop_size=feature_processing.MSA_CROP_SIZE,
+        pair_msa_sequences=pair_msa_sequences,
+        max_templates=feature_processing.MAX_TEMPLATES,
+    )
+    np_example = feature_processing.msa_pairing.merge_chain_features(
+        np_chains_list=np_chains_list,
+        pair_msa_sequences=pair_msa_sequences,
+        max_templates=feature_processing.MAX_TEMPLATES,
+    )
+    np_example = feature_processing.process_final(np_example)
+
+    # Pad MSA to avoid zero-sized extra_msa.
+    np_example = pipeline_multimer.pad_msa(np_example, min_num_seq=512)
+    return np_example
+
+
+def generate_input_feature(query_seqs_unique: List[str], query_seqs_cardinality: List[int],
+                           unpaired_msa: List[str], paired_msa: List[str], template_features: Mapping[str, Any],
+                           is_complex: bool, model_type: str):
+    input_feature = {}
+    if is_complex and model_type == "AlphaFold2":
+        if paired_msa == None and unpaired_msa == None:
+            a3m_lines = pad_sequences(
+                unpaired_msa, query_seqs_unique, query_seqs_cardinality
+            )
+        elif paired_msa != None and unpaired_msa != None:
+            a3m_lines = (
+                    pair_sequences(
+                        paired_msa, query_seqs_unique, query_seqs_cardinality
+                    )
+                    + "\n"
+                    + pad_sequences(unpaired_msa, query_seqs_unique, query_seqs_cardinality)
+            )
+        elif unpaired_msa == None:
+            a3m_lines = pair_sequences(
+                paired_msa, query_seqs_unique, query_seqs_cardinality
+            )
+        else:
+            raise ValueError(f"Invalid pairing")
+        sequence = ""
+        for sequence_index, sequence in enumerate(query_seqs_unique):
+            for cardinality in range(0, query_seqs_cardinality[sequence_index]):
+                sequence += sequence
+
+        input_feature = build_monomer_feature(sequence, a3m_lines,
+                                             template_features[sequence_index])
+    else:
+        features_for_chain = {}
+        chain_cnt = 0
+        for sequence_index, sequence in enumerate(query_seqs_unique):
+            for cardinality in range(0, query_seqs_cardinality[sequence_index]):
+                feature_dict = build_monomer_feature(sequence, unpaired_msa[sequence_index],
+                                                     template_features[sequence_index])
+                if is_complex:
+                    all_seq_features = build_multimer_feature(paired_msa[sequence_index])
+                    feature_dict.update(all_seq_features)
+                features_for_chain[protein.PDB_CHAIN_IDS[chain_cnt]] = feature_dict
+                chain_cnt += 1
+
+        # Do further feature post-processing depending on the model type.
+        if not is_complex:
+            input_feature = features_for_chain[protein.PDB_CHAIN_IDS[0]]
+        elif model_type == "AlphaFold2-multimer":
+            input_feature = process_multimer_features(features_for_chain)
+    return input_feature
+
+
 def run(
-    queries: List[Tuple[str, Union[str, List[str]], Optional[str]]],
-    result_dir: Union[str, Path],
-    use_templates: bool,
-    use_amber: bool,
-    msa_mode: str,
-    num_models: int,
-    num_recycles: int,
-    model_order: List[int],
-    is_complex: bool,
-    keep_existing_results: bool,
-    rank_mode: str,
-    pair_mode: str,
-    data_dir: Union[str, Path] = default_data_dir,
-    host_url: str = DEFAULT_API_SERVER,
-    stop_at_score: float = 100,
-    recompile_padding: float = 1.1,
-    recompile_all_models: bool = False,
+        queries: List[Tuple[str, Union[str, List[str]], Optional[str]]],
+        result_dir: Union[str, Path],
+        use_templates: bool,
+        use_amber: bool,
+        msa_mode: str,
+        model_type: str,
+        num_models: int,
+        num_recycles: int,
+        model_order: List[int],
+        is_complex: bool,
+        keep_existing_results: bool,
+        rank_mode: str,
+        pair_mode: str,
+        data_dir: Union[str, Path] = default_data_dir,
+        host_url: str = DEFAULT_API_SERVER,
+        stop_at_score: float = 100,
+        recompile_padding: float = 1.1,
+        recompile_all_models: bool = False,
 ):
     data_dir = Path(data_dir)
     result_dir = Path(result_dir)
     result_dir.mkdir(exist_ok=True)
+
+    if model_type == "auto" and is_complex:
+        model_type = "AlphaFold2-multimer"
+    elif model_type == "auto" and not is_complex:
+        model_type = "AlphaFold2"
+
+    if model_type == "AlphaFold2-multimer":
+        model_extension = "_multimer"
+    if model_type == "AlphaFold2":
+        model_extension = "_ptm"
 
     # Record the parameters of this run
     result_dir.joinpath("config.json").write_text(
@@ -525,6 +660,7 @@ def run(
                 "use_templates": use_templates,
                 "use_amber": use_amber,
                 "msa_mode": msa_mode,
+                "model_type": model_type,
                 "num_models": num_models,
                 "num_recycles": num_recycles,
                 "model_order": model_order,
@@ -544,13 +680,13 @@ def run(
         or msa_mode == "MMseqs2 (UniRef+Environmental)"
     )
 
-    write_bibtex(use_msa, use_env, use_templates, use_amber, result_dir)
+    write_bibtex(model_type, use_msa, use_env, use_templates, use_amber, result_dir)
 
     model_runner_and_params = load_models_and_params(
         num_models,
         num_recycles,
         model_order,
-        "_multimer" if is_complex else "_ptm",
+        model_extension,
         data_dir,
         recompile_all_models,
     )
@@ -560,8 +696,8 @@ def run(
         jobname = safe_filename(raw_jobname)
         # In the colab version we know we're done when a zip file has been written
         if (
-            keep_existing_results
-            and result_dir.joinpath(jobname).with_suffix(".result.zip").is_file()
+                keep_existing_results
+                and result_dir.joinpath(jobname).with_suffix(".result.zip").is_file()
         ):
             logger.info(f"Skipping {jobname} (result.zip)")
             continue
@@ -608,95 +744,18 @@ def run(
         except Exception as e:
             logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
             continue
-
-        features_for_chain = {}
-        chain_cnt = 0
-        for sequence_index, sequence in enumerate(query_seqs_unique):
-            for cardinality in range(0, query_seqs_cardinality[sequence_index]):
-                try:
-                    msa = pipeline.parsers.parse_a3m(unpaired_msa[sequence_index])
-                    # gather features
-                    feature_dict = {
-                        **pipeline.make_sequence_features(
-                            sequence=sequence, description="none", num_res=len(sequence)
-                        ),
-                        **pipeline.make_msa_features([msa]),
-                        **template_features[sequence_index],
-                    }
-                    if is_complex:
-                        parsed_paired_msa = pipeline.parsers.parse_a3m(
-                            paired_msa[sequence_index]
-                        )
-                        all_seq_features = {
-                            f"{k}_all_seq": v
-                            for k, v in pipeline.make_msa_features(
-                                [parsed_paired_msa]
-                            ).items()
-                        }
-                        feature_dict.update(all_seq_features)
-                    features_for_chain[protein.PDB_CHAIN_IDS[chain_cnt]] = feature_dict
-                    chain_cnt += 1
-                except Exception as e:
-                    logger.exception(f"Could not predict {jobname}: {e}")
-                    continue
-
-        # Do further feature post-processing depending on the model type.
-        if not is_complex:
-            np_example = features_for_chain[protein.PDB_CHAIN_IDS[0]]
-        else:
-            all_chain_features = {}
-            for chain_id, chain_features in features_for_chain.items():
-                all_chain_features[
-                    chain_id
-                ] = pipeline_multimer.convert_monomer_features(chain_features, chain_id)
-
-            all_chain_features = pipeline_multimer.add_assembly_features(
-                all_chain_features
-            )
-            # np_example = feature_processing.pair_and_merge(
-            #    all_chain_features=all_chain_features, is_prokaryote=is_prokaryote)
-            feature_processing.process_unmerged_features(all_chain_features)
-            np_chains_list = list(all_chain_features.values())
-            pair_msa_sequences = not feature_processing._is_homomer_or_monomer(
-                np_chains_list
-            )
-            chains = list(np_chains_list)
-            chain_keys = chains[0].keys()
-            updated_chains = []
-            for chain_num, chain in enumerate(chains):
-                new_chain = {k: v for k, v in chain.items() if "_all_seq" not in k}
-                for feature_name in chain_keys:
-                    if feature_name.endswith("_all_seq"):
-                        feats_padded = msa_pairing.pad_features(
-                            chain[feature_name], feature_name
-                        )
-                        new_chain[feature_name] = feats_padded
-                new_chain["num_alignments_all_seq"] = np.asarray(
-                    len(np_chains_list[chain_num]["msa_all_seq"])
-                )
-                updated_chains.append(new_chain)
-            np_chains_list = updated_chains
-            np_chains_list = feature_processing.crop_chains(
-                np_chains_list,
-                msa_crop_size=feature_processing.MSA_CROP_SIZE,
-                pair_msa_sequences=pair_msa_sequences,
-                max_templates=feature_processing.MAX_TEMPLATES,
-            )
-            np_example = feature_processing.msa_pairing.merge_chain_features(
-                np_chains_list=np_chains_list,
-                pair_msa_sequences=pair_msa_sequences,
-                max_templates=feature_processing.MAX_TEMPLATES,
-            )
-            np_example = feature_processing.process_final(np_example)
-
-            # Pad MSA to avoid zero-sized extra_msa.
-            np_example = pipeline_multimer.pad_msa(np_example, min_num_seq=512)
-
+        try:
+                input_features = generate_input_feature(query_seqs_unique, query_seqs_cardinality,
+                                                        unpaired_msa, paired_msa, template_features,
+                                                        is_complex, model_type)
+        except Exception as e:
+            logger.exception(f"Could not generate input features {jobname}: {e}")
+            continue
         try:
             outs = predict_structure(
                 jobname,
                 result_dir,
-                np_example,
+                input_features,
                 is_complex,
                 sequences_lengths=query_sequence_len_array,
                 crop_len=crop_len,
@@ -709,7 +768,7 @@ def run(
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
             logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
             continue
-        plot_lddt(jobname, np_example["msa"], outs, np_example["msa"][0], result_dir)
+        plot_lddt(jobname, input_features["msa"], outs, input_features["msa"][0], result_dir)
         plot_predicted_alignment_error(jobname, num_models, outs, result_dir)
     logger.info("Done")
 
@@ -720,7 +779,7 @@ def main():
         "input",
         default="input",
         help="Can be one of the following: "
-        "Directory with fasta/a3m files, a csv/tsv file, a fasta file or an a3m file",
+             "Directory with fasta/a3m files, a csv/tsv file, a fasta file or an a3m file",
     )
     parser.add_argument("results", help="Directory to write the results to")
 
@@ -728,7 +787,7 @@ def main():
     parser.add_argument(
         "--stop-at-score",
         help="Compute models until plddt or ptmscore > threshold is reached. "
-        "This can make colabfold much faster by only running the first model for easy queries.",
+             "This can make colabfold much faster by only running the first model for easy queries.",
         type=float,
         default=100,
     )
@@ -736,7 +795,7 @@ def main():
     parser.add_argument(
         "--num-recycle",
         help="Number of prediction cycles."
-        "Increasing recycles can improve the quality but slows down the prediction.",
+             "Increasing recycles can improve the quality but slows down the prediction.",
         type=int,
         default=3,
     )
@@ -747,10 +806,10 @@ def main():
         type=float,
         default=1.1,
         help="Whenever the input length changes, the model needs to be recompiled, which is slow. "
-        "We pad sequences by this factor, so we can e.g. compute sequence from length 100 to 110 without recompiling. "
-        "The prediction will become marginally slower for the longer input, "
-        "but overall performance increases due to not recompiling. "
-        "Set to 1 to disable.",
+             "We pad sequences by this factor, so we can e.g. compute sequence from length 100 to 110 without recompiling. "
+             "The prediction will become marginally slower for the longer input, "
+             "but overall performance increases due to not recompiling. "
+             "Set to 1 to disable.",
     )
 
     parser.add_argument("--model-order", default="3,4,5,1,2", type=str)
@@ -768,6 +827,16 @@ def main():
             "custom",
         ],
     )
+
+    parser.add_argument(
+        "--model-type",
+        help="predict strucutre/complex using the following model."
+             "Auto will pick \"AlphaFold2\" (ptm) for structure predictions and \"AlphaFold2-multimer\" for complexes.",
+        type=str,
+        default="auto",
+        choices=["auto", "AlphaFold2", "AlphaFold2-multimer"],
+    )
+
     parser.add_argument(
         "--amber",
         default=False,
@@ -845,6 +914,7 @@ def main():
         use_templates=args.templates,
         use_amber=args.amber,
         msa_mode=args.msa_mode,
+        model_type=args.model_type,
         num_models=args.num_models,
         num_recycles=args.num_recycle,
         model_order=model_order,
