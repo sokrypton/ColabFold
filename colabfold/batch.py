@@ -385,13 +385,15 @@ def get_msa_and_templates(
     jobname: str,
     query_sequences: Union[str, List[str]],
     result_dir: Path,
-    use_env: bool,
+    msa_mode: str,
     use_templates: bool,
     pair_mode: str,
     host_url: str = DEFAULT_API_SERVER,
 ) -> Tuple[
     Optional[List[str]], Optional[List[str]], List[str], List[int], Mapping[str, Any]
 ]:
+
+    use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
     # remove duplicates before searching
     query_sequences = (
         [query_sequences] if isinstance(query_sequences, str) else query_sequences
@@ -442,19 +444,25 @@ def get_msa_and_templates(
             or pair_mode == "unpaired"
             or pair_mode == "unpaired+paired"
         ):
-            # find normal a3ms
-            a3m_lines = run_mmseqs2(
-                query_seqs_unique,
-                str(result_dir.joinpath(jobname)),
-                use_env,
-                use_pairing=False,
-                host_url=host_url,
-            )
+            if msa_mode == "single_sequence":
+                a3m_lines = []
+                num = 101
+                for i, seq in enumerate(query_seqs_unique):
+                    a3m_lines.append(">" + str(num + i) + "\n" + seq)
+            else:
+                # find normal a3ms
+                a3m_lines = run_mmseqs2(
+                    query_seqs_unique,
+                    str(result_dir.joinpath(jobname)),
+                    use_env,
+                    use_pairing=False,
+                    host_url=host_url,
+                )
         else:
             a3m_lines = None
 
     if pair_mode == "paired" or pair_mode == "unpaired+paired":
-        # find paired a3m if not a monomer
+        # find paired a3m if not a homooligomers
         if len(query_seqs_unique) > 1:
             paired_a3m_lines = run_mmseqs2(
                 query_seqs_unique,
@@ -464,6 +472,7 @@ def get_msa_and_templates(
                 host_url=host_url,
             )
         else:
+            # homooligomers
             num = 101
             paired_a3m_lines = []
             for i in range(0, query_seqs_cardinality[0]):
@@ -526,11 +535,14 @@ def run(
             }
         )
     )
-
     use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
+    use_msa = (
+        msa_mode == "MMseqs2 (UniRef only)"
+        or msa_mode == "MMseqs2 (UniRef+Environmental)"
+    )
 
     # TODO: What's going on with MSA mode?
-    write_bibtex(True, use_env, use_templates, use_amber, result_dir)
+    write_bibtex(use_msa, use_env, use_templates, use_amber, result_dir)
 
     model_runner_and_params = load_models_and_params(
         num_models,
@@ -586,7 +598,7 @@ def run(
                 jobname,
                 query_sequence,
                 result_dir,
-                use_env,
+                msa_mode,
                 use_templates,
                 pair_mode,
                 host_url,

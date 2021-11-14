@@ -272,6 +272,54 @@ def test_batch(pytestconfig, caplog, tmp_path):
     assert tmp_path.joinpath("config.json").is_file()
 
 
+def test_single_sequence(pytestconfig, caplog, tmp_path):
+    prepare_prediction_test(caplog)
+
+    queries = [("5AWL_1", "YYDPETGTWY", None)]
+
+    mock_run_model = MockRunModel(pytestconfig.rootpath.joinpath("test-data/batch"))
+    mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "batch").mock_run_mmseqs2
+    with mock.patch(
+        "alphafold.model.model.RunModel.predict",
+        lambda model_runner, feat: mock_run_model.predict(model_runner, feat),
+    ), mock.patch("colabfold.batch.run_mmseqs2", mock_run_mmseqs):
+        run(
+            queries,
+            tmp_path,
+            use_templates=False,
+            use_amber=False,
+            msa_mode="single_sequence",
+            num_models=1,
+            num_recycles=3,
+            model_order=[1, 2, 3, 4, 5],
+            is_complex=False,
+            keep_existing_results=False,
+            rank_mode="auto",
+            pair_mode="unpaired+paired",
+            stop_at_score=100,
+        )
+
+    assert caplog.messages == [
+        "Found 2 citations for tools or databases",
+        "Query 1/1: 5AWL_1 (length 10)",
+        "Running model_1",
+        "model_1 took 0.0s with pLDDT 94.2",
+        "reranking models based on avg. predicted lDDT",
+        "Done",
+    ]
+
+    # Very simple test, it would be better to check coordinates
+    assert (
+        len(
+            tmp_path.joinpath("5AWL_1_unrelaxed_model_1_rank_1.pdb")
+            .read_text()
+            .splitlines()
+        )
+        == 96
+    )
+    assert tmp_path.joinpath("config.json").is_file()
+
+
 def test_complex(pytestconfig, caplog, tmp_path):
     prepare_prediction_test(caplog)
 
