@@ -121,7 +121,7 @@ This will create intermediate folders `search_results` and `msas` that you can e
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.5123296.svg)](https://doi.org/10.5281/zenodo.5123296)
 
 -----------------
-**OLD Updatess*
+**OLD Updates**
 ```diff
   16Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
   17Aug2021: If you see any errors, please report them.
