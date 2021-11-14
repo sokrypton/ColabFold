@@ -290,6 +290,8 @@ def get_queries(
                     queries[i] = (queries[i][0], queries[i][1][0], None)
         elif input_path.suffix == ".a3m":
             (seqs, header) = pipeline.parsers.parse_fasta(input_path.read_text())
+            if len(seqs) == 0:
+                raise ValueError(f"{input_path} is empty")
             query_sequence = seqs[0]
             # Use a list so we can easily extend this to multiple msas later
             a3m_lines = [input_path.read_text()]
@@ -309,6 +311,9 @@ def get_queries(
             if not file.is_file():
                 continue
             (seqs, header) = pipeline.parsers.parse_fasta(file.read_text())
+            if len(seqs) == 0:
+                logger.error(f"{file} is empty")
+                continue
             query_sequence = seqs[0]
             if len(seqs) > 1 and file.suffix == ".fasta":
                 logger.warning(
