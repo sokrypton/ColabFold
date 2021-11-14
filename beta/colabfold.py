@@ -13,7 +13,7 @@ import os
 import re
 
 import random
-from tqdm.autonotebook import tqdm
+import tqdm.notebook
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -115,7 +115,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
   # lets do it!
   if not os.path.isfile(tar_gz_file):
     TIME_ESTIMATE = 150 * len(seqs_unique)
-    with tqdm(total=TIME_ESTIMATE, bar_format=TQDM_BAR_FORMAT) as pbar:
+    with tqdm.notebook.tqdm(total=TIME_ESTIMATE, bar_format=TQDM_BAR_FORMAT) as pbar:
       while REDO:
         pbar.set_description("SUBMIT")
         
