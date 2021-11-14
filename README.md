@@ -4,9 +4,9 @@
 -----------------
 **New Updates**
 ```diff
-+ 11Nov2021  [AlphaFold2_mmseqs2] now supports complex predictions using Alphafold-multimer. 
-+            [AlphaFold2_Advanced] notebook still offer the old complex predictions logic. 
-+            ColabFold can be installed locally using pip!
++ 11Nov2021  [AlphaFold2_mmseqs2] now uses Alphafold-multimer for complex (homo/hetero-oligomer) modeling.
++            Use [AlphaFold2_advanced] notebook for the old complex prediction logic. 
++ 11Nov2021  ColabFold can be installed locally using pip!
 + 14Nov2021  Template based predictions works again in the Alphafold2_mmseqs2 notebook.
 - 14Nov2021  WARNING "Single-sequence" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken 
 -            starting 11Nov2021. The MMseqs2 MSA was being used regardless of selection.
