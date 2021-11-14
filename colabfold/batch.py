@@ -541,7 +541,6 @@ def run(
         or msa_mode == "MMseqs2 (UniRef+Environmental)"
     )
 
-    # TODO: What's going on with MSA mode?
     write_bibtex(use_msa, use_env, use_templates, use_amber, result_dir)
 
     model_runner_and_params = load_models_and_params(
