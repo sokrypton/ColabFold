@@ -9,7 +9,7 @@
 +            ColabFold can be installed locally using pip!
 + 14Nov2021  Template based predictions works again in the Alphafold2_mmseqs2 notebook.
 - 14Nov2021  WARNING "Single-sequence" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken starting 11Nov2021.
--            The MMseqs2 MSA is being used regardless of selection. It is now fixed!
+-            The MMseqs2 MSA was being used regardless of selection. It is now fixed!
 + 14Nov2021  "Single-sequence" mode is now fixed.
 ```
 -----------------
