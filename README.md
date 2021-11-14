@@ -1,6 +1,18 @@
 # ColabFold
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
+-----------------
+**New Updatess*
+```diff
++ 11Nov2021  Alphafold2_mmseqs2 supports now to complex predictions using Alphafold-multimer. 
++            Advanced notebooks still offer the old complex predictions logic. 
++            ColabFold can be installed locally using pip!
++ 14Nov2021  Template based predictions works again in the Alphafold2_mmseqs2 notebook.
+- 14Nov2021  WARNING "Single-sequence" mode in AlphaFold2_mmseqs2 is broken (starting 11Nov2021). The MMseqs2 MSA is being used.
+
+```
+-----------------
+
 ### Making Protein folding accessible to all via Google Colab!
 
 | Notebooks | monomers | complexes | mmseqs2 | jackhmmer | templates   |
@@ -108,7 +120,7 @@ This will create intermediate folders `search_results` and `msas` that you can e
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.5123296.svg)](https://doi.org/10.5281/zenodo.5123296)
 
 -----------------
-**Updatess**
+**OLD Updatess*
 ```diff
   16Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
   17Aug2021: If you see any errors, please report them.
@@ -130,11 +142,6 @@ This will create intermediate folders `search_results` and `msas` that you can e
              working on fixing this. If you are not using templates, this does not affect the
              the results. Other notebooks that do not use_templates are unaffected.
   21Aug2021  The templates issue is resolved!
-+ 11Nov2021  Alphafold2_mmseqs2 supports now to complex predictions using Alphafold-multimer. 
-+            Advanced (Advaned_beta) notebooks still offer the old complex predictions logic. 
-+            ColabFold can be installed locally using pip!
-+ 14Nov2021  Template based predictions works again in the Alphafold2_mmseqs2 notebook.
-
 
 ```
 -----------------
