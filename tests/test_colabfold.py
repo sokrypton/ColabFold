@@ -417,7 +417,7 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path):
     queries = [("A_A", [A, A], None)]
 
     mock_run_model = MockRunModel(
-        pytestconfig.rootpath.joinpath("test-data/complex_monomer")
+        pytestconfig.rootpath.joinpath("test-data/complex_monomer_ptm")
     )
     mock_run_mmseqs2 = MMseqs2Mock(
         pytestconfig.rootpath, "complex_monomer"
