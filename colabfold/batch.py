@@ -82,7 +82,7 @@ def mk_mock_template(query_sequence, num_temp: int = 1) -> Mapping[str, Any]:
 
 
 def mk_template(
-        a3m_lines: str, template_path: str, query_sequence: str
+    a3m_lines: str, template_path: str, query_sequence: str
 ) -> Mapping[str, Any]:
     template_featurizer = templates.HhsearchHitFeaturizer(
         mmcif_dir=template_path,
@@ -106,10 +106,10 @@ def mk_template(
 
 
 def batch_input(
-        input: model.features.FeatureDict,
-        model_runner: model.RunModel,
-        model_name: str,
-        crop_len: int,
+    input: model.features.FeatureDict,
+    model_runner: model.RunModel,
+    model_name: str,
+    crop_len: int,
 ) -> model.features.FeatureDict:
     model_config = model_runner.config
     eval_cfg = model_config.data.eval
@@ -136,18 +136,18 @@ def batch_input(
 
 
 def predict_structure(
-        prefix: str,
-        result_dir: Path,
-        feature_dict: Dict[str, Any],
-        is_complex: bool,
-        sequences_lengths: List[int],
-        crop_len: int,
-        model_type: str,
-        model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
-        do_relax: bool = False,
-        rank_by: str = "auto",
-        random_seed: int = 0,
-        stop_at_score: float = 100,
+    prefix: str,
+    result_dir: Path,
+    feature_dict: Dict[str, Any],
+    is_complex: bool,
+    sequences_lengths: List[int],
+    crop_len: int,
+    model_type: str,
+    model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
+    do_relax: bool = False,
+    rank_by: str = "auto",
+    random_seed: int = 0,
+    stop_at_score: float = 100,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     # Run the models.
@@ -196,15 +196,15 @@ def predict_structure(
         b_factors = prediction_result["plddt"][:, None] * final_atom_mask
         if is_complex and model_type == "AlphaFold2":
             input["asym_id"] = feature_dict["asym_id"]
-            input['aatype'] = input['aatype'][0]
-            input['residue_index'] = input['residue_index'][0]
+            input["aatype"] = input["aatype"][0]
+            input["residue_index"] = input["residue_index"][0]
             curr_residue_index = 0
-            for i in range(1,input['aatype'].shape[0]):
-                if (input['residue_index'][i] - input['residue_index'][i-1]) > 1:
+            for i in range(1, input["aatype"].shape[0]):
+                if (input["residue_index"][i] - input["residue_index"][i - 1]) > 1:
                     curr_residue_index = 0
-                input['residue_index'][i-1] = curr_residue_index
-                curr_residue_index+=1
-            input['residue_index'][input['aatype'].shape[0]-1]=curr_residue_index
+                input["residue_index"][i - 1] = curr_residue_index
+                curr_residue_index += 1
+            input["residue_index"][input["aatype"].shape[0] - 1] = curr_residue_index
         unrelaxed_protein = protein.from_prediction(
             features=input,
             result=prediction_result,
@@ -279,7 +279,7 @@ def predict_structure(
 
 
 def get_queries(
-        input_path: Union[str, Path], sort_queries_by: str = "length"
+    input_path: Union[str, Path], sort_queries_by: str = "length"
 ) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
     """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
     of job name, sequence and the optional a3m lines"""
@@ -355,7 +355,7 @@ def get_queries(
 
 
 def pair_sequences(
-        a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
+    a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
 ) -> str:
     a3m_line_paired = [""] * len(a3m_lines[0].splitlines())
     for n, seq in enumerate(query_sequences):
@@ -371,15 +371,17 @@ def pair_sequences(
 
 
 def pad_sequences(
-        a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
+    a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
 ) -> str:
     _blank_seq = [
-        ("-" * len(seq)) for n, seq in enumerate(query_sequences) for j in range(0,query_cardinality[n])
+        ("-" * len(seq))
+        for n, seq in enumerate(query_sequences)
+        for j in range(0, query_cardinality[n])
     ]
     a3m_lines_combined = []
     pos = 0
     for n, seq in enumerate(query_sequences):
-        for j in range(0,query_cardinality[n]):
+        for j in range(0, query_cardinality[n]):
             lines = a3m_lines[n].split("\n")
             for a3m_line in lines:
                 if len(a3m_line) == 0:
@@ -388,13 +390,9 @@ def pad_sequences(
                     a3m_lines_combined.append(a3m_line)
                 else:
                     a3m_lines_combined.append(
-                        "".join(
-                         _blank_seq[:pos]
-                           + [a3m_line]
-                           + _blank_seq[pos + 1:]
-                        )
+                        "".join(_blank_seq[:pos] + [a3m_line] + _blank_seq[pos + 1 :])
                     )
-            pos+=1
+            pos += 1
     return "\n".join(a3m_lines_combined)
 
 
@@ -458,9 +456,9 @@ def get_msa_and_templates(
 
     if not a3m_lines:
         if (
-                pair_mode == "none"
-                or pair_mode == "unpaired"
-                or pair_mode == "unpaired+paired"
+            pair_mode == "none"
+            or pair_mode == "unpaired"
+            or pair_mode == "unpaired+paired"
         ):
             if msa_mode == "single_sequence":
                 a3m_lines = []
@@ -525,29 +523,23 @@ def build_multimer_feature(paired_msa):
     parsed_paired_msa = pipeline.parsers.parse_a3m(paired_msa)
     return {
         f"{k}_all_seq": v
-        for k, v in pipeline.make_msa_features(
-            [parsed_paired_msa]
-        ).items()
+        for k, v in pipeline.make_msa_features([parsed_paired_msa]).items()
     }
 
 
 def process_multimer_features(features_for_chain):
     all_chain_features = {}
     for chain_id, chain_features in features_for_chain.items():
-        all_chain_features[
-            chain_id
-        ] = pipeline_multimer.convert_monomer_features(chain_features, chain_id)
+        all_chain_features[chain_id] = pipeline_multimer.convert_monomer_features(
+            chain_features, chain_id
+        )
 
-    all_chain_features = pipeline_multimer.add_assembly_features(
-        all_chain_features
-    )
+    all_chain_features = pipeline_multimer.add_assembly_features(all_chain_features)
     # np_example = feature_processing.pair_and_merge(
     #    all_chain_features=all_chain_features, is_prokaryote=is_prokaryote)
     feature_processing.process_unmerged_features(all_chain_features)
     np_chains_list = list(all_chain_features.values())
-    pair_msa_sequences = not feature_processing._is_homomer_or_monomer(
-        np_chains_list
-    )
+    pair_msa_sequences = not feature_processing._is_homomer_or_monomer(np_chains_list)
     chains = list(np_chains_list)
     chain_keys = chains[0].keys()
     updated_chains = []
@@ -582,9 +574,15 @@ def process_multimer_features(features_for_chain):
     return np_example
 
 
-def generate_input_feature(query_seqs_unique: List[str], query_seqs_cardinality: List[int],
-                           unpaired_msa: List[str], paired_msa: List[str], template_features: Mapping[str, Any],
-                           is_complex: bool, model_type: str):
+def generate_input_feature(
+    query_seqs_unique: List[str],
+    query_seqs_cardinality: List[int],
+    unpaired_msa: List[str],
+    paired_msa: List[str],
+    template_features: Mapping[str, Any],
+    is_complex: bool,
+    model_type: str,
+):
     input_feature = {}
     if is_complex and model_type == "AlphaFold2":
         if paired_msa == None and unpaired_msa != None:
@@ -593,11 +591,9 @@ def generate_input_feature(query_seqs_unique: List[str], query_seqs_cardinality:
             )
         elif paired_msa != None and unpaired_msa != None:
             a3m_lines = (
-                    pair_sequences(
-                        paired_msa, query_seqs_unique, query_seqs_cardinality
-                    )
-                    + "\n"
-                    + pad_sequences(unpaired_msa, query_seqs_unique, query_seqs_cardinality)
+                pair_sequences(paired_msa, query_seqs_unique, query_seqs_cardinality)
+                + "\n"
+                + pad_sequences(unpaired_msa, query_seqs_unique, query_seqs_cardinality)
             )
         elif paired_msa != None and unpaired_msa == None:
             a3m_lines = pair_sequences(
@@ -612,19 +608,27 @@ def generate_input_feature(query_seqs_unique: List[str], query_seqs_cardinality:
                 total_sequence += sequence
                 Ls.append(len(sequence))
 
-        input_feature = build_monomer_feature(total_sequence, a3m_lines,
-                                              mk_mock_template(total_sequence))
-        input_feature["residue_index"] = chain_break(input_feature["residue_index"],Ls)
-        input_feature['asym_id'] = np.array([int(n) for n, l in enumerate(Ls) for i in range(0, l)])
+        input_feature = build_monomer_feature(
+            total_sequence, a3m_lines, mk_mock_template(total_sequence)
+        )
+        input_feature["residue_index"] = chain_break(input_feature["residue_index"], Ls)
+        input_feature["asym_id"] = np.array(
+            [int(n) for n, l in enumerate(Ls) for i in range(0, l)]
+        )
     else:
         features_for_chain = {}
         chain_cnt = 0
         for sequence_index, sequence in enumerate(query_seqs_unique):
             for cardinality in range(0, query_seqs_cardinality[sequence_index]):
-                feature_dict = build_monomer_feature(sequence, unpaired_msa[sequence_index],
-                                                     template_features[sequence_index])
+                feature_dict = build_monomer_feature(
+                    sequence,
+                    unpaired_msa[sequence_index],
+                    template_features[sequence_index],
+                )
                 if is_complex:
-                    all_seq_features = build_multimer_feature(paired_msa[sequence_index])
+                    all_seq_features = build_multimer_feature(
+                        paired_msa[sequence_index]
+                    )
                     feature_dict.update(all_seq_features)
                 features_for_chain[protein.PDB_CHAIN_IDS[chain_cnt]] = feature_dict
                 chain_cnt += 1
@@ -638,24 +642,24 @@ def generate_input_feature(query_seqs_unique: List[str], query_seqs_cardinality:
 
 
 def run(
-        queries: List[Tuple[str, Union[str, List[str]], Optional[str]]],
-        result_dir: Union[str, Path],
-        use_templates: bool,
-        use_amber: bool,
-        msa_mode: str,
-        model_type: str,
-        num_models: int,
-        num_recycles: int,
-        model_order: List[int],
-        is_complex: bool,
-        keep_existing_results: bool,
-        rank_mode: str,
-        pair_mode: str,
-        data_dir: Union[str, Path] = default_data_dir,
-        host_url: str = DEFAULT_API_SERVER,
-        stop_at_score: float = 100,
-        recompile_padding: float = 1.1,
-        recompile_all_models: bool = False,
+    queries: List[Tuple[str, Union[str, List[str]], Optional[str]]],
+    result_dir: Union[str, Path],
+    use_templates: bool,
+    use_amber: bool,
+    msa_mode: str,
+    model_type: str,
+    num_models: int,
+    num_recycles: int,
+    model_order: List[int],
+    is_complex: bool,
+    keep_existing_results: bool,
+    rank_mode: str,
+    pair_mode: str,
+    data_dir: Union[str, Path] = default_data_dir,
+    host_url: str = DEFAULT_API_SERVER,
+    stop_at_score: float = 100,
+    recompile_padding: float = 1.1,
+    recompile_all_models: bool = False,
 ):
     data_dir = Path(data_dir)
     result_dir = Path(result_dir)
@@ -715,8 +719,8 @@ def run(
         jobname = safe_filename(raw_jobname)
         # In the colab version we know we're done when a zip file has been written
         if (
-                keep_existing_results
-                and result_dir.joinpath(jobname).with_suffix(".result.zip").is_file()
+            keep_existing_results
+            and result_dir.joinpath(jobname).with_suffix(".result.zip").is_file()
         ):
             logger.info(f"Skipping {jobname} (result.zip)")
             continue
@@ -764,9 +768,15 @@ def run(
             logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
             continue
         try:
-            input_features = generate_input_feature(query_seqs_unique, query_seqs_cardinality,
-                                                    unpaired_msa, paired_msa, template_features,
-                                                    is_complex, model_type)
+            input_features = generate_input_feature(
+                query_seqs_unique,
+                query_seqs_cardinality,
+                unpaired_msa,
+                paired_msa,
+                template_features,
+                is_complex,
+                model_type,
+            )
         except Exception as e:
             logger.exception(f"Could not generate input features {jobname}: {e}")
             continue
@@ -788,7 +798,9 @@ def run(
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
             logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
             continue
-        plot_lddt(jobname, input_features["msa"], outs, input_features["msa"][0], result_dir)
+        plot_lddt(
+            jobname, input_features["msa"], outs, input_features["msa"][0], result_dir
+        )
         plot_predicted_alignment_error(jobname, num_models, outs, result_dir)
     logger.info("Done")
 
@@ -799,7 +811,7 @@ def main():
         "input",
         default="input",
         help="Can be one of the following: "
-             "Directory with fasta/a3m files, a csv/tsv file, a fasta file or an a3m file",
+        "Directory with fasta/a3m files, a csv/tsv file, a fasta file or an a3m file",
     )
     parser.add_argument("results", help="Directory to write the results to")
 
@@ -807,7 +819,7 @@ def main():
     parser.add_argument(
         "--stop-at-score",
         help="Compute models until plddt or ptmscore > threshold is reached. "
-             "This can make colabfold much faster by only running the first model for easy queries.",
+        "This can make colabfold much faster by only running the first model for easy queries.",
         type=float,
         default=100,
     )
@@ -815,7 +827,7 @@ def main():
     parser.add_argument(
         "--num-recycle",
         help="Number of prediction cycles."
-             "Increasing recycles can improve the quality but slows down the prediction.",
+        "Increasing recycles can improve the quality but slows down the prediction.",
         type=int,
         default=3,
     )
@@ -826,10 +838,10 @@ def main():
         type=float,
         default=1.1,
         help="Whenever the input length changes, the model needs to be recompiled, which is slow. "
-             "We pad sequences by this factor, so we can e.g. compute sequence from length 100 to 110 without recompiling. "
-             "The prediction will become marginally slower for the longer input, "
-             "but overall performance increases due to not recompiling. "
-             "Set to 1 to disable.",
+        "We pad sequences by this factor, so we can e.g. compute sequence from length 100 to 110 without recompiling. "
+        "The prediction will become marginally slower for the longer input, "
+        "but overall performance increases due to not recompiling. "
+        "Set to 1 to disable.",
     )
 
     parser.add_argument("--model-order", default="3,4,5,1,2", type=str)
@@ -851,7 +863,7 @@ def main():
     parser.add_argument(
         "--model-type",
         help="predict strucutre/complex using the following model."
-             "Auto will pick \"AlphaFold2\" (ptm) for structure predictions and \"AlphaFold2-multimer\" for complexes.",
+        'Auto will pick "AlphaFold2" (ptm) for structure predictions and "AlphaFold2-multimer" for complexes.',
         type=str,
         default="auto",
         choices=["auto", "AlphaFold2", "AlphaFold2-multimer"],

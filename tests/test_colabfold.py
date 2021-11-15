@@ -365,7 +365,6 @@ def test_complex(pytestconfig, caplog, tmp_path):
     ]
 
 
-
 def test_complex_ptm(pytestconfig, caplog, tmp_path):
     prepare_prediction_test(caplog)
 
@@ -373,7 +372,9 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path):
     pdb_3g50_B = "MPYTVRFTTTARRDLHKLPPRILAAVVEFAFGDLSREPLRVGKPLRRELAGTFSARRGTYRLLYRIDDEHTTVVILRVDHRADIYRR"
     queries = [("3G5O_A_3G5O_B", [pdb_3g50_A, pdb_3g50_B], None)]
 
-    mock_run_model = MockRunModel(pytestconfig.rootpath.joinpath("test-data/complex_ptm"))
+    mock_run_model = MockRunModel(
+        pytestconfig.rootpath.joinpath("test-data/complex_ptm")
+    )
     mock_run_mmseqs2 = MMseqs2Mock(pytestconfig.rootpath, "complex").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
@@ -449,7 +450,7 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path):
         "Found 5 citations for tools or databases",
         "Query 1/1: A_A (length 118)",
         "Running model_1",
-        'model_1 took 0.0s with pLDDT 95.5',
+        "model_1 took 0.0s with pLDDT 95.5",
         "reranking models based on avg. predicted lDDT",
         "Done",
     ]

@@ -4,7 +4,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 citations = {
-"Mirdita2021": """@article{Mirdita2021,
+    "Mirdita2021": """@article{Mirdita2021,
 author= {Mirdita, Milot and Schütze, Konstantin and Moriwaki, Yoshitaka and Heo, Lim and Ovchinnikov, Sergey and Steinegger, Martin },
 doi = {10.1101/2021.08.15.456425v2},
 journal = {bioRxiv},
