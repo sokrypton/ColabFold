@@ -290,6 +290,7 @@ def test_single_sequence(pytestconfig, caplog, tmp_path):
             use_templates=False,
             use_amber=False,
             msa_mode="single_sequence",
+            model_type="auto",
             num_models=1,
             num_recycles=3,
             model_order=[1, 2, 3, 4, 5],
@@ -359,6 +360,96 @@ def test_complex(pytestconfig, caplog, tmp_path):
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
         "model_1 took 0.0s with pLDDT 94.4",
+        "reranking models based on avg. predicted lDDT",
+        "Done",
+    ]
+
+
+
+def test_complex_ptm(pytestconfig, caplog, tmp_path):
+    prepare_prediction_test(caplog)
+
+    pdb_3g50_A = "MRILPISTIKGKLNEFVDAVSSTQDQITITKNGAPAAVLVGADEWESLQETLYWLAQPGIRESIAEADADIASGRTYGEDEIRAEFGVPRRPH"
+    pdb_3g50_B = "MPYTVRFTTTARRDLHKLPPRILAAVVEFAFGDLSREPLRVGKPLRRELAGTFSARRGTYRLLYRIDDEHTTVVILRVDHRADIYRR"
+    queries = [("3G5O_A_3G5O_B", [pdb_3g50_A, pdb_3g50_B], None)]
+
+    mock_run_model = MockRunModel(pytestconfig.rootpath.joinpath("test-data/complex_ptm"))
+    mock_run_mmseqs2 = MMseqs2Mock(pytestconfig.rootpath, "complex").mock_run_mmseqs2
+    with mock.patch(
+        "alphafold.model.model.RunModel.predict",
+        lambda model_runner, feat: mock_run_model.predict(model_runner, feat),
+    ), mock.patch("colabfold.batch.run_mmseqs2", mock_run_mmseqs2):
+        run(
+            queries,
+            tmp_path,
+            use_templates=False,
+            use_amber=False,
+            msa_mode="MMseqs2 (UniRef+Environmental)",
+            model_type="AlphaFold2",
+            num_models=1,
+            num_recycles=3,
+            model_order=[1, 2, 3, 4, 5],
+            is_complex=True,
+            keep_existing_results=False,
+            rank_mode="auto",
+            pair_mode="unpaired+paired",
+            stop_at_score=100,
+        )
+
+    messages = list(caplog.messages)
+    # noinspection PyUnresolvedReferences
+    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
+    assert messages == [
+        "Found 5 citations for tools or databases",
+        "Query 1/1: 3G5O_A_3G5O_B (length 180)",
+        "Running model_1",
+        "model_1 took 0.0s with pLDDT 91.6",
+        "reranking models based on avg. predicted lDDT",
+        "Done",
+    ]
+
+
+def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path):
+    prepare_prediction_test(caplog)
+
+    A = "PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK"
+    queries = [("A_A", [A, A], None)]
+
+    mock_run_model = MockRunModel(
+        pytestconfig.rootpath.joinpath("test-data/complex_monomer")
+    )
+    mock_run_mmseqs2 = MMseqs2Mock(
+        pytestconfig.rootpath, "complex_monomer"
+    ).mock_run_mmseqs2
+    with mock.patch(
+        "alphafold.model.model.RunModel.predict",
+        lambda model_runner, feat: mock_run_model.predict(model_runner, feat),
+    ), mock.patch("colabfold.batch.run_mmseqs2", mock_run_mmseqs2):
+        run(
+            queries,
+            tmp_path,
+            use_templates=False,
+            use_amber=False,
+            msa_mode="MMseqs2 (UniRef+Environmental)",
+            model_type="AlphaFold2",
+            num_models=1,
+            num_recycles=3,
+            model_order=[1, 2, 3, 4, 5],
+            is_complex=True,
+            keep_existing_results=False,
+            rank_mode="auto",
+            pair_mode="unpaired+paired",
+            stop_at_score=100,
+        )
+
+    messages = list(caplog.messages)
+    # noinspection PyUnresolvedReferences
+    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
+    assert messages == [
+        "Found 5 citations for tools or databases",
+        "Query 1/1: A_A (length 118)",
+        "Running model_1",
+        'model_1 took 0.0s with pLDDT 95.5',
         "reranking models based on avg. predicted lDDT",
         "Done",
     ]

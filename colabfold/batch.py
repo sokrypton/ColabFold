@@ -34,7 +34,7 @@ from alphafold.model import model
 from colabfold.alphafold.models import load_models_and_params
 from colabfold.alphafold.msa import make_fixed_size
 from colabfold.citations import write_bibtex
-from colabfold.colabfold import run_mmseqs2
+from colabfold.colabfold import run_mmseqs2, chain_break
 from colabfold.download import download_alphafold_params, default_data_dir
 from colabfold.plot import plot_predicted_alignment_error, plot_lddt
 from colabfold.utils import (
@@ -142,6 +142,7 @@ def predict_structure(
         is_complex: bool,
         sequences_lengths: List[int],
         crop_len: int,
+        model_type: str,
         model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
         do_relax: bool = False,
         rank_by: str = "auto",
@@ -193,11 +194,22 @@ def predict_structure(
         )
         final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
         b_factors = prediction_result["plddt"][:, None] * final_atom_mask
+        if is_complex and model_type == "AlphaFold2":
+            input["asym_id"] = feature_dict["asym_id"]
+            input['aatype'] = input['aatype'][0]
+            input['residue_index'] = input['residue_index'][0]
+            curr_residue_index = 0
+            for i in range(1,input['aatype'].shape[0]):
+                if (input['residue_index'][i] - input['residue_index'][i-1]) > 1:
+                    curr_residue_index = 0
+                input['residue_index'][i-1] = curr_residue_index
+                curr_residue_index+=1
+            input['residue_index'][input['aatype'].shape[0]-1]=curr_residue_index
         unrelaxed_protein = protein.from_prediction(
             features=input,
             result=prediction_result,
             b_factors=b_factors,
-            remove_leading_feature_dimension=not model_runner.multimer_mode,
+            remove_leading_feature_dimension=not is_complex,
         )
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
@@ -362,24 +374,27 @@ def pad_sequences(
         a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
 ) -> str:
     _blank_seq = [
-        ("-" * len(seq)) * query_cardinality[n] for n, seq in enumerate(query_sequences)
+        ("-" * len(seq)) for n, seq in enumerate(query_sequences) for j in range(0,query_cardinality[n])
     ]
     a3m_lines_combined = []
+    pos = 0
     for n, seq in enumerate(query_sequences):
-        lines = a3m_lines[n].split("\n")
-        for a3m_line in lines:
-            if len(a3m_line) == 0:
-                continue
-            if a3m_line.startswith(">"):
-                a3m_lines_combined.append(a3m_line)
-            else:
-                a3m_lines_combined.append(
-                    "".join(
-                        _blank_seq[:n]
-                        + [a3m_line] * query_cardinality[n]
-                        + _blank_seq[n + 1:]
+        for j in range(0,query_cardinality[n]):
+            lines = a3m_lines[n].split("\n")
+            for a3m_line in lines:
+                if len(a3m_line) == 0:
+                    continue
+                if a3m_line.startswith(">"):
+                    a3m_lines_combined.append(a3m_line)
+                else:
+                    a3m_lines_combined.append(
+                        "".join(
+                         _blank_seq[:pos]
+                           + [a3m_line]
+                           + _blank_seq[pos + 1:]
+                        )
                     )
-                )
+            pos+=1
     return "\n".join(a3m_lines_combined)
 
 
@@ -572,7 +587,7 @@ def generate_input_feature(query_seqs_unique: List[str], query_seqs_cardinality:
                            is_complex: bool, model_type: str):
     input_feature = {}
     if is_complex and model_type == "AlphaFold2":
-        if paired_msa == None and unpaired_msa == None:
+        if paired_msa == None and unpaired_msa != None:
             a3m_lines = pad_sequences(
                 unpaired_msa, query_seqs_unique, query_seqs_cardinality
             )
@@ -584,19 +599,23 @@ def generate_input_feature(query_seqs_unique: List[str], query_seqs_cardinality:
                     + "\n"
                     + pad_sequences(unpaired_msa, query_seqs_unique, query_seqs_cardinality)
             )
-        elif unpaired_msa == None:
+        elif paired_msa != None and unpaired_msa == None:
             a3m_lines = pair_sequences(
                 paired_msa, query_seqs_unique, query_seqs_cardinality
             )
         else:
             raise ValueError(f"Invalid pairing")
-        sequence = ""
+        total_sequence = ""
+        Ls = []
         for sequence_index, sequence in enumerate(query_seqs_unique):
             for cardinality in range(0, query_seqs_cardinality[sequence_index]):
-                sequence += sequence
+                total_sequence += sequence
+                Ls.append(len(sequence))
 
-        input_feature = build_monomer_feature(sequence, a3m_lines,
-                                             template_features[sequence_index])
+        input_feature = build_monomer_feature(total_sequence, a3m_lines,
+                                              mk_mock_template(total_sequence))
+        input_feature["residue_index"] = chain_break(input_feature["residue_index"],Ls)
+        input_feature['asym_id'] = np.array([int(n) for n, l in enumerate(Ls) for i in range(0, l)])
     else:
         features_for_chain = {}
         chain_cnt = 0
@@ -745,9 +764,9 @@ def run(
             logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
             continue
         try:
-                input_features = generate_input_feature(query_seqs_unique, query_seqs_cardinality,
-                                                        unpaired_msa, paired_msa, template_features,
-                                                        is_complex, model_type)
+            input_features = generate_input_feature(query_seqs_unique, query_seqs_cardinality,
+                                                    unpaired_msa, paired_msa, template_features,
+                                                    is_complex, model_type)
         except Exception as e:
             logger.exception(f"Could not generate input features {jobname}: {e}")
             continue
@@ -759,6 +778,7 @@ def run(
                 is_complex,
                 sequences_lengths=query_sequence_len_array,
                 crop_len=crop_len,
+                model_type=model_type,
                 model_runner_and_params=model_runner_and_params,
                 do_relax=use_amber,
                 rank_by=rank_mode,
