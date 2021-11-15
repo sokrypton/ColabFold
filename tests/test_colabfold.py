@@ -21,7 +21,6 @@ from colabfold.download import download_alphafold_params
 # Copy the original method before mocking
 original_run_model = RunModel.predict
 
-
 class MockRunModel:
     """Mocks FeatureDict -> prediction
 
@@ -64,7 +63,8 @@ class MockRunModel:
 
         for input_fix, prediction in self.known_inputs:
             try:
-                numpy.testing.assert_equal(feat, input_fix)
+                for key in input_fix.keys():
+                    numpy.testing.assert_almost_equal(feat[key], input_fix[key])
                 # TODO: Also mock (recycles,tol) from the patches
                 if is_complex:
                     # noinspection PyUnresolvedReferences
