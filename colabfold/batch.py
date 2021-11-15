@@ -664,12 +664,7 @@ def run(
     data_dir = Path(data_dir)
     result_dir = Path(result_dir)
     result_dir.mkdir(exist_ok=True)
-
-    if model_type == "auto" and is_complex:
-        model_type = "AlphaFold2-multimer"
-    elif model_type == "auto" and not is_complex:
-        model_type = "AlphaFold2"
-
+    model_type = set_model_type(is_complex, model_type)
     if model_type == "AlphaFold2-multimer":
         model_extension = "_multimer"
     if model_type == "AlphaFold2":
@@ -805,6 +800,14 @@ def run(
     logger.info("Done")
 
 
+def set_model_type(is_complex: bool, model_type: str):
+    if model_type == "auto" and is_complex:
+        model_type = "AlphaFold2-multimer"
+    elif model_type == "auto" and not is_complex:
+        model_type = "AlphaFold2"
+    return model_type
+
+
 def main():
     parser = ArgumentParser()
     parser.add_argument(
@@ -931,7 +934,8 @@ def main():
         sys.exit(1)
 
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
-    download_alphafold_params(is_complex, data_dir)
+    model_type = set_model_type(is_complex, model_type)
+    download_alphafold_params(model_type, model_type, data_dir)
     uses_api = any((query[2] is None for query in queries))
     if uses_api and args.host_url == DEFAULT_API_SERVER:
         print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
