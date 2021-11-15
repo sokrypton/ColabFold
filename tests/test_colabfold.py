@@ -21,6 +21,7 @@ from colabfold.download import download_alphafold_params
 # Copy the original method before mocking
 original_run_model = RunModel.predict
 
+
 class MockRunModel:
     """Mocks FeatureDict -> prediction
 
