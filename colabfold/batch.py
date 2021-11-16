@@ -34,9 +34,15 @@ from alphafold.model import model
 from colabfold.alphafold.models import load_models_and_params
 from colabfold.alphafold.msa import make_fixed_size
 from colabfold.citations import write_bibtex
-from colabfold.colabfold import run_mmseqs2, chain_break
+from colabfold.colabfold import (
+    run_mmseqs2,
+    chain_break,
+    plot_paes,
+    plot_plddts,
+    plot_dists,
+)
+from colabfold.plot import plot_msa
 from colabfold.download import download_alphafold_params, default_data_dir
-from colabfold.plot import plot_predicted_alignment_error, plot_lddt
 from colabfold.utils import (
     setup_logging,
     safe_filename,
@@ -258,24 +264,24 @@ def predict_structure(
         model_rank = np.mean(plddts, -1).argsort()[::-1]
     out = {}
     logger.info("reranking models based on avg. predicted lDDT")
-    for n, r in enumerate(model_rank):
+    for n, key in enumerate(model_rank):
         unrelaxed_pdb_path = result_dir.joinpath(
-            f"{prefix}_unrelaxed_{model_names[r]}_rank_{n + 1}.pdb"
+            f"{prefix}_unrelaxed_{model_names[key]}_rank_{n + 1}.pdb"
         )
-        unrelaxed_pdb_path.write_text(unrelaxed_pdb_lines[r])
+        unrelaxed_pdb_path.write_text(unrelaxed_pdb_lines[key])
 
         if do_relax:
             relaxed_pdb_path = result_dir.joinpath(
-                f"{prefix}_relaxed_{model_names[r]}_rank_{n + 1}.pdb"
+                f"{prefix}_relaxed_{model_names[key]}_rank_{n + 1}.pdb"
             )
-            relaxed_pdb_path.write_text(relaxed_pdb_lines[r])
+            relaxed_pdb_path.write_text(relaxed_pdb_lines[key])
 
-        out[f"model_{n + 1}"] = {
-            "plddt": plddts[r],
-            "pae": paes[r],
+        out[key] = {
+            "plddt": np.asarray(plddts[key]),
+            "pae": np.asarray(paes[key]),
             "pTMscore": ptmscore,
         }
-    return out
+    return out, model_rank
 
 
 def get_queries(
@@ -776,7 +782,7 @@ def run(
             logger.exception(f"Could not generate input features {jobname}: {e}")
             continue
         try:
-            outs = predict_structure(
+            outs, model_rank = predict_structure(
                 jobname,
                 result_dir,
                 input_features,
@@ -793,10 +799,25 @@ def run(
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
             logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
             continue
-        plot_lddt(
-            jobname, input_features["msa"], outs, input_features["msa"][0], result_dir
+
+        msa_plot = plot_msa(
+            input_features["msa"],
+            input_features["msa"][0],
+            query_sequence_len_array,
+            query_sequence_len,
         )
-        plot_predicted_alignment_error(jobname, num_models, outs, result_dir)
+        msa_plot.savefig(str(result_dir.joinpath(jobname + "_coverage.png")))
+        msa_plot.close()
+        paes_plot = plot_paes(
+            [outs[k]["pae"] for k in model_rank], Ls=query_sequence_len_array, dpi=100
+        )
+        paes_plot.savefig(str(result_dir.joinpath(jobname + "_PAE.png")))
+        paes_plot.close()
+        plddt_plot = plot_plddts(
+            [outs[k]["plddt"] for k in model_rank], Ls=query_sequence_len_array, dpi=100
+        )
+        plddt_plot.savefig(str(result_dir.joinpath(jobname + "_plDDT.png")))
+        plddt_plot.close()
     logger.info("Done")
 
 
