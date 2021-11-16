@@ -206,7 +206,7 @@ def prepare_prediction_test(caplog):
     absl_logging.set_verbosity("error")
     # We'll also want to mock that out later
     download_alphafold_params("AlphaFold2-multimer")
-    download_alphafold_params("AlphaFold2")
+    download_alphafold_params("AlphaFold2-ptm")
     # alphafold uses a method called `make_random_seed`, which deterministically starts with a seed
     # of zero and increases it by one for each protein. This means the input features would become
     # dependent on the number and order of tests. Here we just reset the seed to 0
@@ -387,7 +387,7 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path):
             use_templates=False,
             use_amber=False,
             msa_mode="MMseqs2 (UniRef+Environmental)",
-            model_type="AlphaFold2",
+            model_type="AlphaFold2-ptm",
             num_models=1,
             num_recycles=3,
             model_order=[1, 2, 3, 4, 5],
@@ -433,7 +433,7 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path):
             use_templates=False,
             use_amber=False,
             msa_mode="MMseqs2 (UniRef+Environmental)",
-            model_type="AlphaFold2",
+            model_type="AlphaFold2-ptm",
             num_models=1,
             num_recycles=3,
             model_order=[1, 2, 3, 4, 5],

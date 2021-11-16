@@ -108,7 +108,7 @@ def write_bibtex(
     bibtex_file: str = "cite.bibtex",
 ):
     to_cite = ["Mirdita2021"]
-    if model == "AlphaFold2":
+    if model == "AlphaFold2-ptm":
         to_cite += ["Jumper2021"]
     if model == "AlphaFold2-multimer":
         to_cite += ["Evans2021"]

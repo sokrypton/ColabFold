@@ -200,7 +200,7 @@ def predict_structure(
         )
         final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
         b_factors = prediction_result["plddt"][:, None] * final_atom_mask
-        if is_complex and model_type == "AlphaFold2":
+        if is_complex and model_type == "AlphaFold2-ptm":
             input["asym_id"] = feature_dict["asym_id"]
             input["aatype"] = input["aatype"][0]
             input["residue_index"] = input["residue_index"][0]
@@ -211,6 +211,7 @@ def predict_structure(
                 input["residue_index"][i - 1] = curr_residue_index
                 curr_residue_index += 1
             input["residue_index"][input["aatype"].shape[0] - 1] = curr_residue_index
+
         unrelaxed_protein = protein.from_prediction(
             features=input,
             result=prediction_result,
@@ -590,7 +591,7 @@ def generate_input_feature(
     model_type: str,
 ):
     input_feature = {}
-    if is_complex and model_type == "AlphaFold2":
+    if is_complex and model_type == "AlphaFold2-ptm":
         if paired_msa == None and unpaired_msa != None:
             a3m_lines = pad_sequences(
                 unpaired_msa, query_seqs_unique, query_seqs_cardinality
@@ -673,7 +674,7 @@ def run(
     model_type = set_model_type(is_complex, model_type)
     if model_type == "AlphaFold2-multimer":
         model_extension = "_multimer"
-    if model_type == "AlphaFold2":
+    if model_type == "AlphaFold2-ptm":
         model_extension = "_ptm"
 
     # Record the parameters of this run
@@ -809,15 +810,16 @@ def run(
         msa_plot.savefig(str(result_dir.joinpath(jobname + "_coverage.png")))
         msa_plot.close()
         paes_plot = plot_paes(
-            [outs[k]["pae"] for k in model_rank], Ls=query_sequence_len_array, dpi=100
+            [outs[k]["pae"] for k in model_rank], Ls=query_sequence_len_array, dpi=200
         )
         paes_plot.savefig(str(result_dir.joinpath(jobname + "_PAE.png")))
         paes_plot.close()
         plddt_plot = plot_plddts(
-            [outs[k]["plddt"] for k in model_rank], Ls=query_sequence_len_array, dpi=100
+            [outs[k]["plddt"] for k in model_rank], Ls=query_sequence_len_array, dpi=200
         )
-        plddt_plot.savefig(str(result_dir.joinpath(jobname + "_plDDT.png")))
+        plddt_plot.savefig(str(result_dir.joinpath(jobname + "_plddt.png")))
         plddt_plot.close()
+
     logger.info("Done")
 
 
@@ -825,7 +827,7 @@ def set_model_type(is_complex: bool, model_type: str):
     if model_type == "auto" and is_complex:
         model_type = "AlphaFold2-multimer"
     elif model_type == "auto" and not is_complex:
-        model_type = "AlphaFold2"
+        model_type = "AlphaFold2-ptm"
     return model_type
 
 
@@ -890,7 +892,7 @@ def main():
         'Auto will pick "AlphaFold2" (ptm) for structure predictions and "AlphaFold2-multimer" for complexes.',
         type=str,
         default="auto",
-        choices=["auto", "AlphaFold2", "AlphaFold2-multimer"],
+        choices=["auto", "AlphaFold2-ptm", "AlphaFold2-multimer"],
     )
 
     parser.add_argument(
