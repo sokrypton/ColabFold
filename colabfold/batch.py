@@ -207,10 +207,9 @@ def predict_structure(
             curr_residue_index = 0
             for i in range(1, input["aatype"].shape[0]):
                 if (input["residue_index"][i] - input["residue_index"][i - 1]) > 1:
-                    curr_residue_index = 0
-                input["residue_index"][i - 1] = curr_residue_index
+                    curr_residue_index = 1
+                input["residue_index"][i] = curr_residue_index
                 curr_residue_index += 1
-            input["residue_index"][input["aatype"].shape[0] - 1] = curr_residue_index
 
         unrelaxed_protein = protein.from_prediction(
             features=input,
