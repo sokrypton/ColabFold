@@ -299,9 +299,12 @@ def get_queries(
         elif input_path.suffix == ".fasta":
             (sequences, headers) = pipeline.parsers.parse_fasta(input_path.read_text())
             queries = [
-                (header, sequence.upper(), None)
+                (header, sequence.upper().split(":"), None)
                 for sequence, header in zip(sequences, headers)
             ]
+            for i in range(len(queries)):
+                if len(queries[i][1]) == 1:
+                    queries[i] = (queries[i][0], queries[i][1][0], None)
         else:
             raise ValueError(f"Unknown file format {input_path.suffix}")
     else:
