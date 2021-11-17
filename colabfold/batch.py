@@ -708,6 +708,7 @@ def run(
 
     model_runner_and_params = load_models_and_params(
         num_models,
+        use_templates,
         num_recycles,
         model_order,
         model_extension,
