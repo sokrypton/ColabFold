@@ -116,13 +116,14 @@ def batch_input(
     model_runner: model.RunModel,
     model_name: str,
     crop_len: int,
+    use_templates: bool,
 ) -> model.features.FeatureDict:
     model_config = model_runner.config
     eval_cfg = model_config.data.eval
     crop_feats = {k: [None] + v for k, v in dict(eval_cfg.feat).items()}
 
     # templates models
-    if model_name == "model_1" or model_name == "model_2":
+    if (model_name == "model_1" or model_name == "model_2") and use_templates:
         pad_msa_clusters = eval_cfg.max_msa_clusters - eval_cfg.max_templates
     else:
         pad_msa_clusters = eval_cfg.max_msa_clusters
@@ -146,6 +147,7 @@ def predict_structure(
     result_dir: Path,
     feature_dict: Dict[str, Any],
     is_complex: bool,
+    use_templates: bool,
     sequences_lengths: List[int],
     crop_len: int,
     model_type: str,
@@ -180,7 +182,8 @@ def predict_structure(
         )
         if is_complex == False:
             input = batch_input(
-                processed_feature_dict, model_runner, model_name, crop_len
+                processed_feature_dict, model_runner, model_name,
+                crop_len, use_templates
             )
         else:
             input = processed_feature_dict
@@ -788,6 +791,7 @@ def run(
                 result_dir,
                 input_features,
                 is_complex,
+                use_templates,
                 sequences_lengths=query_sequence_len_array,
                 crop_len=crop_len,
                 model_type=model_type,
