@@ -957,8 +957,8 @@ def main():
         sys.exit(1)
 
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
-    model_type = set_model_type(is_complex, model_type)
-    download_alphafold_params(model_type, model_type, data_dir)
+    model_type = set_model_type(is_complex, args.model_type)
+    download_alphafold_params(model_type, data_dir)
     uses_api = any((query[2] is None for query in queries))
     if uses_api and args.host_url == DEFAULT_API_SERVER:
         print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
@@ -973,7 +973,7 @@ def main():
         use_templates=args.templates,
         use_amber=args.amber,
         msa_mode=args.msa_mode,
-        model_type=args.model_type,
+        model_type=model_type,
         num_models=args.num_models,
         num_recycles=args.num_recycle,
         model_order=model_order,
