@@ -46,7 +46,9 @@ def load_models_and_params(
     else:
         models_need_compilation = [1, 3] if use_templates else [3]
         model_build_order = [3, 4, 5, 1, 2]
-        model_runner_and_params_build_order: [Tuple[str, model.RunModel, haiku.Params]] = []
+        model_runner_and_params_build_order: [
+            Tuple[str, model.RunModel, haiku.Params]
+        ] = []
         model_runner = None
         for model_number in model_build_order:
             if model_number in models_need_compilation:
@@ -63,14 +65,22 @@ def load_models_and_params(
                 model_runner = model.RunModel(
                     model_config,
                     data.get_model_haiku_params(
-                        model_name="model_1" + model_suffix, data_dir=str(data_dir)
+                        model_name="model_" + str(model_number) + model_suffix,
+                        data_dir=str(data_dir),
                     ),
                 )
             model_name = f"model_{model_number}"
             params = data.get_model_haiku_params(
                 model_name=model_name + model_suffix, data_dir=str(data_dir)
             )
-            model_runner_and_params_build_order.append((model_name, model_runner, params))
+            # keep only parameters of compiled model
+            params_subset = {}
+            for k in model_runner.params.keys():
+                params_subset[k] = params[k]
+
+            model_runner_and_params_build_order.append(
+                (model_name, model_runner, params_subset)
+            )
         # reorder model
         for n, model_number in enumerate(model_order):
             if n == num_models:

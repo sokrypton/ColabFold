@@ -182,8 +182,11 @@ def predict_structure(
         )
         if is_complex == False:
             input = batch_input(
-                processed_feature_dict, model_runner, model_name,
-                crop_len, use_templates
+                processed_feature_dict,
+                model_runner,
+                model_name,
+                crop_len,
+                use_templates,
             )
         else:
             input = processed_feature_dict
