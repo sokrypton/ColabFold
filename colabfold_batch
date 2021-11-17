@@ -1,3 +1,7 @@
+"""
+A script just for myself to run directly from the repo, you can ignore this one.
+"""
+
 # -*- coding: utf-8 -*-
 import re
 import sys
