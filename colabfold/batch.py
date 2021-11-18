@@ -2,6 +2,7 @@ import json
 import logging
 import math
 import random
+import os
 import sys
 import time
 from argparse import ArgumentParser
@@ -212,7 +213,7 @@ def predict_structure(
             from alphafold.common import residue_constants
 
             # Hack so that we don't need to download into the alphafold package itself
-            residue_constants.stereo_chemical_props_path = "stereo_chemical_props.txt"
+            residue_constants.stereo_chemical_props_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stereo_chemical_props.txt')
 
             # Remove the padding because unlike to_pdb() amber doesn't handle that
             remove_padding_mask = unrelaxed_protein.atom_mask.sum(axis=-1) > 0
