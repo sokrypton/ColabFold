@@ -349,7 +349,7 @@ def test_msa_serialization(pytestconfig, caplog, tmp_path):
         query_sequence_unique_ret,
         query_sequence_cardinality_ret,
         template,
-    ) = unserialize_msa(msa, query_sequence)
+    ) = unserialize_msa(msa.splitlines(), query_sequence)
     numpy.testing.assert_equal(
         numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment)
     )
@@ -392,7 +392,7 @@ def test_msa_serialization(pytestconfig, caplog, tmp_path):
         query_sequence_unique_ret,
         query_sequence_cardinality_ret,
         template,
-    ) = unserialize_msa(msa, query_sequence)
+    ) = unserialize_msa(msa.splitlines(), query_sequence)
     numpy.testing.assert_equal(
         numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment)
     )
@@ -428,7 +428,7 @@ def test_msa_serialization(pytestconfig, caplog, tmp_path):
         query_sequence_unique_ret,
         query_sequence_cardinality_ret,
         template,
-    ) = unserialize_msa(msa, query_sequence)
+    ) = unserialize_msa(msa.splitlines(), query_sequence)
     numpy.testing.assert_equal(
         numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment)
     )
@@ -461,7 +461,7 @@ def test_msa_serialization(pytestconfig, caplog, tmp_path):
         query_sequence_unique_ret,
         query_sequence_cardinality_ret,
         template,
-    ) = unserialize_msa(msa, query_sequence)
+    ) = unserialize_msa(msa.splitlines(), query_sequence)
 
     numpy.testing.assert_equal(
         numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment)
@@ -478,7 +478,7 @@ def test_msa_serialization(pytestconfig, caplog, tmp_path):
     )
 
     # a3m without header
-    unpaired_alignment = ">101\nAAAAAAAA\n>UP2\nAAAVVAAA\n>UP1\nA-CCcccVV-A\n"
+    unpaired_alignment = ">101\nAAAAAAAA\n>UP2\nAAAVVAAA\n>UP1\nA-CCcccVV-A"
     paired_alignment = None
     query_sequence = ["AAAAAAAA"]
     query_sequence_unique = ["AAAAAAAA"]
@@ -489,10 +489,10 @@ def test_msa_serialization(pytestconfig, caplog, tmp_path):
         query_sequence_unique_ret,
         query_sequence_cardinality_ret,
         template,
-    ) = unserialize_msa(unpaired_alignment, query_sequence)
+    ) = unserialize_msa(unpaired_alignment.splitlines(), query_sequence)
 
     numpy.testing.assert_equal(
-        numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment)
+        numpy.array(unpaired_alignment_ret), numpy.array([unpaired_alignment])
     )
     numpy.testing.assert_equal(
         numpy.array(paired_alignment_ret), numpy.array(paired_alignment)
@@ -512,7 +512,7 @@ def test_msa_serialization(pytestconfig, caplog, tmp_path):
         query_sequence_unique_ret,
         query_sequence_cardinality_ret,
         template,
-    ) = unserialize_msa(msa, "YYDPETGTWY")
+    ) = unserialize_msa(msa.splitlines(), "YYDPETGTWY")
     numpy.testing.assert_equal(
         numpy.array(unpaired_alignment_ret), numpy.array([">101\nYYDPETGTWY\n"])
     )

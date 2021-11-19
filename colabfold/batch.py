@@ -654,14 +654,13 @@ def generate_input_feature(
     return input_feature
 
 
-def unserialize_msa(a3m_lines, query_sequence):
-    if a3m_lines.startswith("#"):
-        a3m_line = a3m_lines.splitlines()
-        if len(a3m_line) < 3:
+def unserialize_msa(a3m_lines : List[str], query_sequence : List[str]):
+    if a3m_lines[0].startswith("#"):
+        if len(a3m_lines) < 3:
             raise ValueError(f"Unknown file format a3m")
-        query_seq_len = a3m_line[0][1:].split("\t")[0].split(",")
+        query_seq_len = a3m_lines[0][1:].split("\t")[0].split(",")
         query_seq_len = list(map(int, query_seq_len))
-        query_seqs_cardinality = a3m_line[0][1:].split("\t")[1].split(",")
+        query_seqs_cardinality = a3m_lines[0][1:].split("\t")[1].split(",")
         query_seqs_cardinality = list(map(int, query_seqs_cardinality))
         is_homooligomer = (
             True if len(query_seq_len) == 1 and query_seqs_cardinality[0] > 1 else False
@@ -676,15 +675,15 @@ def unserialize_msa(a3m_lines, query_sequence):
         # we store the a3m with cardinality of 1
         for n, query_len in enumerate(query_seq_len):
             query_seqs_unique.append(
-                a3m_line[2][prev_query_start : prev_query_start + query_len]
+                a3m_lines[2][prev_query_start : prev_query_start + query_len]
             )
             prev_query_start += query_len
         paired_msa = [""] * len(query_seq_len)
         unpaired_msa = [""] * len(query_seq_len)
         offset = 2 if is_homooligomer else 0
-        for i in range(1 + offset, len(a3m_line), 2):
-            header = a3m_line[i]
-            seq = a3m_line[i + 1]
+        for i in range(1 + offset, len(a3m_lines), 2):
+            header = a3m_lines[i]
+            seq = a3m_lines[i + 1]
             has_amino_acid = [False] * len(query_seq_len)
             seqs_line = []
             prev_pos = 0
@@ -727,16 +726,21 @@ def unserialize_msa(a3m_lines, query_sequence):
                 paired_msa[i] = ">" + str(num + i) + "\n" + query_seqs_unique[0] + "\n"
         if is_single_protein:
             paired_msa = None
+        template_features = []
+        for index in range(0, len(query_seqs_unique)):
+            template_feature = mk_mock_template(query_seqs_unique[index])
+            template_features.append(template_feature)
+
         return (
             unpaired_msa,
             paired_msa,
             query_seqs_unique,
             query_seqs_cardinality,
-            None,
+            template_features,
         )
     else:
         return (
-            [a3m_lines],
+            ["\n".join(a3m_lines)],
             None,
             query_sequence,
             [1],
