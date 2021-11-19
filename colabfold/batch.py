@@ -210,12 +210,15 @@ def predict_structure(
             input["asym_id"] = feature_dict["asym_id"]
             input["aatype"] = input["aatype"][0]
             input["residue_index"] = input["residue_index"][0]
-            curr_residue_index = 0
+            curr_residue_index = 1
+            res_index_array = input["residue_index"].copy()
+            res_index_array[0] = 0
             for i in range(1, input["aatype"].shape[0]):
                 if (input["residue_index"][i] - input["residue_index"][i - 1]) > 1:
-                    curr_residue_index = 1
-                input["residue_index"][i] = curr_residue_index
+                    curr_residue_index = 0
+                res_index_array[i] = curr_residue_index
                 curr_residue_index += 1
+            input["residue_index"] = res_index_array
 
         unrelaxed_protein = protein.from_prediction(
             features=input,
