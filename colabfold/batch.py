@@ -378,7 +378,7 @@ def pair_sequences(
         for i, line in enumerate(lines):
             if line.startswith(">"):
                 if n != 0:
-                    line = line.replace(">", "_", 1)
+                    line = line.replace(">", "\t", 1)
                 a3m_line_paired[i] = a3m_line_paired[i] + line
             else:
                 a3m_line_paired[i] = a3m_line_paired[i] + line * query_cardinality[n]
@@ -710,7 +710,7 @@ def unserialize_msa(a3m_lines, query_sequence):
                 and sum(has_amino_acid) == len(query_seq_len)
             ):
                 header_no_faster = header.replace(">", "")
-                header_no_faster_split = header_no_faster.split("_")
+                header_no_faster_split = header_no_faster.split("\t")
                 for j in range(0, len(seqs_line)):
                     paired_msa[j] += ">" + header_no_faster_split[j] + "\n"
                     paired_msa[j] += seqs_line[j] + "\n"
