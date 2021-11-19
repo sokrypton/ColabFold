@@ -293,6 +293,37 @@ def predict_structure(
     return out, model_rank
 
 
+def parse_fasta(fasta_string: str) -> Tuple[str, str]:
+    """Parses FASTA string and returns list of strings with amino-acid sequences.
+
+    Arguments:
+      fasta_string: The string contents of a FASTA file.
+
+    Returns:
+      A tuple of two lists:
+      * A list of sequences.
+      * A list of sequence descriptions taken from the comment lines. In the
+        same order as the sequences.
+    """
+    sequences = []
+    descriptions = []
+    index = -1
+    for line in fasta_string.splitlines():
+        line = line.strip()
+        if line.startswith("#"):
+            continue
+        if line.startswith(">"):
+            index += 1
+            descriptions.append(line[1:])  # Remove the '>' at the beginning.
+            sequences.append("")
+            continue
+        elif not line:
+            continue  # Skip blank lines.
+        sequences[index] += line
+
+    return sequences, descriptions
+
+
 def get_queries(
     input_path: Union[str, Path], sort_queries_by: str = "length"
 ) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
@@ -316,7 +347,7 @@ def get_queries(
                 if len(queries[i][1]) == 1:
                     queries[i] = (queries[i][0], queries[i][1][0], None)
         elif input_path.suffix == ".a3m":
-            (seqs, header) = pipeline.parsers.parse_fasta(input_path.read_text())
+            (seqs, header) = parse_fasta(input_path.read_text())
             if len(seqs) == 0:
                 raise ValueError(f"{input_path} is empty")
             query_sequence = seqs[0]
@@ -324,7 +355,7 @@ def get_queries(
             a3m_lines = [input_path.read_text()]
             queries = [(input_path.stem, query_sequence, a3m_lines)]
         elif input_path.suffix == ".fasta":
-            (sequences, headers) = pipeline.parsers.parse_fasta(input_path.read_text())
+            (sequences, headers) = parse_fasta(input_path.read_text())
             queries = [
                 (header, sequence.upper().split(":"), None)
                 for sequence, header in zip(sequences, headers)
@@ -340,7 +371,7 @@ def get_queries(
         for file in sorted(input_path.iterdir()):
             if not file.is_file():
                 continue
-            (seqs, header) = pipeline.parsers.parse_fasta(file.read_text())
+            (seqs, header) = parse_fasta(file.read_text())
             if len(seqs) == 0:
                 logger.error(f"{file} is empty")
                 continue
@@ -654,7 +685,12 @@ def generate_input_feature(
     return input_feature
 
 
-def unserialize_msa(a3m_lines : List[str], query_sequence : List[str]):
+def unserialize_msa(
+    a3m_lines: List[str], query_sequence: List[str]
+) -> Tuple[
+    Optional[List[str]], Optional[List[str]], List[str], List[int], Mapping[str, Any]
+]:
+    a3m_lines = a3m_lines[0].splitlines()
     if a3m_lines[0].startswith("#"):
         if len(a3m_lines) < 3:
             raise ValueError(f"Unknown file format a3m")
