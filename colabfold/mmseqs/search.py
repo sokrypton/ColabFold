@@ -6,6 +6,7 @@ Note: Untested and needs mmseqs compiled from source
 
 import logging
 import math
+import shutil
 import subprocess
 from argparse import ArgumentParser
 from pathlib import Path
@@ -110,6 +111,10 @@ def mmseqs_search(
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("res")])
     # @formatter:on
     # fmt: on
+
+    for file in base.glob("prof_res*"):
+        file.unlink()
+    shutil.rmtree(base.joinpath("tmp"))
 
 
 def main():
