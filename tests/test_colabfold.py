@@ -15,7 +15,7 @@ from tests.mock import MockRunModel, MMseqs2Mock
 
 
 # Without this, we're reading the params each time again which is slow
-@lru_cache
+@lru_cache(maxsize=None)
 def get_model_haiku_params_cached(model_name: str, data_dir: str) -> haiku.Params:
     return get_model_haiku_params(model_name, data_dir)
 
