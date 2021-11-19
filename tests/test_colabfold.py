@@ -5,6 +5,7 @@ from unittest import mock
 
 import haiku
 import pytest
+import numpy
 from absl import logging as absl_logging
 
 from alphafold.model.data import get_model_haiku_params
@@ -18,7 +19,6 @@ from tests.mock import MockRunModel, MMseqs2Mock
 @lru_cache(maxsize=None)
 def get_model_haiku_params_cached(model_name: str, data_dir: str) -> haiku.Params:
     return get_model_haiku_params(model_name, data_dir)
-
 
 @pytest.fixture
 def prediction_test(caplog):
@@ -38,6 +38,7 @@ def prediction_test(caplog):
         "alphafold.model.data.get_model_haiku_params", get_model_haiku_params_cached
     ):
         yield
+
 
 
 def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
@@ -72,7 +73,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
         "Found 5 citations for tools or databases",
         "Query 1/2: 5AWL_1 (length 10)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 94.2",
+        "model_1 took 0.0s with pLDDT 94.3",
         "reranking models based on avg. predicted lDDT",
         "Query 2/2: 6A5J (length 13)",
         "Running model_1",
@@ -133,7 +134,7 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
         "Found 2 citations for tools or databases",
         "Query 1/1: 5AWL_1 (length 10)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 94.2",
+        "model_1 took 0.0s with pLDDT 94.3",
         "reranking models based on avg. predicted lDDT",
         "Done",
     ]
@@ -230,7 +231,7 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
         "Found 5 citations for tools or databases",
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 91.6",
+        "model_1 took 0.0s with pLDDT 91.9",
         "reranking models based on avg. predicted lDDT",
         "Done",
     ]
@@ -322,3 +323,110 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
         "reranking models based on avg. predicted lDDT",
         "Done",
     ]
+
+
+def test_msa_serialization(pytestconfig, caplog, tmp_path):
+    from colabfold.batch import msa_to_str, unserialize_msa
+    # heteromer
+    unpaired_alignment = [">101\nAAAAAAAA\n>UP1\nAACCcccVVAA\n", ">102\nCCCC\n>UP1\nCCCC\n>UP2\nCaCaCC\n"]
+    paired_alignment = [">101\nAAAAAAAA\n>UP1\nVVaVVAAAA\n", ">102\nCCCC\n>UP2\nGGGG\n"]
+    query_sequence = ["AAAAAAAA", "AAAAAAAA", "CCCC"]
+    query_sequence_unique = ["AAAAAAAA", "CCCC"]
+    query_sequence_cardinality = [2,1]
+    msa = msa_to_str(unpaired_alignment, paired_alignment, query_sequence_unique, query_sequence_cardinality)
+    (unpaired_alignment_ret,
+     paired_alignment_ret,
+     query_sequence_unique_ret,
+     query_sequence_cardinality_ret,
+     template) = unserialize_msa(msa, query_sequence)
+    numpy.testing.assert_equal(numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment))
+    numpy.testing.assert_equal(numpy.array(paired_alignment_ret), numpy.array(paired_alignment))
+    numpy.testing.assert_equal(numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique))
+    numpy.testing.assert_equal(numpy.array(query_sequence_cardinality), numpy.array(query_sequence_cardinality_ret))
+
+    # heteromer three complex
+    unpaired_alignment = [">101\nAAAAAAAA\n>UP1\nAACCcccVVAA\n",
+                          ">102\nCCCC\n>UP1\nCCCC\n>UP2\nCaCaCC\n",
+                          ">103\nGGGG\n>UP1\nR--R\n",
+                          ">104\nW\n"]
+    paired_alignment = [">101\nAAAAAAAA\n>UP1\nVVaVVAAAA\n",
+                        ">102\nCCCC\n>UP2\nGGGG\n",
+                        ">103\nGGGG\n>UP3\nGGgGG\n",
+                        ">104\nW\n>UP4\nW\n"]
+    query_sequence = ["AAAAAAAA", "CCCC", "GGGG", "W", "W"]
+    query_sequence_unique = ["AAAAAAAA", "CCCC", "GGGG", "W"]
+    query_sequence_cardinality = [1, 1, 1, 2]
+    msa = msa_to_str(unpaired_alignment, paired_alignment, query_sequence_unique, query_sequence_cardinality)
+    (unpaired_alignment_ret,
+     paired_alignment_ret,
+     query_sequence_unique_ret,
+     query_sequence_cardinality_ret,
+     template) = unserialize_msa(msa, query_sequence)
+    numpy.testing.assert_equal(numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment))
+    numpy.testing.assert_equal(numpy.array(paired_alignment_ret), numpy.array(paired_alignment))
+    numpy.testing.assert_equal(numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique))
+    numpy.testing.assert_equal(numpy.array(query_sequence_cardinality), numpy.array(query_sequence_cardinality_ret))
+
+    # heteromer with unpaired
+    unpaired_alignment = [">101\nAAAAAAAA\n>UP1\nAACCcccVVAA\n", ">102\nCCCC\n>UP1\nCCCC\n>UP2\nCaCaCC\n"]
+    paired_alignment = [">101\nAAAAAAAA\n", ">102\nCCCC\n"]
+    query_sequence = ["AAAAAAAA", "CCCC", "CCCC"]
+    query_sequence_unique = ["AAAAAAAA", "CCCC"]
+    query_sequence_cardinality = [1, 2]
+    msa = msa_to_str(unpaired_alignment, paired_alignment, query_sequence_unique, query_sequence_cardinality)
+    (unpaired_alignment_ret,
+     paired_alignment_ret,
+     query_sequence_unique_ret,
+     query_sequence_cardinality_ret,
+     template) = unserialize_msa(msa, query_sequence)
+    numpy.testing.assert_equal(numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment))
+    numpy.testing.assert_equal(numpy.array(paired_alignment_ret), numpy.array(paired_alignment))
+    numpy.testing.assert_equal(numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique))
+    numpy.testing.assert_equal(numpy.array(query_sequence_cardinality), numpy.array(query_sequence_cardinality_ret))
+
+    # homooligomer
+    unpaired_alignment = [">101\nAAAAAAAA\n>UP2\nAAAVVAAA\n>UP1\nA-CCcccVV-A\n"]
+    paired_alignment = [">101\nAAAAAAAA\n", ">102\nAAAAAAAA\n"]
+    query_sequence = ["AAAAAAAA", "AAAAAAAA"]
+    query_sequence_unique = ["AAAAAAAA"]
+    query_sequence_cardinality = [2]
+    msa = msa_to_str(unpaired_alignment, paired_alignment, query_sequence_unique, query_sequence_cardinality)
+    (unpaired_alignment_ret,
+     paired_alignment_ret,
+     query_sequence_unique_ret,
+     query_sequence_cardinality_ret,
+     template) = unserialize_msa(msa, query_sequence)
+
+    numpy.testing.assert_equal(numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment))
+    numpy.testing.assert_equal(numpy.array(paired_alignment_ret), numpy.array(paired_alignment))
+    numpy.testing.assert_equal(numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique))
+    numpy.testing.assert_equal(numpy.array(query_sequence_cardinality), numpy.array(query_sequence_cardinality_ret))
+
+    # a3m without header
+    unpaired_alignment = ">101\nAAAAAAAA\n>UP2\nAAAVVAAA\n>UP1\nA-CCcccVV-A\n"
+    paired_alignment = None
+    query_sequence = ["AAAAAAAA"]
+    query_sequence_unique = ["AAAAAAAA"]
+    query_sequence_cardinality = [1]
+    (unpaired_alignment_ret,
+     paired_alignment_ret,
+     query_sequence_unique_ret,
+     query_sequence_cardinality_ret,
+     template) = unserialize_msa(unpaired_alignment, query_sequence)
+
+    numpy.testing.assert_equal(numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment))
+    numpy.testing.assert_equal(numpy.array(paired_alignment_ret), numpy.array(paired_alignment))
+    numpy.testing.assert_equal(numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique))
+    numpy.testing.assert_equal(numpy.array(query_sequence_cardinality), numpy.array(query_sequence_cardinality_ret))
+
+    msa = "#10\t1\n>101\nYYDPETGTWY"
+    (unpaired_alignment_ret,
+     paired_alignment_ret,
+     query_sequence_unique_ret,
+     query_sequence_cardinality_ret,
+     template) = unserialize_msa(msa, "YYDPETGTWY")
+    numpy.testing.assert_equal(numpy.array(unpaired_alignment_ret), numpy.array(['>101\nYYDPETGTWY\n']))
+    assert paired_alignment_ret == None
+    numpy.testing.assert_equal(numpy.array(query_sequence_unique_ret), numpy.array(["YYDPETGTWY"]))
+    numpy.testing.assert_equal(numpy.array(query_sequence_cardinality), numpy.array([1]))
+

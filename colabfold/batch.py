@@ -35,7 +35,12 @@ from alphafold.model import model
 from colabfold.alphafold.models import load_models_and_params
 from colabfold.alphafold.msa import make_fixed_size
 from colabfold.citations import write_bibtex
-from colabfold.colabfold import run_mmseqs2, chain_break, plot_paes, plot_plddts
+from colabfold.colabfold import (
+    run_mmseqs2,
+    chain_break,
+    plot_paes,
+    plot_plddts,
+)
 from colabfold.plot import plot_msa
 from colabfold.download import download_alphafold_params, default_data_dir
 from colabfold.utils import (
@@ -404,7 +409,6 @@ def pad_sequences(
 
 
 def get_msa_and_templates(
-    a3m_lines: Optional[str],
     jobname: str,
     query_sequences: Union[str, List[str]],
     result_dir: Path,
@@ -450,8 +454,6 @@ def get_msa_and_templates(
                     query_seqs_unique[index],
                 )
                 template_features.append(template_feature)
-        if not a3m_lines:
-            a3m_lines = a3m_lines_mmseqs2
     else:
         for index in range(0, len(query_seqs_unique)):
             template_feature = mk_mock_template(query_seqs_unique[index])
@@ -460,28 +462,27 @@ def get_msa_and_templates(
     if len(query_sequences) == 1:
         pair_mode = "none"
 
-    if not a3m_lines:
-        if (
-            pair_mode == "none"
-            or pair_mode == "unpaired"
-            or pair_mode == "unpaired+paired"
-        ):
-            if msa_mode == "single_sequence":
-                a3m_lines = []
-                num = 101
-                for i, seq in enumerate(query_seqs_unique):
-                    a3m_lines.append(">" + str(num + i) + "\n" + seq)
-            else:
-                # find normal a3ms
-                a3m_lines = run_mmseqs2(
-                    query_seqs_unique,
-                    str(result_dir.joinpath(jobname)),
-                    use_env,
-                    use_pairing=False,
-                    host_url=host_url,
-                )
+    if (
+        pair_mode == "none"
+        or pair_mode == "unpaired"
+        or pair_mode == "unpaired+paired"
+    ):
+        if msa_mode == "single_sequence":
+            a3m_lines = []
+            num = 101
+            for i, seq in enumerate(query_seqs_unique):
+                a3m_lines.append(">" + str(num + i) + "\n" + seq)
         else:
-            a3m_lines = None
+            # find normal a3ms
+            a3m_lines = run_mmseqs2(
+                query_seqs_unique,
+                str(result_dir.joinpath(jobname)),
+                use_env,
+                use_pairing=False,
+                host_url=host_url,
+            )
+    else:
+        a3m_lines = None
 
     if pair_mode == "paired" or pair_mode == "unpaired+paired":
         # find paired a3m if not a homooligomers
@@ -580,6 +581,26 @@ def process_multimer_features(features_for_chain):
     return np_example
 
 
+def pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa):
+    if paired_msa == None and unpaired_msa != None:
+        a3m_lines = pad_sequences(
+            unpaired_msa, query_seqs_unique, query_seqs_cardinality
+        )
+    elif paired_msa != None and unpaired_msa != None:
+        a3m_lines = (
+                pair_sequences(paired_msa, query_seqs_unique, query_seqs_cardinality)
+                + "\n"
+                + pad_sequences(unpaired_msa, query_seqs_unique, query_seqs_cardinality)
+        )
+    elif paired_msa != None and unpaired_msa == None:
+        a3m_lines = pair_sequences(
+            paired_msa, query_seqs_unique, query_seqs_cardinality
+        )
+    else:
+        raise ValueError(f"Invalid pairing")
+    return a3m_lines
+
+
 def generate_input_feature(
     query_seqs_unique: List[str],
     query_seqs_cardinality: List[int],
@@ -591,22 +612,7 @@ def generate_input_feature(
 ):
     input_feature = {}
     if is_complex and model_type == "AlphaFold2-ptm":
-        if paired_msa == None and unpaired_msa != None:
-            a3m_lines = pad_sequences(
-                unpaired_msa, query_seqs_unique, query_seqs_cardinality
-            )
-        elif paired_msa != None and unpaired_msa != None:
-            a3m_lines = (
-                pair_sequences(paired_msa, query_seqs_unique, query_seqs_cardinality)
-                + "\n"
-                + pad_sequences(unpaired_msa, query_seqs_unique, query_seqs_cardinality)
-            )
-        elif paired_msa != None and unpaired_msa == None:
-            a3m_lines = pair_sequences(
-                paired_msa, query_seqs_unique, query_seqs_cardinality
-            )
-        else:
-            raise ValueError(f"Invalid pairing")
+        a3m_lines = pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa)
         total_sequence = ""
         Ls = []
         for sequence_index, sequence in enumerate(query_seqs_unique):
@@ -645,6 +651,84 @@ def generate_input_feature(
         elif model_type == "AlphaFold2-multimer":
             input_feature = process_multimer_features(features_for_chain)
     return input_feature
+
+
+def unserialize_msa(a3m_lines, query_sequence):
+    if a3m_lines.startswith("#"):
+        a3m_line=a3m_lines.splitlines()
+        if len(a3m_line) < 3:
+            raise ValueError(f"Unknown file format a3m")
+        query_seq_len = a3m_line[0][1:].split("\t")[0].split(",")
+        query_seq_len = list(map(int, query_seq_len))
+        query_seqs_cardinality = a3m_line[0][1:].split("\t")[1].split(",")
+        query_seqs_cardinality = list(map(int, query_seqs_cardinality))
+        is_homooligomer = True if len(query_seq_len) == 1 and query_seqs_cardinality[0] > 1 else False
+        is_single_protein = True if len(query_seq_len) == 1 and query_seqs_cardinality[0] == 1 else False
+        query_seqs_unique = []
+        prev_query_start = 0
+        # we store the a3m with cardinality of 1
+        for n,query_len in enumerate(query_seq_len):
+            query_seqs_unique.append(a3m_line[2][prev_query_start:prev_query_start + query_len])
+            prev_query_start += query_len
+        paired_msa = [""] * len(query_seq_len)
+        unpaired_msa = [""] * len(query_seq_len)
+        offset = 2 if is_homooligomer else 0
+        for i in range(1+offset, len(a3m_line), 2):
+            header = a3m_line[i]
+            seq = a3m_line[i + 1]
+            has_amino_acid = [False] * len(query_seq_len)
+            seqs_line = []
+            prev_pos = 0
+            for n, query_len in enumerate(query_seq_len):
+                paired_seq = ""
+                curr_seq_len = 0
+                for pos in range(prev_pos, len(seq)):
+                    if curr_seq_len == query_len:
+                        prev_pos = pos
+                        break
+                    paired_seq += seq[pos]
+                    if seq[pos].islower():
+                        continue
+                    if seq[pos] != '-':
+                        has_amino_acid[n] = True
+                    curr_seq_len += 1
+                seqs_line.append(paired_seq)
+
+            # is sequence is paired add them to output
+            if is_single_protein == False and is_homooligomer == False \
+                and sum(has_amino_acid) == len(query_seq_len):
+                header_no_faster = header.replace(">","")
+                header_no_faster_split = header_no_faster.split("_")
+                for j in range(0, len(seqs_line)):
+                    paired_msa[j] += ">" +header_no_faster_split[j] + "\n"
+                    paired_msa[j] += seqs_line[j] + "\n"
+            else:
+                for j, seq in enumerate(seqs_line):
+                    if has_amino_acid[j]:
+                        unpaired_msa[j] += header + "\n"
+                        unpaired_msa[j] += seq + "\n"
+        if is_homooligomer:
+            # homooligomers
+            num = 101
+            paired_msa = [""] * query_seqs_cardinality[0]
+            for i in range(0, query_seqs_cardinality[0]):
+                paired_msa[i] = ">" + str(num + i) + "\n" + query_seqs_unique[0] + "\n"
+        if is_single_protein:
+            paired_msa = None
+        return (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, None)
+    else:
+        return ([a3m_lines],None,query_sequence,[1],[mk_mock_template(query_sequence)])
+    pass
+
+
+def msa_to_str(unpaired_msa: List[str], paired_msa: List[str],
+               query_seqs_unique: List[str], query_seqs_cardinality: List[int]):
+    msa = "#" + ','.join(map(str, map(len, query_seqs_unique))) + "\t"
+    msa += ','.join(map(str, query_seqs_cardinality)) + "\n"
+    # build msa with cardinality of 1, it makes it easier to parse and manipulate
+    query_seqs_cardinality = [1 for i in query_seqs_cardinality]
+    msa += pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa)
+    return msa
 
 
 def run(
@@ -752,22 +836,32 @@ def run(
         if query_sequence_len > crop_len:
             crop_len = math.ceil(query_sequence_len * recompile_padding)
         try:
-            (
-                unpaired_msa,
-                paired_msa,
-                query_seqs_unique,
-                query_seqs_cardinality,
-                template_features,
-            ) = get_msa_and_templates(
-                a3m_lines,
-                jobname,
-                query_sequence,
-                result_dir,
-                msa_mode,
-                use_templates,
-                pair_mode,
-                host_url,
-            )
+            if a3m_lines != None:
+                (
+                    unpaired_msa,
+                    paired_msa,
+                    query_seqs_unique,
+                    query_seqs_cardinality,
+                    template_features,
+                ) = unserialize_msa(a3m_lines, query_sequence)
+            else:
+                (
+                    unpaired_msa,
+                    paired_msa,
+                    query_seqs_unique,
+                    query_seqs_cardinality,
+                    template_features,
+                ) = get_msa_and_templates(
+                    jobname,
+                    query_sequence,
+                    result_dir,
+                    msa_mode,
+                    use_templates,
+                    pair_mode,
+                    host_url,
+                )
+            msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
+            result_dir.joinpath(jobname + ".a3m").write_text(msa)
         except Exception as e:
             logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
             continue

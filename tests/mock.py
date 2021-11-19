@@ -60,6 +60,10 @@ class MockRunModel:
             with lzma.open(input_fix_file) as fp:
                 pickle.dump(feat_no_msa, fp)
             prediction, (_, _) = original_run_model(model_runner, feat)
+            del prediction["distogram"]
+            del prediction["experimentally_resolved"]
+            del prediction["masked_msa"]
+            del prediction["aligned_confidence_probs"]
             with lzma.open(prediction_file) as fp:
                 pickle.dump(prediction, fp)
 
