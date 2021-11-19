@@ -20,6 +20,7 @@ from tests.mock import MockRunModel, MMseqs2Mock
 def get_model_haiku_params_cached(model_name: str, data_dir: str) -> haiku.Params:
     return get_model_haiku_params(model_name, data_dir)
 
+
 @pytest.fixture
 def prediction_test(caplog):
     caplog.set_level(logging.INFO)
@@ -38,7 +39,6 @@ def prediction_test(caplog):
         "alphafold.model.data.get_model_haiku_params", get_model_haiku_params_cached
     ):
         yield
-
 
 
 def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
@@ -327,62 +327,121 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
 
 def test_msa_serialization(pytestconfig, caplog, tmp_path):
     from colabfold.batch import msa_to_str, unserialize_msa
+
     # heteromer
-    unpaired_alignment = [">101\nAAAAAAAA\n>UP1\nAACCcccVVAA\n", ">102\nCCCC\n>UP1\nCCCC\n>UP2\nCaCaCC\n"]
+    unpaired_alignment = [
+        ">101\nAAAAAAAA\n>UP1\nAACCcccVVAA\n",
+        ">102\nCCCC\n>UP1\nCCCC\n>UP2\nCaCaCC\n",
+    ]
     paired_alignment = [">101\nAAAAAAAA\n>UP1\nVVaVVAAAA\n", ">102\nCCCC\n>UP2\nGGGG\n"]
     query_sequence = ["AAAAAAAA", "AAAAAAAA", "CCCC"]
     query_sequence_unique = ["AAAAAAAA", "CCCC"]
-    query_sequence_cardinality = [2,1]
-    msa = msa_to_str(unpaired_alignment, paired_alignment, query_sequence_unique, query_sequence_cardinality)
-    (unpaired_alignment_ret,
-     paired_alignment_ret,
-     query_sequence_unique_ret,
-     query_sequence_cardinality_ret,
-     template) = unserialize_msa(msa, query_sequence)
-    numpy.testing.assert_equal(numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment))
-    numpy.testing.assert_equal(numpy.array(paired_alignment_ret), numpy.array(paired_alignment))
-    numpy.testing.assert_equal(numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique))
-    numpy.testing.assert_equal(numpy.array(query_sequence_cardinality), numpy.array(query_sequence_cardinality_ret))
+    query_sequence_cardinality = [2, 1]
+    msa = msa_to_str(
+        unpaired_alignment,
+        paired_alignment,
+        query_sequence_unique,
+        query_sequence_cardinality,
+    )
+    (
+        unpaired_alignment_ret,
+        paired_alignment_ret,
+        query_sequence_unique_ret,
+        query_sequence_cardinality_ret,
+        template,
+    ) = unserialize_msa(msa, query_sequence)
+    numpy.testing.assert_equal(
+        numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(paired_alignment_ret), numpy.array(paired_alignment)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(query_sequence_cardinality),
+        numpy.array(query_sequence_cardinality_ret),
+    )
 
     # heteromer three complex
-    unpaired_alignment = [">101\nAAAAAAAA\n>UP1\nAACCcccVVAA\n",
-                          ">102\nCCCC\n>UP1\nCCCC\n>UP2\nCaCaCC\n",
-                          ">103\nGGGG\n>UP1\nR--R\n",
-                          ">104\nW\n"]
-    paired_alignment = [">101\nAAAAAAAA\n>UP1\nVVaVVAAAA\n",
-                        ">102\nCCCC\n>UP2\nGGGG\n",
-                        ">103\nGGGG\n>UP3\nGGgGG\n",
-                        ">104\nW\n>UP4\nW\n"]
+    unpaired_alignment = [
+        ">101\nAAAAAAAA\n>UP1\nAACCcccVVAA\n",
+        ">102\nCCCC\n>UP1\nCCCC\n>UP2\nCaCaCC\n",
+        ">103\nGGGG\n>UP1\nR--R\n",
+        ">104\nW\n",
+    ]
+    paired_alignment = [
+        ">101\nAAAAAAAA\n>UP1\nVVaVVAAAA\n",
+        ">102\nCCCC\n>UP2\nGGGG\n",
+        ">103\nGGGG\n>UP3\nGGgGG\n",
+        ">104\nW\n>UP4\nW\n",
+    ]
     query_sequence = ["AAAAAAAA", "CCCC", "GGGG", "W", "W"]
     query_sequence_unique = ["AAAAAAAA", "CCCC", "GGGG", "W"]
     query_sequence_cardinality = [1, 1, 1, 2]
-    msa = msa_to_str(unpaired_alignment, paired_alignment, query_sequence_unique, query_sequence_cardinality)
-    (unpaired_alignment_ret,
-     paired_alignment_ret,
-     query_sequence_unique_ret,
-     query_sequence_cardinality_ret,
-     template) = unserialize_msa(msa, query_sequence)
-    numpy.testing.assert_equal(numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment))
-    numpy.testing.assert_equal(numpy.array(paired_alignment_ret), numpy.array(paired_alignment))
-    numpy.testing.assert_equal(numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique))
-    numpy.testing.assert_equal(numpy.array(query_sequence_cardinality), numpy.array(query_sequence_cardinality_ret))
+    msa = msa_to_str(
+        unpaired_alignment,
+        paired_alignment,
+        query_sequence_unique,
+        query_sequence_cardinality,
+    )
+    (
+        unpaired_alignment_ret,
+        paired_alignment_ret,
+        query_sequence_unique_ret,
+        query_sequence_cardinality_ret,
+        template,
+    ) = unserialize_msa(msa, query_sequence)
+    numpy.testing.assert_equal(
+        numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(paired_alignment_ret), numpy.array(paired_alignment)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(query_sequence_cardinality),
+        numpy.array(query_sequence_cardinality_ret),
+    )
 
     # heteromer with unpaired
-    unpaired_alignment = [">101\nAAAAAAAA\n>UP1\nAACCcccVVAA\n", ">102\nCCCC\n>UP1\nCCCC\n>UP2\nCaCaCC\n"]
+    unpaired_alignment = [
+        ">101\nAAAAAAAA\n>UP1\nAACCcccVVAA\n",
+        ">102\nCCCC\n>UP1\nCCCC\n>UP2\nCaCaCC\n",
+    ]
     paired_alignment = [">101\nAAAAAAAA\n", ">102\nCCCC\n"]
     query_sequence = ["AAAAAAAA", "CCCC", "CCCC"]
     query_sequence_unique = ["AAAAAAAA", "CCCC"]
     query_sequence_cardinality = [1, 2]
-    msa = msa_to_str(unpaired_alignment, paired_alignment, query_sequence_unique, query_sequence_cardinality)
-    (unpaired_alignment_ret,
-     paired_alignment_ret,
-     query_sequence_unique_ret,
-     query_sequence_cardinality_ret,
-     template) = unserialize_msa(msa, query_sequence)
-    numpy.testing.assert_equal(numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment))
-    numpy.testing.assert_equal(numpy.array(paired_alignment_ret), numpy.array(paired_alignment))
-    numpy.testing.assert_equal(numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique))
-    numpy.testing.assert_equal(numpy.array(query_sequence_cardinality), numpy.array(query_sequence_cardinality_ret))
+    msa = msa_to_str(
+        unpaired_alignment,
+        paired_alignment,
+        query_sequence_unique,
+        query_sequence_cardinality,
+    )
+    (
+        unpaired_alignment_ret,
+        paired_alignment_ret,
+        query_sequence_unique_ret,
+        query_sequence_cardinality_ret,
+        template,
+    ) = unserialize_msa(msa, query_sequence)
+    numpy.testing.assert_equal(
+        numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(paired_alignment_ret), numpy.array(paired_alignment)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(query_sequence_cardinality),
+        numpy.array(query_sequence_cardinality_ret),
+    )
 
     # homooligomer
     unpaired_alignment = [">101\nAAAAAAAA\n>UP2\nAAAVVAAA\n>UP1\nA-CCcccVV-A\n"]
@@ -390,17 +449,33 @@ def test_msa_serialization(pytestconfig, caplog, tmp_path):
     query_sequence = ["AAAAAAAA", "AAAAAAAA"]
     query_sequence_unique = ["AAAAAAAA"]
     query_sequence_cardinality = [2]
-    msa = msa_to_str(unpaired_alignment, paired_alignment, query_sequence_unique, query_sequence_cardinality)
-    (unpaired_alignment_ret,
-     paired_alignment_ret,
-     query_sequence_unique_ret,
-     query_sequence_cardinality_ret,
-     template) = unserialize_msa(msa, query_sequence)
+    msa = msa_to_str(
+        unpaired_alignment,
+        paired_alignment,
+        query_sequence_unique,
+        query_sequence_cardinality,
+    )
+    (
+        unpaired_alignment_ret,
+        paired_alignment_ret,
+        query_sequence_unique_ret,
+        query_sequence_cardinality_ret,
+        template,
+    ) = unserialize_msa(msa, query_sequence)
 
-    numpy.testing.assert_equal(numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment))
-    numpy.testing.assert_equal(numpy.array(paired_alignment_ret), numpy.array(paired_alignment))
-    numpy.testing.assert_equal(numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique))
-    numpy.testing.assert_equal(numpy.array(query_sequence_cardinality), numpy.array(query_sequence_cardinality_ret))
+    numpy.testing.assert_equal(
+        numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(paired_alignment_ret), numpy.array(paired_alignment)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(query_sequence_cardinality),
+        numpy.array(query_sequence_cardinality_ret),
+    )
 
     # a3m without header
     unpaired_alignment = ">101\nAAAAAAAA\n>UP2\nAAAVVAAA\n>UP1\nA-CCcccVV-A\n"
@@ -408,25 +483,43 @@ def test_msa_serialization(pytestconfig, caplog, tmp_path):
     query_sequence = ["AAAAAAAA"]
     query_sequence_unique = ["AAAAAAAA"]
     query_sequence_cardinality = [1]
-    (unpaired_alignment_ret,
-     paired_alignment_ret,
-     query_sequence_unique_ret,
-     query_sequence_cardinality_ret,
-     template) = unserialize_msa(unpaired_alignment, query_sequence)
+    (
+        unpaired_alignment_ret,
+        paired_alignment_ret,
+        query_sequence_unique_ret,
+        query_sequence_cardinality_ret,
+        template,
+    ) = unserialize_msa(unpaired_alignment, query_sequence)
 
-    numpy.testing.assert_equal(numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment))
-    numpy.testing.assert_equal(numpy.array(paired_alignment_ret), numpy.array(paired_alignment))
-    numpy.testing.assert_equal(numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique))
-    numpy.testing.assert_equal(numpy.array(query_sequence_cardinality), numpy.array(query_sequence_cardinality_ret))
+    numpy.testing.assert_equal(
+        numpy.array(unpaired_alignment_ret), numpy.array(unpaired_alignment)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(paired_alignment_ret), numpy.array(paired_alignment)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique)
+    )
+    numpy.testing.assert_equal(
+        numpy.array(query_sequence_cardinality),
+        numpy.array(query_sequence_cardinality_ret),
+    )
 
     msa = "#10\t1\n>101\nYYDPETGTWY"
-    (unpaired_alignment_ret,
-     paired_alignment_ret,
-     query_sequence_unique_ret,
-     query_sequence_cardinality_ret,
-     template) = unserialize_msa(msa, "YYDPETGTWY")
-    numpy.testing.assert_equal(numpy.array(unpaired_alignment_ret), numpy.array(['>101\nYYDPETGTWY\n']))
+    (
+        unpaired_alignment_ret,
+        paired_alignment_ret,
+        query_sequence_unique_ret,
+        query_sequence_cardinality_ret,
+        template,
+    ) = unserialize_msa(msa, "YYDPETGTWY")
+    numpy.testing.assert_equal(
+        numpy.array(unpaired_alignment_ret), numpy.array([">101\nYYDPETGTWY\n"])
+    )
     assert paired_alignment_ret == None
-    numpy.testing.assert_equal(numpy.array(query_sequence_unique_ret), numpy.array(["YYDPETGTWY"]))
-    numpy.testing.assert_equal(numpy.array(query_sequence_cardinality), numpy.array([1]))
-
+    numpy.testing.assert_equal(
+        numpy.array(query_sequence_unique_ret), numpy.array(["YYDPETGTWY"])
+    )
+    numpy.testing.assert_equal(
+        numpy.array(query_sequence_cardinality), numpy.array([1])
+    )
