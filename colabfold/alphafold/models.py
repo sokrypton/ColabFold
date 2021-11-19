@@ -9,7 +9,7 @@ from alphafold.model import model, config, data
 def load_models_and_params(
     num_models: int,
     use_templates: bool,
-    num_recycle: bool = 3,
+    num_recycle: int = 3,
     model_order: Optional[List[int]] = None,
     model_suffix: str = "_ptm",
     data_dir: Path = Path("."),

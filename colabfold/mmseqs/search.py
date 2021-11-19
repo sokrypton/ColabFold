@@ -122,6 +122,14 @@ def main():
     parser.add_argument("query", type=Path)
     parser.add_argument("dbbase", type=Path)
     parser.add_argument("base", type=Path)
+    parser.add_argument(
+        "-s",
+        type=int,
+        default=8,
+        help="mmseqs sensitivity. Lowering this will result in a much faster search",
+    )
+    # dbs are uniref, templates and environmental
+    # We normally don't use templates
     parser.add_argument("--db1", type=Path, default=Path("uniref30_2103_db"))
     parser.add_argument("--db2", type=Path, default=Path(""))
     parser.add_argument("--db3", type=Path, default=Path("colabfold_envdb_202108_db"))
@@ -135,7 +143,6 @@ def main():
     parser.add_argument("--diff", type=int, default=3000)
     parser.add_argument("--qsc", type=float, default=-20.0)
     parser.add_argument("--max-accept", type=int, default=1000000)
-    parser.add_argument("-s", type=int, default=8)
     parser.add_argument("-db-load-mode", type=int, default=2)
     args = parser.parse_args()
 
