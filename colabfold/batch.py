@@ -900,24 +900,16 @@ def run(
             logger.info(f"Skipping {jobname} (already done)")
             continue
 
-        query_sequence_len_array = (
-            [len(query_sequence)]
-            if isinstance(query_sequence, str)
-            else [len(q) for q in query_sequence]
-        )
-
-        logger.info(
-            f"Query {job_number + 1}/{len(queries)}: {jobname} (length {sum(query_sequence_len_array)})"
-        )
-
         query_sequence_len = (
             len(query_sequence)
             if isinstance(query_sequence, str)
             else sum(len(s) for s in query_sequence)
         )
+        logger.info(
+            f"Query {job_number + 1}/{len(queries)}: {jobname} (length {query_sequence_len})"
+        )
 
-        if query_sequence_len > crop_len:
-            crop_len = math.ceil(query_sequence_len * recompile_padding)
+
         try:
             if a3m_lines != None:
                 (
@@ -964,6 +956,15 @@ def run(
             logger.exception(f"Could not generate input features {jobname}: {e}")
             continue
         try:
+            query_sequence_len_array = [
+                len(query_seqs_unique[i])
+                for i, cardinality in enumerate(query_seqs_cardinality)
+                for i in range(0, cardinality)
+            ]
+
+            if sum(query_sequence_len_array) > crop_len:
+                crop_len = math.ceil(sum(query_sequence_len_array) * recompile_padding)
+
             outs, model_rank = predict_structure(
                 jobname,
                 result_dir,
