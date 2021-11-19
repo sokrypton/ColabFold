@@ -400,18 +400,20 @@ def get_queries(
         if a3m_lines != None:
             if a3m_lines[0].startswith("#"):
                 a3m_line = a3m_lines[0].splitlines()[0]
-                query_seq_len = a3m_line[1:].split("\t")[0].split(",")
-                query_seq_len = list(map(int, query_seq_len))
-                query_seqs_cardinality = a3m_line[1:].split("\t")[1].split(",")
-                query_seqs_cardinality = list(map(int, query_seqs_cardinality))
-                is_single_protein = (
-                    True
-                    if len(query_seq_len) == 1 and query_seqs_cardinality[0] == 1
-                    else False
-                )
-                if is_single_protein == False:
-                    is_complex = True
-                    break
+                tab_sep_entries = a3m_line[1:].split("\t")
+                if len(tab_sep_entries) == 2:
+                    query_seq_len = tab_sep_entries[0].split(",")
+                    query_seq_len = list(map(int, query_seq_len))
+                    query_seqs_cardinality = tab_sep_entries[1].split(",")
+                    query_seqs_cardinality = list(map(int, query_seqs_cardinality))
+                    is_single_protein = (
+                        True
+                        if len(query_seq_len) == 1 and query_seqs_cardinality[0] == 1
+                        else False
+                    )
+                    if is_single_protein == False:
+                        is_complex = True
+                        break
     return queries, is_complex
 
 
@@ -706,12 +708,13 @@ def unserialize_msa(
     Optional[List[str]], Optional[List[str]], List[str], List[int], Mapping[str, Any]
 ]:
     a3m_lines = a3m_lines[0].splitlines()
-    if a3m_lines[0].startswith("#"):
+    if a3m_lines[0].startswith("#") and len(a3m_lines[0][1:].split("\t")) == 2:
         if len(a3m_lines) < 3:
             raise ValueError(f"Unknown file format a3m")
-        query_seq_len = a3m_lines[0][1:].split("\t")[0].split(",")
+        tab_sep_entries = a3m_lines[0][1:].split("\t")
+        query_seq_len = tab_sep_entries[0].split(",")
         query_seq_len = list(map(int, query_seq_len))
-        query_seqs_cardinality = a3m_lines[0][1:].split("\t")[1].split(",")
+        query_seqs_cardinality = tab_sep_entries[1].split(",")
         query_seqs_cardinality = list(map(int, query_seqs_cardinality))
         is_homooligomer = (
             True if len(query_seq_len) == 1 and query_seqs_cardinality[0] > 1 else False
@@ -909,7 +912,6 @@ def run(
             f"Query {job_number + 1}/{len(queries)}: {jobname} (length {query_sequence_len})"
         )
 
-
         try:
             if a3m_lines != None:
                 (
@@ -959,7 +961,7 @@ def run(
             query_sequence_len_array = [
                 len(query_seqs_unique[i])
                 for i, cardinality in enumerate(query_seqs_cardinality)
-                for i in range(0, cardinality)
+                for j in range(0, cardinality)
             ]
 
             if sum(query_sequence_len_array) > crop_len:
