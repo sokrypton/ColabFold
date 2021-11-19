@@ -4,6 +4,7 @@ import math
 import random
 import sys
 import time
+import zipfile
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Dict, Tuple, List, Union, Mapping, Optional
@@ -34,13 +35,7 @@ from alphafold.model import model
 from colabfold.alphafold.models import load_models_and_params
 from colabfold.alphafold.msa import make_fixed_size
 from colabfold.citations import write_bibtex
-from colabfold.colabfold import (
-    run_mmseqs2,
-    chain_break,
-    plot_paes,
-    plot_plddts,
-    plot_dists,
-)
+from colabfold.colabfold import run_mmseqs2, chain_break, plot_paes, plot_plddts
 from colabfold.plot import plot_msa
 from colabfold.download import download_alphafold_params, default_data_dir
 from colabfold.utils import (
@@ -420,7 +415,6 @@ def get_msa_and_templates(
 ) -> Tuple[
     Optional[List[str]], Optional[List[str]], List[str], List[int], Mapping[str, Any]
 ]:
-
     use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
     # remove duplicates before searching
     query_sequences = (
@@ -672,6 +666,7 @@ def run(
     stop_at_score: float = 100,
     recompile_padding: float = 1.1,
     recompile_all_models: bool = False,
+    zip_results: bool = False,
 ):
     data_dir = Path(data_dir)
     result_dir = Path(result_dir)
@@ -710,7 +705,9 @@ def run(
         or msa_mode == "MMseqs2 (UniRef+Environmental)"
     )
 
-    write_bibtex(model_type, use_msa, use_env, use_templates, use_amber, result_dir)
+    bibtex_file = write_bibtex(
+        model_type, use_msa, use_env, use_templates, use_amber, result_dir
+    )
 
     model_runner_and_params = load_models_and_params(
         num_models,
@@ -725,18 +722,17 @@ def run(
     crop_len = 0
     for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
         jobname = safe_filename(raw_jobname)
-        # In the colab version we know we're done when a zip file has been written
-        if (
-            keep_existing_results
-            and result_dir.joinpath(jobname).with_suffix(".result.zip").is_file()
-        ):
+        # In the colab version and with --zip we know we're done when a zip file has been written
+        result_zip = result_dir.joinpath(jobname).with_suffix(".result.zip")
+        if keep_existing_results and result_zip.is_file():
             logger.info(f"Skipping {jobname} (result.zip)")
             continue
-        # In the local version we don't zip the files, so assume we're done if the last unrelaxed pdb file exists
-        last_pdb_file = f"{jobname}_unrelaxed_model_{num_models}.pdb"
-        if keep_existing_results and result_dir.joinpath(last_pdb_file).is_file():
-            logger.info(f"Skipping {jobname} (pdb)")
+        # In the local version we use a marker file
+        is_done_marker = result_dir.joinpath(jobname + ".done.txt")
+        if keep_existing_results and is_done_marker.is_file():
+            logger.info(f"Skipping {jobname} (already done)")
             continue
+
         query_sequence_len_array = (
             [len(query_sequence)]
             if isinstance(query_sequence, str)
@@ -826,6 +822,22 @@ def run(
         )
         plddt_plot.savefig(str(result_dir.joinpath(jobname + "_plddt.png")))
         plddt_plot.close()
+
+        if zip_results:
+            result_files = sorted(
+                [bibtex_file, result_dir.joinpath("config.json")]
+                + list(result_dir.glob(jobname + "*.png"))
+                + list(result_dir.glob(f"{jobname}_unrelaxed_*.pdb"))
+                + list(result_dir.glob(f"{jobname}_relaxed_*.pdb"))
+            )
+            with zipfile.ZipFile(result_zip, "w") as result_zip:
+                for file in result_files:
+                    result_zip.write(file)
+            # Delete only after the zip was successful
+            for file in result_files:
+                file.unlink()
+        else:
+            is_done_marker.touch()
 
     logger.info("Done")
 
@@ -945,7 +957,12 @@ def main():
         default="length",
         choices=["none", "length", "random"],
     )
-
+    parser.add_argument(
+        "--zip",
+        default=False,
+        action="store_true",
+        help="zip all results into one <jobname>.result.zip and delete the original files",
+    )
     parser.add_argument(
         "--overwrite-existing-results", default=False, action="store_true"
     )
@@ -993,6 +1010,7 @@ def main():
         stop_at_score=args.stop_at_score,
         recompile_padding=args.recompile_padding,
         recompile_all_models=args.recompile_all_models,
+        zip_results=args.zip,
     )
 
 

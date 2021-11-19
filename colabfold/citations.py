@@ -106,7 +106,7 @@ def write_bibtex(
     use_amber: bool,
     result_dir: Path,
     bibtex_file: str = "cite.bibtex",
-):
+) -> Path:
     to_cite = ["Mirdita2021"]
     if model == "AlphaFold2-ptm":
         to_cite += ["Jumper2021"]
@@ -132,3 +132,4 @@ def write_bibtex(
             writer.write("\n")
 
     logger.info(f"Found {len(to_cite)} citations for tools or databases")
+    return bibtex_file
