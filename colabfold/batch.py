@@ -397,6 +397,21 @@ def get_queries(
         if isinstance(query_sequence, list):
             is_complex = True
             break
+        if a3m_lines != None:
+            if a3m_lines[0].startswith("#"):
+                a3m_line = a3m_lines[0].splitlines()[0]
+                query_seq_len = a3m_line[1:].split("\t")[0].split(",")
+                query_seq_len = list(map(int, query_seq_len))
+                query_seqs_cardinality = a3m_line[1:].split("\t")[1].split(",")
+                query_seqs_cardinality = list(map(int, query_seqs_cardinality))
+                is_single_protein = (
+                    True
+                    if len(query_seq_len) == 1 and query_seqs_cardinality[0] == 1
+                    else False
+                )
+                if is_single_protein == False:
+                    is_complex = True
+                    break
     return queries, is_complex
 
 
