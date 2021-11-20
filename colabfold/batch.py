@@ -1019,17 +1019,22 @@ def run(
         plddt_plot.close()
 
         if zip_results:
-            result_files = sorted(
-                [bibtex_file, result_dir.joinpath("config.json")]
-                + list(result_dir.glob(jobname + "*.png"))
-                + list(result_dir.glob(f"{jobname}_unrelaxed_*.pdb"))
-                + list(result_dir.glob(f"{jobname}_relaxed_*.pdb"))
+            result_files = (
+                [
+                    bibtex_file,
+                    result_dir.joinpath("config.json"),
+                    result_dir.joinpath(jobname + ".a3m"),
+                ]
+                + sorted(result_dir.glob(jobname + "*.png"))
+                + sorted(result_dir.glob(f"{jobname}_unrelaxed_*.pdb"))
+                + sorted(result_dir.glob(f"{jobname}_relaxed_*.pdb"))
             )
+
             with zipfile.ZipFile(result_zip, "w") as result_zip:
                 for file in result_files:
                     result_zip.write(file)
-            # Delete only after the zip was successful, and also not the bibtex file because we need that again
-            for file in result_files[1:]:
+            # Delete only after the zip was successful, and also not the bibtex and config because we need those again
+            for file in result_files[2:]:
                 file.unlink()
         else:
             is_done_marker.touch()
