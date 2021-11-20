@@ -441,7 +441,7 @@ def pad_sequences(
     _blank_seq = [
         ("-" * len(seq))
         for n, seq in enumerate(query_sequences)
-        for _ in range(0, query_cardinality[n])
+        for _ in range(query_cardinality[n])
     ]
     a3m_lines_combined = []
     pos = 0
@@ -719,16 +719,17 @@ def unserialize_msa(
 ) -> Tuple[
     Optional[List[str]],
     Optional[List[str]],
-    Union[List[str], str],
+    List[str],
     List[int],
     List[Dict[str, Any]],
 ]:
     a3m_lines = a3m_lines[0].splitlines()
     if not a3m_lines[0].startswith("#") or len(a3m_lines[0][1:].split("\t")) != 2:
+        assert isinstance(query_sequence, str)
         return (
             ["\n".join(a3m_lines)],
             None,
-            query_sequence,
+            [query_sequence],
             [1],
             [mk_mock_template(query_sequence)],
         )
@@ -833,17 +834,17 @@ def msa_to_str(
 def run(
     queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]]]],
     result_dir: Union[str, Path],
-    use_templates: bool,
-    use_amber: bool,
-    msa_mode: str,
-    model_type: str,
     num_models: int,
     num_recycles: int,
     model_order: List[int],
     is_complex: bool,
-    keep_existing_results: bool,
-    rank_mode: str,
-    pair_mode: str,
+    model_type: str = "auto",
+    msa_mode: str = "MMseqs2 (UniRef+Environmental)",
+    use_templates: bool = False,
+    use_amber: bool = False,
+    keep_existing_results: bool = True,
+    rank_mode: str = "auto",
+    pair_mode: str = "unpaired+paired",
     data_dir: Union[str, Path] = default_data_dir,
     host_url: str = DEFAULT_API_SERVER,
     stop_at_score: float = 100,
@@ -953,7 +954,7 @@ def run(
                 unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality
             )
             result_dir.joinpath(jobname + ".a3m").write_text(msa)
-        except Exception as e:
+        except OSError as e:
             logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
             continue
         try:

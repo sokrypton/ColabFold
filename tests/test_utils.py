@@ -1,6 +1,8 @@
+from pathlib import Path
+
 import pytest
 
-from colabfold.batch import get_queries
+from colabfold.batch import get_queries, run
 
 
 def test_get_queries_fasta_dir(pytestconfig, caplog):
