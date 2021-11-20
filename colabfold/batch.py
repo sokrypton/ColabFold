@@ -256,7 +256,7 @@ def predict_structure(
             relaxed_pdb_path = result_dir.joinpath(
                 f"{prefix}_relaxed_{model_names[r]}_rank_{n + 1}.pdb"
             )
-            relaxed_pdb_path.write_text(unrelaxed_pdb_lines[r])
+            relaxed_pdb_path.write_text(relaxed_pdb_lines[r])
 
         out[f"model_{n + 1}"] = {
             "plddt": plddts[r],
