@@ -4,12 +4,13 @@ from functools import lru_cache
 from unittest import mock
 
 import haiku
-import pytest
 import numpy
+import pytest
 from absl import logging as absl_logging
 
 from alphafold.model.data import get_model_haiku_params
 from alphafold.model.tf import utils
+from colabfold.batch import msa_to_str, unserialize_msa
 from colabfold.batch import run
 from colabfold.download import download_alphafold_params
 from tests.mock import MockRunModel, MMseqs2Mock
@@ -326,8 +327,6 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
 
 
 def test_msa_serialization(pytestconfig, caplog, tmp_path):
-    from colabfold.batch import msa_to_str, unserialize_msa
-
     # heteromer
     unpaired_alignment = [
         ">101\nAAAAAAAA\n>UP1\nAACCcccVVAA\n",
@@ -494,9 +493,7 @@ def test_msa_serialization(pytestconfig, caplog, tmp_path):
     numpy.testing.assert_equal(
         numpy.array(unpaired_alignment_ret), numpy.array([unpaired_alignment])
     )
-    numpy.testing.assert_equal(
-        numpy.array(paired_alignment_ret), numpy.array(paired_alignment)
-    )
+    assert paired_alignment_ret is None
     numpy.testing.assert_equal(
         numpy.array(query_sequence_unique_ret), numpy.array(query_sequence_unique)
     )
@@ -516,7 +513,7 @@ def test_msa_serialization(pytestconfig, caplog, tmp_path):
     numpy.testing.assert_equal(
         numpy.array(unpaired_alignment_ret), numpy.array([">101\nYYDPETGTWY\n"])
     )
-    assert paired_alignment_ret == None
+    assert paired_alignment_ret is None
     numpy.testing.assert_equal(
         numpy.array(query_sequence_unique_ret), numpy.array(["YYDPETGTWY"])
     )

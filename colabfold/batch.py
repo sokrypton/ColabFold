@@ -7,12 +7,13 @@ import time
 import zipfile
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Any, Dict, Tuple, List, Union, Mapping, Optional
+from typing import Any, Dict, Tuple, List, Union, Optional
 
 import haiku
 import numpy as np
 import pandas
 from jax.lib import xla_bridge
+from numpy import ndarray
 
 try:
     import alphafold
@@ -35,12 +36,7 @@ from alphafold.model import model
 from colabfold.alphafold.models import load_models_and_params
 from colabfold.alphafold.msa import make_fixed_size
 from colabfold.citations import write_bibtex
-from colabfold.colabfold import (
-    run_mmseqs2,
-    chain_break,
-    plot_paes,
-    plot_plddts,
-)
+from colabfold.colabfold import run_mmseqs2, chain_break, plot_paes, plot_plddts
 from colabfold.plot import plot_msa
 from colabfold.download import download_alphafold_params, default_data_dir
 from colabfold.utils import (
@@ -54,7 +50,9 @@ from colabfold.utils import (
 logger = logging.getLogger(__name__)
 
 
-def mk_mock_template(query_sequence, num_temp: int = 1) -> Mapping[str, Any]:
+def mk_mock_template(
+    query_sequence: Union[List[str], str], num_temp: int = 1
+) -> Dict[str, Any]:
     ln = (
         len(query_sequence)
         if isinstance(query_sequence, str)
@@ -89,7 +87,7 @@ def mk_mock_template(query_sequence, num_temp: int = 1) -> Mapping[str, Any]:
 
 def mk_template(
     a3m_lines: str, template_path: str, query_sequence: str
-) -> Mapping[str, Any]:
+) -> Dict[str, Any]:
     template_featurizer = templates.HhsearchHitFeaturizer(
         mmcif_dir=template_path,
         max_template_date="2100-01-01",
@@ -108,11 +106,11 @@ def mk_template(
     templates_result = template_featurizer.get_templates(
         query_sequence=query_sequence, hits=hhsearch_hits
     )
-    return templates_result.features
+    return dict(templates_result.features)
 
 
 def batch_input(
-    input: model.features.FeatureDict,
+    input_features: model.features.FeatureDict,
     model_runner: model.RunModel,
     model_name: str,
     crop_len: int,
@@ -132,7 +130,7 @@ def batch_input(
 
     # let's try pad (num_res + X)
     input_fix = make_fixed_size(
-        input,
+        input_features,
         crop_feats,
         msa_cluster_size=max_msa_clusters,  # true_msa (4, 512, 68)
         extra_msa_size=5120,  # extra_msa (4, 5120, 68)
@@ -180,8 +178,8 @@ def predict_structure(
         processed_feature_dict = model_runner.process_features(
             feature_dict, random_seed=random_seed
         )
-        if is_complex == False:
-            input = batch_input(
+        if not is_complex:
+            input_features = batch_input(
                 processed_feature_dict,
                 model_runner,
                 model_name,
@@ -189,9 +187,9 @@ def predict_structure(
                 use_templates,
             )
         else:
-            input = processed_feature_dict
+            input_features = processed_feature_dict
 
-        prediction_result, (_, _) = model_runner.predict(input)
+        prediction_result, (_, _) = model_runner.predict(input_features)
 
         start = time.time()
         # The original alphafold only returns the prediction_result,
@@ -207,21 +205,24 @@ def predict_structure(
         final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
         b_factors = prediction_result["plddt"][:, None] * final_atom_mask
         if is_complex and model_type == "AlphaFold2-ptm":
-            input["asym_id"] = feature_dict["asym_id"]
-            input["aatype"] = input["aatype"][0]
-            input["residue_index"] = input["residue_index"][0]
+            input_features["asym_id"] = feature_dict["asym_id"]
+            input_features["aatype"] = input_features["aatype"][0]
+            input_features["residue_index"] = input_features["residue_index"][0]
             curr_residue_index = 1
-            res_index_array = input["residue_index"].copy()
+            res_index_array = input_features["residue_index"].copy()
             res_index_array[0] = 0
-            for i in range(1, input["aatype"].shape[0]):
-                if (input["residue_index"][i] - input["residue_index"][i - 1]) > 1:
+            for i in range(1, input_features["aatype"].shape[0]):
+                if (
+                    input_features["residue_index"][i]
+                    - input_features["residue_index"][i - 1]
+                ) > 1:
                     curr_residue_index = 0
                 res_index_array[i] = curr_residue_index
                 curr_residue_index += 1
-            input["residue_index"] = res_index_array
+            input_features["residue_index"] = res_index_array
 
         unrelaxed_protein = protein.from_prediction(
-            features=input,
+            features=input_features,
             result=prediction_result,
             b_factors=b_factors,
             remove_leading_feature_dimension=not is_complex,
@@ -293,7 +294,7 @@ def predict_structure(
     return out, model_rank
 
 
-def parse_fasta(fasta_string: str) -> Tuple[str, str]:
+def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
     """Parses FASTA string and returns list of strings with amino-acid sequences.
 
     Arguments:
@@ -356,13 +357,15 @@ def get_queries(
             queries = [(input_path.stem, query_sequence, a3m_lines)]
         elif input_path.suffix == ".fasta":
             (sequences, headers) = parse_fasta(input_path.read_text())
-            queries = [
-                (header, sequence.upper().split(":"), None)
-                for sequence, header in zip(sequences, headers)
-            ]
-            for i in range(len(queries)):
-                if len(queries[i][1]) == 1:
-                    queries[i] = (queries[i][0], queries[i][1][0], None)
+            queries = []
+            for sequence, header in zip(sequences, headers):
+                sequence = sequence.upper()
+                if sequence.count(":") == 1:
+                    # Single sequence
+                    queries.append((header, sequence, None))
+                else:
+                    # Complex mode
+                    queries.append((header, sequence.upper().split(":"), None))
         else:
             raise ValueError(f"Unknown file format {input_path.suffix}")
     else:
@@ -397,23 +400,22 @@ def get_queries(
         if isinstance(query_sequence, list):
             is_complex = True
             break
-        if a3m_lines != None:
-            if a3m_lines[0].startswith("#"):
-                a3m_line = a3m_lines[0].splitlines()[0]
-                tab_sep_entries = a3m_line[1:].split("\t")
-                if len(tab_sep_entries) == 2:
-                    query_seq_len = tab_sep_entries[0].split(",")
-                    query_seq_len = list(map(int, query_seq_len))
-                    query_seqs_cardinality = tab_sep_entries[1].split(",")
-                    query_seqs_cardinality = list(map(int, query_seqs_cardinality))
-                    is_single_protein = (
-                        True
-                        if len(query_seq_len) == 1 and query_seqs_cardinality[0] == 1
-                        else False
-                    )
-                    if is_single_protein == False:
-                        is_complex = True
-                        break
+        if a3m_lines is not None and a3m_lines[0].startswith("#"):
+            a3m_line = a3m_lines[0].splitlines()[0]
+            tab_sep_entries = a3m_line[1:].split("\t")
+            if len(tab_sep_entries) == 2:
+                query_seq_len = tab_sep_entries[0].split(",")
+                query_seq_len = list(map(int, query_seq_len))
+                query_seqs_cardinality = tab_sep_entries[1].split(",")
+                query_seqs_cardinality = list(map(int, query_seqs_cardinality))
+                is_single_protein = (
+                    True
+                    if len(query_seq_len) == 1 and query_seqs_cardinality[0] == 1
+                    else False
+                )
+                if not is_single_protein:
+                    is_complex = True
+                    break
     return queries, is_complex
 
 
@@ -439,7 +441,7 @@ def pad_sequences(
     _blank_seq = [
         ("-" * len(seq))
         for n, seq in enumerate(query_sequences)
-        for j in range(0, query_cardinality[n])
+        for _ in range(0, query_cardinality[n])
     ]
     a3m_lines_combined = []
     pos = 0
@@ -468,7 +470,7 @@ def get_msa_and_templates(
     pair_mode: str,
     host_url: str = DEFAULT_API_SERVER,
 ) -> Tuple[
-    Optional[List[str]], Optional[List[str]], List[str], List[int], Mapping[str, Any]
+    Optional[List[str]], Optional[List[str]], List[str], List[int], List[Dict[str, Any]]
 ]:
     use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
     # remove duplicates before searching
@@ -561,7 +563,9 @@ def get_msa_and_templates(
     )
 
 
-def build_monomer_feature(sequence, unpaired_msa, template_features):
+def build_monomer_feature(
+    sequence: str, unpaired_msa: str, template_features: Dict[str, Any]
+):
     msa = pipeline.parsers.parse_a3m(unpaired_msa)
     # gather features
     return {
@@ -573,7 +577,7 @@ def build_monomer_feature(sequence, unpaired_msa, template_features):
     }
 
 
-def build_multimer_feature(paired_msa):
+def build_multimer_feature(paired_msa: str) -> Dict[str, ndarray]:
     parsed_paired_msa = pipeline.parsers.parse_a3m(paired_msa)
     return {
         f"{k}_all_seq": v
@@ -581,7 +585,9 @@ def build_multimer_feature(paired_msa):
     }
 
 
-def process_multimer_features(features_for_chain):
+def process_multimer_features(
+    features_for_chain: Dict[str, Dict[str, ndarray]]
+) -> Dict[str, ndarray]:
     all_chain_features = {}
     for chain_id, chain_features in features_for_chain.items():
         all_chain_features[chain_id] = pipeline_multimer.convert_monomer_features(
@@ -593,6 +599,7 @@ def process_multimer_features(features_for_chain):
     #    all_chain_features=all_chain_features, is_prokaryote=is_prokaryote)
     feature_processing.process_unmerged_features(all_chain_features)
     np_chains_list = list(all_chain_features.values())
+    # noinspection PyProtectedMember
     pair_msa_sequences = not feature_processing._is_homomer_or_monomer(np_chains_list)
     chains = list(np_chains_list)
     chain_keys = chains[0].keys()
@@ -628,18 +635,23 @@ def process_multimer_features(features_for_chain):
     return np_example
 
 
-def pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa):
-    if paired_msa == None and unpaired_msa != None:
+def pair_msa(
+    query_seqs_unique: List[str],
+    query_seqs_cardinality: List[int],
+    paired_msa: Optional[List[str]],
+    unpaired_msa: Optional[List[str]],
+) -> str:
+    if paired_msa is None and unpaired_msa is not None:
         a3m_lines = pad_sequences(
             unpaired_msa, query_seqs_unique, query_seqs_cardinality
         )
-    elif paired_msa != None and unpaired_msa != None:
+    elif paired_msa is not None and unpaired_msa is not None:
         a3m_lines = (
             pair_sequences(paired_msa, query_seqs_unique, query_seqs_cardinality)
             + "\n"
             + pad_sequences(unpaired_msa, query_seqs_unique, query_seqs_cardinality)
         )
-    elif paired_msa != None and unpaired_msa == None:
+    elif paired_msa is not None and unpaired_msa is None:
         a3m_lines = pair_sequences(
             paired_msa, query_seqs_unique, query_seqs_cardinality
         )
@@ -653,10 +665,10 @@ def generate_input_feature(
     query_seqs_cardinality: List[int],
     unpaired_msa: List[str],
     paired_msa: List[str],
-    template_features: Mapping[str, Any],
+    template_features: List[Dict[str, Any]],
     is_complex: bool,
     model_type: str,
-):
+) -> Dict[str, Any]:
     input_feature = {}
     if is_complex and model_type == "AlphaFold2-ptm":
         a3m_lines = pair_msa(
@@ -674,7 +686,7 @@ def generate_input_feature(
         )
         input_feature["residue_index"] = chain_break(input_feature["residue_index"], Ls)
         input_feature["asym_id"] = np.array(
-            [int(n) for n, l in enumerate(Ls) for i in range(0, l)]
+            [int(n) for n, l in enumerate(Ls) for _ in range(0, l)]
         )
     else:
         features_for_chain = {}
@@ -703,96 +715,16 @@ def generate_input_feature(
 
 
 def unserialize_msa(
-    a3m_lines: List[str], query_sequence: List[str]
+    a3m_lines: List[str], query_sequence: Union[List[str], str]
 ) -> Tuple[
-    Optional[List[str]], Optional[List[str]], List[str], List[int], Mapping[str, Any]
+    Optional[List[str]],
+    Optional[List[str]],
+    Union[List[str], str],
+    List[int],
+    List[Dict[str, Any]],
 ]:
     a3m_lines = a3m_lines[0].splitlines()
-    if a3m_lines[0].startswith("#") and len(a3m_lines[0][1:].split("\t")) == 2:
-        if len(a3m_lines) < 3:
-            raise ValueError(f"Unknown file format a3m")
-        tab_sep_entries = a3m_lines[0][1:].split("\t")
-        query_seq_len = tab_sep_entries[0].split(",")
-        query_seq_len = list(map(int, query_seq_len))
-        query_seqs_cardinality = tab_sep_entries[1].split(",")
-        query_seqs_cardinality = list(map(int, query_seqs_cardinality))
-        is_homooligomer = (
-            True if len(query_seq_len) == 1 and query_seqs_cardinality[0] > 1 else False
-        )
-        is_single_protein = (
-            True
-            if len(query_seq_len) == 1 and query_seqs_cardinality[0] == 1
-            else False
-        )
-        query_seqs_unique = []
-        prev_query_start = 0
-        # we store the a3m with cardinality of 1
-        for n, query_len in enumerate(query_seq_len):
-            query_seqs_unique.append(
-                a3m_lines[2][prev_query_start : prev_query_start + query_len]
-            )
-            prev_query_start += query_len
-        paired_msa = [""] * len(query_seq_len)
-        unpaired_msa = [""] * len(query_seq_len)
-        offset = 2 if is_homooligomer else 0
-        for i in range(1 + offset, len(a3m_lines), 2):
-            header = a3m_lines[i]
-            seq = a3m_lines[i + 1]
-            has_amino_acid = [False] * len(query_seq_len)
-            seqs_line = []
-            prev_pos = 0
-            for n, query_len in enumerate(query_seq_len):
-                paired_seq = ""
-                curr_seq_len = 0
-                for pos in range(prev_pos, len(seq)):
-                    if curr_seq_len == query_len:
-                        prev_pos = pos
-                        break
-                    paired_seq += seq[pos]
-                    if seq[pos].islower():
-                        continue
-                    if seq[pos] != "-":
-                        has_amino_acid[n] = True
-                    curr_seq_len += 1
-                seqs_line.append(paired_seq)
-
-            # is sequence is paired add them to output
-            if (
-                is_single_protein == False
-                and is_homooligomer == False
-                and sum(has_amino_acid) == len(query_seq_len)
-            ):
-                header_no_faster = header.replace(">", "")
-                header_no_faster_split = header_no_faster.split("\t")
-                for j in range(0, len(seqs_line)):
-                    paired_msa[j] += ">" + header_no_faster_split[j] + "\n"
-                    paired_msa[j] += seqs_line[j] + "\n"
-            else:
-                for j, seq in enumerate(seqs_line):
-                    if has_amino_acid[j]:
-                        unpaired_msa[j] += header + "\n"
-                        unpaired_msa[j] += seq + "\n"
-        if is_homooligomer:
-            # homooligomers
-            num = 101
-            paired_msa = [""] * query_seqs_cardinality[0]
-            for i in range(0, query_seqs_cardinality[0]):
-                paired_msa[i] = ">" + str(num + i) + "\n" + query_seqs_unique[0] + "\n"
-        if is_single_protein:
-            paired_msa = None
-        template_features = []
-        for index in range(0, len(query_seqs_unique)):
-            template_feature = mk_mock_template(query_seqs_unique[index])
-            template_features.append(template_feature)
-
-        return (
-            unpaired_msa,
-            paired_msa,
-            query_seqs_unique,
-            query_seqs_cardinality,
-            template_features,
-        )
-    else:
+    if not a3m_lines[0].startswith("#") or len(a3m_lines[0][1:].split("\t")) != 2:
         return (
             ["\n".join(a3m_lines)],
             None,
@@ -800,7 +732,88 @@ def unserialize_msa(
             [1],
             [mk_mock_template(query_sequence)],
         )
-    pass
+
+    if len(a3m_lines) < 3:
+        raise ValueError(f"Unknown file format a3m")
+    tab_sep_entries = a3m_lines[0][1:].split("\t")
+    query_seq_len = tab_sep_entries[0].split(",")
+    query_seq_len = list(map(int, query_seq_len))
+    query_seqs_cardinality = tab_sep_entries[1].split(",")
+    query_seqs_cardinality = list(map(int, query_seqs_cardinality))
+    is_homooligomer = (
+        True if len(query_seq_len) == 1 and query_seqs_cardinality[0] > 1 else False
+    )
+    is_single_protein = (
+        True if len(query_seq_len) == 1 and query_seqs_cardinality[0] == 1 else False
+    )
+    query_seqs_unique = []
+    prev_query_start = 0
+    # we store the a3m with cardinality of 1
+    for n, query_len in enumerate(query_seq_len):
+        query_seqs_unique.append(
+            a3m_lines[2][prev_query_start : prev_query_start + query_len]
+        )
+        prev_query_start += query_len
+    paired_msa = [""] * len(query_seq_len)
+    unpaired_msa = [""] * len(query_seq_len)
+    offset = 2 if is_homooligomer else 0
+    for i in range(1 + offset, len(a3m_lines), 2):
+        header = a3m_lines[i]
+        seq = a3m_lines[i + 1]
+        has_amino_acid = [False] * len(query_seq_len)
+        seqs_line = []
+        prev_pos = 0
+        for n, query_len in enumerate(query_seq_len):
+            paired_seq = ""
+            curr_seq_len = 0
+            for pos in range(prev_pos, len(seq)):
+                if curr_seq_len == query_len:
+                    prev_pos = pos
+                    break
+                paired_seq += seq[pos]
+                if seq[pos].islower():
+                    continue
+                if seq[pos] != "-":
+                    has_amino_acid[n] = True
+                curr_seq_len += 1
+            seqs_line.append(paired_seq)
+
+        # is sequence is paired add them to output
+        if (
+            not is_single_protein
+            and not is_homooligomer
+            and sum(has_amino_acid) == len(query_seq_len)
+        ):
+            header_no_faster = header.replace(">", "")
+            header_no_faster_split = header_no_faster.split("\t")
+            for j in range(0, len(seqs_line)):
+                paired_msa[j] += ">" + header_no_faster_split[j] + "\n"
+                paired_msa[j] += seqs_line[j] + "\n"
+        else:
+            for j, seq in enumerate(seqs_line):
+                if has_amino_acid[j]:
+                    unpaired_msa[j] += header + "\n"
+                    unpaired_msa[j] += seq + "\n"
+    if is_homooligomer:
+        # homooligomers
+        num = 101
+        paired_msa = [""] * query_seqs_cardinality[0]
+        for i in range(0, query_seqs_cardinality[0]):
+            paired_msa[i] = ">" + str(num + i) + "\n" + query_seqs_unique[0] + "\n"
+    if is_single_protein:
+        paired_msa = None
+    template_features = []
+    for query_seq in query_seqs_unique:
+        template_feature = mk_mock_template(query_seq)
+        template_features.append(template_feature)
+
+    return (
+        unpaired_msa,
+        paired_msa,
+        query_seqs_unique,
+        query_seqs_cardinality,
+        template_features,
+    )
 
 
 def msa_to_str(
@@ -808,17 +821,17 @@ def msa_to_str(
     paired_msa: List[str],
     query_seqs_unique: List[str],
     query_seqs_cardinality: List[int],
-):
+) -> str:
     msa = "#" + ",".join(map(str, map(len, query_seqs_unique))) + "\t"
     msa += ",".join(map(str, query_seqs_cardinality)) + "\n"
     # build msa with cardinality of 1, it makes it easier to parse and manipulate
-    query_seqs_cardinality = [1 for i in query_seqs_cardinality]
+    query_seqs_cardinality = [1 for _ in query_seqs_cardinality]
     msa += pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa)
     return msa
 
 
 def run(
-    queries: List[Tuple[str, Union[str, List[str]], Optional[str]]],
+    queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]]]],
     result_dir: Union[str, Path],
     use_templates: bool,
     use_amber: bool,
@@ -844,31 +857,30 @@ def run(
     model_type = set_model_type(is_complex, model_type)
     if model_type == "AlphaFold2-multimer":
         model_extension = "_multimer"
-    if model_type == "AlphaFold2-ptm":
+    elif model_type == "AlphaFold2-ptm":
         model_extension = "_ptm"
+    else:
+        raise ValueError(f"Unknown model_type {model_type}")
 
     # Record the parameters of this run
-    result_dir.joinpath("config.json").write_text(
-        json.dumps(
-            {
-                "num_queries": len(queries),
-                "use_templates": use_templates,
-                "use_amber": use_amber,
-                "msa_mode": msa_mode,
-                "model_type": model_type,
-                "num_models": num_models,
-                "num_recycles": num_recycles,
-                "model_order": model_order,
-                "keep_existing_results": keep_existing_results,
-                "rank_mode": rank_mode,
-                "pair_mode": pair_mode,
-                "host_url": host_url,
-                "stop_at_score": stop_at_score,
-                "recompile_padding": recompile_padding,
-                "recompile_all_models": recompile_all_models,
-            }
-        )
-    )
+    config = {
+        "num_queries": len(queries),
+        "use_templates": use_templates,
+        "use_amber": use_amber,
+        "msa_mode": msa_mode,
+        "model_type": model_type,
+        "num_models": num_models,
+        "num_recycles": num_recycles,
+        "model_order": model_order,
+        "keep_existing_results": keep_existing_results,
+        "rank_mode": rank_mode,
+        "pair_mode": pair_mode,
+        "host_url": host_url,
+        "stop_at_score": stop_at_score,
+        "recompile_padding": recompile_padding,
+        "recompile_all_models": recompile_all_models,
+    }
+    result_dir.joinpath("config.json").write_text(json.dumps(config, indent=4))
     use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
     use_msa = (
         msa_mode == "MMseqs2 (UniRef only)"
@@ -913,7 +925,7 @@ def run(
         )
 
         try:
-            if a3m_lines != None:
+            if a3m_lines is not None:
                 (
                     unpaired_msa,
                     paired_msa,
@@ -961,7 +973,7 @@ def run(
             query_sequence_len_array = [
                 len(query_seqs_unique[i])
                 for i, cardinality in enumerate(query_seqs_cardinality)
-                for j in range(0, cardinality)
+                for _ in range(0, cardinality)
             ]
 
             if sum(query_sequence_len_array) > crop_len:
@@ -1024,7 +1036,7 @@ def run(
     logger.info("Done")
 
 
-def set_model_type(is_complex: bool, model_type: str):
+def set_model_type(is_complex: bool, model_type: str) -> str:
     if model_type == "auto" and is_complex:
         model_type = "AlphaFold2-multimer"
     elif model_type == "auto" and not is_complex:
