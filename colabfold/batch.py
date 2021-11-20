@@ -1028,8 +1028,8 @@ def run(
             with zipfile.ZipFile(result_zip, "w") as result_zip:
                 for file in result_files:
                     result_zip.write(file)
-            # Delete only after the zip was successful
-            for file in result_files:
+            # Delete only after the zip was successful, and also not the bibtex file because we need that again
+            for file in result_files[1:]:
                 file.unlink()
         else:
             is_done_marker.touch()
