@@ -11,6 +11,9 @@
 - 14Nov2021  WARNING "Single-sequence" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken 
 -            starting 11Nov2021. The MMseqs2 MSA was being used regardless of selection.
 + 14Nov2021  "Single-sequence" mode is now fixed.
+- 20Nov2021  WARNING "AMBER" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken 
+-            starting 11Nov2021. Unrelaxed proteins were returned instead.
++ 20Nov2021  "AMBER" is fixed thanks to Kevin Pan
 ```
 -----------------
 
