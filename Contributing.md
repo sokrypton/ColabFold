@@ -7,7 +7,7 @@ Install poetry:
 ```shell
 curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -
 # Make sure you have ~/.local/bin in PATH
-poetry config settings.virtualenvs.in-project true
+poetry config virtualenvs.in-project true
 ```
 
 Setup virtualenv, install dependencies:
