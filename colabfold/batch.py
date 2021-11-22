@@ -12,6 +12,7 @@ from typing import Any, Dict, Tuple, List, Union, Optional
 import haiku
 import numpy as np
 import pandas
+from importlib_metadata import version
 from jax.lib import xla_bridge
 from numpy import ndarray
 
@@ -45,6 +46,7 @@ from colabfold.utils import (
     NO_GPU_FOUND,
     DEFAULT_API_SERVER,
     ACCEPT_DEFAULT_TERMS,
+    get_commit,
 )
 
 logger = logging.getLogger(__name__)
@@ -880,6 +882,8 @@ def run(
         "stop_at_score": stop_at_score,
         "recompile_padding": recompile_padding,
         "recompile_all_models": recompile_all_models,
+        "commit": get_commit(),
+        "version": version("colabfold"),
     }
     result_dir.joinpath("config.json").write_text(json.dumps(config, indent=4))
     use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
