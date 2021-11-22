@@ -2,6 +2,7 @@ import logging
 import re
 from functools import lru_cache
 from unittest import mock
+from zipfile import ZipFile
 
 import haiku
 import pytest
@@ -92,6 +93,42 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
         == 112
     )
     assert tmp_path.joinpath("config.json").is_file()
+
+
+def test_zip(pytestconfig, caplog, tmp_path, prediction_test):
+    queries = [("5AWL_1", "YYDPETGTWY", None), ("6A5J", "IKKILSKIKKLLK", None)]
+
+    mock_run_model = MockRunModel(
+        pytestconfig.rootpath.joinpath("test-data/batch"), ["5AWL_1", "6A5J"]
+    )
+    mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "batch").mock_run_mmseqs2
+    with mock.patch(
+        "alphafold.model.model.RunModel.predict",
+        lambda model_runner, feat: mock_run_model.predict(model_runner, feat),
+    ), mock.patch("colabfold.batch.run_mmseqs2", mock_run_mmseqs):
+        run(
+            queries,
+            tmp_path,
+            num_models=1,
+            num_recycles=3,
+            model_order=[1, 2, 3, 4, 5],
+            is_complex=False,
+            zip_results=True,
+        )
+
+    # Ensure that the correct files are packaged and that they do not contain the dir prefix
+    expect_zip = [
+        "cite.bibtex",
+        "config.json",
+        "5AWL_1.a3m",
+        "5AWL_1_PAE.png",
+        "5AWL_1_coverage.png",
+        "5AWL_1_plddt.png",
+        "5AWL_1_unrelaxed_model_1_rank_1.pdb",
+    ]
+    with ZipFile(tmp_path.joinpath("5AWL_1.result.zip")) as result_zip:
+        actual_zip = [i.filename for i in result_zip.infolist()]
+    assert expect_zip == actual_zip
 
 
 def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):

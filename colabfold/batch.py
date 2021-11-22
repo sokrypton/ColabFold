@@ -1032,7 +1032,7 @@ def run(
 
             with zipfile.ZipFile(result_zip, "w") as result_zip:
                 for file in result_files:
-                    result_zip.write(file)
+                    result_zip.write(file, arcname=file.name)
             # Delete only after the zip was successful, and also not the bibtex and config because we need those again
             for file in result_files[2:]:
                 file.unlink()
