@@ -39,7 +39,7 @@ from colabfold.download import download_alphafold_params, default_data_dir
 from colabfold.plot import (
     plot_predicted_alignment_error,
     plot_lddt,
-    plot_protein_confidence
+    plot_protein_confidence,
 )
 from colabfold.utils import (
     setup_logging,
@@ -277,7 +277,8 @@ def predict_structure(
             plot_path=plot_path,
             protein=unrelaxed_protein_list[r],
             pae=np.array(paes[r]),
-            Ls=sequences_lengths)
+            Ls=sequences_lengths,
+        )
 
         out[f"model_{n + 1}"] = {
             "plddt": plddts[r],
