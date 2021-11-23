@@ -161,7 +161,6 @@ def predict_structure(
     plddts, paes, ptmscore = [], [], []
     unrelaxed_protein_list = []
     unrelaxed_pdb_lines = []
-    full_paes = []
     relaxed_pdb_lines = []
     prediction_times = []
     seq_len = sum(sequences_lengths)
@@ -207,7 +206,6 @@ def predict_structure(
             remove_leading_feature_dimension=not model_runner.multimer_mode,
         )
         unrelaxed_protein_list.append(unrelaxed_protein)
-        full_paes.append(prediction_result["predicted_aligned_error"])
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
         ptmscore.append(prediction_result["ptm"])
