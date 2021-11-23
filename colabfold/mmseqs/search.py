@@ -1,7 +1,7 @@
 """
-Functionality for running mmseqs locally
+Functionality for running mmseqs locally. Takes in a fasta file, outputs final.a3m
 
-Note: Untested and needs mmseqs compiled from source
+Note: Currently needs mmseqs compiled from source
 """
 
 import logging
@@ -43,7 +43,7 @@ def mmseqs_search(
     """Run mmseqs with a local colabfold database set
 
     db1: uniprot db (UniRef30)
-    db2: Template (unused)
+    db2: Template (unused by default)
     db3: metagenomic db (colabfold_envdb_202108 or bfd_mgy_colabfold, the former is preferred)
     """
     if filter:
@@ -126,25 +126,47 @@ def mmseqs_search(
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument("query", type=Path)
-    parser.add_argument("dbbase", type=Path)
-    parser.add_argument("base", type=Path)
+    parser.add_argument(
+        "query",
+        type=Path,
+        help="fasta files with the queries. Doesn't support complexes yet",
+    )
+    parser.add_argument(
+        "dbbase",
+        type=Path,
+        help="The path to the database and indices you downloaded and created with setup_databases.sh",
+    )
+    parser.add_argument(
+        "base", type=Path, help="Directory for the results (and intermediate files)"
+    )
     parser.add_argument(
         "-s",
         type=int,
         default=8,
-        help="mmseqs sensitivity. Lowering this will result in a much faster search",
+        help="mmseqs sensitivity. Lowering this will result in a much faster search but possibly sparser msas",
     )
     # dbs are uniref, templates and environmental
     # We normally don't use templates
-    parser.add_argument("--db1", type=Path, default=Path("uniref30_2103_db"))
-    parser.add_argument("--db2", type=Path, default=Path(""))
-    parser.add_argument("--db3", type=Path, default=Path("colabfold_envdb_202108_db"))
+    parser.add_argument(
+        "--db1", type=Path, default=Path("uniref30_2103_db"), help="UniRef database"
+    )
+    parser.add_argument("--db2", type=Path, default=Path(""), help="Templates database")
+    parser.add_argument(
+        "--db3",
+        type=Path,
+        default=Path("colabfold_envdb_202108_db"),
+        help="Environmental database",
+    )
     # poor man's boolean arguments
     parser.add_argument("--use-env", type=int, default=1, choices=[0, 1])
     parser.add_argument("--use-templates", type=int, default=0, choices=[0, 1])
     parser.add_argument("--filter", type=int, default=1, choices=[0, 1])
-    parser.add_argument("--mmseqs", type=Path, default=Path("mmseqs"))
+    parser.add_argument(
+        "--mmseqs",
+        type=Path,
+        default=Path("mmseqs"),
+        help="Location of the mmseqs binary",
+    )
     parser.add_argument("--expand-eval", type=float, default=math.inf)
     parser.add_argument("--align-eval", type=int, default=10)
     parser.add_argument("--diff", type=int, default=3000)
