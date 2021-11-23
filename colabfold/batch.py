@@ -12,7 +12,7 @@ from typing import Any, Dict, Tuple, List, Union, Optional
 import haiku
 import numpy as np
 import pandas
-from importlib_metadata import version
+import importlib_metadata
 from jax.lib import xla_bridge
 from numpy import ndarray
 
@@ -854,6 +854,14 @@ def run(
     recompile_all_models: bool = False,
     zip_results: bool = False,
 ):
+    version = importlib_metadata.version("colabfold")
+    commit = get_commit()
+    print(commit)
+    if commit:
+        version += f" ({commit})"
+
+    logger.info(f"Running colabfold {version}")
+
     data_dir = Path(data_dir)
     result_dir = Path(result_dir)
     result_dir.mkdir(exist_ok=True)
@@ -883,7 +891,7 @@ def run(
         "recompile_padding": recompile_padding,
         "recompile_all_models": recompile_all_models,
         "commit": get_commit(),
-        "version": version("colabfold"),
+        "version": importlib_metadata.version("colabfold"),
     }
     result_dir.joinpath("config.json").write_text(json.dumps(config, indent=4))
     use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"

@@ -62,7 +62,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
             is_complex=False,
         )
 
-    assert caplog.messages == [
+    assert caplog.messages[1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/2: 5AWL_1 (length 10)",
         "Running model_1",
@@ -72,7 +72,6 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
         "Running model_1",
         "model_1 took 0.0s with pLDDT 90.8",
         "reranking models based on avg. predicted lDDT",
-        "Done",
     ]
 
     # Very simple test, it would be better to check coordinates
@@ -153,13 +152,12 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
             stop_at_score=100,
         )
 
-    assert caplog.messages == [
+    assert caplog.messages[1:-1] == [
         "Found 2 citations for tools or databases",
         "Query 1/1: 5AWL_1 (length 10)",
         "Running model_1",
         "model_1 took 0.0s with pLDDT 94.3",
         "reranking models based on avg. predicted lDDT",
-        "Done",
     ]
 
     # Very simple test, it would be better to check coordinates
@@ -200,13 +198,12 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
     messages = list(caplog.messages)
     # noinspection PyUnresolvedReferences
     messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
-    assert messages == [
+    assert messages[1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
         "model_1 took 0.0s with pLDDT 94.4",
         "reranking models based on avg. predicted lDDT",
-        "Done",
     ]
 
 
@@ -237,13 +234,12 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     messages = list(caplog.messages)
     # noinspection PyUnresolvedReferences
     messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
-    assert messages == [
+    assert messages[1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
         "model_1 took 0.0s with pLDDT 91.9",
         "reranking models based on avg. predicted lDDT",
-        "Done",
     ]
 
 
@@ -275,13 +271,12 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     messages = list(caplog.messages)
     # noinspection PyUnresolvedReferences
     messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
-    assert messages == [
+    assert messages[1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/1: A_A (length 118)",
         "Running model_1",
         "model_1 took 0.0s with pLDDT 95.5",
         "reranking models based on avg. predicted lDDT",
-        "Done",
     ]
 
 
@@ -312,13 +307,12 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
     messages = list(caplog.messages)
     # noinspection PyUnresolvedReferences
     messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
-    assert messages == [
+    assert messages[1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/1: A_A (length 118)",
         "Running model_1",
         "model_1 took 0.0s with pLDDT 95.3",
         "reranking models based on avg. predicted lDDT",
-        "Done",
     ]
 
 
