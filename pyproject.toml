@@ -42,6 +42,8 @@ addopts = "--tb=short"
 
 [tool.poetry.scripts]
 colabfold_batch = 'colabfold.batch:main'
+colabfold_search = 'colabfold.mmseqs.search:main'
+colabfold_split_msas = 'colabfold.mmseqs.split_msas:main'
 
 [tool.black]
 # Format only the new package, don't touch the existing stuff

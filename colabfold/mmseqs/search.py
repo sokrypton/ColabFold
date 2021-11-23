@@ -106,6 +106,13 @@ def mmseqs_search(
         run_mmseqs(mmseqs, ["rmdb", base.joinpath("res_env_exp")])
         run_mmseqs(mmseqs, ["rmdb", base.joinpath("res_env")])
 
+    if use_env:
+        run_mmseqs(mmseqs, ["mergedbs", base.joinpath("qdb"), base.joinpath("final.a3m"), base.joinpath("uniref.a3m"), base.joinpath("bfd.mgnify30.metaeuk30.smag30.a3m")])
+        run_mmseqs(mmseqs, ["rmdb", base.joinpath("bfd.mgnify30.metaeuk30.smag30.a3m")])
+    else:
+        run_mmseqs(mmseqs, ["mvdb", base.joinpath("uniref.a3m"), base.joinpath("final.a3m")])
+    run_mmseqs(mmseqs, ["rmdb", base.joinpath("uniref.a3m")])
+
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("qdb")])
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("qdb_h")])
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("res")])
