@@ -36,7 +36,11 @@ from colabfold.alphafold.msa import make_fixed_size
 from colabfold.citations import write_bibtex
 from colabfold.colabfold import run_mmseqs2
 from colabfold.download import download_alphafold_params, default_data_dir
-from colabfold.plot import plot_predicted_alignment_error, plot_lddt
+from colabfold.plot import (
+    plot_predicted_alignment_error,
+    plot_lddt,
+    plot_protein_confidence
+)
 from colabfold.utils import (
     setup_logging,
     safe_filename,
@@ -155,7 +159,9 @@ def predict_structure(
         rank_by = "plddt" if len(sequences_lengths) == 1 else "ptmscore"
 
     plddts, paes, ptmscore = [], [], []
+    unrelaxed_protein_list = []
     unrelaxed_pdb_lines = []
+    full_paes = []
     relaxed_pdb_lines = []
     prediction_times = []
     seq_len = sum(sequences_lengths)
@@ -178,9 +184,10 @@ def predict_structure(
         else:
             input = processed_feature_dict
 
+        start = time.time()
+
         prediction_result, (_, _) = model_runner.predict(input)
 
-        start = time.time()
         # The original alphafold only returns the prediction_result,
         # but our patched alphafold also returns a tuple (recycles,tol)
 
@@ -199,6 +206,8 @@ def predict_structure(
             b_factors=b_factors,
             remove_leading_feature_dimension=not model_runner.multimer_mode,
         )
+        unrelaxed_protein_list.append(unrelaxed_protein)
+        full_paes.append(prediction_result["predicted_aligned_error"])
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
         ptmscore.append(prediction_result["ptm"])
@@ -257,6 +266,20 @@ def predict_structure(
                 f"{prefix}_relaxed_{model_names[r]}_rank_{n + 1}.pdb"
             )
             relaxed_pdb_path.write_text(relaxed_pdb_lines[r])
+
+        paes_path = result_dir.joinpath(
+            f"{prefix}_pae_{model_names[r]}_rank_{n + 1}.npy"
+        )
+        np.save(paes_path, np.array(paes[r]))
+
+        plot_path = result_dir.joinpath(
+            f"{prefix}_all_plot_{model_names[r]}_rank_{n + 1}.png"
+        )
+        fig = plot_protein_confidence(
+            plot_path=plot_path,
+            protein=unrelaxed_protein_list[r],
+            pae=np.array(paes[r]),
+            Ls=sequences_lengths)
 
         out[f"model_{n + 1}"] = {
             "plddt": plddts[r],
