@@ -252,7 +252,7 @@ def plot_protein_confidence(
     show=False,
 ):
 
-    use_ptm = False if pae is None else True
+    use_ptm = pae is not None
 
     if protein is not None:
         pos = np.asarray(protein.atom_positions[:, 1, :])
