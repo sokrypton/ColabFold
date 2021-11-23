@@ -15,30 +15,30 @@ from typing import List, Union
 logger = logging.getLogger(__name__)
 
 
-def run_mmseqs(mmseqs, params: List[Union[str, Path]]):
+def run_mmseqs(mmseqs: Path, params: List[Union[str, Path]]):
     params_log = " ".join(str(i) for i in params)
     logger.info(f"Running {mmseqs} {params_log}")
     subprocess.check_call([mmseqs] + params)
 
 
 def mmseqs_search(
-    mmseqs: Path,
     query: Path,
     dbbase: Path,
     base: Path,
-    uniref_db: Path,
-    template_db: Path,
-    metagenomic_db: Path,
-    use_env: bool,
-    use_templates: bool,
-    filter: bool,
+    uniref_db: Path = Path("uniref30_2103_db"),
+    template_db: Path = Path(""),  # Unused by default
+    metagenomic_db: Path = Path("colabfold_envdb_202108_db"),
+    mmseqs: Path = Path("mmseqs"),
+    use_env: bool = True,
+    use_templates: bool = False,
+    filter: bool = True,
     expand_eval: float = math.inf,
     align_eval: int = 10,
     diff: int = 3000,
     qsc: float = -20.0,
     max_accept: int = 1000000,
-    s: float = 0,
-    db_load_mode: int = 0,
+    s: float = 8,
+    db_load_mode: int = 2,
 ):
     """Run mmseqs with a local colabfold database set
 
@@ -172,7 +172,7 @@ def main():
     parser.add_argument("--diff", type=int, default=3000)
     parser.add_argument("--qsc", type=float, default=-20.0)
     parser.add_argument("--max-accept", type=int, default=1000000)
-    parser.add_argument("-db-load-mode", type=int, default=2)
+    parser.add_argument("--db-load-mode", type=int, default=2)
     args = parser.parse_args()
 
     mmseqs_search(
