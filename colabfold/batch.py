@@ -376,6 +376,9 @@ def get_queries(
         for file in sorted(input_path.iterdir()):
             if not file.is_file():
                 continue
+            if file.suffix.lower() not in [".a3m", ".fasta"]:
+                logger.warning(f"non-fasta/a3m file in input directory: {file}")
+                continue
             (seqs, header) = parse_fasta(file.read_text())
             if len(seqs) == 0:
                 logger.error(f"{file} is empty")
