@@ -4,6 +4,7 @@ import math
 import random
 import sys
 import time
+import pickle
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Dict, Tuple, List, Union, Mapping, Optional
@@ -265,10 +266,15 @@ def predict_structure(
             )
             relaxed_pdb_path.write_text(relaxed_pdb_lines[r])
 
-        paes_path = result_dir.joinpath(
-            f"{prefix}_pae_{model_names[r]}_rank_{n + 1}.npy"
+        data_path = result_dir.joinpath(
+            f"{prefix}_data_{model_names[r]}_rank_{n + 1}.pickle"
         )
-        np.save(paes_path, np.array(paes[r]))
+        with open(data_path, 'wb') as f:
+            # Pickle the 'data' dictionary using the highest protocol available.
+            pickle.dump({'pae': np.array(paes[r])},
+                        f,
+                        pickle.HIGHEST_PROTOCOL)
+
 
         plot_path = result_dir.joinpath(
             f"{prefix}_all_plot_{model_names[r]}_rank_{n + 1}.png"
