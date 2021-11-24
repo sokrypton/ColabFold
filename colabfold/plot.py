@@ -75,6 +75,7 @@ def plot_lddt(
         plt.show()
     plt.close()
 
+
 def plot_protein_confidence(
     plot_path,
     protein=None,
