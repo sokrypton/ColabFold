@@ -269,12 +269,9 @@ def predict_structure(
         data_path = result_dir.joinpath(
             f"{prefix}_data_{model_names[r]}_rank_{n + 1}.pickle"
         )
-        with open(data_path, 'wb') as f:
+        with open(data_path, "wb") as f:
             # Pickle the 'data' dictionary using the highest protocol available.
-            pickle.dump({'pae': np.array(paes[r])},
-                        f,
-                        pickle.HIGHEST_PROTOCOL)
-
+            pickle.dump({"pae": np.array(paes[r])}, f, pickle.HIGHEST_PROTOCOL)
 
         plot_path = result_dir.joinpath(
             f"{prefix}_all_plot_{model_names[r]}_rank_{n + 1}.png"
