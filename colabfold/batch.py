@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import Any, Dict, Tuple, List, Union, Optional
 
 import haiku
+import importlib_metadata
 import numpy as np
 import pandas
-import importlib_metadata
 from jax.lib import xla_bridge
 from numpy import ndarray
 
