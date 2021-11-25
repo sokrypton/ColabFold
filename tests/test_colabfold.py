@@ -65,7 +65,9 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
     messages = list(caplog.messages)
     # Remove time message as it might change as function of computer
     time_id_list = [4, 8]
-    messages_no_time = [messages[i] for i in range(len(messages)) if i not in time_id_list]
+    messages_no_time = [
+        messages[i] for i in range(len(messages)) if i not in time_id_list
+    ]
     messages_time = [messages[i] for i in time_id_list]
 
     assert messages_no_time[1:-1] == [
@@ -84,7 +86,8 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
     ]
     for i, message in enumerate(messages_time):
         assert message.startswith(expected_list[i][:13]) and message.endswith(
-        expected_list[i][16:])
+            expected_list[i][16:]
+        )
 
     # Very simple test, it would be better to check coordinates
     assert (
