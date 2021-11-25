@@ -14,7 +14,7 @@ authors = [
 [tool.poetry.dependencies]
 python = ">=3.7.1,<3.11"
 absl-py = "^0.13.0"
-alphafold-colabfold = { version = "2.1.1", optional = true }
+alphafold-colabfold = { version = "2.1.2", optional = true }
 jax = { version = "^0.2.20", optional = true }
 # https://github.com/facebook/prophet/issues/1691#issuecomment-712199609
 matplotlib = "3.1.3"
