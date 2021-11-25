@@ -68,11 +68,11 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
         "Query 1/2: 5AWL_1 (length 10)",
         "Running model_1",
         "model_1 took 0.0s (3 recycles) with pLDDT 94.3 and ptmscore 0.0515",
-        "reranking models based on avg. predicted lDDT",
+        "reranking models based on average plddt",
         "Query 2/2: 6A5J (length 13)",
         "Running model_1",
         "model_1 took 0.0s (3 recycles) with pLDDT 90.8 and ptmscore 0.0394",
-        "reranking models based on avg. predicted lDDT",
+        "reranking models based on average plddt",
     ]
 
     # Very simple test, it would be better to check coordinates
@@ -159,7 +159,7 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
         "Query 1/1: 5AWL_1 (length 10)",
         "Running model_1",
         "model_1 took 0.0s (3 recycles) with pLDDT 94.3 and ptmscore 0.0515",
-        "reranking models based on avg. predicted lDDT",
+        "reranking models based on average plddt",
     ]
 
     # Very simple test, it would be better to check coordinates
@@ -203,7 +203,7 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
         "model_1 took 0.0s (3 recycles) with pLDDT 94.4 and ptmscore 0.884",
-        "reranking models based on avg. predicted lDDT",
+        "reranking models based on average ptmscore",
     ]
 
 
@@ -237,7 +237,7 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
         "model_1 took 0.0s (3 recycles) with pLDDT 91.9 and ptmscore 0.846",
-        "reranking models based on avg. predicted lDDT",
+        "reranking models based on average ptmscore",
     ]
 
 
@@ -272,7 +272,7 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
         "Query 1/1: A_A (length 118)",
         "Running model_1",
         "model_1 took 0.0s (3 recycles) with pLDDT 95.5 and ptmscore 0.867",
-        "reranking models based on avg. predicted lDDT",
+        "reranking models based on average ptmscore",
     ]
 
 
@@ -306,11 +306,11 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
         "Query 1/1: A_A (length 118)",
         "Running model_1",
         "model_1 took 0.0s (3 recycles) with pLDDT 95.3 and ptmscore 0.865",
-        "reranking models based on avg. predicted lDDT",
+        "reranking models based on average ptmscore",
     ]
 
 
-def test_msa_serialization(pytestconfig, caplog, tmp_path):
+def test_msa_serialization(pytestconfig):
     # heteromer
     unpaired_alignment = [
         ">101\nAAAAAAAA\n>UP1\nAACCcccVVAA\n",

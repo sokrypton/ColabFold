@@ -280,7 +280,7 @@ def predict_structure(
     else:
         model_rank = np.mean(plddts, -1).argsort()[::-1]
     out = {}
-    logger.info("reranking models based on avg. predicted lDDT")
+    logger.info(f"reranking models based on average {rank_by}")
     for n, key in enumerate(model_rank):
         unrelaxed_pdb_path = result_dir.joinpath(
             f"{prefix}_unrelaxed_{model_names[key]}_rank_{n + 1}.pdb"
