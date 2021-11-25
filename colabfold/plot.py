@@ -31,6 +31,7 @@ def plot_predicted_alignment_error(
         plt.show()
     plt.close()
 
+
 def plot_msa(msa, query_sequence, seq_len_list, total_seq_len, dpi=100):
     # gather MSA info
     prev_pos = 0
@@ -80,8 +81,9 @@ def plot_msa(msa, query_sequence, seq_len_list, total_seq_len, dpi=100):
     plt.colorbar(label="Sequence identity to query")
     plt.xlabel("Positions")
     plt.ylabel("Sequences")
-    
+
     return plt
+
 
 def plot_protein_confidence(
     plot_path,
