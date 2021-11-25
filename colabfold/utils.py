@@ -1,8 +1,11 @@
+import json
 import logging
 import warnings
 from pathlib import Path
+from typing import Optional
 
 from absl import logging as absl_logging
+from importlib_metadata import distribution
 from tqdm import TqdmExperimentalWarning
 
 NO_GPU_FOUND = """ERROR: Jax could not find GPU. This can be either because your machine doesn't have a GPU
@@ -49,3 +52,15 @@ def setup_logging(log_file: Path):
 
 def safe_filename(file: str) -> str:
     return "".join([c if c.isalnum() or c in ["_", ".", "-"] else "_" for c in file])
+
+
+def get_commit() -> Optional[str]:
+    text = distribution("colabfold").read_text("direct_url.json")
+    if not text:
+        return None
+    direct_url = json.loads(text)
+    if "vcs_info" not in direct_url:
+        return None
+    if "commit_id" not in direct_url["vcs_info"]:
+        return None
+    return direct_url["vcs_info"]["commit_id"]

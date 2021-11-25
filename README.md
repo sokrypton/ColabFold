@@ -84,9 +84,9 @@ Download and unpack mmseqs (Note: The required features aren't in a release yet,
 
 ```shell
 # This needs a lot of CPU
-colabfold_search.sh mmseqs input_sequences.fasta /path/to/db_folder search_results uniref30_2103_db "" colabfold_envdb_202108_db 1 0 1
+colabfold_search input_sequences.fasta /path/to/db_folder search_results
 # This just does a bit of IO
-python /home/konsti/ColabFold/colabfold/merge_and_split_msas.py search_results msas
+colabfold_split_msas search_results msas
 # This needs a GPU
 colabfold_batch msas predictions
 ```

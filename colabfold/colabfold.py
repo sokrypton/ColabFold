@@ -411,32 +411,33 @@ def plot_confidence(plddt, pae=None, Ls=None, dpi=100):
     plt.ylabel('Aligned residue')
   return plt
 
-def plot_msas(msas, ori_seq=None, sort_by_seqid=True, deduplicate=True, dpi=100, return_plt=True):
+def plot_msas(msa, ori_seq=None, sort_by_seqid=True, deduplicate=True, dpi=100, return_plt=True):
   '''
   plot the msas
   '''
-  if ori_seq is None: ori_seq = msas[0][0]
+  if ori_seq is None: ori_seq = msa[0]
   seqs = ori_seq.replace("/","").split(":")
   seqs_dash = ori_seq.replace(":","").split("/")
 
   Ln = np.cumsum(np.append(0,[len(seq) for seq in seqs]))
   Ln_dash = np.cumsum(np.append(0,[len(seq) for seq in seqs_dash]))
   Nn,lines = [],[]
-  for msa in msas:
-    msa_ = set(msa) if deduplicate else msa
-    if len(msa_) > 0:
-      Nn.append(len(msa_))
-      msa_ = np.asarray([list(seq) for seq in msa_])
-      gap_ = msa_ != "-"
-      qid_ = msa_ == np.array(list("".join(seqs)))
-      gapid = np.stack([gap_[:,Ln[i]:Ln[i+1]].max(-1) for i in range(len(seqs))],-1)
-      seqid = np.stack([qid_[:,Ln[i]:Ln[i+1]].mean(-1) for i in range(len(seqs))],-1).sum(-1) / (gapid.sum(-1) + 1e-8)
-      non_gaps = gap_.astype(np.float)
-      non_gaps[non_gaps == 0] = np.nan
-      if sort_by_seqid:
-        lines.append(non_gaps[seqid.argsort()]*seqid[seqid.argsort(),None])
-      else:
-        lines.append(non_gaps[::-1] * seqid[::-1,None])
+  #for msa in msas:
+  #msa_ = set(msa) if deduplicate else msa
+  msa_ = msa
+  if len(msa_) > 0:
+    Nn.append(len(msa_))
+    msa_ = np.asarray([list(seq) for seq in msa_])
+    gap_ = msa_ != "-"
+    qid_ = msa_ == np.array(list("".join(seqs)))
+    gapid = np.stack([gap_[:,Ln[i]:Ln[i+1]].max(-1) for i in range(len(seqs))],-1)
+    seqid = np.stack([qid_[:,Ln[i]:Ln[i+1]].mean(-1) for i in range(len(seqs))],-1).sum(-1) / (gapid.sum(-1) + 1e-8)
+    non_gaps = gap_.astype(np.float)
+    non_gaps[non_gaps == 0] = np.nan
+    if sort_by_seqid:
+      lines.append(non_gaps[seqid.argsort()]*seqid[seqid.argsort(),None])
+    else:
+      lines.append(non_gaps[::-1] * seqid[::-1,None])
 
   Nn = np.cumsum(np.append(0,Nn))
   lines = np.concatenate(lines,0)
