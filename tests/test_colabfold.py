@@ -125,6 +125,8 @@ def test_zip(pytestconfig, caplog, tmp_path, prediction_test):
         "5AWL_1_coverage.png",
         "5AWL_1_plddt.png",
         "5AWL_1_unrelaxed_model_1_rank_1.pdb",
+        "5AWL_1_data_model_1_rank_1.pickle",
+        "5AWL_1_pae_model_1_rank_1.txt",
     ]
     with ZipFile(tmp_path.joinpath("5AWL_1.result.zip")) as result_zip:
         actual_zip = [i.filename for i in result_zip.infolist()]
