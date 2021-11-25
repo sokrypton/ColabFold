@@ -306,7 +306,7 @@ def predict_structure(
         pae_txt_path = result_dir.joinpath(
             f"{prefix}_pae_{model_names[key]}_rank_{n + 1}.txt"
         )
-        np.savetxt(pae_txt_path, np.array(paes[key]), fmt='%1.6e')
+        np.savetxt(pae_txt_path, np.array(paes[key]), fmt="%1.6e")
 
         plot_path = result_dir.joinpath(
             f"{prefix}_all_plot_{model_names[key]}_rank_{n + 1}.png"
