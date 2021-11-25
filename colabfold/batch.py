@@ -969,7 +969,7 @@ def run(
                 unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality
             )
             result_dir.joinpath(jobname + ".a3m").write_text(msa)
-        except OSError as e:
+        except Exception as e:
             logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
             continue
         try:
