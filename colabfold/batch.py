@@ -198,13 +198,16 @@ def predict_structure(
         prediction_time = time.time() - start
         prediction_times.append(prediction_time)
 
+        mean_plddt = np.mean(prediction_result["plddt"][:seq_len])
+        mean_ptm = np.mean(prediction_result["ptm"])
         if rank_by == "plddt":
-            mean_score = np.mean(prediction_result["plddt"][:seq_len])
+            mean_score = mean_plddt
         else:
-            mean_score = np.mean(prediction_result["ptm"])
+            mean_score = mean_ptm
 
         logger.info(
-            f"{model_name} took {prediction_time:.1f}s ({recycles[0]} recycles) with {rank_by} {mean_score:.1f}"
+            f"{model_name} took {prediction_time:.1f}s ({recycles[0]} recycles) "
+            f"with pLDDT {mean_plddt:.3g} and ptmscore {mean_ptm:.3g}"
         )
         final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
         b_factors = prediction_result["plddt"][:, None] * final_atom_mask

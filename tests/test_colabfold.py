@@ -1,12 +1,12 @@
-import logging
-import re
-from functools import lru_cache
 from unittest import mock
-from zipfile import ZipFile
 
 import haiku
+import logging
 import pytest
+import re
 from absl import logging as absl_logging
+from functools import lru_cache
+from zipfile import ZipFile
 
 from alphafold.model.data import get_model_haiku_params
 from alphafold.model.tf import utils
@@ -66,11 +66,11 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
         "Found 5 citations for tools or databases",
         "Query 1/2: 5AWL_1 (length 10)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 94.3",
+        "model_1 took 0.0s (3 recycles) with pLDDT 94.3 and ptmscore 0.0515",
         "reranking models based on avg. predicted lDDT",
         "Query 2/2: 6A5J (length 13)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 90.8",
+        "model_1 took 0.0s (3 recycles) with pLDDT 90.8 and ptmscore 0.0394",
         "reranking models based on avg. predicted lDDT",
     ]
 
@@ -156,7 +156,7 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
         "Found 2 citations for tools or databases",
         "Query 1/1: 5AWL_1 (length 10)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 94.3",
+        "model_1 took 0.0s (3 recycles) with pLDDT 94.3 and ptmscore 0.0515",
         "reranking models based on avg. predicted lDDT",
     ]
 
@@ -195,14 +195,12 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
             stop_at_score=100,
         )
 
-    messages = list(caplog.messages)
-    # noinspection PyUnresolvedReferences
-    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
+    messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     assert messages[1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 94.4",
+        "model_1 took 0.0s (3 recycles) with pLDDT 94.4 and ptmscore 0.884",
         "reranking models based on avg. predicted lDDT",
     ]
 
@@ -231,14 +229,12 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
             stop_at_score=100,
         )
 
-    messages = list(caplog.messages)
-    # noinspection PyUnresolvedReferences
-    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
+    messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     assert messages[1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 91.9",
+        "model_1 took 0.0s (3 recycles) with pLDDT 91.9 and ptmscore 0.846",
         "reranking models based on avg. predicted lDDT",
     ]
 
@@ -268,14 +264,12 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
             stop_at_score=100,
         )
 
-    messages = list(caplog.messages)
-    # noinspection PyUnresolvedReferences
-    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
+    messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     assert messages[1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/1: A_A (length 118)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 95.5",
+        "model_1 took 0.0s (3 recycles) with pLDDT 95.5 and ptmscore 0.867",
         "reranking models based on avg. predicted lDDT",
     ]
 
@@ -304,14 +298,12 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
             stop_at_score=100,
         )
 
-    messages = list(caplog.messages)
-    # noinspection PyUnresolvedReferences
-    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
+    messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     assert messages[1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/1: A_A (length 118)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 95.3",
+        "model_1 took 0.0s (3 recycles) with pLDDT 95.3 and ptmscore 0.865",
         "reranking models based on avg. predicted lDDT",
     ]
 
