@@ -1,11 +1,12 @@
 """
-Functionality for running mmseqs locally
+Functionality for running mmseqs locally. Takes in a fasta file, outputs final.a3m
 
-Note: Untested and needs mmseqs compiled from source
+Note: Currently needs mmseqs compiled from source
 """
 
 import logging
 import math
+import shutil
 import subprocess
 from argparse import ArgumentParser
 from pathlib import Path
@@ -14,35 +15,35 @@ from typing import List, Union
 logger = logging.getLogger(__name__)
 
 
-def run_mmseqs(mmseqs, params: List[Union[str, Path]]):
+def run_mmseqs(mmseqs: Path, params: List[Union[str, Path]]):
     params_log = " ".join(str(i) for i in params)
     logger.info(f"Running {mmseqs} {params_log}")
     subprocess.check_call([mmseqs] + params)
 
 
 def mmseqs_search(
-    mmseqs: Path,
     query: Path,
     dbbase: Path,
     base: Path,
-    uniref_db: Path,
-    template_db: Path,
-    metagenomic_db: Path,
-    use_env: bool,
-    use_templates: bool,
-    filter: bool,
+    uniref_db: Path = Path("uniref30_2103_db"),
+    template_db: Path = Path(""),  # Unused by default
+    metagenomic_db: Path = Path("colabfold_envdb_202108_db"),
+    mmseqs: Path = Path("mmseqs"),
+    use_env: bool = True,
+    use_templates: bool = False,
+    filter: bool = True,
     expand_eval: float = math.inf,
     align_eval: int = 10,
     diff: int = 3000,
     qsc: float = -20.0,
     max_accept: int = 1000000,
-    s: float = 0,
-    db_load_mode: int = 0,
+    s: float = 8,
+    db_load_mode: int = 2,
 ):
     """Run mmseqs with a local colabfold database set
 
     db1: uniprot db (UniRef30)
-    db2: Template (unused)
+    db2: Template (unused by default)
     db3: metagenomic db (colabfold_envdb_202108 or bfd_mgy_colabfold, the former is preferred)
     """
     if filter:
@@ -105,33 +106,73 @@ def mmseqs_search(
         run_mmseqs(mmseqs, ["rmdb", base.joinpath("res_env_exp")])
         run_mmseqs(mmseqs, ["rmdb", base.joinpath("res_env")])
 
+    if use_env:
+        run_mmseqs(mmseqs, ["mergedbs", base.joinpath("qdb"), base.joinpath("final.a3m"), base.joinpath("uniref.a3m"), base.joinpath("bfd.mgnify30.metaeuk30.smag30.a3m")])
+        run_mmseqs(mmseqs, ["rmdb", base.joinpath("bfd.mgnify30.metaeuk30.smag30.a3m")])
+    else:
+        run_mmseqs(mmseqs, ["mvdb", base.joinpath("uniref.a3m"), base.joinpath("final.a3m")])
+    run_mmseqs(mmseqs, ["rmdb", base.joinpath("uniref.a3m")])
+
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("qdb")])
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("qdb_h")])
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("res")])
     # @formatter:on
     # fmt: on
 
+    for file in base.glob("prof_res*"):
+        file.unlink()
+    shutil.rmtree(base.joinpath("tmp"))
+
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument("query", type=Path)
-    parser.add_argument("dbbase", type=Path)
-    parser.add_argument("base", type=Path)
-    parser.add_argument("--db1", type=Path, default=Path("uniref30_2103_db"))
-    parser.add_argument("--db2", type=Path, default=Path(""))
-    parser.add_argument("--db3", type=Path, default=Path("colabfold_envdb_202108_db"))
+    parser.add_argument(
+        "query",
+        type=Path,
+        help="fasta files with the queries. Doesn't support complexes yet",
+    )
+    parser.add_argument(
+        "dbbase",
+        type=Path,
+        help="The path to the database and indices you downloaded and created with setup_databases.sh",
+    )
+    parser.add_argument(
+        "base", type=Path, help="Directory for the results (and intermediate files)"
+    )
+    parser.add_argument(
+        "-s",
+        type=int,
+        default=8,
+        help="mmseqs sensitivity. Lowering this will result in a much faster search but possibly sparser msas",
+    )
+    # dbs are uniref, templates and environmental
+    # We normally don't use templates
+    parser.add_argument(
+        "--db1", type=Path, default=Path("uniref30_2103_db"), help="UniRef database"
+    )
+    parser.add_argument("--db2", type=Path, default=Path(""), help="Templates database")
+    parser.add_argument(
+        "--db3",
+        type=Path,
+        default=Path("colabfold_envdb_202108_db"),
+        help="Environmental database",
+    )
     # poor man's boolean arguments
     parser.add_argument("--use-env", type=int, default=1, choices=[0, 1])
     parser.add_argument("--use-templates", type=int, default=0, choices=[0, 1])
     parser.add_argument("--filter", type=int, default=1, choices=[0, 1])
-    parser.add_argument("--mmseqs", type=Path, default=Path("mmseqs"))
+    parser.add_argument(
+        "--mmseqs",
+        type=Path,
+        default=Path("mmseqs"),
+        help="Location of the mmseqs binary",
+    )
     parser.add_argument("--expand-eval", type=float, default=math.inf)
     parser.add_argument("--align-eval", type=int, default=10)
     parser.add_argument("--diff", type=int, default=3000)
     parser.add_argument("--qsc", type=float, default=-20.0)
     parser.add_argument("--max-accept", type=int, default=1000000)
-    parser.add_argument("-s", type=int, default=8)
-    parser.add_argument("-db-load-mode", type=int, default=2)
+    parser.add_argument("--db-load-mode", type=int, default=2)
     args = parser.parse_args()
 
     mmseqs_search(

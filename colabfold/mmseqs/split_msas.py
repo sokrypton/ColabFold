@@ -5,26 +5,10 @@ We merge the two searches and then split into one a3m file per msa.
 import logging
 from argparse import ArgumentParser
 from pathlib import Path
-from subprocess import check_call
 
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
-
-
-def merge_msa(mmseqs: str = "mmseqs", cwd: Path = Path("..")):
-    check_call(
-        [
-            mmseqs,
-            "mergedbs",
-            "bfd.mgnify30.metaeuk30.smag30.a3m",
-            "merged.a3m",
-            "uniref.a3m",
-            "bfd.mgnify30.metaeuk30.smag30.a3m",
-        ],
-        cwd=cwd,
-    )
-    return Path(cwd).joinpath("merged.a3m")
 
 
 def split_msa(merged_msa: Path, output_folder: Path):
@@ -43,8 +27,7 @@ def main():
     )
     parser.add_argument(
         "search_folder",
-        help="The search folder in which you ran colabfold_search, "
-        "which should contain uniref.a3m and bfd.mgnify30.metaeuk30.smag30.a3m",
+        help="The search folder in which you ran colabfold_search with the final.a3m",
     )
     parser.add_argument("output_folder", help="Will contain all the a3m files")
     parser.add_argument("--mmseqs", help="Path to the mmseqs2 binary", default="mmseqs")
@@ -52,10 +35,8 @@ def main():
     output_folder = Path(args.output_folder)
     output_folder.mkdir(exist_ok=True)
 
-    logger.info("Merging MSAs")
-    merged_msa = merge_msa(args.mmseqs, Path(args.search_folder))
     logger.info("Splitting MSAs")
-    split_msa(merged_msa, output_folder)
+    split_msa(Path(args.search_folder).joinpath("final.a3m"), output_folder)
     logger.info("Done")
 
 

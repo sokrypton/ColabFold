@@ -5,8 +5,8 @@ logger = logging.getLogger(__name__)
 
 citations = {
     "Mirdita2021": """@article{Mirdita2021,
-author = {Mirdita, Milot and Ovchinnikov, Sergey and Steinegger, Martin},
-doi = {10.1101/2021.08.15.456425},
+author= {Mirdita, Milot and Schütze, Konstantin and Moriwaki, Yoshitaka and Heo, Lim and Ovchinnikov, Sergey and Steinegger, Martin },
+doi = {10.1101/2021.08.15.456425v2},
 journal = {bioRxiv},
 title = {{ColabFold - Making Protein folding accessible to all}},
 year = {2021},
@@ -38,6 +38,14 @@ pmid = {34265844},
 title = {{Highly accurate protein structure prediction with AlphaFold.}},
 year = {2021},
 comment = {AlphaFold2 + BFD Database}
+}""",
+    "Evans2021": """@article{Evans2021,
+  author   = {Evans, Richard and O'Neill, Michael and Pritzel, Alexander and Antropova, Natasha and Senior, Andrew and Green, Tim and  Zidek, Augustin and Bates, Russ and Blackwell, Sam and Yim, Jason and Ronneberger, Olaf and Bodenstein, Sebastian and Zielinski, Michal and Bridgland, Alex and Potapenko, Anna and Cowie, Andrew and Tunyasuvunakool, Kathryn and Jain, Rishub and Clancy, Ellen and Kohli, Pushmeet and Jumper, John and Hassabis, Demis},
+  doi    = {10.1101/2021.10.04.463034v1},
+  journal  = {bioRxiv},
+  title    = {{Protein complex prediction with AlphaFold-Multimer}},
+  year     =  {2021},
+  comment = {AlphaFold2-multimer}
 }""",
     "Mirdita2019": """@article{Mirdita2019,
 author = {Mirdita, Milot and Steinegger, Martin and S{\"{o}}ding, Johannes},
@@ -91,14 +99,19 @@ comment = {templates downloaded from wwPDB server}
 
 
 def write_bibtex(
+    model: str,
     use_msa: bool,
     use_env: bool,
     use_templates: bool,
     use_amber: bool,
     result_dir: Path,
     bibtex_file: str = "cite.bibtex",
-):
-    to_cite = ["Mirdita2021", "Jumper2021"]
+) -> Path:
+    to_cite = ["Mirdita2021"]
+    if model == "AlphaFold2-ptm":
+        to_cite += ["Jumper2021"]
+    if model == "AlphaFold2-multimer":
+        to_cite += ["Evans2021"]
     if use_msa:
         to_cite += ["Mirdita2019"]
     if use_msa:
@@ -119,3 +132,4 @@ def write_bibtex(
             writer.write("\n")
 
     logger.info(f"Found {len(to_cite)} citations for tools or databases")
+    return bibtex_file

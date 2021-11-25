@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 default_data_dir = Path(appdirs.user_cache_dir(__package__ or "colabfold"))
 
 
-def download_alphafold_params(is_complex: bool, data_dir: Path = default_data_dir):
+def download_alphafold_params(model_type: str, data_dir: Path = default_data_dir):
     params_dir = data_dir.joinpath("params")
-    if is_complex:
+    if model_type == "AlphaFold2-multimer":
         url = "https://storage.googleapis.com/alphafold/alphafold_params_colab_2021-10-27.tar"
         success_marker = params_dir.joinpath("download_complexes_finished.txt")
     else:
@@ -42,5 +42,5 @@ def download_alphafold_params(is_complex: bool, data_dir: Path = default_data_di
 
 if __name__ == "__main__":
     # TODO: Arg to select which one
-    download_alphafold_params(False)
-    download_alphafold_params(True)
+    download_alphafold_params("AlphaFold2-multimer")
+    download_alphafold_params("AlphaFold2-ptm")

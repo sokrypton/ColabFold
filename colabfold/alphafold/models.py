@@ -8,7 +8,8 @@ from alphafold.model import model, config, data
 
 def load_models_and_params(
     num_models: int,
-    num_recycle: bool = 3,
+    use_templates: bool,
+    num_recycle: int = 3,
     model_order: Optional[List[int]] = None,
     model_suffix: str = "_ptm",
     data_dir: Path = Path("."),
@@ -24,8 +25,7 @@ def load_models_and_params(
 
     # Use only two model and later swap params to avoid recompiling
     model_runner_and_params: [Tuple[str, model.RunModel, haiku.Params]] = []
-    model_runner_1 = None
-    model_runner_3 = None
+
     if recompile_all_models:
         for n, model_number in enumerate(model_order):
             model_name = f"model_{model_number}"
@@ -43,52 +43,51 @@ def load_models_and_params(
             model_runner_and_params.append(
                 (model_name, model.RunModel(model_config, params), params)
             )
-        return model_runner_and_params
     else:
-        for n, model_number in enumerate(model_order):
-            if n == num_models:
-                break
-            if model_number in [1, 2]:
-                if not model_runner_1:
-                    model_config = config.model_config("model_1" + model_suffix)
-                    if model_suffix == "_ptm":
-                        model_config.data.eval.num_ensemble = 1
-                        model_config.data.common.num_recycle = num_recycle
-                        model_config.model.num_recycle = num_recycle
-                    elif model_suffix == "_multimer":
-                        model_config.model.num_ensemble_eval = 1
-                        model_config.model.num_recycle = num_recycle
-
-                    model_runner_1 = model.RunModel(
-                        model_config,
-                        data.get_model_haiku_params(
-                            model_name="model_1" + model_suffix, data_dir=str(data_dir)
-                        ),
-                    )
-                model_runner = model_runner_1
-            else:
-                assert model_number in [3, 4, 5], model_number
-
-                if not model_runner_3:
-                    model_config = config.model_config("model_3" + model_suffix)
-                    if model_suffix == "_ptm":
-                        model_config.data.eval.num_ensemble = 1
-                        model_config.data.common.num_recycle = num_recycle
-                        model_config.model.num_recycle = num_recycle
-                    elif model_suffix == "_multimer":
-                        model_config.model.num_ensemble_eval = 1
-                        model_config.model.num_recycle = num_recycle
-                    model_runner_3 = model.RunModel(
-                        model_config,
-                        data.get_model_haiku_params(
-                            model_name="model_3" + model_suffix, data_dir=str(data_dir)
-                        ),
-                    )
-                model_runner = model_runner_3
-
+        models_need_compilation = [1, 3] if use_templates else [3]
+        model_build_order = [3, 4, 5, 1, 2]
+        model_runner_and_params_build_order: [
+            Tuple[str, model.RunModel, haiku.Params]
+        ] = []
+        model_runner = None
+        for model_number in model_build_order:
+            if model_number in models_need_compilation:
+                model_config = config.model_config(
+                    "model_" + str(model_number) + model_suffix
+                )
+                if model_suffix == "_ptm":
+                    model_config.data.eval.num_ensemble = 1
+                    model_config.data.common.num_recycle = num_recycle
+                    model_config.model.num_recycle = num_recycle
+                elif model_suffix == "_multimer":
+                    model_config.model.num_ensemble_eval = 1
+                    model_config.model.num_recycle = num_recycle
+                model_runner = model.RunModel(
+                    model_config,
+                    data.get_model_haiku_params(
+                        model_name="model_" + str(model_number) + model_suffix,
+                        data_dir=str(data_dir),
+                    ),
+                )
             model_name = f"model_{model_number}"
             params = data.get_model_haiku_params(
                 model_name=model_name + model_suffix, data_dir=str(data_dir)
             )
-            model_runner_and_params.append((model_name, model_runner, params))
-        return model_runner_and_params
+            # keep only parameters of compiled model
+            params_subset = {}
+            for k in model_runner.params.keys():
+                params_subset[k] = params[k]
+
+            model_runner_and_params_build_order.append(
+                (model_name, model_runner, params_subset)
+            )
+        # reorder model
+        for n, model_number in enumerate(model_order):
+            if n == num_models:
+                break
+            model_name = f"model_{model_number}"
+            for m in model_runner_and_params_build_order:
+                if model_name == m[0]:
+                    model_runner_and_params.append(m)
+                    break
+    return model_runner_and_params
