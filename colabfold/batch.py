@@ -303,6 +303,11 @@ def predict_structure(
             # Pickle the 'data' dictionary using the highest protocol available.
             pickle.dump({"pae": np.array(paes[key])}, f, pickle.HIGHEST_PROTOCOL)
 
+        pae_txt_path = result_dir.joinpath(
+            f"{prefix}_pae_{model_names[key]}_rank_{n + 1}.txt"
+        )
+        np.savetxt(pae_txt_path, np.array(paes[key]), fmt='%1.6e')
+
         plot_path = result_dir.joinpath(
             f"{prefix}_all_plot_{model_names[key]}_rank_{n + 1}.png"
         )
@@ -1068,6 +1073,8 @@ def run(
                 + sorted(result_dir.glob(jobname + "*.png"))
                 + sorted(result_dir.glob(f"{jobname}_unrelaxed_*.pdb"))
                 + sorted(result_dir.glob(f"{jobname}_relaxed_*.pdb"))
+                + sorted(result_dir.glob(f"{jobname}_data_*.pickle"))
+                + sorted(result_dir.glob(f"{jobname}_pae_*.txt"))
             )
 
             with zipfile.ZipFile(result_zip, "w") as result_zip:
