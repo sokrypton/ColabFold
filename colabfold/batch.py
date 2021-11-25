@@ -250,7 +250,7 @@ def predict_structure(
             residue_constants.stereo_chemical_props_path = "stereo_chemical_props.txt"
 
             # Remove the padding because unlike to_pdb() amber doesn't handle that
-            remove_padding_mask = unrelaxed_protein.atom_mask.sum(axis=-1) > 0
+            remove_padding_mask = np.array(unrelaxed_protein.atom_mask.sum(axis=-1) > 0)
             unrelaxed_protein = Protein(
                 atom_mask=unrelaxed_protein.atom_mask[remove_padding_mask],
                 atom_positions=unrelaxed_protein.atom_positions[remove_padding_mask],
