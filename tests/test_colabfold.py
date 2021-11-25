@@ -62,7 +62,6 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
             is_complex=False,
         )
 
-
     messages = list(caplog.messages)
     expected_messages = [
         r"Running colabfold 1.1.0 (.*)",
@@ -80,7 +79,6 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
     for expected_message, message in zip(expected_messages, messages):
         pattern = re.compile(expected_message)
         assert pattern.match(message)
-
 
     # Very simple test, it would be better to check coordinates
     assert (
@@ -177,7 +175,6 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
         pattern = re.compile(expected_message)
         assert pattern.match(message)
 
-
     # Very simple test, it would be better to check coordinates
     assert (
         len(
@@ -212,7 +209,6 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
             is_complex=True,
             stop_at_score=100,
         )
-
 
     messages = list(caplog.messages)
     expected_messages = [
@@ -267,6 +263,7 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
         pattern = re.compile(expected_message)
         assert pattern.match(message)
 
+
 def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     A = "PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK"
     queries = [("A_A", [A, A], None)]
@@ -291,7 +288,6 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
             is_complex=True,
             stop_at_score=100,
         )
-
 
     messages = list(caplog.messages)
     expected_messages = [
