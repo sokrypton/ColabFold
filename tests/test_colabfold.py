@@ -62,32 +62,25 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
             is_complex=False,
         )
 
+
     messages = list(caplog.messages)
-    # Remove time message as it might change as function of computer
-    time_id_list = [4, 8]
-    messages_no_time = [
-        messages[i] for i in range(len(messages)) if i not in time_id_list
-    ]
-    messages_time = [messages[i] for i in time_id_list]
-
-    assert messages_no_time[1:-1] == [
+    expected_messages = [
+        r"Running colabfold 1.1.0 (.*)",
         "Found 5 citations for tools or databases",
-        "Query 1/2: 5AWL_1 (length 10)",
+        r"Query 1\/2: 5AWL_1 \(length 10\)",
         "Running model_1",
+        r"model_1 took \d*.\ds with pLDDT 94.3",
         "reranking models based on avg. predicted lDDT",
-        "Query 2/2: 6A5J (length 13)",
+        r"Query 2\/2: 6A5J \(length 13\)",
         "Running model_1",
+        r"model_1 took \d*.\ds with pLDDT 90.8",
         "reranking models based on avg. predicted lDDT",
     ]
 
-    expected_list = [
-        "model_1 took 0.0s with pLDDT 94.3",
-        "model_1 took 0.0s with pLDDT 90.8",
-    ]
-    for i, message in enumerate(messages_time):
-        assert message.startswith(expected_list[i][:13]) and message.endswith(
-            expected_list[i][16:]
-        )
+    for expected_message, message in zip(expected_messages, messages):
+        pattern = re.compile(expected_message)
+        assert pattern.match(message)
+
 
     # Very simple test, it would be better to check coordinates
     assert (
@@ -171,18 +164,19 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
         )
 
     messages = list(caplog.messages)
-    # Remove time message as it might change as function of computer
-    time_id = 4
-    assert messages[1:time_id] + messages[time_id + 1 : -1] == [
+    expected_messages = [
+        r"^Running colabfold 1.1.0 \(.*\)$",
         "Found 2 citations for tools or databases",
-        "Query 1/1: 5AWL_1 (length 10)",
+        r"Query 1/1: 5AWL_1 \(length 10\)",
         "Running model_1",
+        r"model_1 took \d*.\ds with pLDDT 94.3",
         "reranking models based on avg. predicted lDDT",
     ]
-    # Test time message without its numerical value
-    assert messages[time_id].startswith("model_1 took") and messages[time_id].endswith(
-        "s with pLDDT 94.3"
-    )
+
+    for expected_message, message in zip(expected_messages, messages):
+        pattern = re.compile(expected_message)
+        assert pattern.match(message)
+
 
     # Very simple test, it would be better to check coordinates
     assert (
@@ -219,21 +213,20 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
             stop_at_score=100,
         )
 
+
     messages = list(caplog.messages)
-    # noinspection PyUnresolvedReferences
-    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
-    # Remove time message as it might change as function of computer
-    time_id = 4
-    assert messages[1:time_id] + messages[time_id + 1 : -1] == [
+    expected_messages = [
+        r"^Running colabfold 1.1.0 \(.*\)$",
         "Found 5 citations for tools or databases",
-        "Query 1/1: 3G5O_A_3G5O_B (length 180)",
+        r"Query 1\/1: 3G5O_A_3G5O_B \(length 180\)",
         "Running model_1",
+        r"model_1 took \d*.\ds with pLDDT 94.4",
         "reranking models based on avg. predicted lDDT",
     ]
-    # Test time message without its numerical value
-    assert messages[time_id].startswith("model_1 took") and messages[time_id].endswith(
-        "s with pLDDT 94.4"
-    )
+
+    for expected_message, message in zip(expected_messages, messages):
+        pattern = re.compile(expected_message)
+        assert pattern.match(message)
 
 
 def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
@@ -261,21 +254,18 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
         )
 
     messages = list(caplog.messages)
-    # noinspection PyUnresolvedReferences
-    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
-    # Remove time message as it might change as function of computer
-    time_id = 4
-    assert messages[1:time_id] + messages[time_id + 1 : -1] == [
+    expected_messages = [
+        r"^Running colabfold 1.1.0 \(.*\)$",
         "Found 5 citations for tools or databases",
-        "Query 1/1: 3G5O_A_3G5O_B (length 180)",
+        r"Query 1\/1: 3G5O_A_3G5O_B \(length 180\)",
         "Running model_1",
+        r"model_1 took \d*.\ds with pLDDT 91.9",
         "reranking models based on avg. predicted lDDT",
     ]
-    # Test time message without its numerical value
-    assert messages[time_id].startswith("model_1 took") and messages[time_id].endswith(
-        "s with pLDDT 91.9"
-    )
 
+    for expected_message, message in zip(expected_messages, messages):
+        pattern = re.compile(expected_message)
+        assert pattern.match(message)
 
 def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     A = "PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK"
@@ -302,21 +292,20 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
             stop_at_score=100,
         )
 
+
     messages = list(caplog.messages)
-    # noinspection PyUnresolvedReferences
-    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
-    # Remove time message as it might change as function of computer
-    time_id = 4
-    assert messages[1:time_id] + messages[time_id + 1 : -1] == [
+    expected_messages = [
+        r"^Running colabfold 1.1.0 \(.*\)$",
         "Found 5 citations for tools or databases",
-        "Query 1/1: A_A (length 118)",
+        "Query 1\/1: A_A \(length 118\)",
         "Running model_1",
+        r"model_1 took \d*.\ds with pLDDT 95.5",
         "reranking models based on avg. predicted lDDT",
     ]
-    # Test time message without its numerical value
-    assert messages[time_id].startswith("model_1 took") and messages[time_id].endswith(
-        "s with pLDDT 95.5"
-    )
+
+    for expected_message, message in zip(expected_messages, messages):
+        pattern = re.compile(expected_message)
+        assert pattern.match(message)
 
 
 def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
@@ -344,15 +333,18 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
         )
 
     messages = list(caplog.messages)
-    # noinspection PyUnresolvedReferences
-    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
-    assert messages[1:-1] == [
+    expected_messages = [
+        r"^Running colabfold 1.1.0 \(.*\)$",
         "Found 5 citations for tools or databases",
-        "Query 1/1: A_A (length 118)",
+        r"Query 1\/1: A_A \(length 118\)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 95.3",
+        r"model_1 took \d*.\ds with pLDDT 95.3",
         "reranking models based on avg. predicted lDDT",
     ]
+
+    for expected_message, message in zip(expected_messages, messages):
+        pattern = re.compile(expected_message)
+        assert pattern.match(message)
 
 
 def test_msa_serialization(pytestconfig, caplog, tmp_path):
