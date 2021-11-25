@@ -158,10 +158,9 @@ def predict_structure(
     stop_at_score: float = 100,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
-    # Run the models.
     if rank_by == "auto":
         # score complexes by ptmscore and sequences by plddt
-        rank_by = "plddt" if len(sequences_lengths) == 1 else "ptmscore"
+        rank_by = "plddt" if not is_complex else "ptmscore"
 
     plddts, paes, ptmscore = [], [], []
     unrelaxed_pdb_lines = []
@@ -191,18 +190,21 @@ def predict_structure(
         else:
             input_features = processed_feature_dict
 
-        prediction_result, (_, _) = model_runner.predict(input_features)
-
         start = time.time()
         # The original alphafold only returns the prediction_result,
         # but our patched alphafold also returns a tuple (recycles,tol)
+        prediction_result, recycles = model_runner.predict(input_features)
 
         prediction_time = time.time() - start
         prediction_times.append(prediction_time)
 
-        mean_plddt = np.mean(prediction_result["plddt"][:seq_len])
+        if rank_by == "plddt":
+            mean_score = np.mean(prediction_result["plddt"][:seq_len])
+        else:
+            mean_score = np.mean(prediction_result["ptm"])
+
         logger.info(
-            f"{model_name} took {prediction_time:.1f}s with pLDDT {mean_plddt :.1f}"
+            f"{model_name} took {prediction_time:.1f}s ({recycles[0]} recycles) with {rank_by} {mean_score:.1f}"
         )
         final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
         b_factors = prediction_result["plddt"][:, None] * final_atom_mask
@@ -267,7 +269,7 @@ def predict_structure(
             # TODO: Those aren't actually used in batch
             relaxed_pdb_lines.append(relaxed_pdb_str)
         # early stop criteria fulfilled
-        if np.mean(prediction_result["plddt"][:seq_len]) > stop_at_score:
+        if mean_score > stop_at_score:
             break
     # rerank models based on predicted lddt
     if rank_by == "ptmscore":
@@ -848,7 +850,7 @@ def run(
     use_templates: bool = False,
     use_amber: bool = False,
     keep_existing_results: bool = True,
-    rank_mode: str = "auto",
+    rank_by: str = "auto",
     pair_mode: str = "unpaired+paired",
     data_dir: Union[str, Path] = default_data_dir,
     host_url: str = DEFAULT_API_SERVER,
@@ -859,7 +861,6 @@ def run(
 ):
     version = importlib_metadata.version("colabfold")
     commit = get_commit()
-    print(commit)
     if commit:
         version += f" ({commit})"
 
@@ -876,6 +877,10 @@ def run(
     else:
         raise ValueError(f"Unknown model_type {model_type}")
 
+    if rank_by == "auto":
+        # score complexes by ptmscore and sequences by plddt
+        rank_by = "plddt" if not is_complex else "ptmscore"
+
     # Record the parameters of this run
     config = {
         "num_queries": len(queries),
@@ -887,7 +892,7 @@ def run(
         "num_recycles": num_recycles,
         "model_order": model_order,
         "keep_existing_results": keep_existing_results,
-        "rank_mode": rank_mode,
+        "rank_by": rank_by,
         "pair_mode": pair_mode,
         "host_url": host_url,
         "stop_at_score": stop_at_score,
@@ -915,6 +920,8 @@ def run(
         model_extension,
         data_dir,
         recompile_all_models,
+        stop_at_score=stop_at_score,
+        rank_by=rank_by,
     )
 
     crop_len = 0
@@ -1006,7 +1013,7 @@ def run(
                 model_type=model_type,
                 model_runner_and_params=model_runner_and_params,
                 do_relax=use_amber,
-                rank_by=rank_mode,
+                rank_by=rank_by,
                 stop_at_score=stop_at_score,
             )
         except RuntimeError as e:
@@ -1218,7 +1225,7 @@ def main():
         model_order=model_order,
         is_complex=is_complex,
         keep_existing_results=not args.overwrite_existing_results,
-        rank_mode=args.rank,
+        rank_by=args.rank,
         pair_mode=args.pair_mode,
         data_dir=data_dir,
         host_url=args.host_url,

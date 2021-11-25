@@ -14,6 +14,8 @@ def load_models_and_params(
     model_suffix: str = "_ptm",
     data_dir: Path = Path("."),
     recompile_all_models: bool = False,
+    stop_at_score: float = 100,
+    rank_by: str = "plddt",
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -33,6 +35,8 @@ def load_models_and_params(
                 model_name=model_name + model_suffix, data_dir=str(data_dir)
             )
             model_config = config.model_config(model_name + model_suffix)
+            model_config.model.stop_at_score = stop_at_score
+            model_config.model.stop_at_score_ranker = rank_by
             if model_suffix == "_ptm":
                 model_config.data.eval.num_ensemble = 1
                 model_config.data.common.num_recycle = num_recycle
@@ -55,6 +59,8 @@ def load_models_and_params(
                 model_config = config.model_config(
                     "model_" + str(model_number) + model_suffix
                 )
+                model_config.model.stop_at_score = stop_at_score
+                model_config.model.stop_at_score_ranker = rank_by
                 if model_suffix == "_ptm":
                     model_config.data.eval.num_ensemble = 1
                     model_config.data.common.num_recycle = num_recycle
