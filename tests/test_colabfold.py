@@ -121,6 +121,7 @@ def test_zip(pytestconfig, caplog, tmp_path, prediction_test):
         "config.json",
         "5AWL_1.a3m",
         "5AWL_1_PAE.png",
+        "5AWL_1_all_plot_model_1_rank_1.png",
         "5AWL_1_coverage.png",
         "5AWL_1_plddt.png",
         "5AWL_1_unrelaxed_model_1_rank_1.pdb",
@@ -234,13 +235,17 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     messages = list(caplog.messages)
     # noinspection PyUnresolvedReferences
     messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
-    assert messages[1:-1] == [
+    # Remove time message as it might change as function of computer
+    time_id = 4
+    assert messages[1:time_id] + messages[time_id + 1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 91.9",
         "reranking models based on avg. predicted lDDT",
     ]
+    # Test time message without its numerical value
+    assert (messages[time_id].startswith("model_1 took") and
+        messages[time_id].endswith("s with pLDDT 91.9"))
 
 
 def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
@@ -271,13 +276,17 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     messages = list(caplog.messages)
     # noinspection PyUnresolvedReferences
     messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
-    assert messages[1:-1] == [
+    # Remove time message as it might change as function of computer
+    time_id = 4
+    assert messages[1:time_id] + messages[time_id + 1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/1: A_A (length 118)",
         "Running model_1",
-        "model_1 took 0.0s with pLDDT 95.5",
         "reranking models based on avg. predicted lDDT",
     ]
+    # Test time message without its numerical value
+    assert (messages[time_id].startswith("model_1 took") and 
+        messages[time_id].endswith("s with pLDDT 95.5"))
 
 
 def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
