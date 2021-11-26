@@ -362,7 +362,7 @@ def get_queries(
             queries = []
             for sequence, header in zip(sequences, headers):
                 sequence = sequence.upper()
-                if sequence.count(":") == 1:
+                if sequence.count(":") == 0:
                     # Single sequence
                     queries.append((header, sequence, None))
                 else:
