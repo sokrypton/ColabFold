@@ -207,10 +207,16 @@ def predict_structure(
         else:
             mean_score = mean_ptm
 
-        logger.info(
-            f"{model_name} took {prediction_time:.1f}s ({recycles[0]} recycles) "
-            f"with pLDDT {mean_plddt:.3g} and ptmscore {mean_ptm:.3g}"
-        )
+        if is_complex:
+            logger.info(
+                f"{model_name} took {prediction_time:.1f}s ({recycles[0]} recycles) "
+                f"with pLDDT {mean_plddt:.3g} and ptmscore {mean_ptm:.3g}"
+            )
+        else:
+            logger.info(
+                f"{model_name} took {prediction_time:.1f}s ({recycles[0]} recycles) "
+                f"with pLDDT {mean_plddt:.3g}"
+            )
         final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
         b_factors = prediction_result["plddt"][:, None] * final_atom_mask
         if is_complex and model_type == "AlphaFold2-ptm":
@@ -1030,10 +1036,10 @@ def run(
             continue
 
         # Write alphafold-db format (PAE)
-        alphafold_pae_file = result_dir.joinpath(jobname + "_predicted_aligned_error_v1.json")
-        alphafold_pae_file.write_text(
-            get_pae_json(outs[0]["pae"], outs[0]["max_pae"])
+        alphafold_pae_file = result_dir.joinpath(
+            jobname + "_predicted_aligned_error_v1.json"
         )
+        alphafold_pae_file.write_text(get_pae_json(outs[0]["pae"], outs[0]["max_pae"]))
         # Write an easy-to-use format (PAE and plDDT)
         scores_file = result_dir.joinpath(jobname + "_scores.json")
         with scores_file.open("w") as fp:
