@@ -64,7 +64,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
 
     messages = list(caplog.messages)
     expected_messages = [
-        r"Running colabfold 1.1.0 (.*)",
+        r"Running colabfold 1.2.0 (.*)",
         "Found 5 citations for tools or databases",
         r"Query 1\/2: 5AWL_1 \(length 10\)",
         "Running model_1",
@@ -163,7 +163,7 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
 
     messages = list(caplog.messages)
     expected_messages = [
-        r"^Running colabfold 1.1.0 \(.*\)$",
+        r"^Running colabfold 1.2.0 \(.*\)$",
         "Found 2 citations for tools or databases",
         r"Query 1/1: 5AWL_1 \(length 10\)",
         "Running model_1",
@@ -212,7 +212,7 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
 
     messages = list(caplog.messages)
     expected_messages = [
-        r"^Running colabfold 1.1.0 \(.*\)$",
+        r"^Running colabfold 1.2.0 \(.*\)$",
         "Found 5 citations for tools or databases",
         r"Query 1\/1: 3G5O_A_3G5O_B \(length 180\)",
         "Running model_1",
@@ -251,7 +251,7 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
 
     messages = list(caplog.messages)
     expected_messages = [
-        r"^Running colabfold 1.1.0 \(.*\)$",
+        r"^Running colabfold 1.2.0 \(.*\)$",
         "Found 5 citations for tools or databases",
         r"Query 1\/1: 3G5O_A_3G5O_B \(length 180\)",
         "Running model_1",
@@ -291,7 +291,7 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
 
     messages = list(caplog.messages)
     expected_messages = [
-        r"^Running colabfold 1.1.0 \(.*\)$",
+        r"^Running colabfold 1.2.0 \(.*\)$",
         "Found 5 citations for tools or databases",
         "Query 1\/1: A_A \(length 118\)",
         "Running model_1",
@@ -330,7 +330,7 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
 
     messages = list(caplog.messages)
     expected_messages = [
-        r"^Running colabfold 1.1.0 \(.*\)$",
+        r"^Running colabfold 1.2.0 \(.*\)$",
         "Found 5 citations for tools or databases",
         r"Query 1\/1: A_A \(length 118\)",
         "Running model_1",
