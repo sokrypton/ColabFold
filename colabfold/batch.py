@@ -698,8 +698,9 @@ def generate_input_feature(
         chain_cnt = 0
         for sequence_index, sequence in enumerate(query_seqs_unique):
             for cardinality in range(0, query_seqs_cardinality[sequence_index]):
-                input_msa = [">" + str(101 + sequence_index) + "\n" + sequence]
-                if unpaired_msa is not None:
+                if unpaired_msa is None:
+                    input_msa = ">" + str(101 + sequence_index) + "\n" + sequence
+                else:
                     input_msa = unpaired_msa[sequence_index]
 
                 feature_dict = build_monomer_feature(
