@@ -743,7 +743,7 @@ def unserialize_msa(
     List[int],
     List[Dict[str, Any]],
 ]:
-    a3m_lines = a3m_lines[0].rstrip("\x00").splitlines()
+    a3m_lines = a3m_lines[0].replace("\x00", "").splitlines()
     if not a3m_lines[0].startswith("#") or len(a3m_lines[0][1:].split("\t")) != 2:
         assert isinstance(query_sequence, str)
         return (
