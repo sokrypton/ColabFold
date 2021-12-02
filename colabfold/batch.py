@@ -701,7 +701,7 @@ def generate_input_feature(
                 input_msa = [">" + str(101 + sequence_index) + "\n" + sequence]
                 if unpaired_msa is not None:
                     input_msa = unpaired_msa[sequence_index]
-                
+
                 feature_dict = build_monomer_feature(
                     sequence,
                     input_msa,
