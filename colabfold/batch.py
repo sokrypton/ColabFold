@@ -5,6 +5,7 @@ import random
 import sys
 import time
 import zipfile
+from alphafold.notebooks.notebook_utils import get_pae_json
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Dict, Tuple, List, Union, Optional
@@ -164,6 +165,7 @@ def predict_structure(
         rank_by = "plddt" if len(sequences_lengths) == 1 else "ptmscore"
 
     plddts, paes, ptmscore = [], [], []
+    max_paes = []
     unrelaxed_pdb_lines = []
     relaxed_pdb_lines = []
     prediction_times = []
@@ -201,6 +203,12 @@ def predict_structure(
         prediction_times.append(prediction_time)
 
         mean_plddt = np.mean(prediction_result["plddt"][:seq_len])
+        mean_ptm = prediction_result["ptm"]
+        if rank_by == "plddt":
+            mean_score = mean_plddt
+        else:
+            mean_score = mean_ptm
+
         logger.info(
             f"{model_name} took {prediction_time:.1f}s with pLDDT {mean_plddt :.1f}"
         )
@@ -232,6 +240,7 @@ def predict_structure(
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
         ptmscore.append(prediction_result["ptm"])
+        max_paes.append(prediction_result["max_predicted_aligned_error"].item())
         paes_res = []
 
         for i in range(seq_len):
@@ -291,6 +300,7 @@ def predict_structure(
         out[key] = {
             "plddt": np.asarray(plddts[key]),
             "pae": np.asarray(paes[key]),
+            "max_pae": max_paes[key],
             "pTMscore": ptmscore,
         }
     return out, model_rank
@@ -901,7 +911,8 @@ def run(
         "commit": get_commit(),
         "version": importlib_metadata.version("colabfold"),
     }
-    result_dir.joinpath("config.json").write_text(json.dumps(config, indent=4))
+    config_out_file = result_dir.joinpath("config.json")
+    config_out_file.write_text(json.dumps(config, indent=4))
     use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
     use_msa = (
         msa_mode == "MMseqs2 (UniRef only)"
@@ -1019,6 +1030,21 @@ def run(
             logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
             continue
 
+        # Write alphafold-db format (PAE)
+        alphafold_pae_file = result_dir.joinpath(
+            jobname + "_predicted_aligned_error_v1.json"
+        )
+        alphafold_pae_file.write_text(get_pae_json(outs[0]["pae"], outs[0]["max_pae"]))
+        # Write an easy-to-use format (PAE and plDDT)
+        scores_file = result_dir.joinpath(jobname + "_scores.json")
+        with scores_file.open("w") as fp:
+            scores = {
+                "config": config,
+                "pae": outs[0]["pae"].tolist(),
+                "plddt": outs[0]["plddt"].tolist(),
+            }
+            json.dump(scores, fp)
+
         msa_plot = plot_msa(
             input_features["msa"],
             input_features["msa"][0],
@@ -1037,18 +1063,20 @@ def run(
         )
         plddt_plot.savefig(str(result_dir.joinpath(jobname + "_plddt.png")))
         plddt_plot.close()
+        result_files = (
+            [
+                bibtex_file,
+                config_out_file,
+                alphafold_pae_file,
+                scores_file,
+                result_dir.joinpath(jobname + ".a3m"),
+            ]
+            + sorted(result_dir.glob(jobname + "*.png"))
+            + sorted(result_dir.glob(f"{jobname}_unrelaxed_*.pdb"))
+            + sorted(result_dir.glob(f"{jobname}_relaxed_*.pdb"))
+        )
 
         if zip_results:
-            result_files = (
-                [
-                    bibtex_file,
-                    result_dir.joinpath("config.json"),
-                    result_dir.joinpath(jobname + ".a3m"),
-                ]
-                + sorted(result_dir.glob(jobname + "*.png"))
-                + sorted(result_dir.glob(f"{jobname}_unrelaxed_*.pdb"))
-                + sorted(result_dir.glob(f"{jobname}_relaxed_*.pdb"))
-            )
 
             with zipfile.ZipFile(result_zip, "w") as result_zip:
                 for file in result_files:
