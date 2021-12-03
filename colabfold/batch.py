@@ -8,7 +8,7 @@ import zipfile
 from alphafold.notebooks.notebook_utils import get_pae_json
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Any, Dict, Tuple, List, Union, Optional
+from typing import Callable, Any, Dict, Tuple, List, Union, Optional
 
 import haiku
 import importlib_metadata
@@ -157,6 +157,7 @@ def predict_structure(
     rank_by: str = "auto",
     random_seed: int = 0,
     stop_at_score: float = 100,
+    prediction_callback: Callable[[Any], Any] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     if rank_by == "auto":
@@ -196,7 +197,8 @@ def predict_structure(
         # The original alphafold only returns the prediction_result,
         # but our patched alphafold also returns a tuple (recycles,tol)
         prediction_result, recycles = model_runner.predict(input_features)
-
+        if prediction_callback is not None:
+            prediction_callback(prediction_result)
         prediction_time = time.time() - start
         prediction_times.append(prediction_time)
 
@@ -871,6 +873,7 @@ def run(
     recompile_padding: float = 1.1,
     recompile_all_models: bool = False,
     zip_results: bool = False,
+    prediction_callback: Callable[[Any], Any] = None,
 ):
     version = importlib_metadata.version("colabfold")
     commit = get_commit()
@@ -1029,6 +1032,7 @@ def run(
                 do_relax=use_amber,
                 rank_by=rank_by,
                 stop_at_score=stop_at_score,
+                prediction_callback=prediction_callback,
             )
         except RuntimeError as e:
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
