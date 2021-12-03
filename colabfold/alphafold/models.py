@@ -30,6 +30,8 @@ def load_models_and_params(
 
     if recompile_all_models:
         for n, model_number in enumerate(model_order):
+            if n == num_models:
+                break
             model_name = f"model_{model_number}"
             params = data.get_model_haiku_params(
                 model_name=model_name + model_suffix, data_dir=str(data_dir)

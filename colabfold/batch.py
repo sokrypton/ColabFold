@@ -194,6 +194,7 @@ def predict_structure(
             input_features = processed_feature_dict
 
         start = time.time()
+
         # The original alphafold only returns the prediction_result,
         # but our patched alphafold also returns a tuple (recycles,tol)
         prediction_result, recycles = model_runner.predict(input_features)
@@ -384,7 +385,7 @@ def get_queries(
             queries = []
             for sequence, header in zip(sequences, headers):
                 sequence = sequence.upper()
-                if sequence.count(":") == 1:
+                if sequence.count(":") == 0:
                     # Single sequence
                     queries.append((header, sequence, None))
                 else:
@@ -398,7 +399,7 @@ def get_queries(
         for file in sorted(input_path.iterdir()):
             if not file.is_file():
                 continue
-            if file.suffix.lower() not in [".a3m", ".fasta"]:
+            if file.suffix.lower() not in [".a3m", ".fasta", ".faa"]:
                 logger.warning(f"non-fasta/a3m file in input directory: {file}")
                 continue
             (seqs, header) = parse_fasta(file.read_text())
@@ -720,9 +721,14 @@ def generate_input_feature(
         chain_cnt = 0
         for sequence_index, sequence in enumerate(query_seqs_unique):
             for cardinality in range(0, query_seqs_cardinality[sequence_index]):
+                if unpaired_msa is None:
+                    input_msa = ">" + str(101 + sequence_index) + "\n" + sequence
+                else:
+                    input_msa = unpaired_msa[sequence_index]
+
                 feature_dict = build_monomer_feature(
                     sequence,
-                    unpaired_msa[sequence_index],
+                    input_msa,
                     template_features[sequence_index],
                 )
                 if is_complex:
@@ -750,7 +756,7 @@ def unserialize_msa(
     List[int],
     List[Dict[str, Any]],
 ]:
-    a3m_lines = a3m_lines[0].splitlines()
+    a3m_lines = a3m_lines[0].replace("\x00", "").splitlines()
     if not a3m_lines[0].startswith("#") or len(a3m_lines[0][1:].split("\t")) != 2:
         assert isinstance(query_sequence, str)
         return (
