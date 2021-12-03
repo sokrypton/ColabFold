@@ -1,6 +1,8 @@
 #!/bin/bash
 # Setup everything for using mmseqs locally
 
+shopt -s expand_aliases
+
 set -ex
 
 cd "$1"
