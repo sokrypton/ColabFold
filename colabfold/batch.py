@@ -157,7 +157,7 @@ def predict_structure(
     rank_by: str = "auto",
     random_seed: int = 0,
     stop_at_score: float = 100,
-    prediction_callback: Callable[[Any], Any] = None,
+    prediction_callback: Callable[[Any, Any, Any, Any], Any] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     if rank_by == "auto":
@@ -197,8 +197,7 @@ def predict_structure(
         # The original alphafold only returns the prediction_result,
         # but our patched alphafold also returns a tuple (recycles,tol)
         prediction_result, recycles = model_runner.predict(input_features)
-        if prediction_callback is not None:
-            prediction_callback(prediction_result)
+
         prediction_time = time.time() - start
         prediction_times.append(prediction_time)
 
@@ -244,6 +243,12 @@ def predict_structure(
             b_factors=b_factors,
             remove_leading_feature_dimension=not is_complex,
         )
+
+        if prediction_callback is not None:
+            prediction_callback(
+                unrelaxed_protein, sequences_lengths, prediction_result, input_features
+            )
+
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
         ptmscore.append(prediction_result["ptm"])
@@ -873,7 +878,7 @@ def run(
     recompile_padding: float = 1.1,
     recompile_all_models: bool = False,
     zip_results: bool = False,
-    prediction_callback: Callable[[Any], Any] = None,
+    prediction_callback: Callable[[Any, Any, Any, Any], Any] = None,
 ):
     version = importlib_metadata.version("colabfold")
     commit = get_commit()
