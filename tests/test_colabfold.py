@@ -78,7 +78,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
     # Very simple test, it would be better to check coordinates
     assert (
         len(
-            tmp_path.joinpath("5AWL_1_unrelaxed_model_1_rank_1.pdb")
+            tmp_path.joinpath("5AWL_1_unrelaxed_rank_1_model_1.pdb")
             .read_text()
             .splitlines()
         )
@@ -86,7 +86,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
     )
     assert (
         len(
-            tmp_path.joinpath("6A5J_unrelaxed_model_1_rank_1.pdb")
+            tmp_path.joinpath("6A5J_unrelaxed_rank_1_model_1.pdb")
             .read_text()
             .splitlines()
         )
@@ -126,7 +126,7 @@ def test_zip(pytestconfig, caplog, tmp_path, prediction_test):
         "5AWL_1_PAE.png",
         "5AWL_1_coverage.png",
         "5AWL_1_plddt.png",
-        "5AWL_1_unrelaxed_model_1_rank_1.pdb",
+        "5AWL_1_unrelaxed_rank_1_model_1.pdb",
     ]
     with ZipFile(tmp_path.joinpath("5AWL_1.result.zip")) as result_zip:
         actual_zip = [i.filename for i in result_zip.infolist()]
@@ -167,7 +167,7 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
     # Very simple test, it would be better to check coordinates
     assert (
         len(
-            tmp_path.joinpath("5AWL_1_unrelaxed_model_1_rank_1.pdb")
+            tmp_path.joinpath("5AWL_1_unrelaxed_rank_1_model_1.pdb")
             .read_text()
             .splitlines()
         )

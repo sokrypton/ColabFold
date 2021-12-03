@@ -299,13 +299,13 @@ def predict_structure(
     logger.info(f"reranking models based on average {rank_by}")
     for n, key in enumerate(model_rank):
         unrelaxed_pdb_path = result_dir.joinpath(
-            f"{prefix}_unrelaxed_{model_names[key]}_rank_{n + 1}.pdb"
+            f"{prefix}_unrelaxed_rank_{n + 1}_{model_names[key]}.pdb"
         )
         unrelaxed_pdb_path.write_text(unrelaxed_pdb_lines[key])
 
         if do_relax:
             relaxed_pdb_path = result_dir.joinpath(
-                f"{prefix}_relaxed_{model_names[key]}_rank_{n + 1}.pdb"
+                f"{prefix}_relaxed_rank_{n + 1}_{model_names[key]}.pdb"
             )
             relaxed_pdb_path.write_text(relaxed_pdb_lines[key])
 
