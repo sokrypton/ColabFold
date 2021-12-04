@@ -59,6 +59,8 @@
 
 ### Running locally
 
+_Note: If you need amber or templates, checkout [localcolabfold](https://github.com/YoshitakaMo/localcolabfold) instead_
+
 Install ColabFold using the `pip` commands below. `pip` will resolvei and install all required dependencies and ColabFold should be ready within a few minutes to use. Please check the [JAX documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to get JAX to work on your GPU or TPU.
 
 ```shell
