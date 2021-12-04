@@ -197,9 +197,7 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
             stop_at_score=100,
         )
 
-    messages = list(caplog.messages)
-    # noinspection PyUnresolvedReferences
-    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
+    messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     assert messages[1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
@@ -233,9 +231,7 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
             stop_at_score=100,
         )
 
-    messages = list(caplog.messages)
-    # noinspection PyUnresolvedReferences
-    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
+    messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     assert messages[1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
@@ -270,9 +266,7 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
             stop_at_score=100,
         )
 
-    messages = list(caplog.messages)
-    # noinspection PyUnresolvedReferences
-    messages[3] = re.sub(r"\d+\.\d+s", "0.0s", messages[3])
+    messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     assert messages[1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/1: A_A (length 118)",
