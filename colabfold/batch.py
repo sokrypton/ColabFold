@@ -1058,10 +1058,12 @@ def run(
         # Write an easy-to-use format (PAE and plDDT)
         scores_file = result_dir.joinpath(jobname + "_scores.json")
         with scores_file.open("w") as fp:
+            # We use astype(np.float64) to prevent very long stringified floats from float imprecision
             scores = {
                 "config": config,
-                "pae": outs[0]["pae"].tolist(),
-                "plddt": outs[0]["plddt"].tolist(),
+                "pae": np.around(outs[0]["pae"].astype(np.float64), 2).tolist(),
+                "plddt": np.around(outs[0]["plddt"], 2).tolist(),
+                "ptm": np.around(outs[0]["pTMscore"][0], 2).item(),
             }
             json.dump(scores, fp)
 
