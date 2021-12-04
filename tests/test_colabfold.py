@@ -62,6 +62,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
             is_complex=False,
         )
 
+    messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     assert caplog.messages[1:-1] == [
         "Found 5 citations for tools or databases",
         "Query 1/2: 5AWL_1 (length 10)",
