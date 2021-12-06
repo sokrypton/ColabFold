@@ -22,9 +22,9 @@ jobs:
       - uses: actions/cache@v1
         with:
           path: .venv
-          key: poetry-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
-          restore-keys: |
-            poetry-${{ runner.os }}-${{ matrix.python-version }}-
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
+          #restore-keys: |
+          #  poetry-${{ runner.os }}-${{ matrix.python-version }}-
       - name: Install depencies
         run: $HOME/.local/bin/poetry install -E alphafold
       - name: Run tests
