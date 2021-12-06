@@ -321,7 +321,7 @@ def predict_structure(
                 "max_pae": max_paes[key],
                 "pae": np.around(np.asarray(paes[key]).astype(np.float64), 2).tolist(),
                 "plddt": np.around(np.asarray(plddts[key]), 2).tolist(),
-                "ptm": np.around(ptmscore, 2).item(),
+                "ptm": np.around(ptmscore[key], 2).item(),
             }
             json.dump(scores, fp)
 
@@ -329,7 +329,7 @@ def predict_structure(
             "plddt": np.asarray(plddts[key]),
             "pae": np.asarray(paes[key]),
             "max_pae": max_paes[key],
-            "pTMscore": ptmscore,
+            "pTMscore": ptmscore[key],
             "model_name": model_names[key],
         }
     return out, model_rank
