@@ -5,15 +5,15 @@ import random
 import sys
 import time
 import zipfile
-from alphafold.notebooks.notebook_utils import get_pae_json
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Any, Dict, Tuple, List, Union, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import haiku
 import importlib_metadata
 import numpy as np
 import pandas
+from alphafold.notebooks.notebook_utils import get_pae_json
 from jax.lib import xla_bridge
 from numpy import ndarray
 
@@ -27,27 +27,28 @@ except ModuleNotFoundError:
 from alphafold.common import protein
 from alphafold.common.protein import Protein
 from alphafold.data import (
-    pipeline,
+    feature_processing,
     msa_pairing,
+    pipeline,
     pipeline_multimer,
     templates,
-    feature_processing,
 )
 from alphafold.data.tools import hhsearch
 from alphafold.model import model
+
 from colabfold.alphafold.models import load_models_and_params
 from colabfold.alphafold.msa import make_fixed_size
 from colabfold.citations import write_bibtex
-from colabfold.colabfold import run_mmseqs2, chain_break, plot_paes, plot_plddts
+from colabfold.colabfold import chain_break, plot_paes, plot_plddts, run_mmseqs2
+from colabfold.download import default_data_dir, download_alphafold_params
 from colabfold.plot import plot_msa
-from colabfold.download import download_alphafold_params, default_data_dir
 from colabfold.utils import (
-    setup_logging,
-    safe_filename,
-    NO_GPU_FOUND,
-    DEFAULT_API_SERVER,
     ACCEPT_DEFAULT_TERMS,
+    DEFAULT_API_SERVER,
+    NO_GPU_FOUND,
     get_commit,
+    safe_filename,
+    setup_logging,
 )
 
 logger = logging.getLogger(__name__)
@@ -157,12 +158,12 @@ def predict_structure(
     rank_by: str = "auto",
     random_seed: int = 0,
     stop_at_score: float = 100,
+    prediction_callback: Callable[[Any, Any, Any, Any], Any] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
-    # Run the models.
     if rank_by == "auto":
         # score complexes by ptmscore and sequences by plddt
-        rank_by = "plddt" if len(sequences_lengths) == 1 else "ptmscore"
+        rank_by = "plddt" if not is_complex else "ptmscore"
 
     plddts, paes, ptmscore = [], [], []
     max_paes = []
@@ -195,10 +196,9 @@ def predict_structure(
 
         start = time.time()
 
-        prediction_result, (_, _) = model_runner.predict(input_features)
-
         # The original alphafold only returns the prediction_result,
         # but our patched alphafold also returns a tuple (recycles,tol)
+        prediction_result, recycles = model_runner.predict(input_features)
 
         prediction_time = time.time() - start
         prediction_times.append(prediction_time)
@@ -210,9 +210,16 @@ def predict_structure(
         else:
             mean_score = mean_ptm
 
-        logger.info(
-            f"{model_name} took {prediction_time:.1f}s with pLDDT {mean_plddt :.1f}"
-        )
+        if is_complex:
+            logger.info(
+                f"{model_name} took {prediction_time:.1f}s ({recycles[0]} recycles) "
+                f"with pLDDT {mean_plddt:.3g} and ptmscore {mean_ptm:.3g}"
+            )
+        else:
+            logger.info(
+                f"{model_name} took {prediction_time:.1f}s ({recycles[0]} recycles) "
+                f"with pLDDT {mean_plddt:.3g}"
+            )
         final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
         b_factors = prediction_result["plddt"][:, None] * final_atom_mask
         if is_complex and model_type == "AlphaFold2-ptm":
@@ -238,6 +245,12 @@ def predict_structure(
             b_factors=b_factors,
             remove_leading_feature_dimension=not is_complex,
         )
+
+        if prediction_callback is not None:
+            prediction_callback(
+                unrelaxed_protein, sequences_lengths, prediction_result, input_features
+            )
+
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
         ptmscore.append(prediction_result["ptm"])
@@ -248,14 +261,14 @@ def predict_structure(
             paes_res.append(prediction_result["predicted_aligned_error"][i][:seq_len])
         paes.append(paes_res)
         if do_relax:
-            from alphafold.relax import relax
             from alphafold.common import residue_constants
+            from alphafold.relax import relax
 
             # Hack so that we don't need to download into the alphafold package itself
             residue_constants.stereo_chemical_props_path = "stereo_chemical_props.txt"
 
             # Remove the padding because unlike to_pdb() amber doesn't handle that
-            remove_padding_mask = unrelaxed_protein.atom_mask.sum(axis=-1) > 0
+            remove_padding_mask = np.array(unrelaxed_protein.atom_mask.sum(axis=-1) > 0)
             unrelaxed_protein = Protein(
                 atom_mask=unrelaxed_protein.atom_mask[remove_padding_mask],
                 atom_positions=unrelaxed_protein.atom_positions[remove_padding_mask],
@@ -277,7 +290,7 @@ def predict_structure(
             # TODO: Those aren't actually used in batch
             relaxed_pdb_lines.append(relaxed_pdb_str)
         # early stop criteria fulfilled
-        if np.mean(prediction_result["plddt"][:seq_len]) > stop_at_score:
+        if mean_score > stop_at_score:
             break
     # rerank models based on predicted lddt
     if rank_by == "ptmscore":
@@ -285,24 +298,39 @@ def predict_structure(
     else:
         model_rank = np.mean(plddts, -1).argsort()[::-1]
     out = {}
-    logger.info("reranking models based on avg. predicted lDDT")
+    logger.info(f"reranking models based on average {rank_by}")
     for n, key in enumerate(model_rank):
         unrelaxed_pdb_path = result_dir.joinpath(
-            f"{prefix}_unrelaxed_{model_names[key]}_rank_{n + 1}.pdb"
+            f"{prefix}_unrelaxed_rank_{n + 1}_{model_names[key]}.pdb"
         )
         unrelaxed_pdb_path.write_text(unrelaxed_pdb_lines[key])
 
         if do_relax:
             relaxed_pdb_path = result_dir.joinpath(
-                f"{prefix}_relaxed_{model_names[key]}_rank_{n + 1}.pdb"
+                f"{prefix}_relaxed_rank_{n + 1}_{model_names[key]}.pdb"
             )
             relaxed_pdb_path.write_text(relaxed_pdb_lines[key])
+
+        # Write an easy-to-use format (PAE and plDDT)
+        scores_file = result_dir.joinpath(
+            f"{prefix}_unrelaxed_rank_{n + 1}_{model_names[key]}_scores.json"
+        )
+        with scores_file.open("w") as fp:
+            # We use astype(np.float64) to prevent very long stringified floats from float imprecision
+            scores = {
+                "max_pae": max_paes[key],
+                "pae": np.around(np.asarray(paes[key]).astype(np.float64), 2).tolist(),
+                "plddt": np.around(np.asarray(plddts[key]), 2).tolist(),
+                "ptm": np.around(ptmscore[key], 2).item(),
+            }
+            json.dump(scores, fp)
 
         out[key] = {
             "plddt": np.asarray(plddts[key]),
             "pae": np.asarray(paes[key]),
             "max_pae": max_paes[key],
-            "pTMscore": ptmscore,
+            "pTMscore": ptmscore[key],
+            "model_name": model_names[key],
         }
     return out, model_rank
 
@@ -864,7 +892,7 @@ def run(
     use_templates: bool = False,
     use_amber: bool = False,
     keep_existing_results: bool = True,
-    rank_mode: str = "auto",
+    rank_by: str = "auto",
     pair_mode: str = "unpaired+paired",
     data_dir: Union[str, Path] = default_data_dir,
     host_url: str = DEFAULT_API_SERVER,
@@ -872,10 +900,10 @@ def run(
     recompile_padding: float = 1.1,
     recompile_all_models: bool = False,
     zip_results: bool = False,
+    prediction_callback: Callable[[Any, Any, Any, Any], Any] = None,
 ):
     version = importlib_metadata.version("colabfold")
     commit = get_commit()
-    print(commit)
     if commit:
         version += f" ({commit})"
 
@@ -892,6 +920,10 @@ def run(
     else:
         raise ValueError(f"Unknown model_type {model_type}")
 
+    if rank_by == "auto":
+        # score complexes by ptmscore and sequences by plddt
+        rank_by = "plddt" if not is_complex else "ptmscore"
+
     # Record the parameters of this run
     config = {
         "num_queries": len(queries),
@@ -903,7 +935,7 @@ def run(
         "num_recycles": num_recycles,
         "model_order": model_order,
         "keep_existing_results": keep_existing_results,
-        "rank_mode": rank_mode,
+        "rank_by": rank_by,
         "pair_mode": pair_mode,
         "host_url": host_url,
         "stop_at_score": stop_at_score,
@@ -932,6 +964,8 @@ def run(
         model_extension,
         data_dir,
         recompile_all_models,
+        stop_at_score=stop_at_score,
+        rank_by=rank_by,
     )
 
     crop_len = 0
@@ -1023,8 +1057,9 @@ def run(
                 model_type=model_type,
                 model_runner_and_params=model_runner_and_params,
                 do_relax=use_amber,
-                rank_by=rank_mode,
+                rank_by=rank_by,
                 stop_at_score=stop_at_score,
+                prediction_callback=prediction_callback,
             )
         except RuntimeError as e:
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
@@ -1036,17 +1071,6 @@ def run(
             jobname + "_predicted_aligned_error_v1.json"
         )
         alphafold_pae_file.write_text(get_pae_json(outs[0]["pae"], outs[0]["max_pae"]))
-        # Write an easy-to-use format (PAE and plDDT)
-        scores_file = result_dir.joinpath(jobname + "_scores.json")
-        with scores_file.open("w") as fp:
-            # We use astype(np.float64) to prevent very long stringified floats from float imprecision
-            scores = {
-                "config": config,
-                "pae": np.around(outs[0]["pae"].astype(np.float64), 2).tolist(),
-                "plddt": np.around(outs[0]["plddt"], 2).tolist(),
-                "ptm": np.around(outs[0]["pTMscore"][0], 2).item(),
-            }
-            json.dump(scores, fp)
 
         msa_plot = plot_msa(
             input_features["msa"],
@@ -1054,33 +1078,49 @@ def run(
             query_sequence_len_array,
             query_sequence_len,
         )
-        msa_plot.savefig(str(result_dir.joinpath(jobname + "_coverage.png")))
+        coverage_png = result_dir.joinpath(jobname + "_coverage.png")
+        msa_plot.savefig(str(coverage_png))
         msa_plot.close()
         paes_plot = plot_paes(
             [outs[k]["pae"] for k in model_rank], Ls=query_sequence_len_array, dpi=200
         )
-        paes_plot.savefig(str(result_dir.joinpath(jobname + "_PAE.png")))
+        pae_png = result_dir.joinpath(jobname + "_PAE.png")
+        paes_plot.savefig(str(pae_png))
         paes_plot.close()
         plddt_plot = plot_plddts(
             [outs[k]["plddt"] for k in model_rank], Ls=query_sequence_len_array, dpi=200
         )
-        plddt_plot.savefig(str(result_dir.joinpath(jobname + "_plddt.png")))
+        plddt_png = result_dir.joinpath(jobname + "_plddt.png")
+        plddt_plot.savefig(str(plddt_png))
         plddt_plot.close()
-        result_files = (
-            [
-                bibtex_file,
-                config_out_file,
-                alphafold_pae_file,
-                scores_file,
-                result_dir.joinpath(jobname + ".a3m"),
-            ]
-            + sorted(result_dir.glob(jobname + "*.png"))
-            + sorted(result_dir.glob(f"{jobname}_unrelaxed_*.pdb"))
-            + sorted(result_dir.glob(f"{jobname}_relaxed_*.pdb"))
-        )
+        result_files = [
+            bibtex_file,
+            config_out_file,
+            alphafold_pae_file,
+            result_dir.joinpath(jobname + ".a3m"),
+            pae_png,
+            coverage_png,
+            plddt_png,
+        ]
+        for i in model_rank:
+            result_files.append(
+                result_dir.joinpath(
+                    f"{jobname}_unrelaxed_rank_{i + 1}_{outs[i]['model_name']}.pdb"
+                )
+            )
+            result_files.append(
+                result_dir.joinpath(
+                    f"{jobname}_unrelaxed_rank_{i + 1}_{outs[i]['model_name']}_scores.json"
+                )
+            )
+            if use_amber:
+                result_files.append(
+                    result_dir.joinpath(
+                        f"{jobname}_relaxed_rank_{i + 1}_{outs[i]['model_name']}.pdb"
+                    )
+                )
 
         if zip_results:
-
             with zipfile.ZipFile(result_zip, "w") as result_zip:
                 for file in result_files:
                     result_zip.write(file, arcname=file.name)
@@ -1254,7 +1294,7 @@ def main():
         model_order=model_order,
         is_complex=is_complex,
         keep_existing_results=not args.overwrite_existing_results,
-        rank_mode=args.rank,
+        rank_by=args.rank,
         pair_mode=args.pair_mode,
         data_dir=data_dir,
         host_url=args.host_url,

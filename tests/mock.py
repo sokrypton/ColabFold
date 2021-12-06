@@ -83,8 +83,7 @@ class MockRunModel:
                 break
 
         if is_same:
-            # TODO: Also mock (recycles,tol) from the patches
-            return prediction, (None, None)
+            return prediction, (3, 0)
 
         if os.environ.get("UPDATE_SNAPSHOTS"):
             print("Running new prediction")
