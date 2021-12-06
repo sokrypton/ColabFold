@@ -5,15 +5,15 @@ import random
 import sys
 import time
 import zipfile
-from alphafold.notebooks.notebook_utils import get_pae_json
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Callable, Any, Dict, Tuple, List, Union, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import haiku
 import importlib_metadata
 import numpy as np
 import pandas
+from alphafold.notebooks.notebook_utils import get_pae_json
 from jax.lib import xla_bridge
 from numpy import ndarray
 
@@ -27,27 +27,28 @@ except ModuleNotFoundError:
 from alphafold.common import protein
 from alphafold.common.protein import Protein
 from alphafold.data import (
-    pipeline,
+    feature_processing,
     msa_pairing,
+    pipeline,
     pipeline_multimer,
     templates,
-    feature_processing,
 )
 from alphafold.data.tools import hhsearch
 from alphafold.model import model
+
 from colabfold.alphafold.models import load_models_and_params
 from colabfold.alphafold.msa import make_fixed_size
 from colabfold.citations import write_bibtex
-from colabfold.colabfold import run_mmseqs2, chain_break, plot_paes, plot_plddts
+from colabfold.colabfold import chain_break, plot_paes, plot_plddts, run_mmseqs2
+from colabfold.download import default_data_dir, download_alphafold_params
 from colabfold.plot import plot_msa
-from colabfold.download import download_alphafold_params, default_data_dir
 from colabfold.utils import (
-    setup_logging,
-    safe_filename,
-    NO_GPU_FOUND,
-    DEFAULT_API_SERVER,
     ACCEPT_DEFAULT_TERMS,
+    DEFAULT_API_SERVER,
+    NO_GPU_FOUND,
     get_commit,
+    safe_filename,
+    setup_logging,
 )
 
 logger = logging.getLogger(__name__)
@@ -260,8 +261,8 @@ def predict_structure(
             paes_res.append(prediction_result["predicted_aligned_error"][i][:seq_len])
         paes.append(paes_res)
         if do_relax:
-            from alphafold.relax import relax
             from alphafold.common import residue_constants
+            from alphafold.relax import relax
 
             # Hack so that we don't need to download into the alphafold package itself
             residue_constants.stereo_chemical_props_path = "stereo_chemical_props.txt"
@@ -310,11 +311,26 @@ def predict_structure(
             )
             relaxed_pdb_path.write_text(relaxed_pdb_lines[key])
 
+        # Write an easy-to-use format (PAE and plDDT)
+        scores_file = result_dir.joinpath(
+            f"{prefix}_unrelaxed_rank_{n + 1}_{model_names[key]}_scores.json"
+        )
+        with scores_file.open("w") as fp:
+            # We use astype(np.float64) to prevent very long stringified floats from float imprecision
+            scores = {
+                "max_pae": max_paes[key],
+                "pae": np.around(np.asarray(paes[key]).astype(np.float64), 2).tolist(),
+                "plddt": np.around(np.asarray(plddts[key]), 2).tolist(),
+                "ptm": np.around(ptmscore, 2).item(),
+            }
+            json.dump(scores, fp)
+
         out[key] = {
             "plddt": np.asarray(plddts[key]),
             "pae": np.asarray(paes[key]),
             "max_pae": max_paes[key],
             "pTMscore": ptmscore,
+            "model_name": model_names[key],
         }
     return out, model_rank
 
@@ -1055,17 +1071,6 @@ def run(
             jobname + "_predicted_aligned_error_v1.json"
         )
         alphafold_pae_file.write_text(get_pae_json(outs[0]["pae"], outs[0]["max_pae"]))
-        # Write an easy-to-use format (PAE and plDDT)
-        scores_file = result_dir.joinpath(jobname + "_scores.json")
-        with scores_file.open("w") as fp:
-            # We use astype(np.float64) to prevent very long stringified floats from float imprecision
-            scores = {
-                "config": config,
-                "pae": np.around(outs[0]["pae"].astype(np.float64), 2).tolist(),
-                "plddt": np.around(outs[0]["plddt"], 2).tolist(),
-                "ptm": np.around(outs[0]["pTMscore"][0], 2).item(),
-            }
-            json.dump(scores, fp)
 
         msa_plot = plot_msa(
             input_features["msa"],
@@ -1073,33 +1078,49 @@ def run(
             query_sequence_len_array,
             query_sequence_len,
         )
-        msa_plot.savefig(str(result_dir.joinpath(jobname + "_coverage.png")))
+        coverage_png = result_dir.joinpath(jobname + "_coverage.png")
+        msa_plot.savefig(str(coverage_png))
         msa_plot.close()
         paes_plot = plot_paes(
             [outs[k]["pae"] for k in model_rank], Ls=query_sequence_len_array, dpi=200
         )
-        paes_plot.savefig(str(result_dir.joinpath(jobname + "_PAE.png")))
+        pae_png = result_dir.joinpath(jobname + "_PAE.png")
+        paes_plot.savefig(str(pae_png))
         paes_plot.close()
         plddt_plot = plot_plddts(
             [outs[k]["plddt"] for k in model_rank], Ls=query_sequence_len_array, dpi=200
         )
-        plddt_plot.savefig(str(result_dir.joinpath(jobname + "_plddt.png")))
+        plddt_png = result_dir.joinpath(jobname + "_plddt.png")
+        plddt_plot.savefig(str(plddt_png))
         plddt_plot.close()
-        result_files = (
-            [
-                bibtex_file,
-                config_out_file,
-                alphafold_pae_file,
-                scores_file,
-                result_dir.joinpath(jobname + ".a3m"),
-            ]
-            + sorted(result_dir.glob(jobname + "*.png"))
-            + sorted(result_dir.glob(f"{jobname}_unrelaxed_*.pdb"))
-            + sorted(result_dir.glob(f"{jobname}_relaxed_*.pdb"))
-        )
+        result_files = [
+            bibtex_file,
+            config_out_file,
+            alphafold_pae_file,
+            result_dir.joinpath(jobname + ".a3m"),
+            pae_png,
+            coverage_png,
+            plddt_png,
+        ]
+        for i in model_rank:
+            result_files.append(
+                result_dir.joinpath(
+                    f"{jobname}_unrelaxed_rank_{i + 1}_{outs[i]['model_name']}.pdb"
+                )
+            )
+            result_files.append(
+                result_dir.joinpath(
+                    f"{jobname}_unrelaxed_rank_{i + 1}_{outs[i]['model_name']}_scores.json"
+                )
+            )
+            if use_amber:
+                result_files.append(
+                    result_dir.joinpath(
+                        f"{jobname}_relaxed_rank_{i + 1}_{outs[i]['model_name']}.pdb"
+                    )
+                )
 
         if zip_results:
-
             with zipfile.ZipFile(result_zip, "w") as result_zip:
                 for file in result_files:
                     result_zip.write(file, arcname=file.name)
