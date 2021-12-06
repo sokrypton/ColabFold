@@ -37,7 +37,7 @@ def load_models_and_params(
                 model_name=model_name + model_suffix, data_dir=str(data_dir)
             )
             model_config = config.model_config(model_name + model_suffix)
-            model_config.model.stop_at_score = stop_at_score
+            model_config.model.stop_at_score = float(stop_at_score)
             model_config.model.stop_at_score_ranker = rank_by
             if model_suffix == "_ptm":
                 model_config.data.eval.num_ensemble = 1
@@ -61,7 +61,7 @@ def load_models_and_params(
                 model_config = config.model_config(
                     "model_" + str(model_number) + model_suffix
                 )
-                model_config.model.stop_at_score = stop_at_score
+                model_config.model.stop_at_score = float(stop_at_score)
                 model_config.model.stop_at_score_ranker = rank_by
                 if model_suffix == "_ptm":
                     model_config.data.eval.num_ensemble = 1
