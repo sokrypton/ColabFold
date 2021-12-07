@@ -64,6 +64,7 @@ def mk_mock_template(
     )
     output_templates_sequence = "A" * ln
     output_confidence_scores = np.full(ln, 1.0)
+
     templates_all_atom_positions = np.zeros(
         (ln, templates.residue_constants.atom_type_num, 3)
     )
@@ -85,6 +86,7 @@ def mk_mock_template(
         ),
         "template_domain_names": [f"none".encode()] * num_temp,
         "template_release_date": [f"none".encode()] * num_temp,
+        "template_sum_probs": np.zeros([num_temp], dtype=np.float32),
     }
     return template_features
 
@@ -545,11 +547,14 @@ def get_msa_and_templates(
                 template_features.append(template_feature)
         else:
             for index in range(0, len(query_seqs_unique)):
-                template_feature = mk_template(
-                    a3m_lines_mmseqs2[index],
-                    template_paths[index],
-                    query_seqs_unique[index],
-                )
+                if template_paths[index] is not None:
+                    template_feature = mk_template(
+                        a3m_lines_mmseqs2[index],
+                        template_paths[index],
+                        query_seqs_unique[index],
+                    )
+                else:
+                    template_feature = mk_mock_template(query_seqs_unique[index])
                 template_features.append(template_feature)
     else:
         for index in range(0, len(query_seqs_unique)):
