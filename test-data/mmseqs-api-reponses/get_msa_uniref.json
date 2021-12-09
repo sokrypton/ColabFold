@@ -1,0 +1,26 @@
+[
+  {
+    "config": {
+      "query": [
+        "MEIIALLIEEGIIIIKDKKVAERFLKDLESSQGMDWKEIRERAERAKKQLEEGIEWAKKTKL"
+      ],
+      "use_env": false,
+      "use_filter": true,
+      "use_templates": false,
+      "filter": null,
+      "use_pairing": false
+    },
+    "response": [
+      [
+        ">101",
+        "MEIIALLIEEGIIIIKDKKVAERFLKDLESSQGMDWKEIRERAERAKKQLEEGIEWAKKTKL",
+        ">UniRef100_Q60262\t119\t1.00\t4.303E-29\t0\t61\t62\t0\t61\t62",
+        "MEIIALLIEEGIIIIKDKKVAERFLKDLESSQGMDWKEIRERAERAKKQLEEGIEWAKKTKL",
+        ">UniRef100_F6BBV3\t84\t0.586\t5.757E-17\t4\t61\t62\t1\t57\t58",
+        "----ATLLEEGICIIKDKEVAEKLLNDL-KSKHTDWREIKKRAERFRKKLEEGERWLEKMEL",
+        ">UniRef100_D3S7P5\t70\t0.583\t3.913E-12\t4\t61\t62\t1\t57\t58",
+        "----ATLLEEGVCIIKDKEVAERFLKDLENPpkEPIISEEIRLKSRRL---LKEGIEWAKKMKL"
+      ]
+    ]
+  }
+]
