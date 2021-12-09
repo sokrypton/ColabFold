@@ -113,7 +113,11 @@ class MMseqs2Mock:
     saved_responses: List[Dict[str, Any]]
 
     def __init__(self, rootpath: Path, name: str):
-        self.data_file = rootpath.joinpath(f"test-data/mmseqs-api-reponses/{name}.json")
+        self.data_file = (
+            rootpath.joinpath("test-data/mmseqs-api-reponses")
+            .joinpath(name)
+            .with_suffix(".json")
+        )
         if os.environ.get("UPDATE_SNAPSHOTS") and not self.data_file.is_file():
             self.data_file.write_text("[]")
         with self.data_file.open() as fp:

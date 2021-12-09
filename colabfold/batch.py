@@ -1197,8 +1197,8 @@ def main():
             "MMseqs2 (UniRef+Environmental)",
             "MMseqs2 (UniRef only)",
             "single_sequence",
-            "custom",
         ],
+        help="Using an a3m file as input overwrites this option",
     )
 
     parser.add_argument(
@@ -1268,8 +1268,6 @@ def main():
     setup_logging(Path(args.results).joinpath("log.txt"))
 
     data_dir = Path(args.data or default_data_dir)
-
-    assert args.msa_mode == "MMseqs2 (UniRef+Environmental)", "Unsupported"
 
     # Prevent people from accidentally running on the cpu, which is really slow
     if not args.cpu and xla_bridge.get_backend().platform == "cpu":
