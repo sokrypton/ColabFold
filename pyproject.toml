@@ -12,10 +12,9 @@ authors = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.7.1,<3.11"
+python = ">=3.7.1,<3.10"
 absl-py = "^0.13.0"
-# alphafold-colabfold = { version = "2.1.2", optional = true }
-alphafold-colabfold = { git = "https://github.com/konstin/alphafold", rev = "6a1f8853dc34593becd389d3108dfca83a4e2057", optional = true }
+alphafold-colabfold = { version = "2.1.4", optional = true }
 jax = { version = "^0.2.20", optional = true }
 # https://github.com/facebook/prophet/issues/1691#issuecomment-712199609
 matplotlib = "3.1.3"
@@ -31,7 +30,7 @@ importlib-metadata = "^4.8.2"
 
 [tool.poetry.dev-dependencies]
 # The latest version conflicts with tensorflow over typing-extensions
-black = "v21.7.b0"
+black = "v21.12b0"
 jupyter = "^1.0.0"
 pytest = "^6.2.5"
 
