@@ -1085,8 +1085,8 @@ def run(
             else input_features["num_alignments"][0]
         )
         msa_plot = plot_msa(
-            input_features["msa"],
             input_features["msa"][0:num_alignment],
+            input_features["msa"][0],
             query_sequence_len_array,
             query_sequence_len,
         )
