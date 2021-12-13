@@ -1079,10 +1079,14 @@ def run(
             jobname + "_predicted_aligned_error_v1.json"
         )
         alphafold_pae_file.write_text(get_pae_json(outs[0]["pae"], outs[0]["max_pae"]))
-
+        num_alignment = (
+            int(input_features["num_alignments"])
+            if model_type == "AlphaFold2-multimer"
+            else input_features["num_alignments"][0]
+        )
         msa_plot = plot_msa(
             input_features["msa"],
-            input_features["msa"][0],
+            input_features["msa"][0:num_alignment],
             query_sequence_len_array,
             query_sequence_len,
         )
