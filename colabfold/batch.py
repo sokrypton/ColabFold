@@ -811,10 +811,13 @@ def unserialize_msa(
         prev_query_start += query_len
     paired_msa = [""] * len(query_seq_len)
     unpaired_msa = [""] * len(query_seq_len)
-    offset = 2 if is_homooligomer else 0
-    for i in range(1 + offset, len(a3m_lines), 2):
+    already_in = dict()
+    for i in range(1, len(a3m_lines), 2):
         header = a3m_lines[i]
         seq = a3m_lines[i + 1]
+        if (header, seq) in already_in:
+            continue
+        already_in[(header, seq)] = 1
         has_amino_acid = [False] * len(query_seq_len)
         seqs_line = []
         prev_pos = 0
