@@ -748,9 +748,7 @@ def generate_input_feature(
                     input_msa = unpaired_msa[sequence_index]
 
                 feature_dict = build_monomer_feature(
-                    sequence,
-                    input_msa,
-                    template_features[sequence_index],
+                    sequence, input_msa, template_features[sequence_index]
                 )
                 if is_complex:
                     all_seq_features = build_multimer_feature(
