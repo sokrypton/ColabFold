@@ -242,7 +242,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
     for n in Ms:
       if n not in template_paths:
         template_paths_.append(None)
-        print(f"{n-N}\tno_templates_found")
+        #print(f"{n-N}\tno_templates_found")
       else:
         template_paths_.append(template_paths[n])
     template_paths = template_paths_

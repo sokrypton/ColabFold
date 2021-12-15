@@ -542,6 +542,7 @@ def get_msa_and_templates(
             host_url=host_url,
         )
         if template_paths is None:
+            logger.info("No template detected")
             for index in range(0, len(query_seqs_unique)):
                 template_feature = mk_mock_template(query_seqs_unique[index])
                 template_features.append(template_feature)
@@ -553,8 +554,13 @@ def get_msa_and_templates(
                         template_paths[index],
                         query_seqs_unique[index],
                     )
+                    logger.info(
+                        f"Sequence {index} found templates: {template_feature['template_domain_names']}"
+                    )
                 else:
                     template_feature = mk_mock_template(query_seqs_unique[index])
+                    logger.info(f"Sequence {index} found no templates")
+
                 template_features.append(template_feature)
     else:
         for index in range(0, len(query_seqs_unique)):
