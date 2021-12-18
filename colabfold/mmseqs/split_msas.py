@@ -15,8 +15,8 @@ def split_msa(merged_msa: Path, output_folder: Path):
     for msa in tqdm(merged_msa.read_text().split("\0")):
         if not msa.strip():
             continue
-        filename = msa.split("\n", 1)[0][1:].split(" ")[0] + ".a3m"
-        output_folder.joinpath(filename).write_text(msa)
+        filename = msa.split("\n", 1)[0][1:].split(" ")[0].replace("/", "_") + ".a3m"
+        output_folder.with_name(filename).write_text(msa)
 
 
 def main():
