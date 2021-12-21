@@ -9,13 +9,11 @@ import requests
 import hashlib
 import tarfile
 import time
-import pickle
 import os
-import re
 from typing import Tuple, List
 
 import random
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 
 import numpy as np
 import matplotlib.pyplot as plt
