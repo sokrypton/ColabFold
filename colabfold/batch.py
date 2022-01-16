@@ -432,10 +432,15 @@ def get_queries(
 
             if file.suffix.lower() == ".a3m":
                 a3m_lines = [file.read_text()]
-            else:
-                a3m_lines = None
-            queries.append((file.stem, query_sequence.upper(), a3m_lines))
-
+                queries.append((file.stem, query_sequence.upper(), a3m_lines))
+            elif:
+                if query_sequence.count(":") == 0:
+                    # Single sequence
+                    queries.append((header, query_sequence, None))
+                else:
+                    # Complex mode
+                    queries.append((header, query_sequence.upper().split(":"), None))
+                    
     # sort by seq. len
     if sort_queries_by == "length":
         queries.sort(key=lambda t: len(t[1]))
