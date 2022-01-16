@@ -440,7 +440,7 @@ def get_queries(
                 else:
                     # Complex mode
                     queries.append((header, query_sequence.upper().split(":"), None))
-                    
+
     # sort by seq. len
     if sort_queries_by == "length":
         queries.sort(key=lambda t: len(t[1]))
