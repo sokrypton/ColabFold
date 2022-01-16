@@ -433,7 +433,7 @@ def get_queries(
             if file.suffix.lower() == ".a3m":
                 a3m_lines = [file.read_text()]
                 queries.append((file.stem, query_sequence.upper(), a3m_lines))
-            elif:
+            else:
                 if query_sequence.count(":") == 0:
                     # Single sequence
                     queries.append((header, query_sequence, None))
