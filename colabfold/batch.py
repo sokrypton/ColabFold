@@ -436,10 +436,10 @@ def get_queries(
             else:
                 if query_sequence.count(":") == 0:
                     # Single sequence
-                    queries.append((header, query_sequence, None))
+                    queries.append((file.stem, query_sequence, None))
                 else:
                     # Complex mode
-                    queries.append((header, query_sequence.upper().split(":"), None))
+                    queries.append((file.stem, query_sequence.upper().split(":"), None))
 
     # sort by seq. len
     if sort_queries_by == "length":
