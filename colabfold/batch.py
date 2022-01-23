@@ -165,14 +165,6 @@ def predict_structure(
     prediction_callback: Callable[[Any, Any, Any, Any], Any] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
-    if rank_by == "auto":
-        # score complexes by ptmscore and sequences by plddt
-        rank_by = "plddt" if not is_complex else "ptmscore"
-        rank_by = (
-            "multimer"
-            if is_complex and model_type == "AlphaFold2-multimer"
-            else rank_by
-        )
 
     plddts, paes, ptmscore, iptmscore = [], [], [], []
     max_paes = []
@@ -952,6 +944,11 @@ def run(
     if rank_by == "auto":
         # score complexes by ptmscore and sequences by plddt
         rank_by = "plddt" if not is_complex else "ptmscore"
+        rank_by = (
+            "multimer"
+            if is_complex and model_type == "AlphaFold2-multimer"
+            else rank_by
+        )
 
     # Record the parameters of this run
     config = {
