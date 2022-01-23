@@ -25,6 +25,8 @@ except ModuleNotFoundError:
     )
 
 from alphafold.common import protein
+from alphafold.common import confidence
+
 from alphafold.common.protein import Protein
 from alphafold.data import (
     feature_processing,
@@ -166,8 +168,13 @@ def predict_structure(
     if rank_by == "auto":
         # score complexes by ptmscore and sequences by plddt
         rank_by = "plddt" if not is_complex else "ptmscore"
+        rank_by = (
+            "multimer"
+            if is_complex and model_type == "AlphaFold2-multimer"
+            else rank_by
+        )
 
-    plddts, paes, ptmscore = [], [], []
+    plddts, paes, ptmscore, iptmscore = [], [], [], []
     max_paes = []
     unrelaxed_pdb_lines = []
     relaxed_pdb_lines = []
@@ -256,6 +263,15 @@ def predict_structure(
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
         ptmscore.append(prediction_result["ptm"])
+        if model_type == "AlphaFold2-multimer":
+            iptmscore.append(
+                confidence.predicted_tm_score(
+                    logits=prediction_result["predicted_aligned_error"]["logits"],
+                    breaks=prediction_result["predicted_aligned_error"]["breaks"],
+                    asym_id=prediction_result["predicted_aligned_error"]["asym_id"],
+                    interface=True,
+                )
+            )
         max_paes.append(prediction_result["max_predicted_aligned_error"].item())
         paes_res = []
 
@@ -297,6 +313,9 @@ def predict_structure(
     # rerank models based on predicted lddt
     if rank_by == "ptmscore":
         model_rank = np.array(ptmscore).argsort()[::-1]
+    elif rank_by == "multimer":
+        rank_array = np.array(iptmscore) * 0.8 + np.array(ptmscore) * 0.2
+        model_rank = rank_array.argsort()[::-1]
     else:
         model_rank = np.mean(plddts, -1).argsort()[::-1]
     out = {}
