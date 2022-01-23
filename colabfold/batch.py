@@ -264,14 +264,7 @@ def predict_structure(
         plddts.append(prediction_result["plddt"][:seq_len])
         ptmscore.append(prediction_result["ptm"])
         if model_type == "AlphaFold2-multimer":
-            iptmscore.append(
-                confidence.predicted_tm_score(
-                    logits=prediction_result["predicted_aligned_error"]["logits"],
-                    breaks=prediction_result["predicted_aligned_error"]["breaks"],
-                    asym_id=prediction_result["predicted_aligned_error"]["asym_id"],
-                    interface=True,
-                )
-            )
+            iptmscore.append(prediction_result["iptm"])
         max_paes.append(prediction_result["max_predicted_aligned_error"].item())
         paes_res = []
 
