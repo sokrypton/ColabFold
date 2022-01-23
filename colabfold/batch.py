@@ -25,7 +25,6 @@ except ModuleNotFoundError:
     )
 
 from alphafold.common import protein
-from alphafold.common import confidence
 
 from alphafold.common.protein import Protein
 from alphafold.data import (
