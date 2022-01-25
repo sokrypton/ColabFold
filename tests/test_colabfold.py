@@ -68,11 +68,11 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
         "Query 1/2: 5AWL_1 (length 10)",
         "Running model_1",
         "model_1 took 0.0s (3 recycles) with pLDDT 94.3",
-        "reranking models based on average plddt",
+        "reranking models by plddt",
         "Query 2/2: 6A5J (length 13)",
         "Running model_1",
         "model_1 took 0.0s (3 recycles) with pLDDT 90.8",
-        "reranking models based on average plddt",
+        "reranking models by plddt",
     ]
 
     # Very simple test, it would be better to check coordinates
