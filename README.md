@@ -4,16 +4,8 @@
 -----------------
 **New Updates**
 ```diff
-+ 11Nov2021  [AlphaFold2_mmseqs2] now uses Alphafold-multimer for complex (homo/hetero-oligomer) modeling.
-+            Use [AlphaFold2_advanced] notebook for the old complex prediction logic. 
-+ 11Nov2021  ColabFold can be installed locally using pip!
-+ 14Nov2021  Template based predictions works again in the Alphafold2_mmseqs2 notebook.
-- 14Nov2021  WARNING "Single-sequence" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken 
--            starting 11Nov2021. The MMseqs2 MSA was being used regardless of selection.
-+ 14Nov2021  "Single-sequence" mode is now fixed.
-- 20Nov2021  WARNING "AMBER" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken 
--            starting 11Nov2021. Unrelaxed proteins were returned instead.
-+ 20Nov2021  "AMBER" is fixed thanks to Kevin Pan
++ 26Jan2022 AlphaFold2_mmseqs2, AlphaFold2_batch and colabfold_batch's multimer complexes predictions are 
++           now in default reranked by iptmscore*0.8+ptmscore*0.2 instead of ptmscore
 ```
 -----------------
 
@@ -150,7 +142,16 @@ This will create intermediate folders `search_results` and `msas` that you can e
              working on fixing this. If you are not using templates, this does not affect the
              the results. Other notebooks that do not use_templates are unaffected.
   21Aug2021  The templates issue is resolved!
-
+  11Nov2021  [AlphaFold2_mmseqs2] now uses Alphafold-multimer for complex (homo/hetero-oligomer) modeling.
+             Use [AlphaFold2_advanced] notebook for the old complex prediction logic. 
+  11Nov2021  ColabFold can be installed locally using pip!
+  14Nov2021  Template based predictions works again in the Alphafold2_mmseqs2 notebook.
+  14Nov2021  WARNING "Single-sequence" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken 
+             starting 11Nov2021. The MMseqs2 MSA was being used regardless of selection.
+  14Nov2021  "Single-sequence" mode is now fixed.
+  20Nov2021  WARNING "AMBER" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken 
+             starting 11Nov2021. Unrelaxed proteins were returned instead.
+  20Nov2021  "AMBER" is fixed thanks to Kevin Pan
 ```
 -----------------
 
