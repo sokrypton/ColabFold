@@ -1,6 +1,6 @@
 import os
-os.environ['TF_FORCE_UNIFIED_MEMORY'] = "1"
-os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = "2.0"
+os.environ["TF_FORCE_UNIFIED_MEMORY"] = "1"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "2.0"
 
 import json
 import logging
