@@ -25,6 +25,7 @@ except ModuleNotFoundError:
     )
 
 from alphafold.common import protein
+
 from alphafold.common.protein import Protein
 from alphafold.data import (
     feature_processing,
@@ -163,11 +164,8 @@ def predict_structure(
     prediction_callback: Callable[[Any, Any, Any, Any], Any] = None,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
-    if rank_by == "auto":
-        # score complexes by ptmscore and sequences by plddt
-        rank_by = "plddt" if not is_complex else "ptmscore"
 
-    plddts, paes, ptmscore = [], [], []
+    plddts, paes, ptmscore, iptmscore = [], [], [], []
     max_paes = []
     unrelaxed_pdb_lines = []
     relaxed_pdb_lines = []
@@ -256,6 +254,8 @@ def predict_structure(
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
         ptmscore.append(prediction_result["ptm"])
+        if model_type == "AlphaFold2-multimer":
+            iptmscore.append(prediction_result["iptm"])
         max_paes.append(prediction_result["max_predicted_aligned_error"].item())
         paes_res = []
 
@@ -297,10 +297,13 @@ def predict_structure(
     # rerank models based on predicted lddt
     if rank_by == "ptmscore":
         model_rank = np.array(ptmscore).argsort()[::-1]
+    elif rank_by == "multimer":
+        rank_array = np.array(iptmscore) * 0.8 + np.array(ptmscore) * 0.2
+        model_rank = rank_array.argsort()[::-1]
     else:
         model_rank = np.mean(plddts, -1).argsort()[::-1]
     out = {}
-    logger.info(f"reranking models based on average {rank_by}")
+    logger.info(f"reranking models by {rank_by}")
     for n, key in enumerate(model_rank):
         unrelaxed_pdb_path = result_dir.joinpath(
             f"{prefix}_unrelaxed_rank_{n + 1}_{model_names[key]}.pdb"
@@ -940,6 +943,11 @@ def run(
     if rank_by == "auto":
         # score complexes by ptmscore and sequences by plddt
         rank_by = "plddt" if not is_complex else "ptmscore"
+        rank_by = (
+            "multimer"
+            if is_complex and model_type == "AlphaFold2-multimer"
+            else rank_by
+        )
 
     # Record the parameters of this run
     config = {
@@ -1247,7 +1255,7 @@ def main():
         help="rank models by auto, plddt or ptmscore",
         type=str,
         default="auto",
-        choices=["auto", "plddt", "ptmscore"],
+        choices=["auto", "plddt", "ptmscore", "multimer"],
     )
     parser.add_argument(
         "--pair-mode",
