@@ -531,7 +531,7 @@ def get_msa_and_templates(
 ) -> Tuple[
     Optional[List[str]], Optional[List[str]], List[str], List[int], List[Dict[str, Any]]
 ]:
-    use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
+    use_env = msa_mode == "MMseqs2_UniRef+Environmental"
     # remove duplicates before searching
     query_sequences = (
         [query_sequences] if isinstance(query_sequences, str) else query_sequences
@@ -913,7 +913,7 @@ def run(
     model_order: List[int],
     is_complex: bool,
     model_type: str = "auto",
-    msa_mode: str = "MMseqs2 (UniRef+Environmental)",
+    msa_mode: str = "MMseqs2_UniRef+Environmental",
     use_templates: bool = False,
     use_amber: bool = False,
     keep_existing_results: bool = True,
@@ -976,10 +976,10 @@ def run(
     }
     config_out_file = result_dir.joinpath("config.json")
     config_out_file.write_text(json.dumps(config, indent=4))
-    use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
+    use_env = msa_mode == "MMseqs2_UniRef+Environmental"
     use_msa = (
-        msa_mode == "MMseqs2 (UniRef only)"
-        or msa_mode == "MMseqs2 (UniRef+Environmental)"
+        msa_mode == "MMseqs2_UniRef_only"
+        or msa_mode == "MMseqs2_UniRef+Environmental"
     )
 
     bibtex_file = write_bibtex(
@@ -1221,10 +1221,10 @@ def main():
     # TODO: This currently isn't actually used
     parser.add_argument(
         "--msa-mode",
-        default="MMseqs2 (UniRef+Environmental)",
+        default="MMseqs2_UniRef+Environmental",
         choices=[
-            "MMseqs2 (UniRef+Environmental)",
-            "MMseqs2 (UniRef only)",
+            "MMseqs2_UniRef+Environmental",
+            "MMseqs2_UniRef_only",
             "single_sequence",
         ],
         help="Using an a3m file as input overwrites this option",
