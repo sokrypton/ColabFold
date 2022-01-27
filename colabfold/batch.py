@@ -531,7 +531,7 @@ def get_msa_and_templates(
 ) -> Tuple[
     Optional[List[str]], Optional[List[str]], List[str], List[int], List[Dict[str, Any]]
 ]:
-    use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
+    use_env = msa_mode == "MMseqs2_UniRef_Environmental"
     # remove duplicates before searching
     query_sequences = (
         [query_sequences] if isinstance(query_sequences, str) else query_sequences
@@ -913,7 +913,7 @@ def run(
     model_order: List[int],
     is_complex: bool,
     model_type: str = "auto",
-    msa_mode: str = "MMseqs2 (UniRef+Environmental)",
+    msa_mode: str = "MMseqs2_UniRef_Environmental",
     use_templates: bool = False,
     use_amber: bool = False,
     keep_existing_results: bool = True,
@@ -976,10 +976,9 @@ def run(
     }
     config_out_file = result_dir.joinpath("config.json")
     config_out_file.write_text(json.dumps(config, indent=4))
-    use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
+    use_env = msa_mode == "MMseqs2_UniRef_Environmental"
     use_msa = (
-        msa_mode == "MMseqs2 (UniRef only)"
-        or msa_mode == "MMseqs2 (UniRef+Environmental)"
+        msa_mode == "MMseqs2_UniRef_only" or msa_mode == "MMseqs2_UniRef_Environmental"
     )
 
     bibtex_file = write_bibtex(
@@ -1218,18 +1217,20 @@ def main():
     parser.add_argument("--host-url", default=DEFAULT_API_SERVER)
     parser.add_argument("--data")
 
-    # TODO: This currently isn't actually used
     parser.add_argument(
         "--msa-mode",
-        default="MMseqs2 (UniRef+Environmental)",
+        default="MMseqs2_UniRef_Environmental",
         choices=[
+            "MMseqs2_UniRef_Environmental",
+            "MMseqs2_UniRef_only",
+            "single_sequence",
+            # legacy options
             "MMseqs2 (UniRef+Environmental)",
             "MMseqs2 (UniRef only)",
-            "single_sequence",
         ],
-        help="Using an a3m file as input overwrites this option",
+        help="Whether to build an MSA by searching UniRef+Environmental, search only UniRef or a single sequence MSA"
+        "without search. Using an a3m file as input overwrites this option",
     )
-
     parser.add_argument(
         "--model-type",
         help="predict strucutre/complex using the following model."
