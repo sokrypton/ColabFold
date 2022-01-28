@@ -22,10 +22,10 @@ if [ -x ./mmseqs/bin/mmseqs ]; then
   # download it again if its a different commit
   if [ $(./mmseqs/bin/mmseqs version) != ${MMSEQS_COMMIT} ]; then 
     rm -rf -- mmseqs
-    curl -s -o- https://mmseqs.com/archive/${COMMIT}/mmseqs-linux-avx2.tar.gz | tar -xf - mmseqs/bin/mmseqs
+    curl -s -o- https://mmseqs.com/archive/${MMSEQS_COMMIT}/mmseqs-linux-avx2.tar.gz | tar -xzf - mmseqs/bin/mmseqs
   fi
 else
-  curl -s -o- https://mmseqs.com/archive/${COMMIT}/mmseqs-linux-avx2.tar.gz | tar -xf - mmseqs/bin/mmseqs
+  curl -s -o- https://mmseqs.com/archive/${MMSEQS_COMMIT}/mmseqs-linux-avx2.tar.gz | tar -xzf - mmseqs/bin/mmseqs
 fi
 
 # mmseqs needs to be in PATH for the setup_databases script to work
