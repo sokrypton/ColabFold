@@ -1123,7 +1123,7 @@ def run(
             coverage_png,
             plddt_png,
         ]
-        for i,key in enumerate(model_rank):
+        for i, key in enumerate(model_rank):
             result_files.append(
                 result_dir.joinpath(
                     f"{jobname}_unrelaxed_rank_{i + 1}_{outs[key]['model_name']}.pdb"
