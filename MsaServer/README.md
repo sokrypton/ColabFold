@@ -34,6 +34,26 @@ sudo systemctl start mmseqs-server.service
 
 The `restart-systemd.sh` script contains an example how to stop the server, clear the job cache and start it again.
 
+## Forcing databases to stay resident in system memory
+
+The ColabFold MSA API server will only achieve response time of few seconds if the search database are held fully within system memory. We use vmtouch (https://github.com/hoytech/vmtouch) to keep the precomputed database index file within system memory. This is the most expensive part of the MSA API server, as the two default databases (UniRef30+ColabFoldDB), require currently 768GB-1024GB RAM to stay resident in RAM and have enough RAM spare for worker processes. If you are only running batch searches or are using the command line tool with our API server, system requirements are much much lower.
+
+After installing `vmtouch`, you can execute the following command to make sure that the search databases are not evicted from the system cache:
+
+```
+cd databases
+sudo vmtouch -f -w -t -l -d -m 1000G *.idx
+```
+
+This assumes that precomputed database index was created without splits. Check that there are no `uniref30_2103_db.idx.{0,1,...}` or `colabfold_envdb_202108_db.idx.{0,1,...}` files in the databases folder. If these files are there, you should recreate the precomputed database indices with the following command:
+
+```
+cd databases
+rm uniref30_2103_db.idx* colabfold_envdb_202108_db.idx*
+mmseqs createindex uniref30_2103_db tmp --remove-tmp-files 1 --split 1
+mmseqs createindex colabfold_envdb_202108_db tmp --remove-tmp-files 1 --split 1
+```
+
 ## Using a custom API server
 
 You can now pass the server URL to `colabfold_batch`'s `--host-url` parameter. If you want to use the notebook with a custom API server add a `host_url=https://yourserver.example.org` parameter to the `run()` call in the *Run Prediction* cell.
