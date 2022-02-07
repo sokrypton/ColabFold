@@ -194,7 +194,7 @@ def main():
         max_accept=args.max_accept,
         s=args.s,
         db_load_mode=args.db_load_mode,
-        threads=args.threads
+        threads=args.threads,
     )
 
 
