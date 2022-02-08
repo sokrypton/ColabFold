@@ -39,6 +39,7 @@ def mmseqs_search(
     max_accept: int = 1000000,
     s: float = 8,
     db_load_mode: int = 2,
+    threads: int = 64,
 ):
     """Run mmseqs with a local colabfold database set
 
