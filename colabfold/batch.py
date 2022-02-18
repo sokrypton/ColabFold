@@ -993,6 +993,8 @@ def run(
         model_type, use_msa, use_env, use_templates, use_amber, result_dir
     )
 
+    save_representations = (save_single_representations or save_pairwise_representations)
+
     model_runner_and_params = load_models_and_params(
         num_models,
         use_templates,
@@ -1003,7 +1005,7 @@ def run(
         recompile_all_models,
         stop_at_score=stop_at_score,
         rank_by=rank_by,
-        return_representations=(save_single_representations or save_pairwise_representations)
+        return_representations=save_representations
     )
 
     crop_len = 0
@@ -1108,21 +1110,22 @@ def run(
 
         representation_files = []
 
-        for i, key in enumerate(model_rank):
-            out = outs[key]
-            model_id = i + 1
-            model_name = out['model_name']
-            representations = out["representations"]
+        if save_representations:
+            for i, key in enumerate(model_rank):
+                out = outs[key]
+                model_id = i + 1
+                model_name = out['model_name']
+                representations = out["representations"]
 
-            if save_single_representations:
-                single_representation = np.asarray(representations["single"])
-                single_filename = result_dir.joinpath(f"{jobname}_single_repr_{model_id}_{model_name}")
-                np.save(single_filename, single_representation)
+                if save_single_representations:
+                    single_representation = np.asarray(representations["single"])
+                    single_filename = result_dir.joinpath(f"{jobname}_single_repr_{model_id}_{model_name}")
+                    np.save(single_filename, single_representation)
 
-            if save_pairwise_representations:
-                pairwise_representation = np.asarray(representations["pairwise"])
-                pairwise_filename = result_dir.joinpath(f"{jobname}_pairwise_repr_{model_id}_{model_name}")
-                np.save(pairwise_filename, pairwise_representation)
+                if save_pairwise_representations:
+                    pairwise_representation = np.asarray(representations["pairwise"])
+                    pairwise_filename = result_dir.joinpath(f"{jobname}_pairwise_repr_{model_id}_{model_name}")
+                    np.save(pairwise_filename, pairwise_representation)
 
         # Write alphafold-db format (PAE)
         alphafold_pae_file = result_dir.joinpath(
