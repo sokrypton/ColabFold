@@ -26,6 +26,8 @@ def load_models_and_params(
     """
 
     if return_representations:
+        # this forces the AlphaFold to always return representations
+        # by means of a decorator on the __call__
 
         def force_return_representation(fn):
             @wraps(fn)
