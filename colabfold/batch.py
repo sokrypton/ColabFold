@@ -1120,8 +1120,8 @@ def run(
                 np.save(single_filename, single_representation)
 
             if save_pairwise_representations:
-                pairwise_representation = np.asarray(representations["msa"])
-                pairwise_filename = result_dir.joinpath(f"{jobname}_msa_repr_{model_id}_{model_name}")
+                pairwise_representation = np.asarray(representations["pairwise"])
+                pairwise_filename = result_dir.joinpath(f"{jobname}_pairwise_repr_{model_id}_{model_name}")
                 np.save(pairwise_filename, pairwise_representation)
 
         # Write alphafold-db format (PAE)
