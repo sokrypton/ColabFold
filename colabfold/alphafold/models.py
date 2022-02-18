@@ -4,7 +4,7 @@ from typing import Tuple, List, Optional
 
 import haiku
 
-from alphafold.model import model, config, data, modules
+from alphafold.model import model, config, data
 from alphafold.model.modules import AlphaFold
 
 def load_models_and_params(
