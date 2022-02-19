@@ -931,7 +931,7 @@ def run(
     zip_results: bool = False,
     prediction_callback: Callable[[Any, Any, Any, Any], Any] = None,
     save_single_representations: bool = False,
-    save_pair_representations: bool = False
+    save_pair_representations: bool = False,
 ):
     version = importlib_metadata.version("colabfold")
     commit = get_commit()
@@ -993,7 +993,7 @@ def run(
         model_type, use_msa, use_env, use_templates, use_amber, result_dir
     )
 
-    save_representations = (save_single_representations or save_pair_representations)
+    save_representations = save_single_representations or save_pair_representations
 
     model_runner_and_params = load_models_and_params(
         num_models,
@@ -1005,7 +1005,7 @@ def run(
         recompile_all_models,
         stop_at_score=stop_at_score,
         rank_by=rank_by,
-        return_representations=save_representations
+        return_representations=save_representations,
     )
 
     crop_len = 0
@@ -1114,17 +1114,21 @@ def run(
             for i, key in enumerate(model_rank):
                 out = outs[key]
                 model_id = i + 1
-                model_name = out['model_name']
+                model_name = out["model_name"]
                 representations = out["representations"]
 
                 if save_single_representations:
                     single_representation = np.asarray(representations["single"])
-                    single_filename = result_dir.joinpath(f"{jobname}_single_repr_{model_id}_{model_name}")
+                    single_filename = result_dir.joinpath(
+                        f"{jobname}_single_repr_{model_id}_{model_name}"
+                    )
                     np.save(single_filename, single_representation)
 
                 if save_pair_representations:
                     pair_representation = np.asarray(representations["pair"])
-                    pair_filename = result_dir.joinpath(f"{jobname}_pair_repr_{model_id}_{model_name}")
+                    pair_filename = result_dir.joinpath(
+                        f"{jobname}_pair_repr_{model_id}_{model_name}"
+                    )
                     np.save(pair_filename, pair_representation)
 
         # Write alphafold-db format (PAE)
