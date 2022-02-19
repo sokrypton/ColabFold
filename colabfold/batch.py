@@ -931,7 +931,7 @@ def run(
     zip_results: bool = False,
     prediction_callback: Callable[[Any, Any, Any, Any], Any] = None,
     save_single_representations: bool = False,
-    save_pairwise_representations: bool = False
+    save_pair_representations: bool = False
 ):
     version = importlib_metadata.version("colabfold")
     commit = get_commit()
@@ -993,7 +993,7 @@ def run(
         model_type, use_msa, use_env, use_templates, use_amber, result_dir
     )
 
-    save_representations = (save_single_representations or save_pairwise_representations)
+    save_representations = (save_single_representations or save_pair_representations)
 
     model_runner_and_params = load_models_and_params(
         num_models,
@@ -1122,10 +1122,10 @@ def run(
                     single_filename = result_dir.joinpath(f"{jobname}_single_repr_{model_id}_{model_name}")
                     np.save(single_filename, single_representation)
 
-                if save_pairwise_representations:
-                    pairwise_representation = np.asarray(representations["pairwise"])
-                    pairwise_filename = result_dir.joinpath(f"{jobname}_pairwise_repr_{model_id}_{model_name}")
-                    np.save(pairwise_filename, pairwise_representation)
+                if save_pair_representations:
+                    pair_representation = np.asarray(representations["pair"])
+                    pair_filename = result_dir.joinpath(f"{jobname}_pair_repr_{model_id}_{model_name}")
+                    np.save(pair_filename, pair_representation)
 
         # Write alphafold-db format (PAE)
         alphafold_pae_file = result_dir.joinpath(
@@ -1321,10 +1321,10 @@ def main():
         help="saves the single representation embeddings of all models",
     )
     parser.add_argument(
-        "--save-pairwise-representations",
+        "--save-pair-representations",
         default=False,
         action="store_true",
-        help="saves the pairwise representation embeddings of all models",
+        help="saves the pair representation embeddings of all models",
     )
     parser.add_argument(
         "--zip",
