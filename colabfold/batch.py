@@ -344,7 +344,7 @@ def predict_structure(
             "max_pae": max_paes[key],
             "pTMscore": ptmscore[key],
             "model_name": model_names[key],
-            "representations": representations[key]
+            "representations": representations[key],
         }
     return out, model_rank
 
