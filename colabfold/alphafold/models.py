@@ -1,11 +1,12 @@
 from pathlib import Path
-from functools import wraps
+from functools import wraps, partial
 from typing import Tuple, List, Optional
 
 import haiku
 
 from alphafold.model import model, config, data
 from alphafold.model.modules import AlphaFold
+
 
 def load_models_and_params(
     num_models: int,
@@ -17,7 +18,7 @@ def load_models_and_params(
     recompile_all_models: bool = False,
     stop_at_score: float = 100,
     rank_by: str = "plddt",
-    return_representations: bool = False
+    return_representations: bool = False,
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -30,10 +31,7 @@ def load_models_and_params(
         # by means of a decorator on the __call__
 
         def force_return_representation(fn):
-            @wraps(fn)
-            def inner(*args, **kwargs):
-                return fn(*args, return_representations=True, **kwargs)
-            return inner
+            return partial(fn, return_representations=True)
 
         AlphaFold.__call__ = force_return_representation(AlphaFold.__call__)
 
