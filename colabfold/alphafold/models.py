@@ -28,7 +28,9 @@ def load_models_and_params(
 
     if return_representations:
         # this forces the AlphaFold to always return representations
-        AlphaFold.__call__ = partialmethod(AlphaFold.__call__, return_representations=True)
+        AlphaFold.__call__ = partialmethod(
+            AlphaFold.__call__, return_representations=True
+        )
 
     if not model_order:
         model_order = [3, 4, 5, 1, 2]
