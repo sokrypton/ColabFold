@@ -1383,7 +1383,7 @@ def main():
         recompile_all_models=args.recompile_all_models,
         zip_results=args.zip,
         save_single_representations=args.save_single_representations,
-        save_pairwise_representations=args.save_pairwise_representations,
+        save_pair_representations=args.save_pair_representations,
     )
 
 
