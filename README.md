@@ -66,7 +66,7 @@ colabfold_batch <directory_with_fasta_files> <result_dir>
 
 If no GPU or TPU is present, `colabfold_batch` can be executed (slowly) using only a CPU with the `--cpu` parameter.
 
-### Generating MSAs
+### Generating MSAs for large scale structure/complex predictions
 
 First create a directory for the databases on a disk with sufficient storage (940GB (!)). Depending on where you are, this will take a couple of hours: 
 
@@ -74,18 +74,22 @@ First create a directory for the databases on a disk with sufficient storage (94
 ./setup_databases.sh /path/to/db_folder
 ```
 
-Download and unpack mmseqs (Note: The required features aren't in a release yet, so currently, you need to compile the latest version from source yourself). If mmseqs is not in your `PATH`, replace `mmseqs` below with the path to your mmseqs:
+Download and unpack mmseqs (Note: The required features aren't in a release yet, so currently, you need to compile the latest version from source yourself or use a [static binary](https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz)). If mmseqs is not in your `PATH`, replace `mmseqs` below with the path to your mmseqs:
 
 ```shell
 # This needs a lot of CPU
-colabfold_search input_sequences.fasta /path/to/db_folder search_results
-# This just does a bit of IO
-colabfold_split_msas search_results msas
+colabfold_search input_sequences.fasta /path/to/db_folder msas
 # This needs a GPU
 colabfold_batch msas predictions
 ```
 
-This will create intermediate folders `search_results` and `msas` that you can eventually delete, and a `predictions` folder with all pdb files. 
+This will create intermediate folder `msas` that contains all input multiple sequence alignments formated as a3m files and a `predictions` folder with all predicted pdb,json and png files. 
+
+Searches against the ColabFoldDB can be done in two different modes:
+
+(1) Batch searches with many sequences against the ColabFoldDB quires a machine with approx. 128GB RAM. The search should be performed on the same machine that called `setup_databases.sh` since the database index size is adjusted to the main memory size. To search on computers with less main memory delete the index by removing all `.idx` files, this will force MMseqs2 to create an index on the fly in memory. MMSeqs2 is optimized for large input sequence sets sizes.
+
+(2) single query searches require the full index (the .idx files) to be kept in memory. This can be done with e.g. by using [vmtouch](https://github.com/hoytech/vmtouch). Thus, this type of search requires a machine with at least 768GB RAM for the ColabfoldDB. If the index is in memory use to `--db-load-mode 3` parameter in `colabfold_search` to avoid index loading overhead. 
 
 ### Tutorials & Presentations
 - ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI). 
