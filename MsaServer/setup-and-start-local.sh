@@ -6,7 +6,7 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "${SCRIPT_DIR}"
 
 # set which commits to use
-MMSEQS_COMMIT=${1:-edb8223d1ea07385ffe63d4f103af0eb12b2058e}
+MMSEQS_COMMIT=${1:-92deb92fb46583b4c68932111303d12dfa121364}
 BACKEND_COMMIT=${2:-1d84d23ec1199a9e46df9a5cb3301f6d73f3530d}
 
 # check if all dependencies are there
