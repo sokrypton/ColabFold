@@ -29,3 +29,9 @@ jobs:
         run: $HOME/.local/bin/poetry install -E alphafold
       - name: Run tests
         run: .venv/bin/pytest
+      - name: Run CLI
+        run: |
+          .venv/bin/colabfold_batch --help
+          .venv/bin/colabfold_search --help
+          .venv/bin/colabfold_split_msas --help
+

@@ -1,3 +1,8 @@
+import os
+
+os.environ["TF_FORCE_UNIFIED_MEMORY"] = "1"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "2.0"
+
 import json
 import logging
 import math
@@ -170,6 +175,7 @@ def predict_structure(
     unrelaxed_pdb_lines = []
     relaxed_pdb_lines = []
     prediction_times = []
+    representations = []
     seq_len = sum(sequences_lengths)
 
     model_names = []
@@ -250,6 +256,8 @@ def predict_structure(
             prediction_callback(
                 unrelaxed_protein, sequences_lengths, prediction_result, input_features
             )
+
+        representations.append(prediction_result.get("representations", None))
 
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
@@ -336,6 +344,7 @@ def predict_structure(
             "max_pae": max_paes[key],
             "pTMscore": ptmscore[key],
             "model_name": model_names[key],
+            "representations": representations[key],
         }
     return out, model_rank
 
@@ -921,6 +930,8 @@ def run(
     recompile_all_models: bool = False,
     zip_results: bool = False,
     prediction_callback: Callable[[Any, Any, Any, Any], Any] = None,
+    save_single_representations: bool = False,
+    save_pair_representations: bool = False,
 ):
     version = importlib_metadata.version("colabfold")
     commit = get_commit()
@@ -933,6 +944,7 @@ def run(
     result_dir = Path(result_dir)
     result_dir.mkdir(exist_ok=True)
     model_type = set_model_type(is_complex, model_type)
+
     if model_type == "AlphaFold2-multimer":
         model_extension = "_multimer"
     elif model_type == "AlphaFold2-ptm":
@@ -981,6 +993,8 @@ def run(
         model_type, use_msa, use_env, use_templates, use_amber, result_dir
     )
 
+    save_representations = save_single_representations or save_pair_representations
+
     model_runner_and_params = load_models_and_params(
         num_models,
         use_templates,
@@ -991,6 +1005,7 @@ def run(
         recompile_all_models,
         stop_at_score=stop_at_score,
         rank_by=rank_by,
+        return_representations=save_representations,
     )
 
     crop_len = 0
@@ -1091,6 +1106,31 @@ def run(
             logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
             continue
 
+        # Write representations if needed
+
+        representation_files = []
+
+        if save_representations:
+            for i, key in enumerate(model_rank):
+                out = outs[key]
+                model_id = i + 1
+                model_name = out["model_name"]
+                representations = out["representations"]
+
+                if save_single_representations:
+                    single_representation = np.asarray(representations["single"])
+                    single_filename = result_dir.joinpath(
+                        f"{jobname}_single_repr_{model_id}_{model_name}"
+                    )
+                    np.save(single_filename, single_representation)
+
+                if save_pair_representations:
+                    pair_representation = np.asarray(representations["pair"])
+                    pair_filename = result_dir.joinpath(
+                        f"{jobname}_pair_repr_{model_id}_{model_name}"
+                    )
+                    np.save(pair_filename, pair_representation)
+
         # Write alphafold-db format (PAE)
         alphafold_pae_file = result_dir.joinpath(
             jobname + "_predicted_aligned_error_v1.json"
@@ -1130,22 +1170,23 @@ def run(
             pae_png,
             coverage_png,
             plddt_png,
+            *representation_files,
         ]
-        for i in model_rank:
+        for i, key in enumerate(model_rank):
             result_files.append(
                 result_dir.joinpath(
-                    f"{jobname}_unrelaxed_rank_{i + 1}_{outs[i]['model_name']}.pdb"
+                    f"{jobname}_unrelaxed_rank_{i + 1}_{outs[key]['model_name']}.pdb"
                 )
             )
             result_files.append(
                 result_dir.joinpath(
-                    f"{jobname}_unrelaxed_rank_{i + 1}_{outs[i]['model_name']}_scores.json"
+                    f"{jobname}_unrelaxed_rank_{i + 1}_{outs[key]['model_name']}_scores.json"
                 )
             )
             if use_amber:
                 result_files.append(
                     result_dir.joinpath(
-                        f"{jobname}_relaxed_rank_{i + 1}_{outs[i]['model_name']}.pdb"
+                        f"{jobname}_relaxed_rank_{i + 1}_{outs[key]['model_name']}.pdb"
                     )
                 )
 
@@ -1278,6 +1319,18 @@ def main():
         choices=["none", "length", "random"],
     )
     parser.add_argument(
+        "--save-single-representations",
+        default=False,
+        action="store_true",
+        help="saves the single representation embeddings of all models",
+    )
+    parser.add_argument(
+        "--save-pair-representations",
+        default=False,
+        action="store_true",
+        help="saves the pair representation embeddings of all models",
+    )
+    parser.add_argument(
         "--zip",
         default=False,
         action="store_true",
@@ -1329,6 +1382,8 @@ def main():
         recompile_padding=args.recompile_padding,
         recompile_all_models=args.recompile_all_models,
         zip_results=args.zip,
+        save_single_representations=args.save_single_representations,
+        save_pair_representations=args.save_pair_representations,
     )
 
 

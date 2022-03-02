@@ -4,16 +4,8 @@
 -----------------
 **New Updates**
 ```diff
-+ 11Nov2021  [AlphaFold2_mmseqs2] now uses Alphafold-multimer for complex (homo/hetero-oligomer) modeling.
-+            Use [AlphaFold2_advanced] notebook for the old complex prediction logic. 
-+ 11Nov2021  ColabFold can be installed locally using pip!
-+ 14Nov2021  Template based predictions works again in the Alphafold2_mmseqs2 notebook.
-- 14Nov2021  WARNING "Single-sequence" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken 
--            starting 11Nov2021. The MMseqs2 MSA was being used regardless of selection.
-+ 14Nov2021  "Single-sequence" mode is now fixed.
-- 20Nov2021  WARNING "AMBER" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken 
--            starting 11Nov2021. Unrelaxed proteins were returned instead.
-+ 20Nov2021  "AMBER" is fixed thanks to Kevin Pan
++ 26Jan2022 AlphaFold2_mmseqs2, AlphaFold2_batch and colabfold_batch's multimer complexes predictions are 
++           now in default reranked by iptmscore*0.8+ptmscore*0.2 instead of ptmscore
 ```
 -----------------
 
@@ -61,7 +53,7 @@
 
 _Note: If you need amber or templates, checkout [localcolabfold](https://github.com/YoshitakaMo/localcolabfold) instead_
 
-Install ColabFold using the `pip` commands below. `pip` will resolvei and install all required dependencies and ColabFold should be ready within a few minutes to use. Please check the [JAX documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to get JAX to work on your GPU or TPU.
+Install ColabFold using the `pip` commands below. `pip` will resolve and install all required dependencies and ColabFold should be ready within a few minutes to use. Please check the [JAX documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to get JAX to work on your GPU or TPU.
 
 ```shell
 pip install "colabfold[alphafold] @ git+https://github.com/sokrypton/ColabFold"
@@ -74,7 +66,7 @@ colabfold_batch <directory_with_fasta_files> <result_dir>
 
 If no GPU or TPU is present, `colabfold_batch` can be executed (slowly) using only a CPU with the `--cpu` parameter.
 
-### Generating MSAs
+### Generating MSAs for large scale structure/complex predictions
 
 First create a directory for the databases on a disk with sufficient storage (940GB (!)). Depending on where you are, this will take a couple of hours: 
 
@@ -82,18 +74,22 @@ First create a directory for the databases on a disk with sufficient storage (94
 ./setup_databases.sh /path/to/db_folder
 ```
 
-Download and unpack mmseqs (Note: The required features aren't in a release yet, so currently, you need to compile the latest version from source yourself). If mmseqs is not in your `PATH`, replace `mmseqs` below with the path to your mmseqs:
+Download and unpack mmseqs (Note: The required features aren't in a release yet, so currently, you need to compile the latest version from source yourself or use a [static binary](https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz)). If mmseqs is not in your `PATH`, replace `mmseqs` below with the path to your mmseqs:
 
 ```shell
 # This needs a lot of CPU
-colabfold_search input_sequences.fasta /path/to/db_folder search_results
-# This just does a bit of IO
-colabfold_split_msas search_results msas
+colabfold_search input_sequences.fasta /path/to/db_folder msas
 # This needs a GPU
 colabfold_batch msas predictions
 ```
 
-This will create intermediate folders `search_results` and `msas` that you can eventually delete, and a `predictions` folder with all pdb files. 
+This will create intermediate folder `msas` that contains all input multiple sequence alignments formated as a3m files and a `predictions` folder with all predicted pdb,json and png files. 
+
+Searches against the ColabFoldDB can be done in two different modes:
+
+(1) Batch searches with many sequences against the ColabFoldDB quires a machine with approx. 128GB RAM. The search should be performed on the same machine that called `setup_databases.sh` since the database index size is adjusted to the main memory size. To search on computers with less main memory delete the index by removing all `.idx` files, this will force MMseqs2 to create an index on the fly in memory. MMSeqs2 is optimized for large input sequence sets sizes.
+
+(2) single query searches require the full index (the .idx files) to be kept in memory. This can be done with e.g. by using [vmtouch](https://github.com/hoytech/vmtouch). Thus, this type of search requires a machine with at least 768GB RAM for the ColabfoldDB. If the index is in memory use to `--db-load-mode 3` parameter in `colabfold_search` to avoid index loading overhead. 
 
 ### Tutorials & Presentations
 - ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI). 
@@ -150,7 +146,16 @@ This will create intermediate folders `search_results` and `msas` that you can e
              working on fixing this. If you are not using templates, this does not affect the
              the results. Other notebooks that do not use_templates are unaffected.
   21Aug2021  The templates issue is resolved!
-
+  11Nov2021  [AlphaFold2_mmseqs2] now uses Alphafold-multimer for complex (homo/hetero-oligomer) modeling.
+             Use [AlphaFold2_advanced] notebook for the old complex prediction logic. 
+  11Nov2021  ColabFold can be installed locally using pip!
+  14Nov2021  Template based predictions works again in the Alphafold2_mmseqs2 notebook.
+  14Nov2021  WARNING "Single-sequence" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken 
+             starting 11Nov2021. The MMseqs2 MSA was being used regardless of selection.
+  14Nov2021  "Single-sequence" mode is now fixed.
+  20Nov2021  WARNING "AMBER" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken 
+             starting 11Nov2021. Unrelaxed proteins were returned instead.
+  20Nov2021  "AMBER" is fixed thanks to Kevin Pan
 ```
 -----------------
 

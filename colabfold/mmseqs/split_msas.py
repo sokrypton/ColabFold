@@ -16,7 +16,7 @@ def split_msa(merged_msa: Path, output_folder: Path):
         if not msa.strip():
             continue
         filename = msa.split("\n", 1)[0][1:].split(" ")[0].replace("/", "_") + ".a3m"
-        output_folder.with_name(filename).write_text(msa)
+        output_folder.joinpath(filename).write_text(msa)
 
 
 def main():

@@ -1,0 +1,16 @@
+[Unit]
+Description=MMseqs2 Server
+After=network.target
+
+[Service]
+User=user
+Group=user
+WorkingDirectory=/path-to-mmseqs-server-home
+Environment="MMSEQS_NUM_THREADS=1"
+ExecStart=/path-to-mmseqs-server-home/msa-server -local -config /path-to-mmseqs-server-home/config.json
+Type=simple
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
