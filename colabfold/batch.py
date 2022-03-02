@@ -138,7 +138,7 @@ def mk_hhsearch_db(template_dir: str):
     ) as cs219_index, open(
         template_path.joinpath("pdb70_a3m.ffindex"), "w"
     ) as a3m_index:
-        id = 0
+        id = 1000000
         index_offset = 0
         for cif_file in cif_files:
             with open(cif_file) as f:
