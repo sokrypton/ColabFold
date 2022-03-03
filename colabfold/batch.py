@@ -174,8 +174,8 @@ def mk_hhsearch_db(template_dir: str):
                 id += 1
 
     os.symlink(
-        template_path.joinpath("pdb70_a3m.ffdata"),
-        template_path.joinpath("pdb70_cs219.ffdata"),
+        template_path.joinpath("pdb70_a3m.ffdata").absolute(),
+        template_path.joinpath("pdb70_cs219.ffdata").absolute(),
     )
 
 
