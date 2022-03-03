@@ -137,7 +137,9 @@ def mk_hhsearch_db(template_dir: str):
         template_path.joinpath("pdb70_cs219.ffindex"), "w"
     ) as cs219_index, open(
         template_path.joinpath("pdb70_a3m.ffindex"), "w"
-    ) as a3m_index:
+    ) as a3m_index, open(
+        template_path.joinpath("pdb70_cs219.ffdata"), "w"
+    ) as cs219:
         id = 1000000
         index_offset = 0
         for cif_file in cif_files:
@@ -171,12 +173,8 @@ def mk_hhsearch_db(template_dir: str):
                 cs219_index.write(f"{id}\t{index_offset}\t{len(protein_str)}\n")
                 index_offset += a3m_str_len
                 a3m.write(a3m_str)
+                cs219.write("\n\0")
                 id += 1
-
-    os.symlink(
-        template_path.joinpath("pdb70_a3m.ffdata").absolute(),
-        template_path.joinpath("pdb70_cs219.ffdata").absolute(),
-    )
 
 
 def batch_input(
