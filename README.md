@@ -4,6 +4,8 @@
 -----------------
 **New Updates**
 ```diff
++ 04Mar2022 ColabFold now uses a much more powerful server for MSAs and searches through the ColabFoldDB instead of BFD/MGnify. 
++           Please let us know if you observe any issues.
 + 26Jan2022 AlphaFold2_mmseqs2, AlphaFold2_batch and colabfold_batch's multimer complexes predictions are 
 +           now in default reranked by iptmscore*0.8+ptmscore*0.2 instead of ptmscore
 ```
