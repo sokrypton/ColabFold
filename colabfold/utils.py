@@ -17,7 +17,7 @@ See https://github.com/google/jax/#pip-installation-gpu-cuda for more details.
 
 If you're sure you want to run without a GPU, pass `--cpu`"""
 
-DEFAULT_API_SERVER = "https://a3m.mmseqs.com"
+DEFAULT_API_SERVER = "https://api.colabfold.com"
 
 ACCEPT_DEFAULT_TERMS = """WARNING: You are welcome to use the default MSA server, however keep in mind that it's a limited shared resource only capable of processing a few thousand MSAs per day. Please submit jobs only from a single IP address. We reserve the right to limit access to the server case-by-case when usage exceeds fair use.
 
