@@ -1,5 +1,7 @@
 import os
 
+from Bio.PDB import MMCIFParser
+
 os.environ["TF_FORCE_UNIFIED_MEMORY"] = "1"
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "2.0"
 
@@ -10,6 +12,8 @@ import random
 import sys
 import time
 import zipfile
+import io
+
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -29,7 +33,7 @@ except ModuleNotFoundError:
         "\n\nalphafold is not installed. Please run `pip install colabfold[alphafold]`\n"
     )
 
-from alphafold.common import protein
+from alphafold.common import protein, residue_constants
 
 from alphafold.common.protein import Protein
 from alphafold.data import (
@@ -119,6 +123,58 @@ def mk_template(
         query_sequence=query_sequence, hits=hhsearch_hits
     )
     return dict(templates_result.features)
+
+
+def mk_hhsearch_db(template_dir: str):
+    template_path = Path(template_dir)
+    cif_files = template_path.glob("*.cif")
+
+    pdb70_db_files = template_path.glob("pdb70*")
+    for f in pdb70_db_files:
+        os.remove(f)
+
+    with open(template_path.joinpath("pdb70_a3m.ffdata"), "w") as a3m, open(
+        template_path.joinpath("pdb70_cs219.ffindex"), "w"
+    ) as cs219_index, open(
+        template_path.joinpath("pdb70_a3m.ffindex"), "w"
+    ) as a3m_index, open(
+        template_path.joinpath("pdb70_cs219.ffdata"), "w"
+    ) as cs219:
+        id = 1000000
+        index_offset = 0
+        for cif_file in cif_files:
+            with open(cif_file) as f:
+                cif_string = f.read()
+            cif_fh = io.StringIO(cif_string)
+            parser = MMCIFParser(QUIET=True)
+            structure = parser.get_structure("none", cif_fh)
+            models = list(structure.get_models())
+            if len(models) != 1:
+                raise ValueError(
+                    f"Only single model PDBs are supported. Found {len(models)} models."
+                )
+            model = models[0]
+            for chain in model:
+                amino_acid_res = []
+                for res in chain:
+                    if res.id[2] != " ":
+                        raise ValueError(
+                            f"PDB contains an insertion code at chain {chain.id} and residue "
+                            f"index {res.id[1]}. These are not supported."
+                        )
+                    amino_acid_res.append(
+                        residue_constants.restype_3to1.get(res.resname, "X")
+                    )
+
+                protein_str = "".join(amino_acid_res)
+                a3m_str = f">{cif_file.stem}_{chain.id}\n{protein_str}\n\0"
+                a3m_str_len = len(a3m_str)
+                a3m_index.write(f"{id}\t{index_offset}\t{a3m_str_len}\n")
+                cs219_index.write(f"{id}\t{index_offset}\t{len(protein_str)}\n")
+                index_offset += a3m_str_len
+                a3m.write(a3m_str)
+                cs219.write("\n\0")
+                id += 1
 
 
 def batch_input(
@@ -530,6 +586,7 @@ def get_msa_and_templates(
     result_dir: Path,
     msa_mode: str,
     use_templates: bool,
+    custom_template_path: str,
     pair_mode: str,
     host_url: str = DEFAULT_API_SERVER,
 ) -> Tuple[
@@ -558,6 +615,10 @@ def get_msa_and_templates(
             use_templates=True,
             host_url=host_url,
         )
+        if custom_template_path is not None:
+            template_paths = {}
+            for index in range(0, len(query_seqs_unique)):
+                template_paths[index] = custom_template_path
         if template_paths is None:
             logger.info("No template detected")
             for index in range(0, len(query_seqs_unique)):
@@ -919,6 +980,7 @@ def run(
     model_type: str = "auto",
     msa_mode: str = "MMseqs2 (UniRef+Environmental)",
     use_templates: bool = False,
+    custom_template_path: str = None,
     use_amber: bool = False,
     keep_existing_results: bool = True,
     rank_by: str = "auto",
@@ -1007,6 +1069,8 @@ def run(
         rank_by=rank_by,
         return_representations=save_representations,
     )
+    if custom_template_path is not None:
+        mk_hhsearch_db(custom_template_path)
 
     crop_len = 0
     for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
@@ -1053,6 +1117,7 @@ def run(
                     result_dir,
                     msa_mode,
                     use_templates,
+                    custom_template_path,
                     pair_mode,
                     host_url,
                 )
@@ -1284,6 +1349,14 @@ def main():
     parser.add_argument(
         "--templates", default=False, action="store_true", help="Use templates from pdb"
     )
+
+    parser.add_argument(
+        "--custom-template-path",
+        type=str,
+        default=None,
+        help="Directory with pdb files to be used as input",
+    )
+
     parser.add_argument("--env", default=False, action="store_true")
     parser.add_argument(
         "--cpu",
@@ -1366,6 +1439,7 @@ def main():
         queries=queries,
         result_dir=args.results,
         use_templates=args.templates,
+        custom_template_path=args.custom_template_path,
         use_amber=args.amber,
         msa_mode=args.msa_mode,
         model_type=model_type,

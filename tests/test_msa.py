@@ -26,6 +26,7 @@ def test_get_msa_and_templates(pytestconfig, caplog, tmp_path):
                 tmp_path,
                 msa_mode,
                 False,
+                None,
                 "unpaired+paired",
             )
 
