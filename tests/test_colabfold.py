@@ -28,7 +28,7 @@ def prediction_test(caplog):
     # otherwise jax will tell us about its search for devices
     absl_logging.set_verbosity("error")
     # We'll also want to mock that out later
-    download_alphafold_params("AlphaFold2-multimer")
+    download_alphafold_params("AlphaFold2-multimer-v1")
     download_alphafold_params("AlphaFold2-ptm")
     # alphafold uses a method called `make_random_seed`, which deterministically starts with a seed
     # of zero and increases it by one for each protein. This means the input features would become
