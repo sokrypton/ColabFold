@@ -16,7 +16,7 @@ default_data_dir = Path(appdirs.user_cache_dir(__package__ or "colabfold"))
 def download_alphafold_params(model_type: str, data_dir: Path = default_data_dir):
     params_dir = data_dir.joinpath("params")
     if model_type == "AlphaFold2-multimer":
-        url = "https://storage.googleapis.com/alphafold/alphafold_params_colab_2021-10-27.tar"
+        url = "https://storage.googleapis.com/alphafold/alphafold_params_colab_2022-03-02.tar"
         success_marker = params_dir.joinpath("download_complexes_finished.txt")
     else:
         url = "https://storage.googleapis.com/alphafold/alphafold_params_2021-07-14.tar"
