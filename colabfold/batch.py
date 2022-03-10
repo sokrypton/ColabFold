@@ -318,7 +318,7 @@ def predict_structure(
         unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
         plddts.append(prediction_result["plddt"][:seq_len])
         ptmscore.append(prediction_result["ptm"])
-        if model_type == "AlphaFold2-multimer":
+        if model_type.startswith("AlphaFold2-multimer"):
             iptmscore.append(prediction_result["iptm"])
         max_paes.append(prediction_result["max_predicted_aligned_error"].item())
         paes_res = []
@@ -845,7 +845,7 @@ def generate_input_feature(
         # Do further feature post-processing depending on the model type.
         if not is_complex:
             input_feature = features_for_chain[protein.PDB_CHAIN_IDS[0]]
-        elif model_type == "AlphaFold2-multimer":
+        elif model_type.startswith("AlphaFold2-multimer"):
             input_feature = process_multimer_features(features_for_chain)
     return input_feature
 
@@ -1007,8 +1007,10 @@ def run(
     result_dir.mkdir(exist_ok=True)
     model_type = set_model_type(is_complex, model_type)
 
-    if model_type == "AlphaFold2-multimer":
+    if model_type == "AlphaFold2-multimer-v1":
         model_extension = "_multimer"
+    elif model_type == "AlphaFold2-multimer-v2":
+        model_extension = "_multimer_v2"
     elif model_type == "AlphaFold2-ptm":
         model_extension = "_ptm"
     else:
@@ -1019,7 +1021,7 @@ def run(
         rank_by = "plddt" if not is_complex else "ptmscore"
         rank_by = (
             "multimer"
-            if is_complex and model_type == "AlphaFold2-multimer"
+            if is_complex and model_type.startswith("AlphaFold2-multimer")
             else rank_by
         )
 
@@ -1203,7 +1205,7 @@ def run(
         alphafold_pae_file.write_text(get_pae_json(outs[0]["pae"], outs[0]["max_pae"]))
         num_alignment = (
             int(input_features["num_alignments"])
-            if model_type == "AlphaFold2-multimer"
+            if model_type.startswith("AlphaFold2-multimer")
             else input_features["num_alignments"][0]
         )
         msa_plot = plot_msa(
@@ -1270,7 +1272,7 @@ def run(
 
 def set_model_type(is_complex: bool, model_type: str) -> str:
     if model_type == "auto" and is_complex:
-        model_type = "AlphaFold2-multimer"
+        model_type = "AlphaFold2-multimer-v2"
     elif model_type == "auto" and not is_complex:
         model_type = "AlphaFold2-ptm"
     return model_type
@@ -1334,10 +1336,10 @@ def main():
     parser.add_argument(
         "--model-type",
         help="predict strucutre/complex using the following model."
-        'Auto will pick "AlphaFold2" (ptm) for structure predictions and "AlphaFold2-multimer" for complexes.',
+        'Auto will pick "AlphaFold2" (ptm) for structure predictions and "AlphaFold2-multimer-v2" for complexes.',
         type=str,
         default="auto",
-        choices=["auto", "AlphaFold2-ptm", "AlphaFold2-multimer"],
+        choices=["auto", "AlphaFold2-ptm", "AlphaFold2-multimer-v1", "AlphaFold2-multimer-v2"],
     )
 
     parser.add_argument(

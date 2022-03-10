@@ -110,7 +110,7 @@ def write_bibtex(
     to_cite = ["Mirdita2021"]
     if model == "AlphaFold2-ptm":
         to_cite += ["Jumper2021"]
-    if model == "AlphaFold2-multimer":
+    if model.startswith("AlphaFold2-multimer"):
         to_cite += ["Evans2021"]
     if use_msa:
         to_cite += ["Mirdita2019"]
