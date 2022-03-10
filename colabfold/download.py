@@ -17,10 +17,10 @@ def download_alphafold_params(model_type: str, data_dir: Path = default_data_dir
     params_dir = data_dir.joinpath("params")
     if model_type == "AlphaFold2-multimer-v2":
         url = "https://storage.googleapis.com/alphafold/alphafold_params_colab_2022-03-02.tar"
-        success_marker = params_dir.joinpath("download_complexes_finished.txt")
+        success_marker = params_dir.joinpath("download_complexes_multimer-v2_finished.txt")
     elif model_type == "AlphaFold2-multimer-v1":
         url = "https://storage.googleapis.com/alphafold/alphafold_params_colab_2021-10-27.tar"
-        success_marker = params_dir.joinpath("download_complexes_finished.txt")
+        success_marker = params_dir.joinpath("download_complexes_multimer-v1_finished.txt")
     else:
         url = "https://storage.googleapis.com/alphafold/alphafold_params_2021-07-14.tar"
         success_marker = params_dir.joinpath("download_finished.txt")
