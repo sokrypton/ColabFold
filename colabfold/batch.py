@@ -1339,7 +1339,12 @@ def main():
         'Auto will pick "AlphaFold2" (ptm) for structure predictions and "AlphaFold2-multimer-v2" for complexes.',
         type=str,
         default="auto",
-        choices=["auto", "AlphaFold2-ptm", "AlphaFold2-multimer-v1", "AlphaFold2-multimer-v2"],
+        choices=[
+            "auto",
+            "AlphaFold2-ptm",
+            "AlphaFold2-multimer-v1",
+            "AlphaFold2-multimer-v2",
+        ],
     )
 
     parser.add_argument(
