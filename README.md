@@ -5,7 +5,7 @@
 **New Updates**
 ```diff
 + 11Mar2022 We use in default AlphaFold-multimer-v2 weights for complex modeling. 
-            We also offer the old complex modes "AlphaFold-ptm" or "AlphaFold-multimer-v1"
++           We also offer the old complex modes "AlphaFold-ptm" or "AlphaFold-multimer-v1"
 + 04Mar2022 ColabFold now uses a much more powerful server for MSAs and searches through the ColabFoldDB instead of BFD/MGnify. 
 +           Please let us know if you observe any issues.
 + 26Jan2022 AlphaFold2_mmseqs2, AlphaFold2_batch and colabfold_batch's multimer complexes predictions are 
