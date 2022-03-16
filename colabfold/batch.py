@@ -466,7 +466,7 @@ def get_queries(
             # Use a list so we can easily extend this to multiple msas later
             a3m_lines = [input_path.read_text()]
             queries = [(input_path.stem, query_sequence, a3m_lines)]
-        elif input_path.suffix == ".fasta":
+        elif input_path.suffix in [".fasta", ".faa", ".fa"]:
             (sequences, headers) = parse_fasta(input_path.read_text())
             queries = []
             for sequence, header in zip(sequences, headers):
@@ -493,7 +493,7 @@ def get_queries(
                 logger.error(f"{file} is empty")
                 continue
             query_sequence = seqs[0]
-            if len(seqs) > 1 and file.suffix == ".fasta":
+            if len(seqs) > 1 and file.suffix in [".fasta", ".faa", ".fa"]:
                 logger.warning(
                     f"More than one sequence in {file}, ignoring all but the first sequence"
                 )
