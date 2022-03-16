@@ -53,7 +53,7 @@ def load_models_and_params(
                 model_config.data.eval.num_ensemble = 1
                 model_config.data.common.num_recycle = num_recycle
                 model_config.model.num_recycle = num_recycle
-            elif model_suffix == "_multimer":
+            elif model_suffix.startswith("_multimer"):
                 model_config.model.num_recycle = num_recycle
                 model_config.model.num_ensemble_eval = 1
             model_runner_and_params.append(
@@ -77,7 +77,7 @@ def load_models_and_params(
                     model_config.data.eval.num_ensemble = 1
                     model_config.data.common.num_recycle = num_recycle
                     model_config.model.num_recycle = num_recycle
-                elif model_suffix == "_multimer":
+                elif model_suffix.startswith("_multimer"):
                     model_config.model.num_ensemble_eval = 1
                     model_config.model.num_recycle = num_recycle
                 model_runner = model.RunModel(
