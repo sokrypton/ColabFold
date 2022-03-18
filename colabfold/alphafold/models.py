@@ -6,6 +6,7 @@ import haiku
 
 from alphafold.model import model, config, data
 from alphafold.model.modules import AlphaFold
+from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
 
 
 def load_models_and_params(
@@ -30,6 +31,10 @@ def load_models_and_params(
         # this forces the AlphaFold to always return representations
         AlphaFold.__call__ = partialmethod(
             AlphaFold.__call__, return_representations=True
+        )
+
+        AlphaFoldMultimer.__call__ = partialmethod(
+            AlphaFoldMultimer.__call__, return_representations=True
         )
 
     if not model_order:
