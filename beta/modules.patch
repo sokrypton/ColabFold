@@ -1,6 +1,33 @@
---- /usr/local/lib/python3.7/dist-packages/alphafold/model/modules.py	2021-08-01 22:46:44.444240429 +0000
-+++ modules.py	2021-08-01 22:52:08.626893597 +0000
-@@ -365,21 +365,29 @@
+--- /content/alphafold_backup/alphafold/model/modules.py	2022-03-23 18:04:42.567385387 +0000
++++ /content/alphafold/alphafold/model/modules.py	2022-03-23 18:08:07.926030407 +0000
+@@ -341,17 +341,16 @@
+           compute_loss=compute_loss,
+           ensemble_representations=ensemble_representations)
+ 
++    emb_config = self.config.embeddings_and_evoformer
++    prev = {
++        'prev_pos': jnp.zeros(
++            [num_residues, residue_constants.atom_type_num, 3]),
++        'prev_msa_first_row': jnp.zeros(
++            [num_residues, emb_config.msa_channel]),
++        'prev_pair': jnp.zeros(
++            [num_residues, num_residues, emb_config.pair_channel]),
++    }
+     if self.config.num_recycle:
+-      emb_config = self.config.embeddings_and_evoformer
+-      prev = {
+-          'prev_pos': jnp.zeros(
+-              [num_residues, residue_constants.atom_type_num, 3]),
+-          'prev_msa_first_row': jnp.zeros(
+-              [num_residues, emb_config.msa_channel]),
+-          'prev_pair': jnp.zeros(
+-              [num_residues, num_residues, emb_config.pair_channel]),
+-      }
+-
+       if 'num_iter_recycling' in batch:
+         # Training time: num_iter_recycling is in batch.
+         # The value for each ensemble batch is the same, so arbitrarily taking
+@@ -365,21 +364,28 @@
          # Eval mode or tests: use the maximum number of iterations.
          num_iter = self.config.num_recycle
  
@@ -32,13 +59,13 @@
 +          lambda x: ((x[0] < num_iter) & (x[1] > self.config.recycle_tol)),
 +          body,(0, jnp.inf, prev))
      else:
-       prev = {}
+-      prev = {}
        num_iter = 0
 +      (recycles,tol) = 0, jnp.inf
  
      ret = do_call(prev=prev, recycle_idx=num_iter)
      if compute_loss:
-@@ -387,7 +395,7 @@
+@@ -387,7 +393,7 @@
  
      if not return_representations:
        del (ret[0] if compute_loss else ret)['representations']  # pytype: disable=unsupported-operands
@@ -47,3 +74,14 @@
  
  
  class TemplatePairStack(hk.Module):
+@@ -1730,9 +1736,7 @@
+                                           True,
+                                           name='prev_msa_first_row_norm')(
+                                               batch['prev_msa_first_row'])
+-        msa_activations = jax.ops.index_add(msa_activations, 0,
+-                                            prev_msa_first_row)
+-
++        msa_activations = msa_activations.at[0].add(prev_msa_first_row)
+       if 'prev_pair' in batch:
+         pair_activations += hk.LayerNorm([-1],
+                                          True,
