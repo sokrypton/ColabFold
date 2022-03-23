@@ -1,0 +1,37 @@
+--- /usr/local/lib/python3.7/dist-packages/alphafold/model/modules.py	2022-03-23 04:02:56.871333044 +0000
++++ alphafold/alphafold/model/modules.py	2022-03-23 04:04:16.081234108 +0000
+@@ -341,17 +341,16 @@
+           compute_loss=compute_loss,
+           ensemble_representations=ensemble_representations)
+ 
++    emb_config = self.config.embeddings_and_evoformer
++    prev = {
++        'prev_pos': jnp.zeros(
++            [num_residues, residue_constants.atom_type_num, 3]),
++        'prev_msa_first_row': jnp.zeros(
++            [num_residues, emb_config.msa_channel]),
++        'prev_pair': jnp.zeros(
++            [num_residues, num_residues, emb_config.pair_channel]),
++    }
+     if self.config.num_recycle:
+-      emb_config = self.config.embeddings_and_evoformer
+-      prev = {
+-          'prev_pos': jnp.zeros(
+-              [num_residues, residue_constants.atom_type_num, 3]),
+-          'prev_msa_first_row': jnp.zeros(
+-              [num_residues, emb_config.msa_channel]),
+-          'prev_pair': jnp.zeros(
+-              [num_residues, num_residues, emb_config.pair_channel]),
+-      }
+-
+       if 'num_iter_recycling' in batch:
+         # Training time: num_iter_recycling is in batch.
+         # The value for each ensemble batch is the same, so arbitrarily taking
+@@ -378,7 +377,6 @@
+             body,
+             (0, prev))
+     else:
+-      prev = {}
+       num_iter = 0
+ 
+     ret = do_call(prev=prev, recycle_idx=num_iter)
