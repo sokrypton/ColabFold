@@ -61,7 +61,7 @@ Install ColabFold using the `pip` commands below. `pip` will resolve and install
 
 ```shell
 pip install "colabfold[alphafold] @ git+https://github.com/sokrypton/ColabFold"
-pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_releases.html  # Note: wheels only available on linux.
+pip install --upgrade "jax[cuda]<0.3.0" -f https://storage.googleapis.com/jax-releases/jax_releases.html  # Note: wheels only available on linux.
 ```
 
 ```shell
