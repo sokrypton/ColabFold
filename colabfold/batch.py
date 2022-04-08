@@ -835,10 +835,16 @@ def generate_input_feature(
                     sequence, input_msa, template_features[sequence_index]
                 )
                 if is_complex:
+                    if paired_msa is None:
+                        input_msa = ">" + str(101 + sequence_index) + "\n" + sequence
+                    else:
+                        input_msa = paired_msa[sequence_index]
+
                     all_seq_features = build_multimer_feature(
-                        paired_msa[sequence_index]
+                        input_msa
                     )
                     feature_dict.update(all_seq_features)
+
                 features_for_chain[protein.PDB_CHAIN_IDS[chain_cnt]] = feature_dict
                 chain_cnt += 1
 
