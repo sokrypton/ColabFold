@@ -840,9 +840,7 @@ def generate_input_feature(
                     else:
                         input_msa = paired_msa[sequence_index]
 
-                    all_seq_features = build_multimer_feature(
-                        input_msa
-                    )
+                    all_seq_features = build_multimer_feature(input_msa)
                     feature_dict.update(all_seq_features)
 
                 features_for_chain[protein.PDB_CHAIN_IDS[chain_cnt]] = feature_dict
