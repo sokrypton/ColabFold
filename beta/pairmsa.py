@@ -53,6 +53,7 @@ def parse_a3m(a3m_lines=None, a3m_file=None, filter_qid=0.15, filter_cov=0.5, N=
         do_filter()
       # start new sequence entry
       nam = line.split()[0][1:]
+      if "_" not in nam: nam = f"X_{nam}"
       nams.append(nam)
       seqs.append("")
       n += 1
