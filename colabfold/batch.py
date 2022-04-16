@@ -666,7 +666,9 @@ def get_msa_and_templates(
     else:
         a3m_lines = None
 
-    if pair_mode == "paired" or pair_mode == "unpaired+paired":
+    if msa_mode != "single_sequence" and (
+        pair_mode == "paired" or pair_mode == "unpaired+paired"
+    ):
         # find paired a3m if not a homooligomers
         if len(query_seqs_unique) > 1:
             paired_a3m_lines = run_mmseqs2(
