@@ -20,6 +20,7 @@ def load_models_and_params(
     stop_at_score: float = 100,
     rank_by: str = "plddt",
     return_representations: bool = False,
+    training: bool = False,
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -62,7 +63,11 @@ def load_models_and_params(
                 model_config.model.num_recycle = num_recycle
                 model_config.model.num_ensemble_eval = 1
             model_runner_and_params.append(
-                (model_name, model.RunModel(model_config, params), params)
+                (
+                    model_name,
+                    model.RunModel(model_config, params, is_training=training),
+                    params,
+                )
             )
     else:
         models_need_compilation = [1, 3] if use_templates else [3]
@@ -91,6 +96,7 @@ def load_models_and_params(
                         model_name="model_" + str(model_number) + model_suffix,
                         data_dir=str(data_dir),
                     ),
+                    is_training=training,
                 )
             model_name = f"model_{model_number}"
             params = data.get_model_haiku_params(
