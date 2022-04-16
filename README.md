@@ -91,9 +91,9 @@ This will create intermediate folder `msas` that contains all input multiple seq
 
 Searches against the ColabFoldDB can be done in two different modes:
 
-(1) Batch searches with many sequences against the ColabFoldDB quires a machine with approx. 128GB RAM. The search should be performed on the same machine that called `setup_databases.sh` since the database index size is adjusted to the main memory size. To search on computers with less main memory delete the index by removing all `.idx` files, this will force MMseqs2 to create an index on the fly in memory. MMSeqs2 is optimized for large input sequence sets sizes.
+(1) Batch searches with many sequences against the ColabFoldDB quires a machine with approx. 128GB RAM. The search should be performed on the same machine that called `setup_databases.sh` since the database index size is adjusted to the main memory size. To search on computers with less main memory delete the index by removing all `.idx` files, this will force MMseqs2 to create an index on the fly in memory. MMSeqs2 is optimized for large input sequence sets sizes. For batch searches use the `--db-load-mode 0` option.
 
-(2) single query searches require the full index (the .idx files) to be kept in memory. This can be done with e.g. by using [vmtouch](https://github.com/hoytech/vmtouch). Thus, this type of search requires a machine with at least 768GB RAM for the ColabfoldDB. If the index is in memory use to `--db-load-mode 3` parameter in `colabfold_search` to avoid index loading overhead. 
+(2) single query searches require the full index (the .idx files) to be kept in memory. This can be done with e.g. by using [vmtouch](https://github.com/hoytech/vmtouch). Thus, this type of search requires a machine with at least 768GB RAM for the ColabfoldDB. If the index is in memory use to `--db-load-mode 3` parameter in `colabfold_search` to avoid index loading overhead. If they database is already in memory use `--db-load-mode 2` option.
 
 ### Tutorials & Presentations
 - ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI). 
