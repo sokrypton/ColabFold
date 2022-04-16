@@ -330,7 +330,7 @@ def main():
     parser.add_argument(
         "query",
         type=Path,
-        help="fasta files with the queries. Doesn't support complexes yet",
+        help="fasta files with the queries.",
     )
     parser.add_argument(
         "dbbase",
