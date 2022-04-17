@@ -1480,7 +1480,7 @@ def main():
         zip_results=args.zip,
         save_single_representations=args.save_single_representations,
         save_pair_representations=args.save_pair_representations,
-        is_training=args.training,
+        training=args.training,
     )
 
 
