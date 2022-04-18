@@ -222,6 +222,7 @@ def predict_structure(
     rank_by: str = "auto",
     random_seed: int = 0,
     stop_at_score: float = 100,
+    stop_at_score_below: float = 0,
     prediction_callback: Callable[[Any, Any, Any, Any], Any] = None,
     use_gpu_relax: bool = False,
 ):
@@ -358,8 +359,9 @@ def predict_structure(
             # TODO: Those aren't actually used in batch
             relaxed_pdb_lines.append(relaxed_pdb_str)
         # early stop criteria fulfilled
-        if mean_score > stop_at_score:
+        if mean_score > stop_at_score or mean_score < stop_at_score_below:
             break
+
     # rerank models based on predicted lddt
     if rank_by == "ptmscore":
         model_rank = np.array(ptmscore).argsort()[::-1]
@@ -1004,6 +1006,7 @@ def run(
     save_pair_representations: bool = False,
     training: bool = False,
     use_gpu_relax: bool = False,
+    stop_at_score_below: float = 0,
 ):
     version = importlib_metadata.version("colabfold")
     commit = get_commit()
@@ -1050,6 +1053,7 @@ def run(
         "pair_mode": pair_mode,
         "host_url": host_url,
         "stop_at_score": stop_at_score,
+        "stop_at_score_below": stop_at_score_below,
         "recompile_padding": recompile_padding,
         "recompile_all_models": recompile_all_models,
         "commit": get_commit(),
@@ -1178,6 +1182,7 @@ def run(
                 do_relax=use_amber,
                 rank_by=rank_by,
                 stop_at_score=stop_at_score,
+                stop_at_score_below=stop_at_score_below,
                 prediction_callback=prediction_callback,
                 use_gpu_relax=use_gpu_relax,
             )
@@ -1308,6 +1313,13 @@ def main():
         "This can make colabfold much faster by only running the first model for easy queries.",
         type=float,
         default=100,
+    )
+    parser.add_argument(
+        "--stop-at-score-below",
+        help="Stop to compute structures if plddt or ptmscore < threshold. "
+        "This can make colabfold much faster by skipping sequences that do not generate good scores.",
+        type=float,
+        default=0,
     )
 
     parser.add_argument(
@@ -1492,6 +1504,7 @@ def main():
         save_pair_representations=args.save_pair_representations,
         training=args.training,
         use_gpu_relax=args.use_gpu_relax,
+        stop_at_score_below=args.stop_at_score_below,
     )
 
 
