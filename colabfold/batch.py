@@ -352,7 +352,7 @@ def predict_structure(
                 stiffness=10.0,
                 exclude_residues=[],
                 max_outer_iterations=20,
-                use_gpu=use_gpu_relax
+                use_gpu=use_gpu_relax,
             )
             relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
             # TODO: Those aren't actually used in batch
