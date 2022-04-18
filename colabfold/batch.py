@@ -629,7 +629,6 @@ def get_msa_and_templates(
         else:
             for index in range(0, len(query_seqs_unique)):
                 if template_paths[index] is not None:
-                    print("Template path: ", template_paths[index])
                     template_feature = mk_template(
                         a3m_lines_mmseqs2[index],
                         template_paths[index],
@@ -728,9 +727,6 @@ def process_multimer_features(
 ) -> Dict[str, ndarray]:
     all_chain_features = {}
     for chain_id, chain_features in features_for_chain.items():
-        print(chain_id, chain_features)
-        print("Feature ", chain_id)
-
         all_chain_features[chain_id] = pipeline_multimer.convert_monomer_features(
             chain_features, chain_id
         )
