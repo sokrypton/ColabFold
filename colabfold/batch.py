@@ -223,6 +223,7 @@ def predict_structure(
     random_seed: int = 0,
     stop_at_score: float = 100,
     prediction_callback: Callable[[Any, Any, Any, Any], Any] = None,
+    use_gpu_relax: bool = False,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
 
@@ -351,6 +352,7 @@ def predict_structure(
                 stiffness=10.0,
                 exclude_residues=[],
                 max_outer_iterations=20,
+                use_gpu=use_gpu_relax
             )
             relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
             # TODO: Those aren't actually used in batch
@@ -627,6 +629,7 @@ def get_msa_and_templates(
         else:
             for index in range(0, len(query_seqs_unique)):
                 if template_paths[index] is not None:
+                    print("Template path: ", template_paths[index])
                     template_feature = mk_template(
                         a3m_lines_mmseqs2[index],
                         template_paths[index],
@@ -725,6 +728,9 @@ def process_multimer_features(
 ) -> Dict[str, ndarray]:
     all_chain_features = {}
     for chain_id, chain_features in features_for_chain.items():
+        print(chain_id, chain_features)
+        print("Feature ", chain_id)
+
         all_chain_features[chain_id] = pipeline_multimer.convert_monomer_features(
             chain_features, chain_id
         )
@@ -1001,6 +1007,7 @@ def run(
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
     training: bool = False,
+    use_gpu_relax: bool = False,
 ):
     version = importlib_metadata.version("colabfold")
     commit = get_commit()
@@ -1176,6 +1183,7 @@ def run(
                 rank_by=rank_by,
                 stop_at_score=stop_at_score,
                 prediction_callback=prediction_callback,
+                use_gpu_relax=use_gpu_relax,
             )
         except RuntimeError as e:
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
@@ -1432,6 +1440,12 @@ def main():
         help="zip all results into one <jobname>.result.zip and delete the original files",
     )
     parser.add_argument(
+        "--use-gpu-relax",
+        default=False,
+        action="store_true",
+        help="run amber on GPU instead of CPU",
+    )
+    parser.add_argument(
         "--overwrite-existing-results", default=False, action="store_true"
     )
 
@@ -1481,6 +1495,7 @@ def main():
         save_single_representations=args.save_single_representations,
         save_pair_representations=args.save_pair_representations,
         training=args.training,
+        use_gpu_relax=args.use_gpu_relax,
     )
 
 
