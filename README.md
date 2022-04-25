@@ -1,18 +1,6 @@
 # ColabFold
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
------------------
-**New Updates**
-```diff
-+ 11Mar2022 We use in default AlphaFold-multimer-v2 weights for complex modeling. 
-+           We also offer the old complex modes "AlphaFold-ptm" or "AlphaFold-multimer-v1"
-+ 04Mar2022 ColabFold now uses a much more powerful server for MSAs and searches through the ColabFoldDB instead of BFD/MGnify. 
-+           Please let us know if you observe any issues.
-+ 26Jan2022 AlphaFold2_mmseqs2, AlphaFold2_batch and colabfold_batch's multimer complexes predictions are 
-+           now in default reranked by iptmscore*0.8+ptmscore*0.2 instead of ptmscore
-```
------------------
-
 ### Making Protein folding accessible to all via Google Colab!
 
 | Notebooks | monomers | complexes | mmseqs2 | jackhmmer | templates   |
@@ -132,6 +120,12 @@ Searches against the ColabFoldDB can be done in two different modes:
 -----------------
 **OLD Updates**
 ```diff
+  11Mar2022: We use in default AlphaFold-multimer-v2 weights for complex modeling. 
+             We also offer the old complex modes "AlphaFold-ptm" or "AlphaFold-multimer-v1"
+  04Mar2022: ColabFold now uses a much more powerful server for MSAs and searches through the ColabFoldDB instead of BFD/MGnify. 
+             Please let us know if you observe any issues.
+  26Jan2022: AlphaFold2_mmseqs2, AlphaFold2_batch and colabfold_batch's multimer complexes predictions are 
+             now in default reranked by iptmscore*0.8+ptmscore*0.2 instead of ptmscore
   16Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
   17Aug2021: If you see any errors, please report them.
   17Aug2021: We are still debugging the MSA generation procedure...
