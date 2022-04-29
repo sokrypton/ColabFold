@@ -807,8 +807,9 @@ def generate_input_feature(
     template_features: List[Dict[str, Any]],
     is_complex: bool,
     model_type: str,
-) -> Dict[str, Any]:
+) -> Tuple[Dict[str, Any], Dict[str, str]]:
     input_feature = {}
+    domain_names = {}
     if is_complex and model_type == "AlphaFold2-ptm":
         a3m_lines = pair_msa(
             query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa
@@ -865,9 +866,26 @@ def generate_input_feature(
         # Do further feature post-processing depending on the model type.
         if not is_complex:
             input_feature = features_for_chain[protein.PDB_CHAIN_IDS[0]]
+            domain_names = {
+                protein.PDB_CHAIN_IDS[0]: [
+                    name.decode("UTF-8")
+                    for name in input_feature["template_domain_names"]
+                    if name != b"none"
+                ]
+            }
         elif model_type.startswith("AlphaFold2-multimer"):
             input_feature = process_multimer_features(features_for_chain)
-    return input_feature
+            domain_names = {
+                chain: [
+                    name.decode("UTF-8")
+                    for name in feature["template_domain_names"]
+                    if name != b"none"
+                ]
+                for (chain, feature) in features_for_chain.items()
+            }
+        elif is_complex and model_type == "AlphaFold2-ptm":
+            domain_names = {protein.PDB_CHAIN_IDS[0]: []}
+    return (input_feature, domain_names)
 
 
 def unserialize_msa(
@@ -1157,7 +1175,7 @@ def run(
             logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
             continue
         try:
-            input_features = generate_input_feature(
+            (input_features, domain_names) = generate_input_feature(
                 query_seqs_unique,
                 query_seqs_cardinality,
                 unpaired_msa,
@@ -1267,6 +1285,13 @@ def run(
             plddt_png,
             *representation_files,
         ]
+        if use_templates:
+            templates_file = result_dir.joinpath(
+                jobname + "_template_domain_names.json"
+            )
+            templates_file.write_text(json.dumps(domain_names))
+            result_files.append(templates_file)
+
         for i, key in enumerate(model_rank):
             result_files.append(
                 result_dir.joinpath(
