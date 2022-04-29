@@ -827,6 +827,16 @@ def generate_input_feature(
         input_feature["asym_id"] = np.array(
             [int(n) for n, l in enumerate(Ls) for _ in range(0, l)]
         )
+        if any(
+            [
+                template != b"none"
+                for i in template_features
+                for template in i["template_domain_names"]
+            ]
+        ):
+            logger.warning(
+                "AlphaFold2-ptm complex does not consider templates. Chose multimer model-type for template support."
+            )
     else:
         features_for_chain = {}
         chain_cnt = 0
