@@ -637,7 +637,7 @@ def get_msa_and_templates(
                         query_seqs_unique[index],
                     )
                     logger.info(
-                        f"Sequence {index} found templates: {template_feature['template_domain_names']}"
+                        f"Sequence {index} found templates: {template_feature['template_domain_names'].astype(str).tolist()}"
                     )
                 else:
                     template_feature = mk_mock_template(query_seqs_unique[index])
