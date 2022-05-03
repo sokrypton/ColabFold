@@ -13,6 +13,7 @@ def load_models_and_params(
     num_models: int,
     use_templates: bool,
     num_recycle: int = 3,
+    num_ensemble: int = 1,
     model_order: Optional[List[int]] = None,
     model_suffix: str = "_ptm",
     data_dir: Path = Path("."),
@@ -56,12 +57,15 @@ def load_models_and_params(
             model_config.model.stop_at_score = float(stop_at_score)
             model_config.model.stop_at_score_ranker = rank_by
             if model_suffix == "_ptm":
-                model_config.data.eval.num_ensemble = 1
                 model_config.data.common.num_recycle = num_recycle
                 model_config.model.num_recycle = num_recycle
+                model_config.data.eval.num_ensemble = num_ensemble
             elif model_suffix.startswith("_multimer"):
                 model_config.model.num_recycle = num_recycle
-                model_config.model.num_ensemble_eval = 1
+                if training:
+                    model_config.model.num_ensemble_train = num_ensemble
+                else:
+                    model_config.model.num_ensemble_eval = num_ensemble
             model_runner_and_params.append(
                 (
                     model_name,
@@ -84,12 +88,15 @@ def load_models_and_params(
                 model_config.model.stop_at_score = float(stop_at_score)
                 model_config.model.stop_at_score_ranker = rank_by
                 if model_suffix == "_ptm":
-                    model_config.data.eval.num_ensemble = 1
                     model_config.data.common.num_recycle = num_recycle
                     model_config.model.num_recycle = num_recycle
+                    model_config.data.eval.num_ensemble = num_ensemble
                 elif model_suffix.startswith("_multimer"):
-                    model_config.model.num_ensemble_eval = 1
                     model_config.model.num_recycle = num_recycle
+                    if training:
+                        model_config.model.num_ensemble_train = num_ensemble
+                    else:
+                        model_config.model.num_ensemble_eval = num_ensemble
                 model_runner = model.RunModel(
                     model_config,
                     data.get_model_haiku_params(

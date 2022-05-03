@@ -1015,6 +1015,7 @@ def run(
     num_recycles: int,
     model_order: List[int],
     is_complex: bool,
+    num_ensemble: int = 1,
     model_type: str = "auto",
     msa_mode: str = "MMseqs2 (UniRef+Environmental)",
     use_templates: bool = False,
@@ -1075,6 +1076,7 @@ def run(
         "model_type": model_type,
         "num_models": num_models,
         "num_recycles": num_recycles,
+        "num_ensemble": num_ensemble,
         "model_order": model_order,
         "keep_existing_results": keep_existing_results,
         "rank_by": rank_by,
@@ -1106,6 +1108,7 @@ def run(
         num_models,
         use_templates,
         num_recycles,
+        num_ensemble,
         model_order,
         model_extension,
         data_dir,
@@ -1365,6 +1368,14 @@ def main():
         default=3,
     )
 
+    parser.add_argument(
+        "--num-ensemble",
+        help="Number of ensembles."
+        "The trunk of the network is run multiple times with different random choices for the MSA cluster centers.",
+        type=int,
+        default=1,
+    )
+
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
     parser.add_argument(
         "--recompile-padding",
@@ -1524,6 +1535,7 @@ def main():
         model_type=model_type,
         num_models=args.num_models,
         num_recycles=args.num_recycle,
+        num_ensemble=args.num_ensemble,
         model_order=model_order,
         is_complex=is_complex,
         keep_existing_results=not args.overwrite_existing_results,
