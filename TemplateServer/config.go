@@ -28,16 +28,20 @@ var defaultFileContent = []byte(`{
         // should CORS headers be set to allow requests from anywhere
         "cors"       : true
     },
-    // paths to workfolders and mmseqs, special character ~ is resolved relative to the binary location
+    // paths; special character ~ is resolved relative to the binary location
     "paths" : {
-        // path to mmseqs databases, has to be shared between server/workers
+        // paths to templates and databases
         "database"    : "~database",
+		"pdbdivided"  : "~divided",
+		"pdbobsolete" : "~obsolete"
     }
 }
 `)
 
 type ConfigPaths struct {
 	DatabasePrefix string `json:"database"`
+	PdbDivided     string `json:"pdbdivided"`
+	PdbObsolete    string `json:"pdbobsolete"`
 }
 
 type ConfigAuth struct {

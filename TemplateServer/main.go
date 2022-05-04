@@ -3,11 +3,14 @@ package main
 import (
 	"archive/tar"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -65,7 +68,7 @@ func AddTarEntry(tw *tar.Writer, name string, s string, now time.Time) error {
 	return nil
 }
 
-func GatherResults(w io.Writer, templates []string, a3m Reader, hhm Reader, cif Reader) (err error) {
+func GatherResults(w io.Writer, templates []string, a3m Reader, hhm Reader, pdbdivided string, pdbobsolete string) (err error) {
 	gw := gzip.NewWriter(w)
 	tw := tar.NewWriter(gw)
 
@@ -132,13 +135,42 @@ func GatherResults(w io.Writer, templates []string, a3m Reader, hhm Reader, cif 
 	}
 
 	for i := 0; i < len(uniquesWithoutChains); i++ {
-		pdbacc := uniquesWithoutChains[i]
-		cifid, ok := cif.Id(pdbacc)
-		if ok == false {
-			continue
+		pdbacc := strings.ToLower(uniquesWithoutChains[i])
+		if len(pdbacc) < 4 {
+			return fmt.Errorf("Invalid PDB accession %s", pdbacc)
 		}
 
-		if err := AddTarEntry(tw, strings.ToLower(pdbacc)+".cif", cif.Data(cifid), now); err != nil {
+		pdbmid := pdbacc[1:3]
+
+		file, err := os.Open(filepath.Join(pdbdivided, pdbmid, pdbacc+".cif.gz"))
+		if errors.Is(err, os.ErrNotExist) {
+			file, err = os.Open(filepath.Join(pdbobsolete, pdbmid, pdbacc+".cif.gz"))
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+
+		reader, err := gzip.NewReader(file)
+		if err != nil {
+			return err
+		}
+
+		cif, err := ioutil.ReadAll(reader)
+		if err != nil {
+			return err
+		}
+
+		if err := AddTarEntry(tw, pdbacc+".cif", string(cif), now); err != nil {
+			return err
+		}
+
+		if err := reader.Close(); err != nil {
+			return err
+		}
+
+		if err := file.Close(); err != nil {
 			return err
 		}
 	}
@@ -188,14 +220,11 @@ func main() {
 	hhmreader := Reader{}
 	hhmreader.Make(dbpaths(config.Paths.DatabasePrefix + "_hhm"))
 
-	cifreader := Reader{}
-	cifreader.Make(dbpaths(config.Paths.DatabasePrefix + "_cif"))
-
 	r.HandleFunc("/template/{list}", func(w http.ResponseWriter, req *http.Request) {
 		templates := strings.Split(mux.Vars(req)["list"], ",")
 		w.Header().Set("Content-Disposition", "attachment; filename=\"templates.tar.gz\"")
 		w.Header().Set("Content-Type", "application/octet-stream")
-		if err != GatherResults(w, templates, a3mreader, hhmreader, cifreader) {
+		if err != GatherResults(w, templates, a3mreader, hhmreader, config.Paths.PdbDivided, config.Paths.PdbObsolete) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
