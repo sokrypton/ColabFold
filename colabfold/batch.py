@@ -762,6 +762,13 @@ def process_multimer_features(
         pair_msa_sequences=pair_msa_sequences,
         max_templates=feature_processing.MAX_TEMPLATES,
     )
+    # merge_chain_features crashes if there are additional features only present in one chain
+    # remove all features that are not present in all chains
+    common_features = set([*np_chains_list[0]]).intersection(*np_chains_list)
+    np_chains_list = [
+        {key: value for (key, value) in chain.items() if key in common_features}
+        for chain in np_chains_list
+    ]
     np_example = feature_processing.msa_pairing.merge_chain_features(
         np_chains_list=np_chains_list,
         pair_msa_sequences=pair_msa_sequences,
