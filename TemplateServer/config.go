@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -32,8 +33,8 @@ var defaultFileContent = []byte(`{
     "paths" : {
         // paths to templates and databases
         "database"    : "~database",
-		"pdbdivided"  : "~divided",
-		"pdbobsolete" : "~obsolete"
+        "pdbdivided"  : "~divided",
+        "pdbobsolete" : "~obsolete"
     }
 }
 `)
@@ -61,6 +62,10 @@ type ConfigRoot struct {
 	Server  ConfigServer `json:"server" validate:"required"`
 	Paths   ConfigPaths  `json:"paths" validate:"required"`
 	Verbose bool         `json:"verbose"`
+}
+
+func WriteDefaultConfig(path string) error {
+	return ioutil.WriteFile(path, []byte(defaultFileContent), 0644)
 }
 
 func ReadConfigFromFile(name string) (ConfigRoot, error) {
