@@ -1,6 +1,6 @@
 import os
 
-from Bio.PDB import MMCIFParser
+from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 
 os.environ["TF_FORCE_UNIFIED_MEMORY"] = "1"
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "2.0"
@@ -59,6 +59,7 @@ from colabfold.utils import (
     get_commit,
     safe_filename,
     setup_logging,
+    CFMMCIFIO,
 )
 
 logger = logging.getLogger(__name__)
@@ -127,7 +128,33 @@ def mk_template(
 
 def mk_hhsearch_db(template_dir: str):
     template_path = Path(template_dir)
+
+    # check that required poly_seq and revision_date fields are present
     cif_files = template_path.glob("*.cif")
+    for cif_file in cif_files:
+        cif_dict = MMCIF2Dict.MMCIF2Dict(cif_file)
+        required = [
+            "_entity_poly_seq.mon_id",
+            "_pdbx_audit_revision_history.revision_date",
+        ]
+        for req in required:
+            if req not in cif_dict:
+                raise ValueError(
+                    f"mmCIF file {cif_file} is missing required field {req}."
+                )
+
+    # convert existing pdb files into mmcif with the required poly_seq and revision_date
+    pdb_files = template_path.glob("*.pdb")
+    for pdb_file in pdb_files:
+        id = os.path.basename(pdb_file).split(".")[0]
+        cif_file = os.path.join(template_path, f"{id}.cif")
+        if os.path.exists(cif_file):
+            continue
+        parser = PDBParser(QUIET=True)
+        structure = parser.get_structure(id, pdb_file)
+        io = CFMMCIFIO()
+        io.set_structure(structure)
+        io.save(cif_file)
 
     pdb70_db_files = template_path.glob("pdb70*")
     for f in pdb70_db_files:
@@ -142,6 +169,7 @@ def mk_hhsearch_db(template_dir: str):
     ) as cs219:
         id = 1000000
         index_offset = 0
+        cif_files = template_path.glob("*.cif")
         for cif_file in cif_files:
             with open(cif_file) as f:
                 cif_string = f.read()
