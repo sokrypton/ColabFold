@@ -12,11 +12,11 @@ import random
 import sys
 import time
 import zipfile
-import io
 
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from io import StringIO
 
 import haiku
 import importlib_metadata
@@ -126,6 +126,21 @@ def mk_template(
     return dict(templates_result.features)
 
 
+def convert_pdb_to_mmcif(template_path: Path):
+    """convert existing pdb files into mmcif with the required poly_seq and revision_date"""
+    pdb_files = template_path.glob("*.pdb")
+    for pdb_file in pdb_files:
+        id = pdb_file.stem
+        cif_file = template_path.joinpath(f"{id}.cif")
+        if cif_file.is_file():
+            return
+        parser = PDBParser(QUIET=True)
+        structure = parser.get_structure(id, pdb_file)
+        io = CFMMCIFIO()
+        io.set_structure(structure)
+        io.save(str(cif_file))
+
+
 def mk_hhsearch_db(template_dir: str):
     template_path = Path(template_dir)
 
@@ -143,18 +158,7 @@ def mk_hhsearch_db(template_dir: str):
                     f"mmCIF file {cif_file} is missing required field {req}."
                 )
 
-    # convert existing pdb files into mmcif with the required poly_seq and revision_date
-    pdb_files = template_path.glob("*.pdb")
-    for pdb_file in pdb_files:
-        id = os.path.basename(pdb_file).split(".")[0]
-        cif_file = os.path.join(template_path, f"{id}.cif")
-        if os.path.exists(cif_file):
-            continue
-        parser = PDBParser(QUIET=True)
-        structure = parser.get_structure(id, pdb_file)
-        io = CFMMCIFIO()
-        io.set_structure(structure)
-        io.save(cif_file)
+    convert_pdb_to_mmcif(template_path)
 
     pdb70_db_files = template_path.glob("pdb70*")
     for f in pdb70_db_files:
@@ -173,7 +177,7 @@ def mk_hhsearch_db(template_dir: str):
         for cif_file in cif_files:
             with open(cif_file) as f:
                 cif_string = f.read()
-            cif_fh = io.StringIO(cif_string)
+            cif_fh = StringIO(cif_string)
             parser = MMCIFParser(QUIET=True)
             structure = parser.get_structure("none", cif_fh)
             models = list(structure.get_models())
