@@ -1,7 +1,6 @@
 import json
 import logging
 import warnings
-from collections import defaultdict
 from pathlib import Path
 from typing import Optional
 
@@ -73,7 +72,16 @@ def get_commit() -> Optional[str]:
 import re
 from Bio.PDB import MMCIFIO
 
-# copied from Bio.PDB
+CIF_REVISION_DATE = """loop_
+_pdbx_audit_revision_history.ordinal
+_pdbx_audit_revision_history.data_content_type
+_pdbx_audit_revision_history.major_revision
+_pdbx_audit_revision_history.minor_revision
+_pdbx_audit_revision_history.revision_date
+1 'Structure model' 1 0 1971-01-01
+#\n"""
+
+### begin section copied from Bio.PDB
 mmcif_order = {
     "_atom_site": [
         "group_PDB",
@@ -100,30 +108,24 @@ mmcif_order = {
     ]
 }
 
-CIF_REVISION_DATE = """loop_
-_pdbx_audit_revision_history.ordinal
-_pdbx_audit_revision_history.data_content_type
-_pdbx_audit_revision_history.major_revision
-_pdbx_audit_revision_history.minor_revision
-_pdbx_audit_revision_history.revision_date
-1 'Structure model' 1 0 1971-01-01
-#\n"""
-
 
 class CFMMCIFIO(MMCIFIO):
     def _save_dict(self, out_file):
-        data_val = self.dic["data_"]
         # Form dictionary where key is first part of mmCIF key and value is list
         # of corresponding second parts
-        key_lists = defaultdict(list)
+        key_lists = {}
         for key in self.dic:
             if key == "data_":
-                continue
-            s = re.split(r"\.", key)
-            if len(s) == 2:
-                key_lists[s[0]].append(s[1])
+                data_val = self.dic[key]
             else:
-                raise ValueError("Invalid key in mmCIF dictionary: " + key)
+                s = re.split(r"\.", key)
+                if len(s) == 2:
+                    if s[0] in key_lists:
+                        key_lists[s[0]].append(s[1])
+                    else:
+                        key_lists[s[0]] = [s[1]]
+                else:
+                    raise ValueError("Invalid key in mmCIF dictionary: " + key)
 
         # Re-order lists if an order has been specified
         # Not all elements from the specified order are necessarily present
@@ -141,7 +143,7 @@ class CFMMCIFIO(MMCIFIO):
         # Write out top data_ line
         if data_val:
             out_file.write("data_" + data_val + "\n#\n")
-
+            ### end section copied from Bio.PDB
             # Add poly_seq as default MMCIFIO doesn't handle this
             out_file.write(
                 """loop_
@@ -165,6 +167,7 @@ _entity_poly_seq.hetero
             for seq in poly_seq:
                 out_file.write(f"{seq[0]} {seq[1]} {seq[2]}  {seq[3]}\n")
 
+        ### begin section copied from Bio.PDB
         for key, key_list in key_lists.items():
             # Pick a sample mmCIF value, which can be a list or a single value
             sample_val = self.dic[key + "." + key_list[0]]
@@ -183,8 +186,11 @@ _entity_poly_seq.hetero
             if isinstance(sample_val, str) or (
                 isinstance(sample_val, list) and len(sample_val) == 1
             ):
+                m = 0
                 # Find the maximum key length
-                m = max(len(i) for i in key_list)
+                for i in key_list:
+                    if len(i) > m:
+                        m = len(i)
                 for i in key_list:
                     # If the value is a single item list, just take the value
                     if isinstance(sample_val, str):
@@ -229,4 +235,5 @@ _entity_poly_seq.hetero
                     "Invalid type in mmCIF dictionary: " + str(type(sample_val))
                 )
             out_file.write("#\n")
+            ### end section copied from Bio.PDB
             out_file.write(CIF_REVISION_DATE)
