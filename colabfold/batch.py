@@ -163,7 +163,7 @@ def mk_hhsearch_db(template_dir: str):
 
     cif_files = template_path.glob("*.cif")
     for cif_file in cif_files:
-        validate_and_fix_mmcif(cif_files)
+        validate_and_fix_mmcif(cif_file)
 
     pdb_files = template_path.glob("*.pdb")
     for pdb_file in pdb_files:
