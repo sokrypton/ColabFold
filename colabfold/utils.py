@@ -1,6 +1,7 @@
 import json
 import logging
 import warnings
+from collections import defaultdict
 from pathlib import Path
 from typing import Optional
 
@@ -102,21 +103,18 @@ mmcif_order = {
 
 class CFMMCIFIO(MMCIFIO):
     def _save_dict(self, out_file):
+        data_val = self.dic["data_"]
         # Form dictionary where key is first part of mmCIF key and value is list
         # of corresponding second parts
-        key_lists = {}
+        key_lists = defaultdict(list)
         for key in self.dic:
             if key == "data_":
-                data_val = self.dic[key]
+                continue
+            s = re.split(r"\.", key)
+            if len(s) == 2:
+                key_lists[s[0]].append(s[1])
             else:
-                s = re.split(r"\.", key)
-                if len(s) == 2:
-                    if s[0] in key_lists:
-                        key_lists[s[0]].append(s[1])
-                    else:
-                        key_lists[s[0]] = [s[1]]
-                else:
-                    raise ValueError("Invalid key in mmCIF dictionary: " + key)
+                raise ValueError("Invalid key in mmCIF dictionary: " + key)
 
         # Re-order lists if an order has been specified
         # Not all elements from the specified order are necessarily present
@@ -176,11 +174,8 @@ _entity_poly_seq.hetero
             if isinstance(sample_val, str) or (
                 isinstance(sample_val, list) and len(sample_val) == 1
             ):
-                m = 0
                 # Find the maximum key length
-                for i in key_list:
-                    if len(i) > m:
-                        m = len(i)
+                m = max(len(i) for i in key_list)
                 for i in key_list:
                     # If the value is a single item list, just take the value
                     if isinstance(sample_val, str):

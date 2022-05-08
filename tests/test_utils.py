@@ -1,6 +1,6 @@
 import pytest
 
-from colabfold.batch import get_queries
+from colabfold.batch import get_queries, convert_pdb_to_mmcif
 
 
 def test_get_queries_fasta_dir(pytestconfig, caplog):
@@ -58,3 +58,16 @@ def test_a3m_input(pytestconfig, caplog, tmp_path):
     assert caplog.messages == [
         f"{pytestconfig.rootpath}/test-data/a3m/empty.a3m is empty"
     ]
+
+
+def test_convert_pdb_to_mmcif(pytestconfig, tmp_path):
+    base_name = "ERR550519_2213899_unrelaxed_model_1"
+    tmp_path.joinpath(f"{base_name}.pdb").write_text(
+        pytestconfig.rootpath.joinpath(f"test-data/{base_name}.pdb").read_text()
+    )
+
+    convert_pdb_to_mmcif(tmp_path)
+
+    actual = tmp_path.joinpath(f"{base_name}.cif").read_text()
+    expected = pytestconfig.rootpath.joinpath(f"test-data/{base_name}.cif").read_text()
+    assert actual == expected
