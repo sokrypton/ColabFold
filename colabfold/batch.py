@@ -12,6 +12,7 @@ import random
 import sys
 import time
 import zipfile
+import shutil
 
 from argparse import ArgumentParser
 from pathlib import Path
@@ -56,6 +57,7 @@ from colabfold.utils import (
     ACCEPT_DEFAULT_TERMS,
     DEFAULT_API_SERVER,
     NO_GPU_FOUND,
+    CIF_REVISION_DATE,
     get_commit,
     safe_filename,
     setup_logging,
@@ -126,39 +128,46 @@ def mk_template(
     return dict(templates_result.features)
 
 
-def convert_pdb_to_mmcif(template_path: Path):
+def validate_and_fix_mmcif(cif_file: Path):
+    """validate presence of _entity_poly_seq in cif file and add revision_date if missing"""
+    # check that required poly_seq and revision_date fields are present
+    cif_dict = MMCIF2Dict.MMCIF2Dict(cif_file)
+    if "_entity_poly_seq.mon_id" not in cif_dict:
+        raise ValueError(
+            f"mmCIF file {cif_file} is missing required field _entity_poly_seq.mon_id."
+        )
+    if "_pdbx_audit_revision_history.revision_date" not in cif_dict:
+        logger.info(
+            f"Adding missing field revision_date to {cif_file}. Backing up original file to {cif_file}.bak."
+        )
+        shutil.copy2(cif_file, str(cif_file) + ".bak")
+        with open(cif_file, "a") as f:
+            f.write(CIF_REVISION_DATE)
+
+
+def convert_pdb_to_mmcif(pdb_file: Path):
     """convert existing pdb files into mmcif with the required poly_seq and revision_date"""
-    pdb_files = template_path.glob("*.pdb")
-    for pdb_file in pdb_files:
-        id = pdb_file.stem
-        cif_file = template_path.joinpath(f"{id}.cif")
-        if cif_file.is_file():
-            return
-        parser = PDBParser(QUIET=True)
-        structure = parser.get_structure(id, pdb_file)
-        io = CFMMCIFIO()
-        io.set_structure(structure)
-        io.save(str(cif_file))
+    id = pdb_file.stem
+    cif_file = pdb_file.parent.joinpath(f"{id}.cif")
+    if cif_file.is_file():
+        return
+    parser = PDBParser(QUIET=True)
+    structure = parser.get_structure(id, pdb_file)
+    cif_io = CFMMCIFIO()
+    cif_io.set_structure(structure)
+    cif_io.save(str(cif_file))
 
 
 def mk_hhsearch_db(template_dir: str):
     template_path = Path(template_dir)
 
-    # check that required poly_seq and revision_date fields are present
     cif_files = template_path.glob("*.cif")
     for cif_file in cif_files:
-        cif_dict = MMCIF2Dict.MMCIF2Dict(cif_file)
-        required = [
-            "_entity_poly_seq.mon_id",
-            "_pdbx_audit_revision_history.revision_date",
-        ]
-        for req in required:
-            if req not in cif_dict:
-                raise ValueError(
-                    f"mmCIF file {cif_file} is missing required field {req}."
-                )
+        validate_and_fix_mmcif(cif_files)
 
-    convert_pdb_to_mmcif(template_path)
+    pdb_files = template_path.glob("*.pdb")
+    for pdb_file in pdb_files:
+        convert_pdb_to_mmcif(pdb_file)
 
     pdb70_db_files = template_path.glob("pdb70*")
     for f in pdb70_db_files:
@@ -173,7 +182,6 @@ def mk_hhsearch_db(template_dir: str):
     ) as cs219:
         id = 1000000
         index_offset = 0
-        cif_files = template_path.glob("*.cif")
         for cif_file in cif_files:
             with open(cif_file) as f:
                 cif_string = f.read()

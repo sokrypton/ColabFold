@@ -100,6 +100,15 @@ mmcif_order = {
     ]
 }
 
+CIF_REVISION_DATE = """loop_
+_pdbx_audit_revision_history.ordinal
+_pdbx_audit_revision_history.data_content_type
+_pdbx_audit_revision_history.major_revision
+_pdbx_audit_revision_history.minor_revision
+_pdbx_audit_revision_history.revision_date
+1 'Structure model' 1 0 1971-01-01
+#\n"""
+
 
 class CFMMCIFIO(MMCIFIO):
     def _save_dict(self, out_file):
@@ -220,13 +229,4 @@ _entity_poly_seq.hetero
                     "Invalid type in mmCIF dictionary: " + str(type(sample_val))
                 )
             out_file.write("#\n")
-            out_file.write(
-                """loop_
-_pdbx_audit_revision_history.ordinal
-_pdbx_audit_revision_history.data_content_type
-_pdbx_audit_revision_history.major_revision
-_pdbx_audit_revision_history.minor_revision
-_pdbx_audit_revision_history.revision_date
-1 'Structure model' 1 0 1971-01-01
-#\n"""
-            )
+            out_file.write(CIF_REVISION_DATE)
