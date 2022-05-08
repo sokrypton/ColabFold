@@ -67,7 +67,9 @@ def get_commit() -> Optional[str]:
 
 
 # Copied from Bio.PDB to override _save_dict method
+# https://github.com/biopython/biopython/blob/biopython-179/Bio/PDB/mmcifio.py
 # We add poly_seq and revision_date so that AF2 can read these cif files
+# Original license BSD 3-clause
 
 import re
 from Bio.PDB import MMCIFIO
