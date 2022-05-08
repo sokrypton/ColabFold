@@ -355,9 +355,12 @@ def predict_structure(
                 unrelaxed_protein, sequences_lengths, prediction_result, input_features
             )
 
-        representations.append(prediction_result.get("representations", None))
+        protein_lines = protein.to_pdb(unrelaxed_protein)
+        unrelaxed_pdb_path = result_dir.joinpath(f"{prefix}_unrelaxed_{model_name}.pdb")
+        unrelaxed_pdb_path.write_text(protein_lines)
 
-        unrelaxed_pdb_lines.append(protein.to_pdb(unrelaxed_protein))
+        representations.append(prediction_result.get("representations", None))
+        unrelaxed_pdb_lines.append(protein_lines)
         plddts.append(prediction_result["plddt"][:seq_len])
         ptmscore.append(prediction_result["ptm"])
         if model_type.startswith("AlphaFold2-multimer"):
@@ -396,7 +399,8 @@ def predict_structure(
                 use_gpu=use_gpu_relax,
             )
             relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
-            # TODO: Those aren't actually used in batch
+            relaxed_pdb_path = result_dir.joinpath(f"{prefix}_relaxed_{model_name}.pdb")
+            relaxed_pdb_path.write_text(relaxed_pdb_str)
             relaxed_pdb_lines.append(relaxed_pdb_str)
         # early stop criteria fulfilled
         if mean_score > stop_at_score or mean_score < stop_at_score_below:
@@ -418,11 +422,23 @@ def predict_structure(
         )
         unrelaxed_pdb_path.write_text(unrelaxed_pdb_lines[key])
 
+        unrelaxed_pdb_path_unranked = result_dir.joinpath(
+            f"{prefix}_unrelaxed_{model_names[key]}.pdb"
+        )
+        if unrelaxed_pdb_path_unranked.is_file():
+            unrelaxed_pdb_path_unranked.unlink()
+
         if do_relax:
             relaxed_pdb_path = result_dir.joinpath(
                 f"{prefix}_relaxed_rank_{n + 1}_{model_names[key]}.pdb"
             )
             relaxed_pdb_path.write_text(relaxed_pdb_lines[key])
+
+            relaxed_pdb_path_unranked = result_dir.joinpath(
+                f"{prefix}_relaxed_{model_names[key]}.pdb"
+            )
+            if relaxed_pdb_path_unranked.is_file():
+                relaxed_pdb_path_unranked.unlink()
 
         # Write an easy-to-use format (PAE and plDDT)
         scores_file = result_dir.joinpath(
