@@ -263,7 +263,7 @@ def predict_structure(
     random_seed: int = 0,
     stop_at_score: float = 100,
     stop_at_score_below: float = 0,
-    prediction_callback: Callable[[Any, Any, Any, Any], Any] = None,
+    prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
     use_gpu_relax: bool = False,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
@@ -352,7 +352,11 @@ def predict_structure(
 
         if prediction_callback is not None:
             prediction_callback(
-                unrelaxed_protein, sequences_lengths, prediction_result, input_features
+                unrelaxed_protein,
+                sequences_lengths,
+                prediction_result,
+                input_features,
+                (model_name, False),
             )
 
         protein_lines = protein.to_pdb(unrelaxed_protein)
@@ -399,6 +403,15 @@ def predict_structure(
                 use_gpu=use_gpu_relax,
             )
             relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
+            if prediction_callback is not None:
+                prediction_callback(
+                    protein.from_pdb_string(relaxed_pdb_str),
+                    sequences_lengths,
+                    prediction_result,
+                    input_features,
+                    (model_name, True),
+                )
+
             relaxed_pdb_path = result_dir.joinpath(f"{prefix}_relaxed_{model_name}.pdb")
             relaxed_pdb_path.write_text(relaxed_pdb_str)
             relaxed_pdb_lines.append(relaxed_pdb_str)
@@ -1093,7 +1106,7 @@ def run(
     recompile_padding: float = 1.1,
     recompile_all_models: bool = False,
     zip_results: bool = False,
-    prediction_callback: Callable[[Any, Any, Any, Any], Any] = None,
+    prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
     training: bool = False,
