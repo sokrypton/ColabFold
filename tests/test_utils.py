@@ -72,6 +72,7 @@ def test_convert_pdb_to_mmcif(pytestconfig, tmp_path):
     expected = pytestconfig.rootpath.joinpath(f"test-data/{base_name}.cif").read_text()
     assert actual == expected
 
+
 def test_validate_and_fix_mmcif(pytestconfig, tmp_path):
     base_name = "ERR550519_2213899_unrelaxed_model_1"
     tmp_path.joinpath(f"{base_name}.cif").write_text(
@@ -83,3 +84,38 @@ def test_validate_and_fix_mmcif(pytestconfig, tmp_path):
     actual = tmp_path.joinpath(f"{base_name}.cif").read_text()
     expected = pytestconfig.rootpath.joinpath(f"test-data/{base_name}.cif").read_text()
     assert actual == expected
+
+
+def test_validate_and_fix_mmcif_add_revision_date(pytestconfig, tmp_path):
+    base_name = "ERR550519_2213899_unrelaxed_model_1"
+    cif = pytestconfig.rootpath.joinpath(f"test-data/{base_name}.cif").read_text()
+    cif_without_revision_date = "\n".join(cif.split("\n")[:-9]) + "\n"
+
+    tmp_path.joinpath(f"{base_name}.cif").write_text(cif_without_revision_date)
+
+    validate_and_fix_mmcif(tmp_path.joinpath(f"{base_name}.cif"))
+
+    actual = tmp_path.joinpath(f"{base_name}.cif").read_text()
+    expected = pytestconfig.rootpath.joinpath(f"test-data/{base_name}.cif").read_text()
+    assert actual == expected
+
+
+def test_validate_and_fix_mmcif_missing_poly_seq(pytestconfig, tmp_path):
+    base_name = "ERR550519_2213899_unrelaxed_model_1"
+    cif_lines = (
+        pytestconfig.rootpath.joinpath(f"test-data/{base_name}.cif")
+        .read_text()
+        .split("\n")
+    )
+    del cif_lines[2:138]
+    cif_without_poly_seq = "\n".join(cif_lines) + "\n"
+
+    cif_file = tmp_path.joinpath(f"{base_name}.cif")
+    cif_file.write_text(cif_without_poly_seq)
+
+    with pytest.raises(ValueError) as e:
+        validate_and_fix_mmcif(cif_file)
+        assert (
+            e.message
+            == f"mmCIF file {cif_file} is missing required field _entity_poly_seq.mon_id."
+        )
