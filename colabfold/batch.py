@@ -376,12 +376,21 @@ def predict_structure(
         for i in range(seq_len):
             paes_res.append(prediction_result["predicted_aligned_error"][i][:seq_len])
         paes.append(paes_res)
+
         if do_relax:
             from alphafold.common import residue_constants
             from alphafold.relax import relax
 
-            # Hack so that we don't need to download into the alphafold package itself
-            residue_constants.stereo_chemical_props_path = "stereo_chemical_props.txt"
+            ###
+            # stereo_chemical_props.txt is from openstructure, see openstructure/README.md
+            # Hack so that we don't need to load the file into the alphafold package
+            stereo_chemical_props = (
+                Path(__file__)
+                .parent.absolute()
+                .joinpath("openstructure", "stereo_chemical_props.txt")
+            )
+
+            residue_constants.stereo_chemical_props_path = stereo_chemical_props
 
             # Remove the padding because unlike to_pdb() amber doesn't handle that
             remove_padding_mask = np.array(unrelaxed_protein.atom_mask.sum(axis=-1) > 0)
