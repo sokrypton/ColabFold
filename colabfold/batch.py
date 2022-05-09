@@ -182,6 +182,7 @@ def mk_hhsearch_db(template_dir: str):
     ) as cs219:
         id = 1000000
         index_offset = 0
+        cif_files = template_path.glob("*.cif")
         for cif_file in cif_files:
             with open(cif_file) as f:
                 cif_string = f.read()
