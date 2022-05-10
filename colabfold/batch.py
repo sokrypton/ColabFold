@@ -274,6 +274,7 @@ def predict_structure(
     unrelaxed_pdb_lines = []
     relaxed_pdb_lines = []
     prediction_times = []
+    relax_times = []
     representations = []
     seq_len = sum(sequences_lengths)
 
@@ -381,6 +382,8 @@ def predict_structure(
             from alphafold.common import residue_constants
             from alphafold.relax import relax
 
+            start = time.time()
+
             ###
             # stereo_chemical_props.txt is from openstructure, see openstructure/README.md
             # Hack so that we don't need to load the file into the alphafold package
@@ -413,6 +416,12 @@ def predict_structure(
                 use_gpu=use_gpu_relax,
             )
             relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
+
+            relax_time = time.time() - start
+            relax_times.append(relax_time)
+
+            logger.info(f"Relaxation took {relax_time:.1f}s")
+
             if prediction_callback is not None:
                 prediction_callback(
                     protein.from_pdb_string(relaxed_pdb_str),
