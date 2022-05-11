@@ -13,7 +13,7 @@ def test_get_msa_and_templates(pytestconfig, caplog, tmp_path):
         ("single_sequence", "single_sequence", 2),
     ]:
         mmseqs2mock = MMseqs2Mock(pytestconfig.rootpath, f"get_msa_{tag}")
-        with mock.patch("colabfold.batch.run_mmseqs2", mmseqs2mock.mock_run_mmseqs2):
+        with mock.patch("colabfold.colabfold.run_mmseqs2", mmseqs2mock.mock_run_mmseqs2):
             (
                 unpaired_msa,
                 paired_msa,
