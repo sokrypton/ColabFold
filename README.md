@@ -43,13 +43,17 @@
 
 ### Running locally
 
-_Note: If you need amber or templates, checkout [localcolabfold](https://github.com/YoshitakaMo/localcolabfold) instead_
+_Note: Checkout [localcolabfold](https://github.com/YoshitakaMo/localcolabfold) too
 
 Install ColabFold using the `pip` commands below. `pip` will resolve and install all required dependencies and ColabFold should be ready within a few minutes to use. Please check the [JAX documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to get JAX to work on your GPU or TPU.
 
 ```shell
 pip install "colabfold[alphafold] @ git+https://github.com/sokrypton/ColabFold"
 pip install --upgrade "jax[cuda]<0.3.0" -f https://storage.googleapis.com/jax-releases/jax_releases.html  # Note: wheels only available on linux.
+# For template-based predictions also install kalign and hhsuite
+conda install -c conda-forge -c bioconda kalign2=2.04 hhsuite=3.3.0
+# For amber also install openmm and pdbfixer
+conda install -c conda-forge openmm=7.5.1 pdbfixer
 ```
 
 ```shell
