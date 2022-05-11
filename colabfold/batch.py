@@ -1,6 +1,6 @@
-import os
+from __future__ import annotations
 
-from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
+import os
 
 os.environ["TF_FORCE_UNIFIED_MEMORY"] = "1"
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "2.0"
@@ -16,16 +16,12 @@ import shutil
 
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 from io import StringIO
 
-import haiku
 import importlib_metadata
 import numpy as np
 import pandas
-from alphafold.notebooks.notebook_utils import get_pae_json
-from jax.lib import xla_bridge
-from numpy import ndarray
 
 try:
     import alphafold
@@ -36,6 +32,13 @@ except ModuleNotFoundError:
 
 from alphafold.common import protein, residue_constants
 
+# delay imports of tensorflow, jax and numpy
+# loading these for type checking only can take around 10 seconds just to show a CLI usage message
+if TYPE_CHECKING:
+    import haiku
+    from alphafold.model import model
+    from numpy import ndarray
+
 from alphafold.common.protein import Protein
 from alphafold.data import (
     feature_processing,
@@ -45,14 +48,8 @@ from alphafold.data import (
     templates,
 )
 from alphafold.data.tools import hhsearch
-from alphafold.model import model
-
-from colabfold.alphafold.models import load_models_and_params
-from colabfold.alphafold.msa import make_fixed_size
 from colabfold.citations import write_bibtex
-from colabfold.colabfold import chain_break, plot_paes, plot_plddts, run_mmseqs2
 from colabfold.download import default_data_dir, download_alphafold_params
-from colabfold.plot import plot_msa
 from colabfold.utils import (
     ACCEPT_DEFAULT_TERMS,
     DEFAULT_API_SERVER,
@@ -63,6 +60,7 @@ from colabfold.utils import (
     setup_logging,
     CFMMCIFIO,
 )
+from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 
 logger = logging.getLogger(__name__)
 
@@ -225,6 +223,8 @@ def batch_input(
     crop_len: int,
     use_templates: bool,
 ) -> model.features.FeatureDict:
+    from colabfold.alphafold.msa import make_fixed_size
+
     model_config = model_runner.config
     eval_cfg = model_config.data.eval
     crop_feats = {k: [None] + v for k, v in dict(eval_cfg.feat).items()}
@@ -684,6 +684,8 @@ def get_msa_and_templates(
 ) -> Tuple[
     Optional[List[str]], Optional[List[str]], List[str], List[int], List[Dict[str, Any]]
 ]:
+    from colabfold.colabfold import run_mmseqs2
+
     use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
     # remove duplicates before searching
     query_sequences = (
@@ -903,6 +905,8 @@ def generate_input_feature(
     is_complex: bool,
     model_type: str,
 ) -> Tuple[Dict[str, Any], Dict[str, str]]:
+    from colabfold.colabfold import chain_break
+
     input_feature = {}
     domain_names = {}
     if is_complex and model_type == "AlphaFold2-ptm":
@@ -1132,12 +1136,10 @@ def run(
     use_gpu_relax: bool = False,
     stop_at_score_below: float = 0,
 ):
-    version = importlib_metadata.version("colabfold")
-    commit = get_commit()
-    if commit:
-        version += f" ({commit})"
-
-    logger.info(f"Running colabfold {version}")
+    from alphafold.notebooks.notebook_utils import get_pae_json
+    from colabfold.alphafold.models import load_models_and_params
+    from colabfold.colabfold import plot_paes, plot_plddts
+    from colabfold.plot import plot_msa
 
     data_dir = Path(data_dir)
     result_dir = Path(result_dir)
@@ -1602,9 +1604,18 @@ def main():
 
     setup_logging(Path(args.results).joinpath("log.txt"))
 
+    version = importlib_metadata.version("colabfold")
+    commit = get_commit()
+    if commit:
+        version += f" ({commit})"
+
+    logger.info(f"Running colabfold {version}")
+
     data_dir = Path(args.data or default_data_dir)
 
     # Prevent people from accidentally running on the cpu, which is really slow
+    from jax.lib import xla_bridge
+
     if not args.cpu and xla_bridge.get_backend().platform == "cpu":
         print(NO_GPU_FOUND, file=sys.stderr)
         sys.exit(1)

@@ -3,7 +3,6 @@ import tarfile
 from pathlib import Path
 
 import appdirs
-import requests
 import tqdm
 
 logger = logging.getLogger(__name__)
@@ -14,6 +13,8 @@ default_data_dir = Path(appdirs.user_cache_dir(__package__ or "colabfold"))
 
 
 def download_alphafold_params(model_type: str, data_dir: Path = default_data_dir):
+    import requests
+
     params_dir = data_dir.joinpath("params")
     if model_type == "AlphaFold2-multimer-v2":
         url = "https://storage.googleapis.com/alphafold/alphafold_params_colab_2022-03-02.tar"
