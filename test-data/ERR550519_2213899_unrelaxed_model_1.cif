@@ -136,6 +136,38 @@ _entity_poly_seq.hetero
 1 128 VAL  n
 1 129 CYS  n
 1 130 LYS  n
+#
+loop_
+_chem_comp.id
+_chem_comp.type
+#
+ALA "peptide linking"
+CYS "peptide linking"
+ASP "peptide linking"
+GLU "peptide linking"
+PHE "peptide linking"
+GLY "peptide linking"
+HIS "peptide linking"
+ILE "peptide linking"
+LYS "peptide linking"
+LEU "peptide linking"
+MET "peptide linking"
+ASN "peptide linking"
+PRO "peptide linking"
+GLN "peptide linking"
+ARG "peptide linking"
+SER "peptide linking"
+THR "peptide linking"
+VAL "peptide linking"
+TRP "peptide linking"
+TYR "peptide linking"
+#
+loop_
+_struct_asym.id
+_struct_asym.entity_id
+#
+A 1
+#
 loop_
 _atom_site.group_PDB
 _atom_site.id

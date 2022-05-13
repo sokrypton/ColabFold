@@ -174,10 +174,16 @@ def validate_and_fix_mmcif(cif_file: Path):
     """validate presence of _entity_poly_seq in cif file and add revision_date if missing"""
     # check that required poly_seq and revision_date fields are present
     cif_dict = MMCIF2Dict.MMCIF2Dict(cif_file)
-    if "_entity_poly_seq.mon_id" not in cif_dict:
-        raise ValueError(
-            f"mmCIF file {cif_file} is missing required field _entity_poly_seq.mon_id."
-        )
+    required = [
+        "_chem_comp.id",
+        "_chem_comp.type",
+        "_struct_asym.id",
+        "_struct_asym.entity_id",
+        "_entity_poly_seq.mon_id",
+    ]
+    for r in required:
+        if r not in cif_dict:
+            raise ValueError(f"mmCIF file {cif_file} is missing required field {r}.")
     if "_pdbx_audit_revision_history.revision_date" not in cif_dict:
         logger.info(
             f"Adding missing field revision_date to {cif_file}. Backing up original file to {cif_file}.bak."

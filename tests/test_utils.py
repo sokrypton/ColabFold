@@ -119,3 +119,22 @@ def test_validate_and_fix_mmcif_missing_poly_seq(pytestconfig, tmp_path):
             e.message
             == f"mmCIF file {cif_file} is missing required field _entity_poly_seq.mon_id."
         )
+
+
+def test_convert_pdb_to_mmcif_parse_with_alphafold(pytestconfig, tmp_path):
+    base_name = "ERR550519_2213899_unrelaxed_model_1"
+    tmp_path.joinpath(f"{base_name}.pdb").write_text(
+        pytestconfig.rootpath.joinpath(f"test-data/{base_name}.pdb").read_text()
+    )
+
+    convert_pdb_to_mmcif(tmp_path.joinpath(f"{base_name}.pdb"))
+
+    from alphafold.data.templates import mmcif_parsing
+
+    parsing_result = mmcif_parsing.parse(
+        file_id=base_name,
+        mmcif_string=tmp_path.joinpath(f"{base_name}.cif").read_text(),
+        catch_all_errors=False,
+    )
+
+    assert len(parsing_result.errors) == 0
