@@ -1360,7 +1360,7 @@ def run(
                 stop_at_score_below=stop_at_score_below,
                 prediction_callback=prediction_callback,
                 use_gpu_relax=use_gpu_relax,
-                random_seed=random_seed
+                random_seed=random_seed,
             )
         except RuntimeError as e:
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
