@@ -1171,6 +1171,7 @@ def run(
     pair_mode: str = "unpaired+paired",
     data_dir: Union[str, Path] = default_data_dir,
     host_url: str = DEFAULT_API_SERVER,
+    random_seed: int = 0,
     stop_at_score: float = 100,
     recompile_padding: float = 1.1,
     recompile_all_models: bool = False,
@@ -1359,6 +1360,7 @@ def run(
                 stop_at_score_below=stop_at_score_below,
                 prediction_callback=prediction_callback,
                 use_gpu_relax=use_gpu_relax,
+                random_seed=random_seed
             )
         except RuntimeError as e:
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
@@ -1517,6 +1519,12 @@ def main():
         "The trunk of the network is run multiple times with different random choices for the MSA cluster centers.",
         type=int,
         default=1,
+    )
+    parser.add_argument(
+        "--random-seed",
+        help="Changing the seed for the random number generator can result in different structure predictions.",
+        type=int,
+        default=0,
     )
 
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
@@ -1695,6 +1703,7 @@ def main():
         pair_mode=args.pair_mode,
         data_dir=data_dir,
         host_url=args.host_url,
+        random_seed=args.random_seed,
         stop_at_score=args.stop_at_score,
         recompile_padding=args.recompile_padding,
         recompile_all_models=args.recompile_all_models,
