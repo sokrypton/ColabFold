@@ -231,7 +231,7 @@ func main() {
 		templates := strings.Split(mux.Vars(req)["list"], ",")
 		w.Header().Set("Content-Disposition", "attachment; filename=\"templates.tar.gz\"")
 		w.Header().Set("Content-Type", "application/octet-stream")
-		if err != GatherResults(w, templates, a3mreader, hhmreader, config.Paths.PdbDivided, config.Paths.PdbObsolete) {
+		if err := GatherResults(w, templates, a3mreader, hhmreader, config.Paths.PdbDivided, config.Paths.PdbObsolete); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
