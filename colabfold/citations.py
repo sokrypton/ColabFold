@@ -4,12 +4,12 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 citations = {
-    "Mirdita2021": """@article{Mirdita2021,
+    "Mirdita2021": """@article{Mirdita2022,
 author= {Mirdita, Milot and Schütze, Konstantin and Moriwaki, Yoshitaka and Heo, Lim and Ovchinnikov, Sergey and Steinegger, Martin },
-doi = {10.1101/2021.08.15.456425v2},
-journal = {bioRxiv},
-title = {{ColabFold - Making Protein folding accessible to all}},
-year = {2021},
+doi = {10.1038/s41592-022-01488-1},
+journal = {Nature Methods},
+title = {{ColabFold: Making Protein folding accessible to all}},
+year = {2022},
 comment = {ColabFold including MMseqs2 MSA server}
 }""",
     "Mitchell2019": """@article{Mitchell2019,
