@@ -107,7 +107,7 @@ Searches against the ColabFoldDB can be done in two different modes:
 
 ### How do I reference this work?
 
-- Mirdita M, Schütze K, Moriwaki Y, Heo L, Ovchinnikov S and Steinegger M. ColabFold - Making protein folding accessible to all. <br />
+- Mirdita M, Schütze K, Moriwaki Y, Heo L, Ovchinnikov S and Steinegger M. ColabFold: Making protein folding accessible to all. <br />
   Nature Methods (2022) doi: [10.1038/s41592-022-01488-1](https://www.nature.com/articles/s41592-022-01488-1)
 - If you’re using **AlphaFold**, please also cite: <br />
   Jumper et al. "Highly accurate protein structure prediction with AlphaFold." <br />
