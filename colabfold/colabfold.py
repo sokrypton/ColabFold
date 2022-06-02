@@ -68,7 +68,7 @@ TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaini
 
 def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
                 use_templates=False, filter=None, use_pairing=False,
-                host_url="https://a3m.mmseqs.com") -> Tuple[List[str], List[str]]:
+                host_url="https://api.colabfold.com") -> Tuple[List[str], List[str]]:
   submission_endpoint = "ticket/pair" if use_pairing else "ticket/msa"
 
   def submit(seqs, mode, N=101):
@@ -211,7 +211,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
       if not os.path.isdir(TMPL_PATH):
         os.mkdir(TMPL_PATH)
         TMPL_LINE = ",".join(TMPL[:20])
-        os.system(f"curl -s https://a3m-templates.mmseqs.com/template/{TMPL_LINE} | tar xzf - -C {TMPL_PATH}/")
+        os.system(f"curl -s -L {host_url}/template/{TMPL_LINE} | tar xzf - -C {TMPL_PATH}/")
         os.system(f"cp {TMPL_PATH}/pdb70_a3m.ffindex {TMPL_PATH}/pdb70_cs219.ffindex")
         os.system(f"touch {TMPL_PATH}/pdb70_cs219.ffdata")
       template_paths[k] = TMPL_PATH
