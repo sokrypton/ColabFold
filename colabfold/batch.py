@@ -1182,6 +1182,7 @@ def run(
     training: bool = False,
     use_gpu_relax: bool = False,
     stop_at_score_below: float = 0,
+    dpi: int = 200
 ):
     from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
@@ -1407,18 +1408,19 @@ def run(
             input_features["msa"][0],
             query_sequence_len_array,
             query_sequence_len,
+            dpi=dpi
         )
         coverage_png = result_dir.joinpath(jobname + "_coverage.png")
         msa_plot.savefig(str(coverage_png))
         msa_plot.close()
         paes_plot = plot_paes(
-            [outs[k]["pae"] for k in model_rank], Ls=query_sequence_len_array, dpi=200
+            [outs[k]["pae"] for k in model_rank], Ls=query_sequence_len_array, dpi=dpi
         )
         pae_png = result_dir.joinpath(jobname + "_PAE.png")
         paes_plot.savefig(str(pae_png))
         paes_plot.close()
         plddt_plot = plot_plddts(
-            [outs[k]["plddt"] for k in model_rank], Ls=query_sequence_len_array, dpi=200
+            [outs[k]["plddt"] for k in model_rank], Ls=query_sequence_len_array, dpi=dpi
         )
         plddt_png = result_dir.joinpath(jobname + "_plddt.png")
         plddt_plot.savefig(str(plddt_png))
