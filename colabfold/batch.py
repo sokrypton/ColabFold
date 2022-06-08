@@ -360,7 +360,7 @@ def predict_structure(
         else:
             mean_score = mean_ptm
 
-        if is_complex:
+        if is_complex or model_type == "AlphaFold2-ptm":
             logger.info(
                 f"{model_name} took {prediction_time:.1f}s ({recycles[0]} recycles) "
                 f"with pLDDT {mean_plddt:.3g} and ptmscore {mean_ptm:.3g}"
