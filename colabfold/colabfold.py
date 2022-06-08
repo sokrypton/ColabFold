@@ -525,7 +525,7 @@ def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False,
   return view
 
 def plot_plddts(plddts, Ls=None, dpi=100, fig=True):
-  if fig: plt.figure(figsize=(8,5),dpi=100)
+  if fig: plt.figure(figsize=(8,5),dpi=dpi)
   plt.title("Predicted lDDT per position")
   for n,plddt in enumerate(plddts):
     plt.plot(plddt,label=f"rank_{n+1}")
