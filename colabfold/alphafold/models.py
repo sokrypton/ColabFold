@@ -22,6 +22,7 @@ def load_models_and_params(
     rank_by: str = "plddt",
     return_representations: bool = False,
     training: bool = False,
+    max_msa: str = None,
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -56,6 +57,10 @@ def load_models_and_params(
             model_config = config.model_config(model_name + model_suffix)
             model_config.model.stop_at_score = float(stop_at_score)
             model_config.model.stop_at_score_ranker = rank_by
+            if max_msa != None:
+                max_msa_clusters, max_extra_msa = [int(x) for x in max_msa.split(":")]
+                model_config.data.eval.max_msa_clusters = max_msa_clusters
+                model_config.data.common.max_extra_msa = max_extra_msa
             if model_suffix == "_ptm":
                 model_config.data.common.num_recycle = num_recycle
                 model_config.model.num_recycle = num_recycle
@@ -87,6 +92,12 @@ def load_models_and_params(
                 )
                 model_config.model.stop_at_score = float(stop_at_score)
                 model_config.model.stop_at_score_ranker = rank_by
+                if max_msa != None:
+                    max_msa_clusters, max_extra_msa = [
+                        int(x) for x in max_msa.split(":")
+                    ]
+                    model_config.data.eval.max_msa_clusters = max_msa_clusters
+                    model_config.data.common.max_extra_msa = max_extra_msa
                 if model_suffix == "_ptm":
                     model_config.data.common.num_recycle = num_recycle
                     model_config.model.num_recycle = num_recycle

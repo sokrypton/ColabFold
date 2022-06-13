@@ -265,7 +265,6 @@ def batch_input(
     model_runner: model.RunModel,
     model_name: str,
     crop_len: int,
-    max_msa: str,
     use_templates: bool,
 ) -> model.features.FeatureDict:
     from colabfold.alphafold.msa import make_fixed_size
@@ -276,9 +275,6 @@ def batch_input(
 
     max_msa_clusters = eval_cfg.max_msa_clusters
     max_extra_msa = model_config.data.common.max_extra_msa
-    if max_msa != None:
-        max_msa_clusters, max_extra_msa = [int(x) for x in max_msa.split(":")]
-
     # templates models
     if (model_name == "model_1" or model_name == "model_2") and use_templates:
         pad_msa_clusters = max_msa_clusters - eval_cfg.max_templates
@@ -309,7 +305,6 @@ def predict_structure(
     crop_len: int,
     model_type: str,
     model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
-    max_msa: str = None,
     do_relax: bool = False,
     rank_by: str = "auto",
     random_seed: int = 0,
@@ -346,7 +341,6 @@ def predict_structure(
                 model_runner,
                 model_name,
                 crop_len,
-                max_msa,
                 use_templates,
             )
         else:
@@ -1272,6 +1266,7 @@ def run(
         rank_by=rank_by,
         return_representations=save_representations,
         training=training,
+        max_msa=max_msa,
     )
     if custom_template_path is not None:
         mk_hhsearch_db(custom_template_path)
