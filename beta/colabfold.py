@@ -458,13 +458,13 @@ def read_pdb_renum(pdb_filename, Ls=None):
 
 def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False,
              color="lDDT", chains=None, Ls=None, vmin=50, vmax=90,
-             color_HP=False, size=(800,480)):
+             color_HP=False, size=(800,480), hbondCutoff=4.0):
   
   if chains is None:
     chains = 1 if Ls is None else len(Ls)
 
   view = py3Dmol.view(js='https://3dmol.org/build/3Dmol.js', width=size[0], height=size[1])
-  view.addModel(read_pdb_renum(pred_output_path, Ls),'pdb')
+  view.addModel(read_pdb_renum(pred_output_path, Ls),'pdb',{'hbondCutoff':hbondCutoff})
   if color == "lDDT":
     view.setStyle({'cartoon': {'colorscheme': {'prop':'b','gradient': 'roygb','min':vmin,'max':vmax}}})
   elif color == "rainbow":
