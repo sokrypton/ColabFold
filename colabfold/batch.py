@@ -1182,7 +1182,7 @@ def run(
     training: bool = False,
     use_gpu_relax: bool = False,
     stop_at_score_below: float = 0,
-    dpi: int = 200
+    dpi: int = 200,
 ):
     from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
@@ -1408,7 +1408,7 @@ def run(
             input_features["msa"][0],
             query_sequence_len_array,
             query_sequence_len,
-            dpi=dpi
+            dpi=dpi,
         )
         coverage_png = result_dir.joinpath(jobname + "_coverage.png")
         msa_plot.savefig(str(coverage_png))

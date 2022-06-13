@@ -67,11 +67,11 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
         "Found 5 citations for tools or databases",
         "Query 1/2: 5AWL_1 (length 10)",
         "Running model_1",
-        "model_1 took 0.0s (3 recycles) with pLDDT 94.3",
+        "model_1 took 0.0s (3 recycles) with pLDDT 94.3 and ptmscore 0.0515",
         "reranking models by plddt",
         "Query 2/2: 6A5J (length 13)",
         "Running model_1",
-        "model_1 took 0.0s (3 recycles) with pLDDT 90.8",
+        "model_1 took 0.0s (3 recycles) with pLDDT 90.8 and ptmscore 0.0394",
         "reranking models by plddt",
     ]
 
@@ -160,7 +160,7 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
         "Found 2 citations for tools or databases",
         "Query 1/1: 5AWL_1 (length 10)",
         "Running model_1",
-        "model_1 took 0.0s (3 recycles) with pLDDT 94.3",
+        "model_1 took 0.0s (3 recycles) with pLDDT 94.3 and ptmscore 0.0515",
         "reranking models by plddt",
     ]
 
