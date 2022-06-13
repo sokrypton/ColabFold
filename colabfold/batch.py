@@ -364,12 +364,12 @@ def predict_structure(
 
         if is_complex or model_type == "AlphaFold2-ptm":
             logger.info(
-                f"{model_name} took {prediction_time:.1f}s ({recycles[0]} recycles) "
+                f"{model_name} took {prediction_time:.1f}s ({recycles} recycles) "
                 f"with pLDDT {mean_plddt:.3g} and ptmscore {mean_ptm:.3g}"
             )
         else:
             logger.info(
-                f"{model_name} took {prediction_time:.1f}s ({recycles[0]} recycles) "
+                f"{model_name} took {prediction_time:.1f}s ({recycles} recycles) "
                 f"with pLDDT {mean_plddt:.3g}"
             )
         final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
@@ -1347,6 +1347,7 @@ def run(
                 for _ in range(0, cardinality)
             ]
 
+            # only use padding if we have more than one sequence
             if sum(query_sequence_len_array) > crop_len:
                 crop_len = math.ceil(sum(query_sequence_len_array) * recompile_padding)
 
