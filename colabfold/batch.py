@@ -265,6 +265,7 @@ def batch_input(
     model_runner: model.RunModel,
     model_name: str,
     crop_len: int,
+    max_msa: str,
     use_templates: bool,
 ) -> model.features.FeatureDict:
     from colabfold.alphafold.msa import make_fixed_size
@@ -273,11 +274,16 @@ def batch_input(
     eval_cfg = model_config.data.eval
     crop_feats = {k: [None] + v for k, v in dict(eval_cfg.feat).items()}
 
+    max_msa_clusters = eval_cfg.max_msa_clusters
+    max_extra_msa = model_config.data.common.max_extra_msa
+    if max_msa != None:
+        max_msa_clusters, max_extra_msa = [int(x) for x in max_msa.split(":")]
+
     # templates models
     if (model_name == "model_1" or model_name == "model_2") and use_templates:
-        pad_msa_clusters = eval_cfg.max_msa_clusters - eval_cfg.max_templates
+        pad_msa_clusters = max_msa_clusters - eval_cfg.max_templates
     else:
-        pad_msa_clusters = eval_cfg.max_msa_clusters
+        pad_msa_clusters = max_msa_clusters
 
     max_msa_clusters = pad_msa_clusters
 
@@ -286,7 +292,7 @@ def batch_input(
         input_features,
         crop_feats,
         msa_cluster_size=max_msa_clusters,  # true_msa (4, 512, 68)
-        extra_msa_size=5120,  # extra_msa (4, 5120, 68)
+        extra_msa_size=max_extra_msa,  # extra_msa (4, 5120, 68)
         num_res=crop_len,  # aatype (4, 68)
         num_templates=4,
     )  # template_mask (4, 4) second value
@@ -303,6 +309,7 @@ def predict_structure(
     crop_len: int,
     model_type: str,
     model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
+    max_msa: str = None,
     do_relax: bool = False,
     rank_by: str = "auto",
     random_seed: int = 0,
@@ -339,6 +346,7 @@ def predict_structure(
                 model_runner,
                 model_name,
                 crop_len,
+                max_msa,
                 use_templates,
             )
         else:
@@ -1183,6 +1191,7 @@ def run(
     use_gpu_relax: bool = False,
     stop_at_score_below: float = 0,
     dpi: int = 200,
+    max_msa: str = None,
 ):
     from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
@@ -1225,6 +1234,7 @@ def run(
         "model_order": model_order,
         "keep_existing_results": keep_existing_results,
         "rank_by": rank_by,
+        "max_msa": max_msa,
         "pair_mode": pair_mode,
         "host_url": host_url,
         "stop_at_score": stop_at_score,
@@ -1641,6 +1651,14 @@ def main():
         help="turn on training mode of the model to activate drop outs",
     )
     parser.add_argument(
+        "--max-msa",
+        help="defines: `max_msa_clusters:max_extra_msa` number of sequences to use",
+        type=str,
+        default=None,
+        choices=["512:5120", "512:1024", "256:512", "128:256", "64:128", "32:64"],
+    )
+
+    parser.add_argument(
         "--zip",
         default=False,
         action="store_true",
@@ -1713,6 +1731,7 @@ def main():
         save_single_representations=args.save_single_representations,
         save_pair_representations=args.save_pair_representations,
         training=args.training,
+        max_msa=args.max_msa,
         use_gpu_relax=args.use_gpu_relax,
         stop_at_score_below=args.stop_at_score_below,
     )
