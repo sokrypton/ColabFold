@@ -11,7 +11,7 @@ six = "*"
 
 [[package]]
 name = "alphafold-colabfold"
-version = "2.1.8"
+version = "2.1.9"
 description = "An implementation of the inference pipeline of AlphaFold v2.0.This is a completely new model that was entered as AlphaFold2 in CASP14 and published in Nature. This package contains patches for colabfold"
 category = "main"
 optional = true
@@ -1704,7 +1704,7 @@ alphafold = ["alphafold-colabfold", "jax"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.1,<3.10"
-content-hash = "987f8f142ef0285a17bfbfd50ff7d4179e8b99c100653f354db98264122c3fda"
+content-hash = "add8a3fe9f638546540620c1a1b684499ae9a39f41917892437f11671bc185d8"
 
 [metadata.files]
 absl-py = [
@@ -1712,8 +1712,8 @@ absl-py = [
     {file = "absl_py-0.13.0-py3-none-any.whl", hash = "sha256:62bd4e248ddb19d81aec8f9446b407ff37c8175c2ba88266a7afa9b4ce4a333b"},
 ]
 alphafold-colabfold = [
-    {file = "alphafold-colabfold-2.1.8.tar.gz", hash = "sha256:1dea3e244e2a3cbbad2105f25a64f3c0293fb90a4f0bf98a2e91ffbeb9dc42fa"},
-    {file = "alphafold_colabfold-2.1.8-py3-none-any.whl", hash = "sha256:b473501fc2c9a4dacc6f67ee4d5b4687c7ff1668cf951a93be32db39eb3fde0a"},
+    {file = "alphafold-colabfold-2.1.9.tar.gz", hash = "sha256:b9782093e6d5057f2604f651af84e38780a4d15c14bfd24b7b51032cc5056367"},
+    {file = "alphafold_colabfold-2.1.9-py3-none-any.whl", hash = "sha256:26d4a63210ffa7ebfec282701bcad48da1293dfd59afd0f7bec59d3e3e586a42"},
 ]
 appdirs = [
     {file = "appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128"},
