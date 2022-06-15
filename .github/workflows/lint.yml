@@ -8,6 +8,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
+        with:
+          python-version: "3.7"
       - uses: psf/black@stable
         with:
           options: "--check --exclude '\\.(txt|md)$'"
