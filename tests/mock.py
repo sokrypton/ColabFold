@@ -83,7 +83,7 @@ class MockRunModel:
                 break
 
         if is_same:
-            return prediction, (3, 0)
+            return prediction, 3
 
         if os.environ.get("UPDATE_SNAPSHOTS"):
             print("Running new prediction")
