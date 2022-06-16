@@ -546,7 +546,7 @@ def predict_structure(
                 "ptm": np.around(ptmscore[key], 2).item(),
             }
             if model_type.startswith("AlphaFold2-multimer"):
-                scores["iptm"] = np.around(iptmscore[key], 2)
+                scores["iptm"] = np.around(iptmscore[key], 2).item()
             json.dump(scores, fp)
 
         out[key] = {
