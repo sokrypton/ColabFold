@@ -1,19 +1,19 @@
---- /content/alphafold_backup/alphafold/model/modules.py	2022-03-23 18:04:42.567385387 +0000
-+++ /content/alphafold/alphafold/model/modules.py	2022-03-23 18:08:07.926030407 +0000
-@@ -341,17 +341,16 @@
+--- /content/alphafold_copy/alphafold/model/modules.py	2022-06-16 23:22:42.489230552 +0000
++++ /content/alphafold/alphafold/model/modules.py	2022-06-16 23:33:50.394462860 +0000
+@@ -322,7 +322,7 @@
+                 recycle_idx,
+                 compute_loss=compute_loss):
+       if self.config.resample_msa_in_recycling:
+-        num_ensemble = batch_size // (self.config.num_recycle + 1)
++        num_ensemble = batch_size
+         def slice_recycle_idx(x):
+           start = recycle_idx * num_ensemble
+           size = num_ensemble
+@@ -341,53 +341,16 @@
            compute_loss=compute_loss,
            ensemble_representations=ensemble_representations)
  
-+    emb_config = self.config.embeddings_and_evoformer
-+    prev = {
-+        'prev_pos': jnp.zeros(
-+            [num_residues, residue_constants.atom_type_num, 3]),
-+        'prev_msa_first_row': jnp.zeros(
-+            [num_residues, emb_config.msa_channel]),
-+        'prev_pair': jnp.zeros(
-+            [num_residues, num_residues, emb_config.pair_channel]),
-+    }
-     if self.config.num_recycle:
+-    if self.config.num_recycle:
 -      emb_config = self.config.embeddings_and_evoformer
 -      prev = {
 -          'prev_pos': jnp.zeros(
@@ -24,57 +24,50 @@
 -              [num_residues, num_residues, emb_config.pair_channel]),
 -      }
 -
-       if 'num_iter_recycling' in batch:
-         # Training time: num_iter_recycling is in batch.
-         # The value for each ensemble batch is the same, so arbitrarily taking
-@@ -365,21 +364,28 @@
-         # Eval mode or tests: use the maximum number of iterations.
-         num_iter = self.config.num_recycle
- 
+-      if 'num_iter_recycling' in batch:
+-        # Training time: num_iter_recycling is in batch.
+-        # The value for each ensemble batch is the same, so arbitrarily taking
+-        # 0-th.
+-        num_iter = batch['num_iter_recycling'][0]
+-
+-        # Add insurance that we will not run more
+-        # recyclings than the model is configured to run.
+-        num_iter = jnp.minimum(num_iter, self.config.num_recycle)
+-      else:
+-        # Eval mode or tests: use the maximum number of iterations.
+-        num_iter = self.config.num_recycle
+-
 -      body = lambda x: (x[0] + 1,  # pylint: disable=g-long-lambda
 -                        get_prev(do_call(x[1], recycle_idx=x[0],
 -                                         compute_loss=False)))
-+      def pw_dist(a):
-+        a_norm = jnp.square(a).sum(-1)
-+        return jnp.sqrt(jnp.abs(a_norm[:,None] + a_norm[None,:] - 2 * a @ a.T))
-+
-+      def body(x):
-+        n, tol, prev = x
-+        prev_ = get_prev(do_call(prev, recycle_idx=n, compute_loss=False))
-+        ca,ca_ = prev["prev_pos"][:,1,:], prev_["prev_pos"][:,1,:]
-+        tol_ = jnp.sqrt(jnp.square(pw_dist(ca) - pw_dist(ca_)).mean())
-+        return n+1, tol_, prev_
-+
-       if hk.running_init():
-         # When initializing the Haiku module, run one iteration of the
-         # while_loop to initialize the Haiku modules used in `body`.
+-      if hk.running_init():
+-        # When initializing the Haiku module, run one iteration of the
+-        # while_loop to initialize the Haiku modules used in `body`.
 -        _, prev = body((0, prev))
-+        recycles, tol, prev = body((0, jnp.inf, prev))
-       else:
+-      else:
 -        _, prev = hk.while_loop(
 -            lambda x: x[0] < num_iter,
 -            body,
 -            (0, prev))
-+        recycles, tol, prev = hk.while_loop(
-+          lambda x: ((x[0] < num_iter) & (x[1] > self.config.recycle_tol)),
-+          body,(0, jnp.inf, prev))
-     else:
+-    else:
 -      prev = {}
-       num_iter = 0
-+      (recycles,tol) = 0, jnp.inf
+-      num_iter = 0
++    emb_config = self.config.embeddings_and_evoformer
++    ret = do_call(prev=batch.pop("prev"), recycle_idx=0)
++    ret["prev"] = get_prev(ret)
  
-     ret = do_call(prev=prev, recycle_idx=num_iter)
+-    ret = do_call(prev=prev, recycle_idx=num_iter)
      if compute_loss:
-@@ -387,7 +393,7 @@
+       ret = ret[0], [ret[1]]
  
      if not return_representations:
        del (ret[0] if compute_loss else ret)['representations']  # pytype: disable=unsupported-operands
 -    return ret
-+    return ret, (recycles,tol)
++    return ret, (None, None)
  
  
  class TemplatePairStack(hk.Module):
-@@ -1730,9 +1736,7 @@
+@@ -1730,9 +1693,7 @@
                                            True,
                                            name='prev_msa_first_row_norm')(
                                                batch['prev_msa_first_row'])

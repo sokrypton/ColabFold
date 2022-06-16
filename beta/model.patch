@@ -1,5 +1,5 @@
---- model.py	2021-08-09 14:09:12.655392517 +0000
-+++ alphafold/alphafold/model/model.py	2021-08-09 14:08:27.335446573 +0000
+--- /content/alphafold_copy/alphafold/model/model.py	2022-06-16 23:22:42.489230552 +0000
++++ /content/alphafold/alphafold/model/model.py	2022-06-16 23:39:22.926989610 +0000
 @@ -50,7 +50,8 @@
  
    def __init__(self,
@@ -28,18 +28,39 @@
      """Makes a prediction by inferencing the model on the provided features.
  
      Args:
-@@ -130,7 +131,7 @@
+@@ -128,14 +129,24 @@
+       A dictionary of model outputs.
+     """
      self.init_params(feat)
-     logging.info('Running predict with shape(feat) = %s',
-                  tree.map_structure(lambda x: x.shape, feat))
+-    logging.info('Running predict with shape(feat) = %s',
+-                 tree.map_structure(lambda x: x.shape, feat))
 -    result = self.apply(self.params, jax.random.PRNGKey(0), feat)
-+    result, recycles = self.apply(self.params, jax.random.PRNGKey(random_seed), feat)
-     # This block is to ensure benchmark timings are accurate. Some blocking is
-     # already happening when computing get_confidence_metrics, and this ensures
-     # all outputs are blocked on.
-@@ -138,4 +139,4 @@
-     result.update(get_confidence_metrics(result))
-     logging.info('Output shape was %s',
-                  tree.map_structure(lambda x: x.shape, result))
+-    # This block is to ensure benchmark timings are accurate. Some blocking is
+-    # already happening when computing get_confidence_metrics, and this ensures
+-    # all outputs are blocked on.
+-    jax.tree_map(lambda x: x.block_until_ready(), result)
+-    result.update(get_confidence_metrics(result))
+-    logging.info('Output shape was %s',
+-                 tree.map_structure(lambda x: x.shape, result))
 -    return result
-+    return result, recycles
++    logging.info('Running predict with shape(feat) = %s', tree.map_structure(lambda x: x.shape, feat))
++                 
++    aatype = feat["aatype"]
++    num_recycles, L = aatype.shape[:2]    
++    result = {"prev":{'prev_msa_first_row': np.zeros([L,256]),
++                      'prev_pair': np.zeros([L,L,128]),
++                      'prev_pos': np.zeros([L,37,3])}}
++        
++    r = 0
++    key = jax.random.PRNGKey(random_seed)
++    while r < num_recycles:
++      sub_feat = jax.tree_map(lambda x:x[r,None], feat)
++      sub_feat["prev"] = result["prev"]
++      result, _ = self.apply(self.params, key, sub_feat)
++      del sub_feat
++      confidences = get_confidence_metrics(result)
++      result.update(confidences)
++      r += 1
++
++    logging.info('Output shape was %s', tree.map_structure(lambda x: x.shape, result))
++    return result, (r-1,0)
