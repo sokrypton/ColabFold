@@ -369,10 +369,17 @@ def predict_structure(
             mean_score = mean_ptm
 
         if is_complex or model_type == "AlphaFold2-ptm":
-            logger.info(
-                f"{model_name} took {prediction_time:.1f}s ({recycles} recycles) "
-                f"with pLDDT {mean_plddt:.3g} and ptmscore {mean_ptm:.3g}"
-            )
+            if model_type.startswith("AlphaFold2-multimer"):
+                mean_iptm = prediction_result["iptm"]
+                logger.info(
+                    f"{model_name} took {prediction_time:.1f}s ({recycles} recycles) "
+                    f"with pLDDT {mean_plddt:.3g}, ptmscore {mean_ptm:.3g} and iptm {mean_iptm:.3g}"
+                )
+            else:
+                logger.info(
+                    f"{model_name} took {prediction_time:.1f}s ({recycles} recycles) "
+                    f"with pLDDT {mean_plddt:.3g} and ptmscore {mean_ptm:.3g}"
+                )
         else:
             logger.info(
                 f"{model_name} took {prediction_time:.1f}s ({recycles} recycles) "
@@ -538,6 +545,8 @@ def predict_structure(
                 "plddt": np.around(np.asarray(plddts[key]), 2).tolist(),
                 "ptm": np.around(ptmscore[key], 2).item(),
             }
+            if model_type.startswith("AlphaFold2-multimer"):
+                scores["iptm"] = np.around(iptmscore[key], 2)
             json.dump(scores, fp)
 
         out[key] = {
@@ -1506,14 +1515,14 @@ def main():
     # Main performance parameter
     parser.add_argument(
         "--stop-at-score",
-        help="Compute models until plddt or ptmscore > threshold is reached. "
+        help="Compute models until plddt (single chain) or ptmscore (complex) > threshold is reached. "
         "This can make colabfold much faster by only running the first model for easy queries.",
         type=float,
         default=100,
     )
     parser.add_argument(
         "--stop-at-score-below",
-        help="Stop to compute structures if plddt or ptmscore < threshold. "
+        help="Stop to compute structures if plddt (single chain) or ptmscore (complex) < threshold. "
         "This can make colabfold much faster by skipping sequences that do not generate good scores.",
         type=float,
         default=0,
@@ -1698,6 +1707,11 @@ def main():
 
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
     model_type = set_model_type(is_complex, args.model_type)
+    if model_type.startswith("AlphaFold2-multimer"):
+        logger.info(
+            f"--max-msa can not be used in combination with AlphaFold2-multimer (--max-msa ignored)"
+        )
+        args.max_msa = None
     download_alphafold_params(model_type, data_dir)
     uses_api = any((query[2] is None for query in queries))
     if uses_api and args.host_url == DEFAULT_API_SERVER:

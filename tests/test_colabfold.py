@@ -205,7 +205,7 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
         "Found 5 citations for tools or databases",
         "Query 1/1: 3G5O_A_3G5O_B (length 180)",
         "Running model_1",
-        "model_1 took 0.0s (3 recycles) with pLDDT 94.4 and ptmscore 0.884",
+        "model_1 took 0.0s (3 recycles) with pLDDT 94.4, ptmscore 0.884 and iptm 0.877",
         "reranking models by multimer",
     ]
 
@@ -309,7 +309,7 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
         "Found 5 citations for tools or databases",
         "Query 1/1: A_A (length 118)",
         "Running model_1",
-        "model_1 took 0.0s (3 recycles) with pLDDT 95.3 and ptmscore 0.865",
+        "model_1 took 0.0s (3 recycles) with pLDDT 95.3, ptmscore 0.865 and iptm 0.86",
         "reranking models by multimer",
     ]
 
