@@ -1,5 +1,5 @@
---- /content/alphafold_copy/alphafold/model/model.py	2022-06-16 23:22:42.489230552 +0000
-+++ /content/alphafold/alphafold/model/model.py	2022-06-16 23:39:22.926989610 +0000
+--- /content/alphafold_copy/alphafold/model/model.py	2022-06-21 02:56:28.903256585 +0000
++++ /content/alphafold/alphafold/model/model.py	2022-06-21 03:08:21.392362049 +0000
 @@ -50,7 +50,8 @@
  
    def __init__(self,
@@ -28,7 +28,7 @@
      """Makes a prediction by inferencing the model on the provided features.
  
      Args:
-@@ -128,14 +129,24 @@
+@@ -128,14 +129,28 @@
        A dictionary of model outputs.
      """
      self.init_params(feat)
@@ -46,15 +46,19 @@
 +    logging.info('Running predict with shape(feat) = %s', tree.map_structure(lambda x: x.shape, feat))
 +                 
 +    aatype = feat["aatype"]
-+    num_recycles, L = aatype.shape[:2]    
++    num_iters = self.config.model.num_recycle + 1
++    num_ensemble = self.config.data.eval.num_ensemble
++    L = aatype.shape[1]
 +    result = {"prev":{'prev_msa_first_row': np.zeros([L,256]),
 +                      'prev_pair': np.zeros([L,L,128]),
 +                      'prev_pos': np.zeros([L,37,3])}}
 +        
 +    r = 0
 +    key = jax.random.PRNGKey(random_seed)
-+    while r < num_recycles:
-+      sub_feat = jax.tree_map(lambda x:x[r,None], feat)
++    while r < num_iters:
++      s = r * num_ensemble
++      e = (r+1) * num_ensemble
++      sub_feat = jax.tree_map(lambda x:x[s:e], feat)      
 +      sub_feat["prev"] = result["prev"]
 +      result, _ = self.apply(self.params, key, sub_feat)
 +      del sub_feat
