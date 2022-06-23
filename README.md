@@ -49,7 +49,7 @@ Install ColabFold using the `pip` commands below. `pip` will resolve and install
 
 ```shell
 pip install "colabfold[alphafold] @ git+https://github.com/sokrypton/ColabFold"
-pip install -q "jax[cuda]>=0.3.8,<0.4" -f https://storage.googleapis.com/jax-releases/jax_releases.html
+pip install -q "jax[cuda]>=0.3.8,<0.4" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 # For template-based predictions also install kalign and hhsuite
 conda install -c conda-forge -c bioconda kalign2=2.04 hhsuite=3.3.0
 # For amber also install openmm and pdbfixer
