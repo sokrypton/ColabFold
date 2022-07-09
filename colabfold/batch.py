@@ -1632,7 +1632,7 @@ def main():
     )
     parser.add_argument(
         "--recompile-all-models",
-        help="recompile all models instead of just model 1 ane 3",
+        help="recompile all models instead of just model 1 and 3",
         default=False,
         action="store_true",
     )
