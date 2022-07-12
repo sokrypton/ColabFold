@@ -1,4 +1,7 @@
 #!/bin/bash -e
+echo "Do not use this script. Use the python colabfold_search instead"
+exit 0
+
 set -x
 export OMP_NUM_THREADS=100
 MMSEQS="$1"
