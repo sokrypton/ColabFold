@@ -40,7 +40,7 @@ def mmseqs_search_monomer(
     max_accept: int = 1000000,
     s: float = 8,
     db_load_mode: int = 2,
-    threads: int = 64,
+    threads: int = 32,
 ):
     """Run mmseqs with a local colabfold database set
 
