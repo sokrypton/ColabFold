@@ -1,4 +1,10 @@
 # ColabFold
+
+```diff
+- 2022/07/13: We have set up a new ColabFold MSA server provided by Korean Bioinformation Center. 
+- We expect a short downtime around 8PM KST/1PM CET/7AM EST. We accelerated MSA generation with
+- multiple threads and updated UniRef30 to 2022_02 and PDB/PDB70 to 220313.
+```
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
 ### Making Protein folding accessible to all via Google Colab!
