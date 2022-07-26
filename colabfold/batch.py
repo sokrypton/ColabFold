@@ -1205,6 +1205,7 @@ def run(
     stop_at_score_below: float = 0,
     dpi: int = 200,
     max_msa: str = None,
+    input_features_callback: Callable[[Any], Any] = None,
 ):
     from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
@@ -1359,6 +1360,8 @@ def run(
         except Exception as e:
             logger.exception(f"Could not generate input features {jobname}: {e}")
             continue
+        if input_features_callback is not None:
+            input_features_callback(input_features)
         try:
             query_sequence_len_array = [
                 len(query_seqs_unique[i])
