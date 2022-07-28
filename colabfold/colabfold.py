@@ -691,16 +691,16 @@ def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view
 
   if Ls is None or len(Ls) == 1:
     # color N->C
-    plot_protein_backboe(pos=pos, coloring='N-C', line_w=line_w, axes=ax1)
+    plot_protein_backbone(pos=pos, coloring='N-C', line_w=line_w, axes=ax1)
     add_text("colored by N→C", ax1)
   else:
     # color by chain
-    plot_protein_backboe(pos=pos, coloring='chain', Ls=Ls, line_w=line_w, axes=ax1)
+    plot_protein_backbone(pos=pos, coloring='chain', Ls=Ls, line_w=line_w, axes=ax1)
     add_text("colored by chain", ax1)
     
   if plddt is not None:
     # color by pLDDT
-    plot_protein_backboe(pos=pos, coloring='plddt', plddt=plddt, line_w=line_w, axes=ax2)
+    plot_protein_backbone(pos=pos, coloring='plddt', plddt=plddt, line_w=line_w, axes=ax2)
     add_text("colored by pLDDT", ax2)
 
   return fig
