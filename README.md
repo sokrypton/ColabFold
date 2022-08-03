@@ -26,6 +26,8 @@
 
 
 ### FAQ
+- Where can I chat with other ColabFold users?
+  - See our [Discord](https://discord.gg/gna8maru7d) channel!
 - Can I use the models for **Molecular Replacement**?
   - Yes, but be **CAREFUL**, the bfactor column is populated with pLDDT confidence values (higher = better). Phenix.phaser expects a "real" bfactor, where (lower = better). See [post](https://twitter.com/cheshireminima/status/1423929241675120643) from Claudia Millán.
 - What is the maximum length?
