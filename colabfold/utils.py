@@ -42,6 +42,10 @@ class TqdmHandler(logging.StreamHandler):
 
 def setup_logging(log_file: Path):
     log_file.parent.mkdir(exist_ok=True, parents=True)
+    root = logging.getLogger()
+    if root.handlers:
+        for handler in root.handlers:
+            root.removeHandler(handler)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(message)s",
