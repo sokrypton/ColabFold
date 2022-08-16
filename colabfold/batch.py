@@ -1670,7 +1670,7 @@ def main():
         help="defines: `max_msa_clusters:max_extra_msa` number of sequences to use",
         type=str,
         default=None,
-        choices=["512:5120", "512:1024", "256:512", "128:256", "64:128", "32:64"],
+        choices=["512:5120", "512:1024", "256:512", "128:256", "64:128", "32:64", "16:32"],
     )
 
     parser.add_argument(
