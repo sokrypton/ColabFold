@@ -1252,6 +1252,7 @@ def run(
         "host_url": host_url,
         "stop_at_score": stop_at_score,
         "stop_at_score_below": stop_at_score_below,
+        "random_seed": random_seed,
         "recompile_padding": recompile_padding,
         "recompile_all_models": recompile_all_models,
         "commit": get_commit(),
