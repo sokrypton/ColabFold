@@ -204,7 +204,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
       if not os.path.isdir(TMPL_PATH):
         os.mkdir(TMPL_PATH)
         TMPL_LINE = ",".join(TMPL[:20])
-        os.system(f"curl -s https://a3m-templates.mmseqs.com/template/{TMPL_LINE} | tar xzf - -C {TMPL_PATH}/")
+        os.system(f"curl -s {host_url}/template/{TMPL_LINE} | tar xzf - -C {TMPL_PATH}/")
         os.system(f"cp {TMPL_PATH}/pdb70_a3m.ffindex {TMPL_PATH}/pdb70_cs219.ffindex")
         os.system(f"touch {TMPL_PATH}/pdb70_cs219.ffdata")
       template_paths[k] = TMPL_PATH
