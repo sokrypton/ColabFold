@@ -77,7 +77,16 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
       query += f">{n}\n{seq}\n"
       n += 1
 
-    res = requests.post(f'{host_url}/{submission_endpoint}', data={'q':query,'mode': mode})
+    while True:
+      try:
+        # https://requests.readthedocs.io/en/latest/user/advanced/#advanced
+        # "good practice to set connect timeouts to slightly larger than a multiple of 3"
+        res = requests.post(f'{host_url}/{submission_endpoint}', data={'q':query,'mode': mode}, timeout=6.02)
+      except requests.exceptions.Timeout:
+        logger.warning("Timeout while submitting to MSA server. Retrying...")
+        continue
+      break
+
     try:
       out = res.json()
     except ValueError:
@@ -86,7 +95,13 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
     return out
 
   def status(ID):
-    res = requests.get(f'{host_url}/ticket/{ID}')
+    while True:
+      try:
+        res = requests.get(f'{host_url}/ticket/{ID}', timeout=6.02)
+      except requests.exceptions.Timeout:
+        logger.warning("Timeout while fetching status from MSA server. Retrying...")
+        continue
+      break
     try:
       out = res.json()
     except ValueError:
@@ -95,7 +110,13 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
     return out
 
   def download(ID, path):
-    res = requests.get(f'{host_url}/result/download/{ID}')
+    while True:
+      try:
+        res = requests.get(f'{host_url}/result/download/{ID}', timeout=6.02)
+      except requests.exceptions.Timeout:
+        logger.warning("Timeout while fetching result from MSA server. Retrying...")
+        continue
+      break
     with open(path,"wb") as out: out.write(res.content)
 
   # process input x
