@@ -303,7 +303,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "dm-haiku"
-version = "0.0.4"
+version = "0.0.7"
 description = "Haiku is a library for building neural networks in JAX."
 category = "main"
 optional = false
@@ -311,13 +311,13 @@ python-versions = "*"
 
 [package.dependencies]
 absl-py = ">=0.7.1"
+jmp = ">=0.0.2"
 numpy = ">=1.18.0"
 tabulate = ">=0.8.9"
 typing-extensions = {version = "*", markers = "python_version < \"3.8\""}
 
 [package.extras]
-jax = ["jax (>=0.1.71)"]
-jaxlib = ["jaxlib (>=0.1.49)"]
+jax = ["jaxlib (==0.3.5)", "jax (==0.3.5)"]
 
 [[package]]
 name = "dm-tree"
@@ -655,6 +655,21 @@ MarkupSafe = ">=2.0"
 
 [package.extras]
 i18n = ["Babel (>=2.7)"]
+
+[[package]]
+name = "jmp"
+version = "0.0.2"
+description = "JMP is a Mixed Precision library for JAX."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+numpy = ">=1.19.5"
+
+[package.extras]
+jaxlib = ["jaxlib (>=0.1.49)"]
+jax = ["jax (>=0.1.71)"]
 
 [[package]]
 name = "jsonschema"
@@ -1756,17 +1771,14 @@ alphafold-minus-jax = ["alphafold-colabfold"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.1,<3.10"
-content-hash = "37c06d81545e0f00fa5e20d89b54903f5e6c5cbc637b4dc66827e36b06d42018"
+content-hash = "3fdb6055bfec15ec05e58378e53f15f1e6cd41e3b5af25a508962939e0239e35"
 
 [metadata.files]
 absl-py = [
     {file = "absl-py-0.13.0.tar.gz", hash = "sha256:6953272383486044699fd0e9f00aad167a27e08ce19aae66c6c4b10e7e767793"},
     {file = "absl_py-0.13.0-py3-none-any.whl", hash = "sha256:62bd4e248ddb19d81aec8f9446b407ff37c8175c2ba88266a7afa9b4ce4a333b"},
 ]
-alphafold-colabfold = [
-    {file = "alphafold-colabfold-2.1.14.tar.gz", hash = "sha256:66ac55dec55a6020216093d3a244b6b1ffdfff2c28251c36a315c5da94466f1f"},
-    {file = "alphafold_colabfold-2.1.14-py3-none-any.whl", hash = "sha256:38555944b1b6781135bfb403842cac2ddd02640f770c341e4266ca14115dbbb1"},
-]
+alphafold-colabfold = []
 appdirs = [
     {file = "appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128"},
     {file = "appdirs-1.4.4.tar.gz", hash = "sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41"},
@@ -1823,7 +1835,6 @@ beautifulsoup4 = [
     {file = "beautifulsoup4-4.11.1.tar.gz", hash = "sha256:ad9aa55b65ef2808eb405f46cf74df7fcb7044d5cbc26487f96eb2ef2e436693"},
 ]
 biopython = [
-    {file = "biopython-1.79-cp310-cp310-win_amd64.whl", hash = "sha256:9eadfd4300f534cd4fa39613eeee786d2c3d6b981d373c5c46616fa1a97cad10"},
     {file = "biopython-1.79-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:72a1477cf1701964c7224e506a54fd65d1cc5228da200b634a17992230aa1cbd"},
     {file = "biopython-1.79-cp36-cp36m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:365569543ea58dd07ef205ec351c23b6c1a3200d5d321eb28ceaecd55eb5955e"},
     {file = "biopython-1.79-cp36-cp36m-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:4be31815226052d86d4c2f6a103c40504e34bba3e25cc1b1d687a3203c42fb6e"},
@@ -1970,10 +1981,7 @@ defusedxml = [
     {file = "defusedxml-0.7.1-py2.py3-none-any.whl", hash = "sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61"},
     {file = "defusedxml-0.7.1.tar.gz", hash = "sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69"},
 ]
-dm-haiku = [
-    {file = "dm-haiku-0.0.4.tar.gz", hash = "sha256:5faa387ad6b522516283cbe45adbc4c46bedcf501c82db2f9174945f3ec2ea7d"},
-    {file = "dm_haiku-0.0.4-py3-none-any.whl", hash = "sha256:9dab941b18ba0bcd7851d12e0a3125ea111a50a86685bd3eb4390ca6e04725a2"},
-]
+dm-haiku = []
 dm-tree = [
     {file = "dm-tree-0.1.7.tar.gz", hash = "sha256:30fec8aca5b92823c0e796a2f33b875b4dccd470b57e91e6c542405c5f77fd2a"},
     {file = "dm_tree-0.1.7-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:3fae437135b6cbbdd51e96488a35e78c3617defa0b65265e7e8752d506f933fd"},
@@ -2169,6 +2177,7 @@ jinja2 = [
     {file = "Jinja2-3.1.2-py3-none-any.whl", hash = "sha256:6088930bfe239f0e6710546ab9c19c9ef35e29792895fed6e6e31a023a182a61"},
     {file = "Jinja2-3.1.2.tar.gz", hash = "sha256:31351a702a408a9e7595a8fc6150fc3f43bb6bf7e319770cbc0db9df9437e852"},
 ]
+jmp = []
 jsonschema = [
     {file = "jsonschema-4.6.0-py3-none-any.whl", hash = "sha256:1c92d2db1900b668201f1797887d66453ab1fbfea51df8e4b46236689c427baf"},
     {file = "jsonschema-4.6.0.tar.gz", hash = "sha256:9d6397ba4a6c0bf0300736057f649e3e12ecbc07d3e81a0dacb72de4e9801957"},
@@ -2751,9 +2760,6 @@ rsa = [
     {file = "rsa-4.8.tar.gz", hash = "sha256:5c6bd9dc7a543b7fe4304a631f8a8a3b674e2bbfc49c2ae96200cdbe55df6b17"},
 ]
 scipy = [
-    {file = "scipy-1.7.3-1-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:c9e04d7e9b03a8a6ac2045f7c5ef741be86727d8f49c45db45f244bdd2bcff17"},
-    {file = "scipy-1.7.3-1-cp38-cp38-macosx_12_0_arm64.whl", hash = "sha256:b0e0aeb061a1d7dcd2ed59ea57ee56c9b23dd60100825f98238c06ee5cc4467e"},
-    {file = "scipy-1.7.3-1-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:b78a35c5c74d336f42f44106174b9851c783184a85a3fe3e68857259b37b9ffb"},
     {file = "scipy-1.7.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:173308efba2270dcd61cd45a30dfded6ec0085b4b6eb33b5eb11ab443005e088"},
     {file = "scipy-1.7.3-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:21b66200cf44b1c3e86495e3a436fc7a26608f92b8d43d344457c54f1c024cbc"},
     {file = "scipy-1.7.3-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ceebc3c4f6a109777c0053dfa0282fddb8893eddfb0d598574acfb734a926168"},
