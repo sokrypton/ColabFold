@@ -1,7 +1,6 @@
 # ColabFold
 
 ```diff
-- 2022/08/31: MMseqs2 MSA server is currently experiencing connection issues. We are working on fixing this.
 + 2022/07/13: We have set up a new ColabFold MSA server provided by Korean Bioinformation Center. 
 +             It provides accelerated MSA generation, we updated the UniRef30 to 2022_02 and PDB/PDB70 to 220313.
 ```
