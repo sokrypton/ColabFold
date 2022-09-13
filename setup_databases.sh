@@ -41,10 +41,10 @@ downloadFile() {
 }
 
 if [ ! -f UNIREF30_READY ]; then
-  downloadFile "http://wwwuser.gwdg.de/~compbiol/colabfold/uniref30_2103.tar.gz" "uniref30_2103.tar.gz"
-  tar xzvf "uniref30_2103.tar.gz"
-  mmseqs tsv2exprofiledb "uniref30_2103" "uniref30_2103_db"
-  mmseqs createindex "uniref30_2103_db" tmp1 --remove-tmp-files 1
+  downloadFile "http://wwwuser.gwdg.de/~compbiol/colabfold/uniref30_2202.tar.gz" "uniref30_2202.tar.gz"
+  tar xzvf "uniref30_2202.tar.gz"
+  mmseqs tsv2exprofiledb "uniref30_2202" "uniref30_2202_db"
+  mmseqs createindex "uniref30_2202_db" tmp1 --remove-tmp-files 1
   touch UNIREF30_READY
 fi
 
