@@ -26,7 +26,7 @@ def run_mmseqs(mmseqs: Path, params: List[Union[str, Path]]):
 def mmseqs_search_monomer(
     dbbase: Path,
     base: Path,
-    uniref_db: Path = Path("uniref30_2103_db"),
+    uniref_db: Path = Path("uniref30_2202_db"),
     template_db: Path = Path(""),  # Unused by default
     metagenomic_db: Path = Path("colabfold_envdb_202108_db"),
     mmseqs: Path = Path("mmseqs"),
