@@ -373,7 +373,7 @@ def main():
     parser.add_argument("--diff", type=int, default=3000)
     parser.add_argument("--qsc", type=float, default=-20.0)
     parser.add_argument("--max-accept", type=int, default=1000000)
-    parser.add_argument("--db-load-mode", type=int, default=2)
+    parser.add_argument("--db-load-mode", type=int, default=0)
     parser.add_argument("--threads", type=int, default=64)
     args = parser.parse_args()
 
