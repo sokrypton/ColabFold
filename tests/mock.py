@@ -33,7 +33,7 @@ class MockRunModel:
         self.pos = 0
 
     def predict(
-        self, model_runner: RunModel, feat: FeatureDict
+        self, model_runner: RunModel, feat: FeatureDict, random_seed: int
     ) -> Tuple[Mapping[str, Any], Tuple[Any, Any]]:
         """feat["msa"] or feat["msa_feat"] for normal/complexes is non-deterministic, so we remove it before storing,
         but we keep it for predicting or returning, where we need it for plotting"""
