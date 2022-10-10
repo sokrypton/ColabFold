@@ -1,10 +1,12 @@
 # ColabFold
 
 ```diff
-+ 2022/10/10: Bugfix: random_seed was not being used for alphafold-multimer. Same structure was returned 
-+             regardless of defined seed. This has been fixed!
-+ 2022/07/13: We have set up a new ColabFold MSA server provided by Korean Bioinformation Center. 
-+             It provides accelerated MSA generation, we updated the UniRef30 to 2022_02 and PDB/PDB70 to 220313.
++ 2022/10/10: Bugfix: random_seed was not being used for alphafold-multimer.
++             Same structure was returned regardless of defined seed. This
++             has been fixed!
++ 2022/07/13: We have set up a new ColabFold MSA server provided by Korean
++             Bioinformation Center. It provides accelerated MSA generation, 
++             we updated the UniRef30 to 2022_02 and PDB/PDB70 to 220313.
 ```
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
