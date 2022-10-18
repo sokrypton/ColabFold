@@ -57,6 +57,13 @@
 
 _Note: Checkout [localcolabfold](https://github.com/YoshitakaMo/localcolabfold) too
 
+It is recommended that you create a conda environment with python version 3.7. If you use a newer python version, you might run into problems when installing tensorflow, as the required version may not be found.
+
+```shell
+conda create --name my_colabfold python=3.7
+```
+Then activate it with `activate my_colabfold`.
+
 Install ColabFold using the `pip` commands below. `pip` will resolve and install all required dependencies and ColabFold should be ready within a few minutes to use. Please check the [JAX documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to get JAX to work on your GPU or TPU.
 
 ```shell
