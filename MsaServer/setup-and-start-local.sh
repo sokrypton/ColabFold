@@ -5,12 +5,26 @@ set -e
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "${SCRIPT_DIR}"
 
+# choose which pdb rsync server to use
+#PDB_SERVER=rsync.wwpdb.org::ftp                                   # RCSB PDB server name
+#PDB_PORT=33444                                                    # port RCSB PDB server is using
+#
+#PDB_SERVER=rsync.ebi.ac.uk::pub/databases/rcsb/pdb-remediated     # PDBe server name
+#PDB_PORT=873                                                      # port PDBe server is using
+#
+#PDB_SERVER=pdb.protein.osaka-u.ac.jp::ftp                         # PDBj server name
+#PDB_PORT=873                                                      # port PDBj server is using
+if [ -z "${PDB_SERVER}" ] || [ -z "${PDB_PORT}" ]; then
+    echo "PDB rsync server was not chosen, please edit this script to choose which PDB download server you want to use"
+    exit 1
+fi
+
 # set which commits to use
-MMSEQS_COMMIT=${1:-92deb92fb46583b4c68932111303d12dfa121364}
-BACKEND_COMMIT=${2:-1d84d23ec1199a9e46df9a5cb3301f6d73f3530d}
+MMSEQS_COMMIT=${1:-4589151554eb83a70ff0c4d04d21b83cabc203e4}
+BACKEND_COMMIT=${2:-14e087560f309f989a5e1feb54fd1f9c988076d5}
 
 # check if all dependencies are there
-for i in go curl git aria2c; do
+for i in go curl git aria2c rsync; do
   if ! command -v "${i}" > /dev/null 2>&1; then
     echo "${i} is not installed, please install it first"
     exit 1
@@ -34,7 +48,7 @@ PATH="${SCRIPT_DIR}/mmseqs/bin:$PATH"
 # don't re-download databases if they already exist as they are quite large
 if [ ! -d databases ]; then
   mkdir -p databases
-  ../setup_databases.sh databases
+  ../setup_databases.sh databases "${PDB_SERVER}" "${PDB_PORT}"
 fi
 
 # make sure the API server is checked out

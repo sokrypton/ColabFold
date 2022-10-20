@@ -11,13 +11,24 @@
         "databases"    : "~/databases",
         "results"      : "~/jobs",
         "temporary"    : "~/tmp",
+        "colabfold"    : {
+            // disable parallel stage execution if you plan to use exactly #workers of CPU-cores
+            // this will ~2-3x speedup the execution, while requiring more cores
+            "parallelstages": true,
+            "uniref"        : "~/databases/uniref30_2202_db",
+            "pdb"           : "~/databases/pdb70_220313",
+            "environmental" : "~/databases/colabfold_envdb_202108",
+            "pdb70"         : "~/databases/pdb70",
+            "pdbdivided"    : "~/databases/pdb/divided",
+            "pdbobsolete"   : "~/databases/pdb/obsolete"
+        },
         "mmseqs"       : "~/mmseqs/bin/mmseqs"
     },
     "local" : {
         // this will allow up to 16 jobs at the same time
         "workers"  : 16
     },
-    // ignore the rest
+    // ignore the rest, redis is not used here
     "redis" : {
         "network"  : "tcp",
         "address"  : "mmseqs-web-redis:6379",
