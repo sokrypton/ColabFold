@@ -17,7 +17,7 @@
             "parallelstages": true,
             "uniref"        : "~/databases/uniref30_2202_db",
             "pdb"           : "~/databases/pdb70_220313",
-            "environmental" : "~/databases/colabfold_envdb_202108",
+            "environmental" : "~/databases/colabfold_envdb_202108_db",
             "pdb70"         : "~/databases/pdb70",
             "pdbdivided"    : "~/databases/pdb/divided",
             "pdbobsolete"   : "~/databases/pdb/obsolete"
