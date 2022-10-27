@@ -46,6 +46,15 @@
   - The databases are available at [colabfold.mmseqs.com](https://colabfold.mmseqs.com)
 - I want to render my own images of the predicted structures, how do I color by pLDDT?
   - In pymol for AlphaFold structures: `spectrum b, red_yellow_green_cyan_blue, minimum=50, maximum=90`
+  - If you want to use AlphaFold Colours (credit: Konstantin Korotkov)
+    ```python
+    set_color n0, [0.051, 0.341, 0.827]
+    set_color n1, [0.416, 0.796, 0.945]
+    set_color n2, [0.996, 0.851, 0.212]
+    set_color n3, [0.992, 0.490, 0.302]
+    color n0, b < 100; color n1, b < 90
+    color n2, b < 70;  color n3, b < 50
+    ```
   - In pymol for RoseTTAFold structures: `spectrum b, red_yellow_green_cyan_blue, minimum=0.5, maximum=0.9`
 - What is the difference between the AlphaFold2_advanced and AlphaFold2_mmseqs2 (_batch) notebook for complex prediction? 
   - We currently have two different ways to predict protein complexes: (1) using the AlphaFold2 model with residue index jump and (2) using the AlphaFold2-multimer model. AlphaFold2_advanced supports (1) and AlphaFold2_mmseqs2 (_batch) (2).
