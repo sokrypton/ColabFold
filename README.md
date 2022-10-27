@@ -50,7 +50,9 @@
 - What is the difference between the AlphaFold2_advanced and AlphaFold2_mmseqs2 (_batch) notebook for complex prediction? 
   - We currently have two different ways to predict protein complexes: (1) using the AlphaFold2 model with residue index jump and (2) using the AlphaFold2-multimer model. AlphaFold2_advanced supports (1) and AlphaFold2_mmseqs2 (_batch) (2).
 - What is the difference between localcolabfold and the pip installable colabfold_batch?
-  -  localcolabfold is a command line interface for our advanced notebooks. pip is a command line version of the alphafold_mmseqs2 and alphafold_batch notebook.
+  -  [LocalColabFold](https://github.com/YoshitakaMo/localcolabfold) is an installer script designed to make ColabFold functionality available on local users' machines. It supports wide range of operating systems, such as Windows 10 or later (using Windows Subsystem for Linux 2), macOS, and Linux.
+- Is there a way to amber-relax structures without having to rerun alphafold/colabfold from scratch?
+  - Yes, see this [notebook](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/relax_amber.ipynb).
 
 
 ### Running locally
