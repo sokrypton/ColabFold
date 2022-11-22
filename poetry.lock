@@ -1918,8 +1918,8 @@ alphafold-minus-jax = ["alphafold-colabfold"]
 
 [metadata]
 lock-version = "1.1"
-python-versions = ">=3.7.1,<3.10"
-content-hash = "20b4ea8c5ad1533b6796d6abe45ea7d6b0a8af35b988f3c8fc28cac874ebf40f"
+python-versions = ">=3.7.1,<3.9"
+content-hash = "0d545f7e00ca93ece62e5bfbe49027124c7cc00cf81a4249f7ae56975ee8bc8b"
 
 [metadata.files]
 absl-py = [

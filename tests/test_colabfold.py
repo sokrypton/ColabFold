@@ -63,7 +63,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
         )
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
-    assert messages[0:-1] == [
+    expected = [
         "Found 5 citations for tools or databases",
         "Query 1/2: 5AWL_1 (length 10)",
         "Running model_1",
@@ -73,7 +73,10 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
         "Running model_1",
         "model_1 took 0.0s (3 recycles) with pLDDT 90.8 and ptmscore 0.0394",
         "reranking models by plddt",
+        "Done"
     ]
+    # We can get extra messages through warnings
+    assert set(expected) < set(messages)
 
     # Very simple test, it would be better to check coordinates
     assert (
