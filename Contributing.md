@@ -56,3 +56,43 @@ pytest tests
  * `git tag v2.1.1234 -m v2.1.1234`, make sure it's the correct number (if you don't have permission, ask one of the team to push the tag)
  * `git push --tags`
  * In colabfold: update the number of `alphafold-colabfold = { version = "` in pyproject.toml, commit and push
+
+# Colab dev setup
+
+While it's generally easier to edit locally, you can also test and develop directly in google colab.
+
+We clone to _directory to avoid python from importing from the directory.
+
+```
+%%bash
+
+pip install -U pip
+git clone https://github.com/sokrypton/Colabfold _colabfold
+pip install _colabfold
+# Unholy Hack: Use the files from our cloned git repository instead of installed copy
+site_packages=$(python -c 'import site; print(site.getsitepackages()[0])')
+rm -r ${site_packages}/colabfold
+ln -s $(pwd)/_colabfold/colabfold ${site_packages}/colabfold
+```
+
+If you also need to patch alphafold:
+
+```
+%%bash
+
+pip uninstall -y alphafold
+git clone https://github.com/sokrypton/alphafold _alphafold
+pip install -e ./_alphafold
+```
+
+After that, restart the runtime.
+
+When you changed a file in the `colabfold` package, you need to reload the modules you were using with `importlib.reload()`, e.g.
+
+```python
+import colabfold.batch
+import importlib
+
+importlib.reload(colabfold.batch)
+```
+
