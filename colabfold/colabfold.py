@@ -238,7 +238,26 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
   # extract a3m files
   if any(not os.path.isfile(a3m_file) for a3m_file in a3m_files):
     with tarfile.open(tar_gz_file) as tar_gz:
-      tar_gz.extractall(path)
+      def is_within_directory(directory, target):
+          
+          abs_directory = os.path.abspath(directory)
+          abs_target = os.path.abspath(target)
+      
+          prefix = os.path.commonprefix([abs_directory, abs_target])
+          
+          return prefix == abs_directory
+      
+      def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+      
+          for member in tar.getmembers():
+              member_path = os.path.join(path, member.name)
+              if not is_within_directory(path, member_path):
+                  raise Exception("Attempted Path Traversal in Tar File")
+      
+          tar.extractall(path, members, numeric_owner) 
+          
+      
+      safe_extract(tar_gz, path)
 
   # templates
   if use_templates:
@@ -279,7 +298,26 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
             continue
           break
         with tarfile.open(fileobj=response.raw, mode="r|gz") as tar:
-          tar.extractall(path=TMPL_PATH)
+          def is_within_directory(directory, target):
+              
+              abs_directory = os.path.abspath(directory)
+              abs_target = os.path.abspath(target)
+          
+              prefix = os.path.commonprefix([abs_directory, abs_target])
+              
+              return prefix == abs_directory
+          
+          def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+          
+              for member in tar.getmembers():
+                  member_path = os.path.join(path, member.name)
+                  if not is_within_directory(path, member_path):
+                      raise Exception("Attempted Path Traversal in Tar File")
+          
+              tar.extractall(path, members, numeric_owner) 
+              
+          
+          safe_extract(tar, path=TMPL_PATH)
         os.symlink("pdb70_a3m.ffindex", f"{TMPL_PATH}/pdb70_cs219.ffindex")
         with open(f"{TMPL_PATH}/pdb70_cs219.ffdata", "w") as f:
           f.write("")
