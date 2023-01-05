@@ -1,8 +1,9 @@
 # ColabFold
 
 ```diff
-+ 2022/12/26: The ColabFold MSA server is down due to hardware issues.
-+             We are setting up a backup server.
++ 2022/01/03: The MSA server's faulty hardware from 12/26 was replaced.
++             There were intermittent failures on 12/26 and 1/3. Currently, 
++             there are no known issues. Let us know if you experience any.
 + 2022/10/10: Bugfix: random_seed was not being used for alphafold-multimer.
 +             Same structure was returned regardless of defined seed. This
 +             has been fixed!
