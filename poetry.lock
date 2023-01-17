@@ -1312,7 +1312,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "py3dmol"
-version = "1.8.1"
+version = "2.0.0.post2"
 description = "An IPython interface for embedding 3Dmol.js views"
 category = "main"
 optional = false
@@ -2739,8 +2739,8 @@ py = [
     {file = "py-1.11.0.tar.gz", hash = "sha256:51c75c4126074b472f746a24399ad32f6053d1b34b68d2fa41e558e6f4a98719"},
 ]
 py3dmol = [
-    {file = "py3Dmol-1.8.1-py2.py3-none-any.whl", hash = "sha256:c4741f1bc2e219024b165e36c3e5c172c0550a3a36b81825d2a9d0eff06cd714"},
-    {file = "py3Dmol-1.8.1.tar.gz", hash = "sha256:10bb3022c5db3e5e6d66f51d7d4118afaf939726d655f08761709ddf032cb31d"},
+    {file = "py3Dmol-2.0.0.post2-py2.py3-none-any.whl", hash = "sha256:508f4569c3fbe9781cd28527ab8d0fa5e80c49ebdf00ad2ba43de6dab25fb381"},
+    {file = "py3Dmol-2.0.0.post2.tar.gz", hash = "sha256:a280285f23bf4216c4b957f91680bb69f112ca7b0173c53ee291409481ddb103"},
 ]
 pyasn1 = [
     {file = "pyasn1-0.4.8-py2.py3-none-any.whl", hash = "sha256:39c7e2ec30515947ff4e87fb6f456dfc6e84857d34be479c9d4a4ba4bf46aa5d"},
