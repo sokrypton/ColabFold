@@ -300,6 +300,12 @@ def batch_input(
     )  # template_mask (4, 4) second value
     return input_fix
 
+to_np = lambda a: np.asarray(a)
+def class_to_np(c):
+  class dict2obj():
+    def __init__(self, d):
+      for k,v in d.items(): setattr(self, k, to_np(v))
+  return dict2obj(c.__dict__)
 
 def predict_structure(
     prefix: str,
@@ -412,6 +418,7 @@ def predict_structure(
             b_factors=b_factors,
             remove_leading_feature_dimension=not is_complex,
         )
+        unrelaxed_protein = class_to_np(unrelaxed_protein)
 
         if prediction_callback is not None:
             prediction_callback(
