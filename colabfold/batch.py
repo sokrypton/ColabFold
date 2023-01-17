@@ -1222,6 +1222,8 @@ def run(
         model_extension = "_multimer"
     elif model_type == "AlphaFold2-multimer-v2":
         model_extension = "_multimer_v2"
+    elif model_type == "AlphaFold2-multimer-v3":
+        model_extension = "_multimer_v3"
     elif model_type == "AlphaFold2-ptm":
         model_extension = "_ptm"
     else:
@@ -1521,7 +1523,7 @@ def run(
 
 def set_model_type(is_complex: bool, model_type: str) -> str:
     if model_type == "auto" and is_complex:
-        model_type = "AlphaFold2-multimer-v2"
+        model_type = "AlphaFold2-multimer-v3"
     elif model_type == "auto" and not is_complex:
         model_type = "AlphaFold2-ptm"
     return model_type
@@ -1606,7 +1608,7 @@ def main():
     parser.add_argument(
         "--model-type",
         help="predict strucutre/complex using the following model."
-        'Auto will pick "AlphaFold2" (ptm) for structure predictions and "AlphaFold2-multimer-v2" for complexes.',
+        'Auto will pick "AlphaFold2" (ptm) for structure predictions and "AlphaFold2-multimer-v3" for complexes.',
         type=str,
         default="auto",
         choices=[
@@ -1614,6 +1616,7 @@ def main():
             "AlphaFold2-ptm",
             "AlphaFold2-multimer-v1",
             "AlphaFold2-multimer-v2",
+            "AlphaFold2-multimer-v3",
         ],
     )
 
