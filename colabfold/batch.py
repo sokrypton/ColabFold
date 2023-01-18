@@ -1214,6 +1214,7 @@ def run(
     stop_at_score_below: float = 0,
     dpi: int = 200,
     max_msa: str = None,
+    fuse: bool = True,
 ):
     from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
@@ -1298,6 +1299,7 @@ def run(
         return_representations=save_representations,
         training=training,
         max_msa=max_msa,
+        fuse=fuse,
     )
     if custom_template_path is not None:
         mk_hhsearch_db(custom_template_path)

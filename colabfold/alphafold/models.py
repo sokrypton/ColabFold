@@ -23,6 +23,7 @@ def load_models_and_params(
     return_representations: bool = False,
     training: bool = False,
     max_msa: str = None,
+    fuse: bool = True
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -52,11 +53,16 @@ def load_models_and_params(
                 break
             model_name = f"model_{model_number}"
             params = data.get_model_haiku_params(
-                model_name=model_name + model_suffix, data_dir=str(data_dir)
+                model_name=model_name + model_suffix, data_dir=str(data_dir), fuse=fuse,
             )
             model_config = config.model_config(model_name + model_suffix)
             model_config.model.stop_at_score = float(stop_at_score)
             model_config.model.stop_at_score_ranker = rank_by
+            model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights = fuse
+            model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights = fuse
+            if model_suffix.startswith("_multimer") or model_number in [1,2]:
+                model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.fuse_projection_weights = fuse
+                model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.fuse_projection_weights = fuse
             if max_msa != None:
                 max_msa_clusters, max_extra_msa = [int(x) for x in max_msa.split(":")]
                 model_config.data.eval.max_msa_clusters = max_msa_clusters
@@ -92,6 +98,11 @@ def load_models_and_params(
                 )
                 model_config.model.stop_at_score = float(stop_at_score)
                 model_config.model.stop_at_score_ranker = rank_by
+                model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights = fuse
+                model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights = fuse
+                if model_suffix.startswith("_multimer") or model_number in [1,2]:
+                    model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.fuse_projection_weights = fuse
+                    model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.fuse_projection_weights = fuse
                 if max_msa != None:
                     max_msa_clusters, max_extra_msa = [
                         int(x) for x in max_msa.split(":")
@@ -112,13 +123,13 @@ def load_models_and_params(
                     model_config,
                     data.get_model_haiku_params(
                         model_name="model_" + str(model_number) + model_suffix,
-                        data_dir=str(data_dir),
+                        data_dir=str(data_dir), fuse=fuse,
                     ),
                     is_training=training,
                 )
             model_name = f"model_{model_number}"
             params = data.get_model_haiku_params(
-                model_name=model_name + model_suffix, data_dir=str(data_dir)
+                model_name=model_name + model_suffix, data_dir=str(data_dir), fuse=fuse,
             )
             # keep only parameters of compiled model
             params_subset = {}
