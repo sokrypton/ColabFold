@@ -11,7 +11,7 @@ six = "*"
 
 [[package]]
 name = "alphafold-colabfold"
-version = "2.3.0"
+version = "2.3.1"
 description = "An implementation of the inference pipeline of AlphaFold v2.0.This is a completely new model that was entered as AlphaFold2 in CASP14 and published in Nature. This package contains patches for colabfold"
 category = "main"
 optional = true
@@ -1928,10 +1928,6 @@ content-hash = "0d545f7e00ca93ece62e5bfbe49027124c7cc00cf81a4249f7ae56975ee8bc8b
 absl-py = [
     {file = "absl-py-0.13.0.tar.gz", hash = "sha256:6953272383486044699fd0e9f00aad167a27e08ce19aae66c6c4b10e7e767793"},
     {file = "absl_py-0.13.0-py3-none-any.whl", hash = "sha256:62bd4e248ddb19d81aec8f9446b407ff37c8175c2ba88266a7afa9b4ce4a333b"},
-]
-alphafold-colabfold = [
-    {file = "alphafold-colabfold-2.3.0.tar.gz", hash = "sha256:ca5662c792558a2ae32fd617d3b2824b256fc2e1171093291d5f80ace0136f94"},
-    {file = "alphafold_colabfold-2.3.0-py3-none-any.whl", hash = "sha256:989e792aa8685f6bd6c7298f447cda975f07def3bf7930a1d8abf8e80d272f0c"},
 ]
 anyio = [
     {file = "anyio-3.6.2-py3-none-any.whl", hash = "sha256:fbbe32bd270d2a2ef3ed1c5d45041250284e31fc0a4df4a5a6071842051a51e3"},
