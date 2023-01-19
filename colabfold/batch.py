@@ -344,8 +344,8 @@ def predict_structure(
         model_runner.params = params
 
         for seed in range(random_seed, random_seed+num_seeds):
-            logger.info(f"Running {model_name} with seed {seed}")
             model_names.append(f"{model_name}_seed{seed}")
+            logger.info(f"Running {model_names[-1]}")
 
             processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)
             if not is_complex:
@@ -379,17 +379,17 @@ def predict_structure(
                 if model_type.startswith("AlphaFold2-multimer"):
                     mean_iptm = prediction_result["iptm"]
                     logger.info(
-                        f"{model_name} took {prediction_time:.1f}s ({recycles} recycles) "
+                        f"{model_names[-1]} took {prediction_time:.1f}s ({recycles} recycles) "
                         f"with pLDDT {mean_plddt:.3g}, ptmscore {mean_ptm:.3g} and iptm {mean_iptm:.3g}"
                     )
                 else:
                     logger.info(
-                        f"{model_name} took {prediction_time:.1f}s ({recycles} recycles) "
+                        f"{model_names[-1]} took {prediction_time:.1f}s ({recycles} recycles) "
                         f"with pLDDT {mean_plddt:.3g} and ptmscore {mean_ptm:.3g}"
                     )
             else:
                 logger.info(
-                    f"{model_name} took {prediction_time:.1f}s ({recycles} recycles) "
+                    f"{model_names[-1]} took {prediction_time:.1f}s ({recycles} recycles) "
                     f"with pLDDT {mean_plddt:.3g}"
                 )
             final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
