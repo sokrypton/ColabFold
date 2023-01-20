@@ -737,7 +737,8 @@ def add_text(text, ax):
   return plt.text(0.5, 1.01, text, horizontalalignment='center',
                   verticalalignment='bottom', transform=ax.transAxes)
 
-def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view=True, line_w=2.0):
+def plot_protein(protein=None, pos=None, plddt=None, Ls=None,
+                 dpi=100, best_view=True, line_w=2.0):
   
   if protein is not None:
     pos = np.asarray(protein.atom_positions[:,1,:])
@@ -760,16 +761,16 @@ def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view
 
   if Ls is None or len(Ls) == 1:
     # color N->C
-    plot_protein_backbone(pos=pos, coloring='N-C', line_w=line_w, axes=ax1)
+    plot_protein_backbone(pos=pos, coloring='N-C', best_view=False, line_w=line_w, axes=ax1)
     add_text("colored by N→C", ax1)
   else:
     # color by chain
-    plot_protein_backbone(pos=pos, coloring='chain', Ls=Ls, line_w=line_w, axes=ax1)
+    plot_protein_backbone(pos=pos, coloring='chain', best_view=False, Ls=Ls, line_w=line_w, axes=ax1)
     add_text("colored by chain", ax1)
     
   if plddt is not None:
     # color by pLDDT
-    plot_protein_backbone(pos=pos, coloring='plddt', plddt=plddt, line_w=line_w, axes=ax2)
+    plot_protein_backbone(pos=pos, coloring='plddt', best_view=False, plddt=plddt, line_w=line_w, axes=ax2)
     add_text("colored by pLDDT", ax2)
 
   return fig
@@ -785,7 +786,8 @@ def protein_best_view(pos, plddt=None):
   return pos
 
 def plot_protein_backbone(protein=None, pos=None, plddt=None,
-                          axes=None, coloring='plddt', Ls=None, best_view=True, line_w=2.0):
+                          axes=None, coloring='plddt', Ls=None,
+                          best_view=True, line_w=2.0):
   import numpy as np
   if protein is not None:
     if pos is None:
