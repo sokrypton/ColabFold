@@ -59,6 +59,11 @@ def load_models_and_params(
             model_config = config.model_config(
                 "model_" + str(model_number) + model_suffix
             )
+            if model_suffix.startswith("_multimer"):
+                if "v3" in model_suffix:
+                    model_config.model.global_config.bfloat16 = True
+                else:
+                    model_config.model.global_config.bfloat16 = False
             
             model_config.model.stop_at_score = float(stop_at_score)
             model_config.model.stop_at_score_ranker = rank_by
