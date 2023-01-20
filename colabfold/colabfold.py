@@ -438,7 +438,8 @@ def plot_plddt_legend(dpi=100):
   plt.axis(False)
   return plt
 
-def plot_ticks(Ls):
+def plot_ticks(Ls, axes=None):
+  if axes is None: axes = plt.gca()
   Ln = sum(Ls)
   L_prev = 0
   for L_i in Ls[:-1]:
@@ -448,7 +449,8 @@ def plot_ticks(Ls):
     plt.plot([L,L],[0,Ln],color="black")
   ticks = np.cumsum([0]+Ls)
   ticks = (ticks[1:] + ticks[:-1])/2
-  plt.yticks(ticks,alphabet_list[:len(ticks)])
+  axes.set_yticks(ticks)
+  axes.set_yticklabels(alphabet_list[:len(ticks)])
 
 def plot_confidence(plddt, pae=None, Ls=None, dpi=100):
   use_ptm = False if pae is None else True
@@ -614,13 +616,16 @@ def plot_paes(paes, Ls=None, dpi=100, fig=True):
   num_models = len(paes)
   if fig: plt.figure(figsize=(3*num_models,2), dpi=dpi)
   for n,pae in enumerate(paes):
-    plt.subplot(1,num_models,n+1)
-    plt.title(f"rank_{n+1}")
-    Ln = pae.shape[0]
-    plt.imshow(pae,cmap="bwr",vmin=0,vmax=30,extent=(0, Ln, Ln, 0))
-    if Ls is not None and len(Ls) > 1: plot_ticks(Ls)
-    plt.colorbar()
+    axes = plt.subplot(1,num_models,n+1)
+    plot_pae(pae, axes, caption = f"rank_{n+1}", Ls=Ls)
   return plt
+
+def plot_pae(pae, axes, caption='PAE', caption_pad=None, Ls=None, colorkey_size=1.0):
+  axes.set_title(caption, pad=caption_pad)
+  Ln = pae.shape[0]
+  image = axes.imshow(pae,cmap="bwr",vmin=0,vmax=30,extent=(0, Ln, Ln, 0))
+  if Ls is not None and len(Ls) > 1: plot_ticks(Ls, axes=axes)
+  plt.colorbar(mappable=image, ax=axes, shrink=colorkey_size)
 
 def plot_adjs(adjs, Ls=None, dpi=100, fig=True):
   num_models = len(adjs)
@@ -738,15 +743,8 @@ def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view
     pos = np.asarray(protein.atom_positions[:,1,:])
     plddt = np.asarray(protein.b_factors[:,0])
 
-  # get best view
   if best_view:
-    if plddt is not None:
-      weights = plddt/100
-      pos = pos - (pos * weights[:,None]).sum(0,keepdims=True) / weights.sum()
-      pos = pos @ kabsch(pos, pos, weights, return_v=True)
-    else:
-      pos = pos - pos.mean(0,keepdims=True)
-      pos = pos @ kabsch(pos, pos, return_v=True)
+    pos = protein_best_view(pos, plddt=plddt)
 
   if plddt is not None:
     fig, (ax1, ax2) = plt.subplots(1,2)
@@ -760,28 +758,60 @@ def plot_protein(protein=None, pos=None, plddt=None, Ls=None, dpi=100, best_view
   fig.set_dpi(dpi)
   fig.subplots_adjust(top = 0.9, bottom = 0.1, right = 1, left = 0, hspace = 0, wspace = 0)
 
-  xy_min = pos[...,:2].min() - line_w
-  xy_max = pos[...,:2].max() + line_w
-  for a in ax:
-    a.set_xlim(xy_min, xy_max)
-    a.set_ylim(xy_min, xy_max)
-    a.axis(False)
-
   if Ls is None or len(Ls) == 1:
     # color N->C
-    c = np.arange(len(pos))[::-1]
-    plot_pseudo_3D(pos,  line_w=line_w, ax=ax1)
+    plot_protein_backbone(pos=pos, coloring='N-C', line_w=line_w, axes=ax1)
     add_text("colored by N→C", ax1)
   else:
     # color by chain
-    c = np.concatenate([[n]*L for n,L in enumerate(Ls)])
-    if len(Ls) > 40:   plot_pseudo_3D(pos, c=c, line_w=line_w, ax=ax1)
-    else:              plot_pseudo_3D(pos, c=c, cmap=pymol_cmap, cmin=0, cmax=39, line_w=line_w, ax=ax1)
+    plot_protein_backbone(pos=pos, coloring='chain', Ls=Ls, line_w=line_w, axes=ax1)
     add_text("colored by chain", ax1)
     
   if plddt is not None:
     # color by pLDDT
-    plot_pseudo_3D(pos, c=plddt, cmin=50, cmax=90, line_w=line_w, ax=ax2)
+    plot_protein_backbone(pos=pos, coloring='plddt', plddt=plddt, line_w=line_w, axes=ax2)
     add_text("colored by pLDDT", ax2)
 
   return fig
+
+def protein_best_view(pos, plddt=None):
+  if plddt is not None:
+    weights = plddt/100
+    pos = pos - (pos * weights[:,None]).sum(0,keepdims=True) / weights.sum()
+    pos = pos @ kabsch(pos, pos, weights, return_v=True)
+  else:
+    pos = pos - pos.mean(0,keepdims=True)
+    pos = pos @ kabsch(pos, pos, return_v=True)
+  return pos
+
+def plot_protein_backbone(protein=None, pos=None, plddt=None,
+                          axes=None, coloring='plddt', Ls=None, best_view=True, line_w=2.0):
+  import numpy as np
+  if protein is not None:
+    if pos is None:
+      pos = np.asarray(protein.atom_positions[:,1,:])
+    if plddt is None:
+      plddt = np.asarray(protein.b_factors[:,0])
+
+  if best_view:
+    pos = protein_best_view(pos, plddt=plddt)
+    
+  xy_min = pos[...,:2].min() - line_w
+  xy_max = pos[...,:2].max() + line_w
+  axes.set_xlim(xy_min, xy_max)
+  axes.set_ylim(xy_min, xy_max)
+  axes.axis(False)
+
+  if coloring == 'N-C':
+    # color N->C
+    plot_pseudo_3D(pos,  line_w=line_w, ax=axes)
+  elif coloring == 'plddt':
+    # color by pLDDT
+    plot_pseudo_3D(pos, c=plddt, cmin=50, cmax=90, line_w=line_w, ax=axes)
+  elif coloring == 'chain':
+    # color by chain
+    c = np.concatenate([[n]*L for n,L in enumerate(Ls)])
+    nchain = len(Ls)
+    if nchain > 40:   plot_pseudo_3D(pos, c=c, line_w=line_w, ax=axes)
+    else:             plot_pseudo_3D(pos, c=c, cmap=pymol_cmap, cmin=0, cmax=39,
+                                     line_w=line_w, ax=axes)
