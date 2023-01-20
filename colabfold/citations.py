@@ -126,7 +126,7 @@ def write_bibtex(
         to_cite += ["Eastman2017"]
 
     bibtex_file = result_dir.joinpath(bibtex_file)
-    with bibtex_file.open("w") as writer:
+    with bibtex_file.open("w", encoding="utf-8") as writer:
         for i in to_cite:
             writer.write(citations[i])
             writer.write("\n")
