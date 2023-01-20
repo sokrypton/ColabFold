@@ -22,7 +22,7 @@ def load_models_and_params(
     return_representations: bool = False,
     training: bool = False,
     max_msa: str = None,
-    fuse: bool = True
+    fuse: bool = True,
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -58,29 +58,29 @@ def load_models_and_params(
         if model_number in models_need_compilation:
             model_config = config.model_config(
                 "model_" + str(model_number) + model_suffix
-            )
-            if model_suffix.startswith("_multimer"):
-                if "v3" in model_suffix:
-                    model_config.model.global_config.bfloat16 = True
-                else:
-                    model_config.model.global_config.bfloat16 = False
-            
+            )            
             model_config.model.stop_at_score = float(stop_at_score)
             model_config.model.stop_at_score_ranker = rank_by
+            
+            # set fuse options
             model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights = fuse
             model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights = fuse
-            
             if model_suffix.startswith("_multimer") or model_number in [1,2]:
                 model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.fuse_projection_weights = fuse
                 model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.fuse_projection_weights = fuse
             
-            if max_msa != None:
-                max_msa_clusters, max_extra_msa = [
-                    int(x) for x in max_msa.split(":")
-                ]
-                model_config.data.eval.max_msa_clusters = max_msa_clusters
-                model_config.data.common.max_extra_msa = max_extra_msa
+            # set number of sequences options
+            if max_msa is not None:
+                max_msa_clusters, max_extra_msa = [int(x) for x in max_msa.split(":")]
+
+                if model_suffix.startswith("_multimer"):
+                    model_config.model.embeddings_and_evoformer.num_msa = max_msa_clusters
+                    model_config.model.embeddings_and_evoformer.num_extra_msa = max_extra_msa
+                else:
+                    model_config.data.eval.max_msa_clusters = max_msa_clusters
+                    model_config.data.common.max_extra_msa = max_extra_msa
             
+            # set number of recycles and ensembles
             if model_suffix == "_ptm":
                 model_config.data.common.num_recycle = num_recycle
                 model_config.model.num_recycle = num_recycle
@@ -92,6 +92,8 @@ def load_models_and_params(
                     model_config.model.num_ensemble_train = num_ensemble
                 else:
                     model_config.model.num_ensemble_eval = num_ensemble
+            
+            # get model runner
             model_runner = model.RunModel(
                 model_config,
                 data.get_model_haiku_params(

@@ -350,7 +350,9 @@ def predict_structure(
             logger.info(f"Running {model_names[-1]}")
 
             processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)
-            if not is_complex:
+            if model_type.startswith("AlphaFold2-multimer"):
+                input_features = processed_feature_dict
+            else:
                 input_features = batch_input(
                     processed_feature_dict,
                     model_runner,
@@ -358,8 +360,6 @@ def predict_structure(
                     crop_len,
                     use_templates,
                 )
-            else:
-                input_features = processed_feature_dict
 
             start = time.time()
 
@@ -1730,8 +1730,12 @@ def main():
         type=str,
         default=None,
         choices=[
-            "512:5120",
-            "512:1024",
+            "512:5120", # default used in alphafold (models 1,3,4)
+            "508:2048", # default used in alphafold-multimer (v3, models 1,2,3)
+            "508:1152", # default used in alphafold-multimer (v3, models 4,5)
+            "252:1152", # default used in alphafold-multimer (v1, v2)
+
+            "512:1024", # default used in alphafold (models 2,5)
             "256:512",
             "128:256",
             "64:128",
@@ -1784,11 +1788,7 @@ def main():
 
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
     model_type = set_model_type(is_complex, args.model_type)
-    if model_type.startswith("AlphaFold2-multimer"):
-        logger.info(
-            f"--max-msa can not be used in combination with AlphaFold2-multimer (--max-msa ignored)"
-        )
-        args.max_msa = None
+        
     download_alphafold_params(model_type, data_dir)
     uses_api = any((query[2] is None for query in queries))
     if uses_api and args.host_url == DEFAULT_API_SERVER:
