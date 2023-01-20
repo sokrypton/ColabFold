@@ -344,7 +344,7 @@ def predict_structure(
         model_runner.params = params
 
         for seed in range(random_seed, random_seed+num_seeds):
-            model_names.append(f"{model_name}_seed{seed}")
+            model_names.append(f"{model_type}_{model_name}_seed{seed}")
             logger.info(f"Running {model_names[-1]}")
 
             processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)
