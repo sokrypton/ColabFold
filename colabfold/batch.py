@@ -1298,23 +1298,6 @@ def run(
         model_type, use_msa, use_env, use_templates, use_amber, result_dir
     )
 
-    save_representations = save_single_representations or save_pair_representations
-
-    model_runner_and_params = load_models_and_params(
-        num_models,
-        use_templates,
-        num_recycles,
-        num_ensemble,
-        model_order,
-        model_extension,
-        data_dir,
-        stop_at_score=stop_at_score,
-        rank_by=rank_by,
-        return_representations=save_representations,
-        training=training,
-        max_msa=max_msa,
-        fuse=fuse,
-    )
     if custom_template_path is not None:
         mk_hhsearch_db(custom_template_path)
 
@@ -1389,6 +1372,7 @@ def run(
                 unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality
             )
             result_dir.joinpath(jobname + ".a3m").write_text(msa)
+                
         except Exception as e:
             logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
             continue
@@ -1417,6 +1401,53 @@ def run(
             # only use padding if we have more than one sequence
             if sum(query_sequence_len_array) > crop_len:
                 crop_len = math.ceil(sum(query_sequence_len_array) * recompile_padding)
+
+            # prep model and params
+            if job_number == 0:            
+                
+                # if one job input adjust max settings
+                if len(queries) == 1:
+                    
+                    # get number of sequences
+                    if "msa_mask" in input_features:
+                        num_seqs = sum(input_features["msa_mask"].max(-1) == 1)
+                    else:
+                        num_seqs = len(input_features["msa"])
+
+                    # get max settings
+                    if max_msa is not None:
+                        max_a, max_b = [int(x) for x in max_msa.split(":")]                    
+                    else:
+                        if model_type in ["AlphaFold2-multimer-v1","AlphaFold2-multimer-v2"]:
+                            (max_a, max_b) = (252, 1152)
+                        elif model_type == "AlphaFold2-multimer-v3":
+                            (max_a, max_b) = (508, 2048)
+                        else:
+                            (max_a, max_b) = (512, 5120)
+                            if use_templates: num_seqs = num_seqs + 4
+                    
+                    # adjust max settings
+                    max_a = min(num_seqs, max_a)
+                    max_b = max(min(num_seqs - max_a, max_b), 1)
+                    max_msa = f"{max_a}:{max_b}"
+                    logger.info(f"Setting max_msa='{max_msa}'")
+
+                save_representations = save_single_representations or save_pair_representations
+                model_runner_and_params = load_models_and_params(
+                    num_models,
+                    use_templates,
+                    num_recycles,
+                    num_ensemble,
+                    model_order,
+                    model_extension,
+                    data_dir,
+                    stop_at_score=stop_at_score,
+                    rank_by=rank_by,
+                    return_representations=save_representations,
+                    training=training,
+                    max_msa=max_msa,
+                    fuse=fuse,
+                )
 
             outs, model_rank = predict_structure(
                 jobname,
