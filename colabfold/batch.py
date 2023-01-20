@@ -13,6 +13,7 @@ import sys
 import time
 import zipfile
 import shutil
+import pickle
 
 from argparse import ArgumentParser
 from pathlib import Path
@@ -325,6 +326,7 @@ def predict_structure(
     stop_at_score_below: float = 0,
     prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
     use_gpu_relax: bool = False,
+    save_all: bool = False,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
 
@@ -367,6 +369,15 @@ def predict_structure(
 
             prediction_time = time.time() - start
             prediction_times.append(prediction_time)
+
+            if save_all:
+                pickle_path = result_dir.joinpath(f"{prefix}_unrelaxed_{model_names[-1]}.pickle")
+                def fn(x):
+                    y = {}
+                    for k,v in x.items():
+                        y[k] = fn(v) if isinstance(v,dict) else np.asarray(v)
+                    return y
+                pickle.dump(fn(prediction_result), open(pickle_path,"wb"))
 
             mean_plddt = np.mean(prediction_result["plddt"][:seq_len])
             mean_ptm = prediction_result["ptm"]
@@ -425,7 +436,7 @@ def predict_structure(
                     sequences_lengths,
                     prediction_result,
                     input_features,
-                    (model_name, False),
+                    (model_names[-1], False),
                 )
 
             protein_lines = protein.to_pdb(unrelaxed_protein)
@@ -497,7 +508,7 @@ def predict_structure(
                         sequences_lengths,
                         prediction_result,
                         input_features,
-                        (model_name, True),
+                        (model_names[-1], True),
                     )
 
                 relaxed_pdb_path = result_dir.joinpath(f"{prefix}_relaxed_{model_names[-1]}.pdb")
@@ -1218,6 +1229,7 @@ def run(
     max_msa: str = None,
     fuse: bool = True,
     input_features_callback: Callable[[Any], Any] = None,
+    save_all: bool = False,
 ):
     from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
@@ -1424,6 +1436,7 @@ def run(
                 use_gpu_relax=use_gpu_relax,
                 random_seed=random_seed,
                 num_seeds=num_seeds,
+                save_all=save_all,
             )
         except RuntimeError as e:
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
@@ -1740,6 +1753,12 @@ def main():
         help="run amber on GPU instead of CPU",
     )
     parser.add_argument(
+        "--save-all",
+        default=False,
+        action="store_true",
+        help="save ALL raw outputs from model to a pickle file",
+    )
+    parser.add_argument(
         "--overwrite-existing-results", default=False, action="store_true"
     )
 
@@ -1808,6 +1827,7 @@ def main():
         max_msa=args.max_msa,
         use_gpu_relax=args.use_gpu_relax,
         stop_at_score_below=args.stop_at_score_below,
+        save_all=args.save_all,
     )
 
 
