@@ -23,6 +23,7 @@ def load_models_and_params(
     training: bool = False,
     max_msa: str = None,
     fuse: bool = True,
+    use_cluster_profile: bool = True,
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -87,6 +88,7 @@ def load_models_and_params(
                 model_config.data.eval.num_ensemble = num_ensemble
             
             elif model_suffix.startswith("_multimer"):
+                model_config.model.embeddings_and_evoformer.use_cluster_profile = use_cluster_profile
                 model_config.model.num_recycle = num_recycle
                 if training:
                     model_config.model.num_ensemble_train = num_ensemble
