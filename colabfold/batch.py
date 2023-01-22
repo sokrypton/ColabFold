@@ -1830,7 +1830,7 @@ def main():
             logger.info("WARNING: no GPU detected, will be using CPU")
             DEVICE = "cpu"
         else:
-            import tf
+            import tensorflow as tf
             logger.info('Running on GPU')
             DEVICE = "gpu"
             # disable GPU on tensorflow
