@@ -336,9 +336,8 @@ def predict_structure(
     relaxed_pdb_lines = []
     prediction_times = []
     relax_times = []
-    representations = []
     seq_len = sum(sequences_lengths)
-
+    representations = []
     model_names = []
     for (model_name, model_runner, params) in model_runner_and_params:
         # swap params to avoid recompiling
@@ -377,7 +376,9 @@ def predict_structure(
                     for k,v in x.items():
                         y[k] = fn(v) if isinstance(v,dict) else np.asarray(v)
                     return y
-                pickle.dump(fn(prediction_result), open(pickle_path,"wb"))
+                x = fn(prediction_result)
+                x["representations"] = x.pop("prev")
+                pickle.dump(x, open(pickle_path,"wb"))
 
             mean_plddt = np.mean(prediction_result["plddt"][:seq_len])
             mean_ptm = prediction_result["ptm"]
@@ -442,8 +443,7 @@ def predict_structure(
             protein_lines = protein.to_pdb(unrelaxed_protein)
             unrelaxed_pdb_path = result_dir.joinpath(f"{prefix}_unrelaxed_{model_names[-1]}.pdb")
             unrelaxed_pdb_path.write_text(protein_lines)
-
-            representations.append(prediction_result.get("representations", None))
+            representations.append({k:to_np(v) for k,v in prediction_result["prev"].items()})
             unrelaxed_pdb_lines.append(protein_lines)
             plddts.append(prediction_result["plddt"][:seq_len])
             ptmscore.append(prediction_result["ptm"])
@@ -1181,7 +1181,6 @@ def unserialize_msa(
         template_features,
     )
 
-
 def msa_to_str(
     unpaired_msa: List[str],
     paired_msa: List[str],
@@ -1195,14 +1194,14 @@ def msa_to_str(
     msa += pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa)
     return msa
 
-
 def run(
     queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]]]],
     result_dir: Union[str, Path],
     num_models: int,
-    num_recycles: int,
-    model_order: List[int],
     is_complex: bool,
+    num_recycles: Any = "auto",
+    recycle_early_stop_tolerance: Any = "auto",
+    model_order: List[int] = [1,2,3,4,5],
     num_ensemble: int = 1,
     model_type: str = "auto",
     msa_mode: str = "MMseqs2 (UniRef+Environmental)",
@@ -1230,7 +1229,7 @@ def run(
     fuse: bool = True,
     input_features_callback: Callable[[Any], Any] = None,
     save_all: bool = False,
-    use_cluster_profile: bool = True,
+    use_cluster_profile: bool = None,
 ):
     from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
@@ -1242,17 +1241,15 @@ def run(
     result_dir.mkdir(exist_ok=True)
     model_type = set_model_type(is_complex, model_type)
 
-    if model_type == "AlphaFold2-multimer-v1":
-        model_extension = "_multimer"
-    elif model_type == "AlphaFold2-multimer-v2":
-        model_extension = "_multimer_v2"
-    elif model_type == "AlphaFold2-multimer-v3":
-        model_extension = "_multimer_v3"
-    elif model_type == "AlphaFold2-ptm":
-        model_extension = "_ptm"
-    else:
-        raise ValueError(f"Unknown model_type {model_type}")
+    # determine model extension
+    if   model_type == "AlphaFold2-multimer-v1":    model_suffix = "_multimer"
+    elif model_type == "AlphaFold2-multimer-v2":    model_suffix = "_multimer_v2"
+    elif model_type == "AlphaFold2-multimer-v3":    model_suffix = "_multimer_v3"
+    elif model_type == "AlphaFold2-ptm":            model_suffix = "_ptm"
+    elif model_type == "AlphaFold2":                model_suffix = ""
+    else: raise ValueError(f"Unknown model_type {model_type}")
 
+    # decide how to rank outputs
     if rank_by == "auto":
         # score complexes by ptmscore and sequences by plddt
         rank_by = "plddt" if not is_complex else "ptmscore"
@@ -1261,6 +1258,12 @@ def run(
             if is_complex and model_type.startswith("AlphaFold2-multimer")
             else rank_by
         )
+
+    # decide number of recycles to run
+    if num_recycles == "auto": num_recycles = None
+    else: num_recycles = int(num_recycles)
+    if recycle_early_stop_tolerance == "auto": recycle_early_stop_tolerance = None
+    else: recycle_early_stop_tolerance = float(recycle_early_stop_tolerance)
 
     # Record the parameters of this run
     config = {
@@ -1271,6 +1274,7 @@ def run(
         "model_type": model_type,
         "num_models": num_models,
         "num_recycles": num_recycles,
+        "recycle_early_stop_tolerance": recycle_early_stop_tolerance,
         "num_ensemble": num_ensemble,
         "model_order": model_order,
         "keep_existing_results": keep_existing_results,
@@ -1435,30 +1439,29 @@ def run(
                     max_msa = f"{max_a}:{max_b}"
                     logger.info(f"Setting max_msa='{max_msa}'")
 
-                save_representations = save_single_representations or save_pair_representations
                 model_runner_and_params = load_models_and_params(
-                    num_models,
-                    use_templates,
-                    num_recycles,
-                    num_ensemble,
-                    model_order,
-                    model_extension,
-                    data_dir,
+                    num_models=num_models,
+                    use_templates=use_templates,
+                    num_recycles=num_recycles,
+                    num_ensemble=num_ensemble,
+                    model_order=model_order,
+                    model_suffix=model_suffix,
+                    data_dir=data_dir,
                     stop_at_score=stop_at_score,
                     rank_by=rank_by,
-                    return_representations=save_representations,
                     training=training,
                     max_msa=max_msa,
                     fuse=fuse,
                     use_cluster_profile=use_cluster_profile,
+                    recycle_early_stop_tolerance=recycle_early_stop_tolerance,
                 )
 
             outs, model_rank = predict_structure(
-                jobname,
-                result_dir,
-                input_features,
-                is_complex,
-                use_templates,
+                prefix=jobname,
+                result_dir=result_dir,
+                feature_dict=input_features,
+                is_complex=is_complex,
+                use_templates=use_templates,
                 sequences_lengths=query_sequence_len_array,
                 crop_len=crop_len,
                 model_type=model_type,
@@ -1479,25 +1482,22 @@ def run(
             continue
 
         # Write representations if needed
-
         representation_files = []
-
-        if save_representations:
+        if save_single_representations or save_pair_representations:
             for i, key in enumerate(model_rank):
                 out = outs[key]
                 model_id = i + 1
                 model_name = out["model_name"]
-                representations = out["representations"]
 
                 if save_single_representations:
-                    single_representation = np.asarray(representations["single"])
+                    single_representation = out["representations"]["prev_msa_first_row"]
                     single_filename = result_dir.joinpath(
                         f"{jobname}_single_repr_{model_id}_{model_name}"
                     )
                     np.save(single_filename, single_representation)
 
                 if save_pair_representations:
-                    pair_representation = np.asarray(representations["pair"])
+                    pair_representation = out["representations"]["prev_pair"]
                     pair_filename = result_dir.joinpath(
                         f"{jobname}_pair_repr_{model_id}_{model_name}"
                     )
@@ -1621,10 +1621,16 @@ def main():
         "--num-recycle",
         help="Number of prediction recycles."
         "Increasing recycles can improve the quality but slows down the prediction.",
-        type=int,
-        default=3,
+        type=str,
+        default="auto",
     )
-
+    parser.add_argument(
+        "--recycle-early-stop-tolerance",
+        help="Specify convergence criteria."
+        "Run until the distance between recycles is within specified value.",
+        type=str,
+        default="auto",
+    )
 
     parser.add_argument(
         "--num-ensemble",
@@ -1729,12 +1735,6 @@ def main():
         choices=["unpaired", "paired", "unpaired+paired"],
     )
     parser.add_argument(
-        "--recompile-all-models",
-        help="recompile all models instead of just model 1 and 3",
-        default=False,
-        action="store_true",
-    )
-    parser.add_argument(
         "--sort-queries-by",
         help="sort queries by: none, length, random",
         type=str,
@@ -1814,12 +1814,24 @@ def main():
 
     data_dir = Path(args.data or default_data_dir)
 
-    # Prevent people from accidentally running on the cpu, which is really slow
-    from jax.lib import xla_bridge
-
-    if not args.cpu and xla_bridge.get_backend().platform == "cpu":
-        print(NO_GPU_FOUND, file=sys.stderr)
-        sys.exit(1)
+    # check what device is available
+    import jax    
+    try:
+        # check if TPU is available
+        import jax.tools.colab_tpu
+        jax.tools.colab_tpu.setup_tpu()
+        logger.info('Running on TPU')
+        DEVICE = "tpu"
+    except:
+        if jax.local_devices()[0].platform == 'cpu':
+            logger.info("WARNING: no GPU detected, will be using CPU")
+            DEVICE = "cpu"
+        else:
+            import tf
+            logger.info('Running on GPU')
+            DEVICE = "gpu"
+            # disable GPU on tensorflow
+            tf.config.set_visible_devices([], 'GPU')
 
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
     model_type = set_model_type(is_complex, args.model_type)
@@ -1843,6 +1855,7 @@ def main():
         model_type=model_type,
         num_models=args.num_models,
         num_recycles=args.num_recycle,
+        recycle_early_stop_tolerance=args.recycle_early_stop_tolerance,
         num_ensemble=args.num_ensemble,
         model_order=model_order,
         is_complex=is_complex,
@@ -1860,7 +1873,7 @@ def main():
         save_pair_representations=args.save_pair_representations,
         training=args.training,
         max_msa=args.max_msa,
-        use_gpu_relax=args.use_gpu_relax,
+        use_gpu_relax = args.use_gpu_relax if DEVICE == "gpu" else False,
         stop_at_score_below=args.stop_at_score_below,
         save_all=args.save_all,
     )

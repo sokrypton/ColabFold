@@ -1,9 +1,7 @@
 from pathlib import Path
 from functools import wraps, partialmethod
 from typing import Tuple, List, Optional
-
 import haiku
-
 from alphafold.model import model, config, data
 from alphafold.model.modules import AlphaFold
 from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
@@ -12,18 +10,19 @@ from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
 def load_models_and_params(
     num_models: int,
     use_templates: bool,
-    num_recycle: int = 3,
+    num_recycles: int = None,
+    recycle_early_stop_tolerance: float = None,
     num_ensemble: int = 1,
     model_order: Optional[List[int]] = None,
     model_suffix: str = "_ptm",
     data_dir: Path = Path("."),
     stop_at_score: float = 100,
     rank_by: str = "plddt",
-    return_representations: bool = False,
     training: bool = False,
     max_msa: str = None,
+    use_cluster_profile: bool = None,
     fuse: bool = True,
-    use_cluster_profile: bool = True,
+
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -31,21 +30,11 @@ def load_models_and_params(
     so we load model 1 and model 3.
     """
 
-    if return_representations:
-        # this forces the AlphaFold to always return representations
-        AlphaFold.__call__ = partialmethod(
-            AlphaFold.__call__, return_representations=True
-        )
-
-        AlphaFoldMultimer.__call__ = partialmethod(
-            AlphaFoldMultimer.__call__, return_representations=True
-        )
-
-
     # Use only two model and later swap params to avoid recompiling
     model_runner_and_params: [Tuple[str, model.RunModel, haiku.Params]] = []
 
-    if model_order is None: model_order = [3, 4, 5, 1, 2]
+    if model_order is None: model_order = [1, 2, 3, 4, 5]
+
     model_build_order = [3, 4, 5, 1, 2]
     if model_suffix.startswith("_multimer"):
         models_need_compilation = [3]
@@ -57,19 +46,20 @@ def load_models_and_params(
     model_runner = None
     for model_number in model_build_order:
         if model_number in models_need_compilation:
-            model_config = config.model_config(
-                "model_" + str(model_number) + model_suffix
-            )            
+
+            # get configurations
+            model_config = config.model_config("model_" + str(model_number) + model_suffix)
             model_config.model.stop_at_score = float(stop_at_score)
             model_config.model.stop_at_score_ranker = rank_by
             
             # set fuse options
-            model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights = fuse
-            model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights = fuse
-            if model_suffix.startswith("_multimer") or model_number in [1,2]:
-                model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.fuse_projection_weights = fuse
-                model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.fuse_projection_weights = fuse
-            
+            if fuse is not None:
+                model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights = fuse
+                model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights = fuse
+                if model_suffix.startswith("_multimer") or model_number in [1,2]:
+                    model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.fuse_projection_weights = fuse
+                    model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.fuse_projection_weights = fuse
+                        
             # set number of sequences options
             if max_msa is not None:
                 max_msa_clusters, max_extra_msa = [int(x) for x in max_msa.split(":")]
@@ -81,27 +71,30 @@ def load_models_and_params(
                     model_config.data.eval.max_msa_clusters = max_msa_clusters
                     model_config.data.common.max_extra_msa = max_extra_msa
             
-            # set number of recycles and ensembles
-            if model_suffix == "_ptm":
-                model_config.data.common.num_recycle = num_recycle
-                model_config.model.num_recycle = num_recycle
+            # set number of recycles and ensembles            
+            if model_suffix.startswith("_multimer"):
+                if num_recycles is not None:
+                    model_config.model.num_recycle = num_recycles
+                if use_cluster_profile is not None:
+                    model_config.model.embeddings_and_evoformer.use_cluster_profile = use_cluster_profile
+                model_config.model.num_ensemble_eval = num_ensemble
+            else:
+                if num_recycles is not None:
+                    model_config.data.common.num_recycle = num_recycles
+                    model_config.model.num_recycle = num_recycles
                 model_config.data.eval.num_ensemble = num_ensemble
-            
-            elif model_suffix.startswith("_multimer"):
-                model_config.model.embeddings_and_evoformer.use_cluster_profile = use_cluster_profile
-                model_config.model.num_recycle = num_recycle
-                if training:
-                    model_config.model.num_ensemble_train = num_ensemble
-                else:
-                    model_config.model.num_ensemble_eval = num_ensemble
+
+
+            if recycle_early_stop_tolerance is not None:
+                model_config.model.recycle_early_stop_tolerance = recycle_early_stop_tolerance
             
             # get model runner
+            params = data.get_model_haiku_params(
+                model_name="model_" + str(model_number) + model_suffix,
+                data_dir=str(data_dir), fuse=fuse)
             model_runner = model.RunModel(
                 model_config,
-                data.get_model_haiku_params(
-                    model_name="model_" + str(model_number) + model_suffix,
-                    data_dir=str(data_dir), fuse=fuse,
-                ),
+                model_params,
                 is_training=training,
             )
         
