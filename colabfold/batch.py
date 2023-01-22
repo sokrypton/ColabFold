@@ -1230,6 +1230,7 @@ def run(
     input_features_callback: Callable[[Any], Any] = None,
     save_all: bool = False,
     use_cluster_profile: bool = None,
+    use_bfloat16: bool = None,
 ):
     from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
@@ -1291,6 +1292,7 @@ def run(
         "is_training": training,
         "use_cluster_profile": use_cluster_profile,
         "fuse": fuse,
+        "use_bfloat16":use_bfloat16,
         "version": importlib_metadata.version("colabfold"),
     }
     config_out_file = result_dir.joinpath("config.json")
@@ -1454,6 +1456,7 @@ def run(
                     fuse=fuse,
                     use_cluster_profile=use_cluster_profile,
                     recycle_early_stop_tolerance=recycle_early_stop_tolerance,
+                    use_bfloat16=use_bfloat16,
                 )
 
             outs, model_rank = predict_structure(

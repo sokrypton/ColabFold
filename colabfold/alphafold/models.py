@@ -22,6 +22,7 @@ def load_models_and_params(
     max_msa: str = None,
     use_cluster_profile: bool = None,
     fuse: bool = True,
+    use_bfloat16: bool = None,
 
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
@@ -51,6 +52,10 @@ def load_models_and_params(
             model_config = config.model_config("model_" + str(model_number) + model_suffix)
             model_config.model.stop_at_score = float(stop_at_score)
             model_config.model.stop_at_score_ranker = rank_by
+
+            # set bfloat options
+            if use_bfloat16 is not None:
+                model_config.model.global_config.bfloat16 = use_bfloat16
             
             # set fuse options
             if fuse is not None:
