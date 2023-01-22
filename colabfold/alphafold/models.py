@@ -94,7 +94,7 @@ def load_models_and_params(
                 data_dir=str(data_dir), fuse=fuse)
             model_runner = model.RunModel(
                 model_config,
-                model_params,
+                params,
                 is_training=training,
             )
         
