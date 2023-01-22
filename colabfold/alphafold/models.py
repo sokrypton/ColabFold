@@ -10,19 +10,19 @@ from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
 def load_models_and_params(
     num_models: int,
     use_templates: bool,
-    num_recycles: int = None,
-    recycle_early_stop_tolerance: float = None,
+    num_recycles: Optional[int] = None,
+    recycle_early_stop_tolerance: Optional[float] = None,
     num_ensemble: int = 1,
     model_order: Optional[List[int]] = None,
     model_suffix: str = "_ptm",
     data_dir: Path = Path("."),
     stop_at_score: float = 100,
     rank_by: str = "plddt",
-    training: bool = False,
-    max_msa: str = None,
-    use_cluster_profile: bool = None,
-    fuse: bool = True,
-    use_bfloat16: bool = None,
+    max_msa: Optional[str] = None,
+    use_cluster_profile: Optional[bool] = None,
+    use_fuse: bool = True,
+    use_bfloat16: bool = True,
+    use_dropout: bool = False,
 
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
@@ -53,17 +53,18 @@ def load_models_and_params(
             model_config.model.stop_at_score = float(stop_at_score)
             model_config.model.stop_at_score_ranker = rank_by
 
+            # set dropouts
+            model_config.model.global_config.eval_dropout = use_dropout
+
             # set bfloat options
-            if use_bfloat16 is not None:
-                model_config.model.global_config.bfloat16 = use_bfloat16
+            model_config.model.global_config.bfloat16 = use_bfloat16
             
             # set fuse options
-            if fuse is not None:
-                model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights = fuse
-                model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights = fuse
-                if model_suffix.startswith("_multimer") or model_number in [1,2]:
-                    model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.fuse_projection_weights = fuse
-                    model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.fuse_projection_weights = fuse
+            model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights = use_fuse
+            model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights = use_fuse
+            if model_suffix.startswith("_multimer") or model_number in [1,2]:
+                model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.fuse_projection_weights = use_fuse
+                model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.fuse_projection_weights = use_fuse
                         
             # set number of sequences options
             if max_msa is not None:
@@ -96,16 +97,15 @@ def load_models_and_params(
             # get model runner
             params = data.get_model_haiku_params(
                 model_name="model_" + str(model_number) + model_suffix,
-                data_dir=str(data_dir), fuse=fuse)
+                data_dir=str(data_dir), fuse=use_fuse)
             model_runner = model.RunModel(
                 model_config,
                 params,
-                is_training=training,
             )
         
         model_name = f"model_{model_number}"
         params = data.get_model_haiku_params(
-            model_name=model_name + model_suffix, data_dir=str(data_dir), fuse=fuse,
+            model_name=model_name + model_suffix, data_dir=str(data_dir), fuse=use_fuse,
         )
         # keep only parameters of compiled model
         params_subset = {}

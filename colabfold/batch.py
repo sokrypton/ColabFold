@@ -1199,8 +1199,8 @@ def run(
     result_dir: Union[str, Path],
     num_models: int,
     is_complex: bool,
-    num_recycles: Any = "auto",
-    recycle_early_stop_tolerance: Any = "auto",
+    num_recycles: Optional[int] = None,
+    recycle_early_stop_tolerance: Optional[float] = None,
     model_order: List[int] = [1,2,3,4,5],
     num_ensemble: int = 1,
     model_type: str = "auto",
@@ -1215,22 +1215,20 @@ def run(
     host_url: str = DEFAULT_API_SERVER,
     random_seed: int = 0,
     num_seeds: int = 1,
-    stop_at_score: float = 100,
     recompile_padding: float = 1.1,
     zip_results: bool = False,
     prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
-    training: bool = False,
+    save_all: bool = False,
+    use_dropout: bool = False,
     use_gpu_relax: bool = False,
+    stop_at_score: float = 100,
     stop_at_score_below: float = 0,
     dpi: int = 200,
-    max_msa: str = None,
-    fuse: bool = True,
+    max_msa: Optional[str] = None,
     input_features_callback: Callable[[Any], Any] = None,
-    save_all: bool = False,
-    use_cluster_profile: bool = None,
-    use_bfloat16: bool = None,
+    **kwargs
 ):
     from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
@@ -1250,6 +1248,14 @@ def run(
     elif model_type == "AlphaFold2":                model_suffix = ""
     else: raise ValueError(f"Unknown model_type {model_type}")
 
+    # backward-compatibility with old options
+    use_cluster_profile = kwargs.pop("use_cluster_profile", None)
+    use_fuse = kwargs.pop("use_fuse", True)
+    use_bfloat16 = kwargs.pop("use_bfloat16", True)
+    use_dropout = kwargs.pop("training", use_dropout)
+    if len(kwargs) > 0:
+        print(f"WARNING: the following options are not being used: {kwargs}")
+
     # decide how to rank outputs
     if rank_by == "auto":
         # score complexes by ptmscore and sequences by plddt
@@ -1259,12 +1265,6 @@ def run(
             if is_complex and model_type.startswith("AlphaFold2-multimer")
             else rank_by
         )
-
-    # decide number of recycles to run
-    if num_recycles == "auto": num_recycles = None
-    else: num_recycles = int(num_recycles)
-    if recycle_early_stop_tolerance == "auto": recycle_early_stop_tolerance = None
-    else: recycle_early_stop_tolerance = float(recycle_early_stop_tolerance)
 
     # Record the parameters of this run
     config = {
@@ -1289,9 +1289,9 @@ def run(
         "num_seeds": num_seeds,
         "recompile_padding": recompile_padding,
         "commit": get_commit(),
-        "is_training": training,
+        "use_dropout": use_dropout,
         "use_cluster_profile": use_cluster_profile,
-        "fuse": fuse,
+        "use_fuse": use_fuse,
         "use_bfloat16":use_bfloat16,
         "version": importlib_metadata.version("colabfold"),
     }
@@ -1451,11 +1451,11 @@ def run(
                     data_dir=data_dir,
                     stop_at_score=stop_at_score,
                     rank_by=rank_by,
-                    training=training,
+                    use_dropout=use_dropout,
                     max_msa=max_msa,
-                    fuse=fuse,
                     use_cluster_profile=use_cluster_profile,
                     recycle_early_stop_tolerance=recycle_early_stop_tolerance,
+                    use_fuse=use_fuse,
                     use_bfloat16=use_bfloat16,
                 )
 
@@ -1624,15 +1624,15 @@ def main():
         "--num-recycle",
         help="Number of prediction recycles."
         "Increasing recycles can improve the quality but slows down the prediction.",
-        type=str,
-        default="auto",
+        type=int,
+        default=None,
     )
     parser.add_argument(
         "--recycle-early-stop-tolerance",
         help="Specify convergence criteria."
         "Run until the distance between recycles is within specified value.",
-        type=str,
-        default="auto",
+        type=float,
+        default=None,
     )
 
     parser.add_argument(
@@ -1718,12 +1718,6 @@ def main():
 
     parser.add_argument("--env", default=False, action="store_true")
     parser.add_argument(
-        "--cpu",
-        default=False,
-        action="store_true",
-        help="Allow running on the cpu, which is very slow",
-    )
-    parser.add_argument(
         "--rank",
         help="rank models by auto, plddt or ptmscore",
         type=str,
@@ -1757,10 +1751,10 @@ def main():
         help="saves the pair representation embeddings of all models",
     )
     parser.add_argument(
-        "--training",
+        "--use-dropout",
         default=False,
         action="store_true",
-        help="turn on training mode of the model to activate drop outs",
+        help="activate dropouts during inference to sample from uncertainity of the models",
     )
     parser.add_argument(
         "--max-msa",
@@ -1874,7 +1868,7 @@ def main():
         zip_results=args.zip,
         save_single_representations=args.save_single_representations,
         save_pair_representations=args.save_pair_representations,
-        training=args.training,
+        use_dropout=args.use_dropout,
         max_msa=args.max_msa,
         use_gpu_relax = args.use_gpu_relax if DEVICE == "gpu" else False,
         stop_at_score_below=args.stop_at_score_below,
