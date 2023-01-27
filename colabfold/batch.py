@@ -229,7 +229,7 @@ def mk_hhsearch_db(template_dir: str):
     ) as a3m_index, open(
         template_path.joinpath("pdb70_cs219.ffdata"), "w"
     ) as cs219:
-        id = 1000000
+        n = 1000000
         index_offset = 0
         cif_files = template_path.glob("*.cif")
         for cif_file in cif_files:
@@ -259,12 +259,12 @@ def mk_hhsearch_db(template_dir: str):
                 protein_str = "".join(amino_acid_res)
                 a3m_str = f">{cif_file.stem}_{chain.id}\n{protein_str}\n\0"
                 a3m_str_len = len(a3m_str)
-                a3m_index.write(f"{id}\t{index_offset}\t{a3m_str_len}\n")
-                cs219_index.write(f"{id}\t{index_offset}\t{len(protein_str)}\n")
+                a3m_index.write(f"{n}\t{index_offset}\t{a3m_str_len}\n")
+                cs219_index.write(f"{n}\t{index_offset}\t{len(protein_str)}\n")
                 index_offset += a3m_str_len
                 a3m.write(a3m_str)
                 cs219.write("\n\0")
-                id += 1
+                n += 1
 
 
 def batch_input(
@@ -999,23 +999,19 @@ def generate_input_feature(
     input_feature = {}
     domain_names = {}
     if is_complex and model_type == "AlphaFold2-ptm":
-        a3m_lines = pair_msa(
-            query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa
-        )
-        total_sequence = ""
+
+        # TODO: there is a bug somewhere here...
+        a3m_lines = pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa)        
+        
+        full_sequence = ""
         Ls = []
         for sequence_index, sequence in enumerate(query_seqs_unique):
             for cardinality in range(0, query_seqs_cardinality[sequence_index]):
-                total_sequence += sequence
+                full_sequence += sequence
                 Ls.append(len(sequence))
-
-        input_feature = build_monomer_feature(
-            total_sequence, a3m_lines, mk_mock_template(total_sequence)
-        )
+        input_feature = build_monomer_feature(full_sequence, a3m_lines, mk_mock_template(full_sequence))
         input_feature["residue_index"] = chain_break(input_feature["residue_index"], Ls)
-        input_feature["asym_id"] = np.array(
-            [int(n) for n, l in enumerate(Ls) for _ in range(0, l)]
-        )
+        input_feature["asym_id"] = np.array([int(n) for n, l in enumerate(Ls) for _ in range(0, l)])
         if any(
             [
                 template != b"none"
@@ -1026,6 +1022,7 @@ def generate_input_feature(
             logger.warning(
                 "AlphaFold2-ptm complex does not consider templates. Chose multimer model-type for template support."
             )
+
     else:
         features_for_chain = {}
         chain_cnt = 0
@@ -1324,6 +1321,7 @@ def run(
             logger.info(f"Skipping {jobname} (already done)")
             continue
 
+        # query sequence is either string or list of strings (for complex)
         query_sequence_len = (
             len(query_sequence)
             if isinstance(query_sequence, str)
@@ -1333,73 +1331,40 @@ def run(
             f"Query {job_number + 1}/{len(queries)}: {jobname} (length {query_sequence_len})"
         )
 
+        # generate MSA (a3m_lines) and templates
         try:
-            if a3m_lines is not None:
-                if use_templates is False:
-                    (
-                        unpaired_msa,
-                        paired_msa,
-                        query_seqs_unique,
-                        query_seqs_cardinality,
-                        template_features,
-                    ) = unserialize_msa(a3m_lines, query_sequence)
-                else:
-                    (
-                        unpaired_msa,
-                        paired_msa,
-                        query_seqs_unique,
-                        query_seqs_cardinality,
-                    ) = unserialize_msa(a3m_lines, query_sequence)[:4]
-                    template_features = get_msa_and_templates(
-                        jobname,
-                        query_sequence,
-                        result_dir,
-                        msa_mode,
-                        use_templates,
-                        custom_template_path,
-                        pair_mode,
-                        host_url,
-                    )[4]
+            if a3m_lines is None:
+                (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
+                = get_msa_and_templates(jobname, query_sequence, result_dir, msa_mode, 
+                                        use_templates, custom_template_path, pair_mode, host_url)
             else:
-                (
-                    unpaired_msa,
-                    paired_msa,
-                    query_seqs_unique,
-                    query_seqs_cardinality,
-                    template_features,
-                ) = get_msa_and_templates(
-                    jobname,
-                    query_sequence,
-                    result_dir,
-                    msa_mode,
-                    use_templates,
-                    custom_template_path,
-                    pair_mode,
-                    host_url,
-                )
-            msa = msa_to_str(
-                unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality
-            )
-            result_dir.joinpath(jobname + ".a3m").write_text(msa)
+                (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
+                = unserialize_msa(a3m_lines, query_sequence)
+                if use_templates:
+                    template_features = get_msa_and_templates(jobname, query_sequence, result_dir, msa_mode,
+                                                              use_templates, custom_template_path, pair_mode, host_url)[4]
+
+            # save a3m
+            msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
+            result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
                 
         except Exception as e:
             logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
             continue
+        
+        # parse features
         try:
-            (input_features, domain_names) = generate_input_feature(
-                query_seqs_unique,
-                query_seqs_cardinality,
-                unpaired_msa,
-                paired_msa,
-                template_features,
-                is_complex,
-                model_type,
-            )
+            (input_features, domain_names) \
+            = generate_input_feature(query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa,
+                                     template_features, is_complex, model_type)
+            # to allow display of MSA info during colab/chimera run (thanks tomgoddard)
+            if input_features_callback is not None: input_features_callback(input_features)
+        
         except Exception as e:
             logger.exception(f"Could not generate input features {jobname}: {e}")
             continue
-        if input_features_callback is not None:
-            input_features_callback(input_features)
+        
+        # predict structures
         try:
             query_sequence_len_array = [
                 len(query_seqs_unique[i])
