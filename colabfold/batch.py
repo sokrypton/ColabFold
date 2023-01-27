@@ -454,7 +454,6 @@ def predict_structure(
             protein_lines = protein.to_pdb(unrelaxed_protein)
             unrelaxed_pdb_path = result_dir.joinpath(f"{prefix}_unrelaxed_{model_names[-1]}.pdb")
             unrelaxed_pdb_path.write_text(protein_lines)
-            representations.append({k:to_np(v) for k,v in prediction_result["prev"].items()})
             unrelaxed_pdb_lines.append(protein_lines)
             plddts.append(prediction_result["plddt"][:seq_len])
             ptmscore.append(prediction_result["ptm"])
@@ -1308,8 +1307,8 @@ def run(
     }
     config_out_file = result_dir.joinpath("config.json")
     config_out_file.write_text(json.dumps(config, indent=4))
-    use_env = if "env" in msa_mode
-    use_msa = if "mmseqs2" in msa_mode
+    use_env = "env" in msa_mode
+    use_msa = "mmseqs2" in msa_mode
 
     bibtex_file = write_bibtex(
         model_type, use_msa, use_env, use_templates, use_amber, result_dir
@@ -1457,7 +1456,7 @@ def run(
                 save_single_representations=save_single_representations,
                 save_pair_representations=save_pair_representations,
             )
-            outs = results["outs"]
+            outs = results["out"]
             model_rank = results["model_rank"]
             saved_files = results["saved_files"]
 
