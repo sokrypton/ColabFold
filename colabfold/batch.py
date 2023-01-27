@@ -327,6 +327,8 @@ def predict_structure(
     prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
     use_gpu_relax: bool = False,
     save_all: bool = False,
+    save_single_representations: bool = False,
+    save_pair_representations: bool = False,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
 
@@ -337,8 +339,8 @@ def predict_structure(
     prediction_times = []
     relax_times = []
     seq_len = sum(sequences_lengths)
-    representations = []
     model_names = []
+    saved_files = []
     for (model_name, model_runner, params) in model_runner_and_params:
         # swap params to avoid recompiling
         # note: models 1,2 have diff number of params compared to models 3,4,5 (this was handled on construction)
@@ -349,7 +351,7 @@ def predict_structure(
             logger.info(f"Running {model_names[-1]}")
 
             processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)
-            if model_type.startswith("AlphaFold2-multimer"):
+            if model_type.startswith("alphafold2_multimer"):
                 input_features = processed_feature_dict
             else:
                 input_features = batch_input(
@@ -369,8 +371,8 @@ def predict_structure(
             prediction_time = time.time() - start
             prediction_times.append(prediction_time)
 
-            if save_all:
-                pickle_path = result_dir.joinpath(f"{prefix}_unrelaxed_{model_names[-1]}.pickle")
+            # save raw inputs/outputs
+            if save_all or save_single_representations or save_pair_representations:
                 def fn(x):
                     y = {}
                     for k,v in x.items():
@@ -378,7 +380,16 @@ def predict_structure(
                     return y
                 x = fn(prediction_result)
                 x["representations"] = x.pop("prev")
-                pickle.dump(x, open(pickle_path,"wb"))
+                if save_single_representations:
+                    saved_files.append(result_dir.joinpath(f"{prefix}_single_repr_{model_names[-1]}.npy"))
+                    np.save(saved_files[-1], x["representations"]["prev_msa_first_row"])
+                if save_pair_representations:
+                    saved_files.append(result_dir.joinpath(f"{prefix}_pair_repr_{model_names[-1]}.npy"))
+                    np.save(saved_files[-1], x["representations"]["prev_pair"])
+                if save_all:
+                    saved_files.append(result_dir.joinpath(f"{prefix}_unrelaxed_{model_names[-1]}.pickle"))
+                    with open(saved_files[-1], "wb") as handle:
+                        pickle.dump(x, handle)
 
             mean_plddt = np.mean(prediction_result["plddt"][:seq_len])
             mean_ptm = prediction_result["ptm"]
@@ -387,8 +398,8 @@ def predict_structure(
             else:
                 mean_score = mean_ptm
 
-            if is_complex or model_type == "AlphaFold2-ptm":
-                if model_type.startswith("AlphaFold2-multimer"):
+            if is_complex or model_type == "alphafold2_ptm":
+                if model_type.startswith("alphafold2_multimer"):
                     mean_iptm = prediction_result["iptm"]
                     logger.info(
                         f"{model_names[-1]} took {prediction_time:.1f}s ({recycles} recycles) "
@@ -406,7 +417,7 @@ def predict_structure(
                 )
             final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
             b_factors = prediction_result["plddt"][:, None] * final_atom_mask
-            if is_complex and model_type == "AlphaFold2-ptm":
+            if is_complex and model_type == "alphafold2_ptm":
                 input_features["asym_id"] = feature_dict["asym_id"]
                 input_features["aatype"] = input_features["aatype"][0]
                 input_features["residue_index"] = input_features["residue_index"][0]
@@ -447,7 +458,7 @@ def predict_structure(
             unrelaxed_pdb_lines.append(protein_lines)
             plddts.append(prediction_result["plddt"][:seq_len])
             ptmscore.append(prediction_result["ptm"])
-            if model_type.startswith("AlphaFold2-multimer"):
+            if model_type.startswith("alphafold2_multimer"):
                 iptmscore.append(prediction_result["iptm"])
             max_paes.append(prediction_result["max_predicted_aligned_error"].item())
             paes_res = []
@@ -536,7 +547,6 @@ def predict_structure(
             f"{prefix}_unrelaxed_rank_{n + 1}_{model_names[key]}.pdb"
         )
         unrelaxed_pdb_path.write_text(unrelaxed_pdb_lines[key])
-
         unrelaxed_pdb_path_unranked = result_dir.joinpath(
             f"{prefix}_unrelaxed_{model_names[key]}.pdb"
         )
@@ -567,19 +577,19 @@ def predict_structure(
                 "plddt": np.around(np.asarray(plddts[key]), 2).tolist(),
                 "ptm": np.around(ptmscore[key], 2).item(),
             }
-            if model_type.startswith("AlphaFold2-multimer"):
+            if model_type.startswith("alphafold2_multimer"):
                 scores["iptm"] = np.around(iptmscore[key], 2).item()
             json.dump(scores, fp)
-
         out[key] = {
             "plddt": np.asarray(plddts[key]),
             "pae": np.asarray(paes[key]),
             "max_pae": max_paes[key],
             "pTMscore": ptmscore[key],
             "model_name": model_names[key],
-            "representations": representations[key],
         }
-    return out, model_rank
+    return {"out":out,
+            "model_rank":model_rank,
+            "saved_files":saved_files}
 
 
 def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
@@ -771,7 +781,7 @@ def get_msa_and_templates(
 ]:
     from colabfold.colabfold import run_mmseqs2
 
-    use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
+    use_env = msa_mode == "mmseqs2_uniref_env"
     # remove duplicates before searching
     query_sequences = (
         [query_sequences] if isinstance(query_sequences, str) else query_sequences
@@ -831,7 +841,7 @@ def get_msa_and_templates(
     if len(query_sequences) == 1:
         pair_mode = "none"
 
-    if pair_mode == "none" or pair_mode == "unpaired" or pair_mode == "unpaired+paired":
+    if pair_mode == "none" or pair_mode == "unpaired" or pair_mode == "unpaired_paired":
         if msa_mode == "single_sequence":
             a3m_lines = []
             num = 101
@@ -850,7 +860,7 @@ def get_msa_and_templates(
         a3m_lines = None
 
     if msa_mode != "single_sequence" and (
-        pair_mode == "paired" or pair_mode == "unpaired+paired"
+        pair_mode == "paired" or pair_mode == "unpaired_paired"
     ):
         # find paired a3m if not a homooligomers
         if len(query_seqs_unique) > 1:
@@ -998,7 +1008,7 @@ def generate_input_feature(
 
     input_feature = {}
     domain_names = {}
-    if is_complex and model_type == "AlphaFold2-ptm":
+    if is_complex and model_type == "alphafold2_ptm":
 
         # TODO: there is a bug somewhere here...
         a3m_lines = pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa)        
@@ -1020,7 +1030,7 @@ def generate_input_feature(
             ]
         ):
             logger.warning(
-                "AlphaFold2-ptm complex does not consider templates. Chose multimer model-type for template support."
+                "alphafold2_ptm complex does not consider templates. Chose multimer model-type for template support."
             )
 
     else:
@@ -1058,7 +1068,7 @@ def generate_input_feature(
                     if name != b"none"
                 ]
             }
-        elif model_type.startswith("AlphaFold2-multimer"):
+        elif model_type.startswith("alphafold2_multimer"):
             input_feature = process_multimer_features(features_for_chain)
             domain_names = {
                 chain: [
@@ -1068,7 +1078,7 @@ def generate_input_feature(
                 ]
                 for (chain, feature) in features_for_chain.items()
             }
-        elif is_complex and model_type == "AlphaFold2-ptm":
+        elif is_complex and model_type == "alphafold2_ptm":
             domain_names = {protein.PDB_CHAIN_IDS[0]: []}
     return (input_feature, domain_names)
 
@@ -1201,13 +1211,13 @@ def run(
     model_order: List[int] = [1,2,3,4,5],
     num_ensemble: int = 1,
     model_type: str = "auto",
-    msa_mode: str = "MMseqs2 (UniRef+Environmental)",
+    msa_mode: str = "mmseqs2_uniref_env",
     use_templates: bool = False,
     custom_template_path: str = None,
     use_amber: bool = False,
     keep_existing_results: bool = True,
     rank_by: str = "auto",
-    pair_mode: str = "unpaired+paired",
+    pair_mode: str = "unpaired_paired",
     data_dir: Union[str, Path] = default_data_dir,
     host_url: str = DEFAULT_API_SERVER,
     random_seed: int = 0,
@@ -1238,18 +1248,22 @@ def run(
     model_type = set_model_type(is_complex, model_type)
 
     # determine model extension
-    if   model_type == "AlphaFold2-multimer-v1":    model_suffix = "_multimer"
-    elif model_type == "AlphaFold2-multimer-v2":    model_suffix = "_multimer_v2"
-    elif model_type == "AlphaFold2-multimer-v3":    model_suffix = "_multimer_v3"
-    elif model_type == "AlphaFold2-ptm":            model_suffix = "_ptm"
-    elif model_type == "AlphaFold2":                model_suffix = ""
+    if   model_type == "alphafold2_multimer_v1": model_suffix = "_multimer"
+    elif model_type == "alphafold2_multimer_v2": model_suffix = "_multimer_v2"
+    elif model_type == "alphafold2_multimer_v3": model_suffix = "_multimer_v3"
+    elif model_type == "alphafold2_ptm":         model_suffix = "_ptm"
     else: raise ValueError(f"Unknown model_type {model_type}")
 
     # backward-compatibility with old options
+    old_names = {"MMseqs2 (UniRef+Environmental)":"mmseqs2_uniref_env",
+                 "MMseqs2 (UniRef only)":"mmseqs2_uniref",
+                 "unpaired+paired":"unpaired_paired"}
+    msa_mode   = old_names.get(msa_mode,msa_mode)
+    pair_mode  = old_names.get(pair_mode,pair_mode)
     use_cluster_profile = kwargs.pop("use_cluster_profile", None)
-    use_fuse = kwargs.pop("use_fuse", True)
-    use_bfloat16 = kwargs.pop("use_bfloat16", True)
-    use_dropout = kwargs.pop("training", use_dropout)
+    use_fuse            = kwargs.pop("use_fuse", True)
+    use_bfloat16        = kwargs.pop("use_bfloat16", True)
+    use_dropout         = kwargs.pop("training", use_dropout)
     if len(kwargs) > 0:
         print(f"WARNING: the following options are not being used: {kwargs}")
 
@@ -1259,7 +1273,7 @@ def run(
         rank_by = "plddt" if not is_complex else "ptmscore"
         rank_by = (
             "multimer"
-            if is_complex and model_type.startswith("AlphaFold2-multimer")
+            if is_complex and model_type.startswith("alphafold2_multimer")
             else rank_by
         )
 
@@ -1294,11 +1308,8 @@ def run(
     }
     config_out_file = result_dir.joinpath("config.json")
     config_out_file.write_text(json.dumps(config, indent=4))
-    use_env = msa_mode == "MMseqs2 (UniRef+Environmental)"
-    use_msa = (
-        msa_mode == "MMseqs2 (UniRef only)"
-        or msa_mode == "MMseqs2 (UniRef+Environmental)"
-    )
+    use_env = if "env" in msa_mode
+    use_msa = if "mmseqs2" in msa_mode
 
     bibtex_file = write_bibtex(
         model_type, use_msa, use_env, use_templates, use_amber, result_dir
@@ -1392,9 +1403,9 @@ def run(
                     if max_msa is not None:
                         max_a, max_b = [int(x) for x in max_msa.split(":")]                    
                     else:
-                        if model_type in ["AlphaFold2-multimer-v1","AlphaFold2-multimer-v2"]:
+                        if model_type in ["alphafold2_multimer_v1","alphafold2_multimer_v2"]:
                             (max_a, max_b) = (252, 1152)
-                        elif model_type == "AlphaFold2-multimer-v3":
+                        elif model_type == "alphafold2_multimer_v3":
                             (max_a, max_b) = (508, 2048)
                         else:
                             (max_a, max_b) = (512, 5120)
@@ -1424,7 +1435,7 @@ def run(
                     use_bfloat16=use_bfloat16,
                 )
 
-            outs, model_rank = predict_structure(
+            results = predict_structure(
                 prefix=jobname,
                 result_dir=result_dir,
                 feature_dict=input_features,
@@ -1443,33 +1454,18 @@ def run(
                 random_seed=random_seed,
                 num_seeds=num_seeds,
                 save_all=save_all,
+                save_single_representations=save_single_representations,
+                save_pair_representations=save_pair_representations,
             )
+            outs = results["outs"]
+            model_rank = results["model_rank"]
+            saved_files = results["saved_files"]
+
         except RuntimeError as e:
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
             logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
             continue
 
-        # Write representations if needed
-        representation_files = []
-        if save_single_representations or save_pair_representations:
-            for i, key in enumerate(model_rank):
-                out = outs[key]
-                model_id = i + 1
-                model_name = out["model_name"]
-
-                if save_single_representations:
-                    single_representation = out["representations"]["prev_msa_first_row"]
-                    single_filename = result_dir.joinpath(
-                        f"{jobname}_single_repr_{model_id}_{model_name}"
-                    )
-                    np.save(single_filename, single_representation)
-
-                if save_pair_representations:
-                    pair_representation = out["representations"]["prev_pair"]
-                    pair_filename = result_dir.joinpath(
-                        f"{jobname}_pair_repr_{model_id}_{model_name}"
-                    )
-                    np.save(pair_filename, pair_representation)
 
         # Write alphafold-db format (PAE)
         alphafold_pae_file = result_dir.joinpath(
@@ -1478,7 +1474,7 @@ def run(
         alphafold_pae_file.write_text(get_pae_json(outs[0]["pae"], outs[0]["max_pae"]))
         num_alignment = (
             int(input_features["num_alignments"])
-            if model_type.startswith("AlphaFold2-multimer")
+            if model_type.startswith("alphafold2_multimer")
             else input_features["num_alignments"][0]
         )
         msa_plot = plot_msa(
@@ -1511,7 +1507,7 @@ def run(
             pae_png,
             coverage_png,
             plddt_png,
-            *representation_files,
+            *saved_files
         ]
         if use_templates:
             templates_file = result_dir.joinpath(
@@ -1552,12 +1548,17 @@ def run(
 
 
 def set_model_type(is_complex: bool, model_type: str) -> str:
+    # backward-compatibility with old options
+    old_names = {"AlphaFold2-multimer-v1":"alphafold2_multimer_v1",
+                 "AlphaFold2-multimer-v2":"alphafold2_multimer_v2",
+                 "AlphaFold2-multimer-v3":"alphafold2_multimer_v3",
+                 "AlphaFold2-ptm":"alphafold2_ptm"}
+    model_type = old_names.get(model_type, model_type)
     if model_type == "auto" and is_complex:
-        model_type = "AlphaFold2-multimer-v3"
+        model_type = "alphafold2_multimer_v3"
     elif model_type == "auto" and not is_complex:
-        model_type = "AlphaFold2-ptm"
+        model_type = "alphafold2_ptm"
     return model_type
-
 
 def main():
     parser = ArgumentParser()
@@ -1632,38 +1633,33 @@ def main():
         "but overall performance increases due to not recompiling. "
         "Set to 1 to disable.",
     )
-
-    parser.add_argument("--model-order", default="3,4,5,1,2", type=str)
+    parser.add_argument("--model-order", default="1,2,3,4,5", type=str)
     parser.add_argument("--host-url", default=DEFAULT_API_SERVER)
     parser.add_argument("--data")
-
-    # TODO: This currently isn't actually used
     parser.add_argument(
         "--msa-mode",
-        default="MMseqs2 (UniRef+Environmental)",
+        default="mmseqs2_uniref_env",
         choices=[
-            "MMseqs2 (UniRef+Environmental)",
-            "MMseqs2 (UniRef only)",
+            "mmseqs2_uniref_env",
+            "mmseqs2_uniref",
             "single_sequence",
         ],
         help="Using an a3m file as input overwrites this option",
     )
-
     parser.add_argument(
         "--model-type",
         help="predict strucutre/complex using the following model."
-        'Auto will pick "AlphaFold2" (ptm) for structure predictions and "AlphaFold2-multimer-v3" for complexes.',
+        'Auto will pick "alphafold2_ptm" for structure predictions and "alphafold2_multimer_v3" for complexes.',
         type=str,
         default="auto",
         choices=[
             "auto",
-            "AlphaFold2-ptm",
-            "AlphaFold2-multimer-v1",
-            "AlphaFold2-multimer-v2",
-            "AlphaFold2-multimer-v3",
+            "alphafold2_ptm",
+            "alphafold2_multimer_v1",
+            "alphafold2_multimer_v2",
+            "alphafold2_multimer_v3",
         ],
     )
-
     parser.add_argument(
         "--amber",
         default=False,
@@ -1673,15 +1669,12 @@ def main():
     parser.add_argument(
         "--templates", default=False, action="store_true", help="Use templates from pdb"
     )
-
     parser.add_argument(
         "--custom-template-path",
         type=str,
         default=None,
         help="Directory with pdb files to be used as input",
     )
-
-    parser.add_argument("--env", default=False, action="store_true")
     parser.add_argument(
         "--rank",
         help="rank models by auto, plddt or ptmscore",
@@ -1691,10 +1684,10 @@ def main():
     )
     parser.add_argument(
         "--pair-mode",
-        help="rank models by auto, unpaired, paired, unpaired+paired",
+        help="rank models by auto, unpaired, paired, unpaired_paired",
         type=str,
-        default="unpaired+paired",
-        choices=["unpaired", "paired", "unpaired+paired"],
+        default="unpaired_paired",
+        choices=["unpaired", "paired", "unpaired_paired"],
     )
     parser.add_argument(
         "--sort-queries-by",
