@@ -1009,15 +1009,17 @@ def generate_input_feature(
     domain_names = {}
     if is_complex and model_type == "alphafold2_ptm":
 
-        # TODO: there is a bug somewhere here...
-        a3m_lines = pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa)        
-        
         full_sequence = ""
         Ls = []
         for sequence_index, sequence in enumerate(query_seqs_unique):
             for cardinality in range(0, query_seqs_cardinality[sequence_index]):
                 full_sequence += sequence
                 Ls.append(len(sequence))
+
+        # bugfix
+        a3m_lines = f">0\n{full_sequence}\n"
+        a3m_lines += pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa)        
+
         input_feature = build_monomer_feature(full_sequence, a3m_lines, mk_mock_template(full_sequence))
         input_feature["residue_index"] = chain_break(input_feature["residue_index"], Ls)
         input_feature["asym_id"] = np.array([int(n) for n, l in enumerate(Ls) for _ in range(0, l)])
@@ -1239,7 +1241,7 @@ def run(
     from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
     from colabfold.colabfold import plot_paes, plot_plddts
-    from colabfold.plot import plot_msa
+    from colabfold.plot import plot_msa_v2
 
     data_dir = Path(data_dir)
     result_dir = Path(result_dir)
@@ -1471,18 +1473,7 @@ def run(
             jobname + "_predicted_aligned_error_v1.json"
         )
         alphafold_pae_file.write_text(get_pae_json(outs[0]["pae"], outs[0]["max_pae"]))
-        num_alignment = (
-            int(input_features["num_alignments"])
-            if model_type.startswith("alphafold2_multimer")
-            else input_features["num_alignments"][0]
-        )
-        msa_plot = plot_msa(
-            input_features["msa"][0:num_alignment],
-            input_features["msa"][0],
-            query_sequence_len_array,
-            query_sequence_len,
-            dpi=dpi,
-        )
+        msa_plot = plot_msa_v2(input_features,dpi=dpi)
         coverage_png = result_dir.joinpath(jobname + "_coverage.png")
         msa_plot.savefig(str(coverage_png))
         msa_plot.close()
