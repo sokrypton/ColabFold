@@ -308,6 +308,29 @@ def class_to_np(c):
       for k,v in d.items(): setattr(self, k, to_np(v))
   return dict2obj(c.__dict__)
 
+
+def relax_me(pdb_filename=None, pdb_lines=None, pdb_obj=None, use_gpu=False):
+    if "relax" not in dir():
+        patch_openmm()
+        from alphafold.common import residue_constants
+        from alphafold.relax import relax
+
+    if pdb_obj is None:        
+        if pdb_lines is None:
+            pdb_lines = Path(pdb_filename).read_text()
+        pdb_obj = protein.from_pdb_string(pdb_lines)
+    
+    amber_relaxer = relax.AmberRelaxation(
+        max_iterations=0,
+        tolerance=2.39,
+        stiffness=10.0,
+        exclude_residues=[],
+        max_outer_iterations=3,
+        use_gpu=use_gpu)
+    
+    relaxed_pdb_lines, _, _ = amber_relaxer.process(prot=pdb_obj)
+    return relaxed_pdb_lines
+
 def predict_structure(
     prefix: str,
     result_dir: Path,
@@ -318,7 +341,7 @@ def predict_structure(
     crop_len: int,
     model_type: str,
     model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
-    do_relax: bool = False,
+    num_relax: int = 0,
     rank_by: str = "auto",
     random_seed: int = 0,
     num_seeds: int = 1,
@@ -335,9 +358,7 @@ def predict_structure(
     plddts, paes, ptmscore, iptmscore = [], [], [], []
     max_paes = []
     unrelaxed_pdb_lines = []
-    relaxed_pdb_lines = []
     prediction_times = []
-    relax_times = []
     seq_len = sum(sequences_lengths)
     model_names = []
     saved_files = []
@@ -465,65 +486,6 @@ def predict_structure(
             for i in range(seq_len):
                 paes_res.append(prediction_result["predicted_aligned_error"][i][:seq_len])
             paes.append(paes_res)
-
-            if do_relax:
-                patch_openmm()
-
-                from alphafold.common import residue_constants
-                from alphafold.relax import relax
-
-                start = time.time()
-
-                ###
-                # stereo_chemical_props.txt is from openstructure, see openstructure/README.md
-                # Hack so that we don't need to load the file into the alphafold package
-                stereo_chemical_props = (
-                    Path(__file__)
-                    .parent.absolute()
-                    .joinpath("openstructure", "stereo_chemical_props.txt")
-                )
-
-                residue_constants.stereo_chemical_props_path = stereo_chemical_props
-
-                # Remove the padding because unlike to_pdb() amber doesn't handle that
-                remove_padding_mask = np.array(unrelaxed_protein.atom_mask.sum(axis=-1) > 0)
-                unrelaxed_protein = Protein(
-                    atom_mask=unrelaxed_protein.atom_mask[remove_padding_mask],
-                    atom_positions=unrelaxed_protein.atom_positions[remove_padding_mask],
-                    aatype=unrelaxed_protein.aatype[remove_padding_mask],
-                    residue_index=unrelaxed_protein.residue_index[remove_padding_mask],
-                    b_factors=unrelaxed_protein.b_factors[remove_padding_mask],
-                    chain_index=unrelaxed_protein.chain_index[remove_padding_mask],
-                )
-
-                # Relax the prediction.
-                amber_relaxer = relax.AmberRelaxation(
-                    max_iterations=0,
-                    tolerance=2.39,
-                    stiffness=10.0,
-                    exclude_residues=[],
-                    max_outer_iterations=20,
-                    use_gpu=use_gpu_relax,
-                )
-                relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
-
-                relax_time = time.time() - start
-                relax_times.append(relax_time)
-
-                logger.info(f"Relaxation took {relax_time:.1f}s")
-
-                if prediction_callback is not None:
-                    prediction_callback(
-                        protein.from_pdb_string(relaxed_pdb_str),
-                        sequences_lengths,
-                        prediction_result,
-                        input_features,
-                        (model_names[-1], True),
-                    )
-
-                relaxed_pdb_path = result_dir.joinpath(f"{prefix}_relaxed_{model_names[-1]}.pdb")
-                relaxed_pdb_path.write_text(relaxed_pdb_str)
-                relaxed_pdb_lines.append(relaxed_pdb_str)
             
             # early stop criteria fulfilled
             if mean_score > stop_at_score or mean_score < stop_at_score_below: break
@@ -539,35 +501,30 @@ def predict_structure(
         model_rank = rank_array.argsort()[::-1]
     else:
         model_rank = np.mean(plddts, -1).argsort()[::-1]
+    
+
     out = {}
     logger.info(f"reranking models by {rank_by}")
     for n, key in enumerate(model_rank):
-        unrelaxed_pdb_path = result_dir.joinpath(
-            f"{prefix}_unrelaxed_rank_{n + 1}_{model_names[key]}.pdb"
-        )
+        suffix = f"rank_{n + 1}_{model_names[key]}"
+        # save unrelaxed pdb
+        unrelaxed_pdb_path = result_dir.joinpath(f"{prefix}_unrelaxed_{suffix}.pdb")
         unrelaxed_pdb_path.write_text(unrelaxed_pdb_lines[key])
-        unrelaxed_pdb_path_unranked = result_dir.joinpath(
-            f"{prefix}_unrelaxed_{model_names[key]}.pdb"
-        )
-        if unrelaxed_pdb_path_unranked.is_file():
-            unrelaxed_pdb_path_unranked.unlink()
 
-        if do_relax:
-            relaxed_pdb_path = result_dir.joinpath(
-                f"{prefix}_relaxed_rank_{n + 1}_{model_names[key]}.pdb"
-            )
-            relaxed_pdb_path.write_text(relaxed_pdb_lines[key])
+        # delete temporary file
+        unrelaxed_pdb_path_unranked = result_dir.joinpath(f"{prefix}_unrelaxed_{model_names[key]}.pdb")
+        if unrelaxed_pdb_path_unranked.is_file(): unrelaxed_pdb_path_unranked.unlink()
 
-            relaxed_pdb_path_unranked = result_dir.joinpath(
-                f"{prefix}_relaxed_{model_names[key]}.pdb"
-            )
-            if relaxed_pdb_path_unranked.is_file():
-                relaxed_pdb_path_unranked.unlink()
+        # relax pdb
+        if n < num_relax:
+            start = time.time()
+            relaxed_pdb_path = result_dir.joinpath(f"{prefix}_relaxed_{suffix}.pdb")
+            relaxed_pdb_path.write_text(relax_me(pdb_lines=unrelaxed_pdb_lines[key], use_gpu=use_gpu_relax))            
+            relax_time = time.time() - start
+            logger.info(f"Relaxation took {relax_time:.1f}s")
 
-        # Write an easy-to-use format (PAE and plDDT)
-        scores_file = result_dir.joinpath(
-            f"{prefix}_unrelaxed_rank_{n + 1}_{model_names[key]}_scores.json"
-        )
+        # write an easy-to-use format (PAE and plDDT)
+        scores_file = result_dir.joinpath(f"{prefix}_unrelaxed_{suffix}_scores.json")
         with scores_file.open("w") as fp:
             # We use astype(np.float64) to prevent very long stringified floats from float imprecision
             scores = {
@@ -579,6 +536,7 @@ def predict_structure(
             if model_type.startswith("alphafold2_multimer"):
                 scores["iptm"] = np.around(iptmscore[key], 2).item()
             json.dump(scores, fp)
+
         out[key] = {
             "plddt": np.asarray(plddts[key]),
             "pae": np.asarray(paes[key]),
@@ -1215,7 +1173,7 @@ def run(
     msa_mode: str = "mmseqs2_uniref_env",
     use_templates: bool = False,
     custom_template_path: str = None,
-    use_amber: bool = False,
+    num_relax: int = 0,
     keep_existing_results: bool = True,
     rank_by: str = "auto",
     pair_mode: str = "unpaired_paired",
@@ -1265,6 +1223,9 @@ def run(
     use_fuse            = kwargs.pop("use_fuse", True)
     use_bfloat16        = kwargs.pop("use_bfloat16", True)
     use_dropout         = kwargs.pop("training", use_dropout)
+    if kwargs.pop("use_amber", False) and num_relax == 0: 
+        num_relax = num_models * num_seeds
+
     if len(kwargs) > 0:
         print(f"WARNING: the following options are not being used: {kwargs}")
 
@@ -1282,7 +1243,7 @@ def run(
     config = {
         "num_queries": len(queries),
         "use_templates": use_templates,
-        "use_amber": use_amber,
+        "num_relax": num_relax,
         "msa_mode": msa_mode,
         "model_type": model_type,
         "num_models": num_models,
@@ -1311,6 +1272,7 @@ def run(
     config_out_file.write_text(json.dumps(config, indent=4))
     use_env = "env" in msa_mode
     use_msa = "mmseqs2" in msa_mode
+    use_amber = num_relax > 0
 
     bibtex_file = write_bibtex(
         model_type, use_msa, use_env, use_templates, use_amber, result_dir
@@ -1446,7 +1408,7 @@ def run(
                 crop_len=crop_len,
                 model_type=model_type,
                 model_runner_and_params=model_runner_and_params,
-                do_relax=use_amber,
+                num_relax=num_relax,
                 rank_by=rank_by,
                 stop_at_score=stop_at_score,
                 stop_at_score_below=stop_at_score_below,
@@ -1467,26 +1429,29 @@ def run(
             logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
             continue
 
-
-        # Write alphafold-db format (PAE)
-        alphafold_pae_file = result_dir.joinpath(
-            jobname + "_predicted_aligned_error_v1.json"
-        )
+        # write alphafold-db format (PAE)
+        alphafold_pae_file = result_dir.joinpath(f"{jobname}_predicted_aligned_error_v1.json")
         alphafold_pae_file.write_text(get_pae_json(outs[0]["pae"], outs[0]["max_pae"]))
+        
+        # make msa plot
         msa_plot = plot_msa_v2(input_features,dpi=dpi)
-        coverage_png = result_dir.joinpath(jobname + "_coverage.png")
+        coverage_png = result_dir.joinpath(f"{jobname}_coverage.png")
         msa_plot.savefig(str(coverage_png))
         msa_plot.close()
+        
+        # make pae plots
         paes_plot = plot_paes(
             [outs[k]["pae"] for k in model_rank], Ls=query_sequence_len_array, dpi=dpi
         )
-        pae_png = result_dir.joinpath(jobname + "_PAE.png")
+        pae_png = result_dir.joinpath(f"{jobname}_PAE.png")
         paes_plot.savefig(str(pae_png))
         paes_plot.close()
         plddt_plot = plot_plddts(
             [outs[k]["plddt"] for k in model_rank], Ls=query_sequence_len_array, dpi=dpi
         )
-        plddt_png = result_dir.joinpath(jobname + "_plddt.png")
+
+        # make plddt plot
+        plddt_png = result_dir.joinpath(f"{jobname}_plddt.png")
         plddt_plot.savefig(str(plddt_png))
         plddt_plot.close()
         result_files = [
@@ -1500,29 +1465,16 @@ def run(
             *saved_files
         ]
         if use_templates:
-            templates_file = result_dir.joinpath(
-                jobname + "_template_domain_names.json"
-            )
+            templates_file = result_dir.joinpath(f"{jobname}_template_domain_names.json")
             templates_file.write_text(json.dumps(domain_names))
             result_files.append(templates_file)
 
         for i, key in enumerate(model_rank):
-            result_files.append(
-                result_dir.joinpath(
-                    f"{jobname}_unrelaxed_rank_{i + 1}_{outs[key]['model_name']}.pdb"
-                )
-            )
-            result_files.append(
-                result_dir.joinpath(
-                    f"{jobname}_unrelaxed_rank_{i + 1}_{outs[key]['model_name']}_scores.json"
-                )
-            )
-            if use_amber:
-                result_files.append(
-                    result_dir.joinpath(
-                        f"{jobname}_relaxed_rank_{i + 1}_{outs[key]['model_name']}.pdb"
-                    )
-                )
+            suffix = f"rank_{i + 1}_{outs[key]['model_name']}"
+            result_files.append(result_dir.joinpath(f"{jobname}_unrelaxed_{suffix}.pdb"))
+            result_files.append(result_dir.joinpath(f"{jobname}_unrelaxed_{suffix}_scores.json"))
+            if i < num_relax:
+                result_files.append(result_dir.joinpath(f"{jobname}_relaxed_{suffix}.pdb"))
 
         if zip_results:
             with zipfile.ZipFile(result_zip, "w") as result_zip:
@@ -1654,8 +1606,16 @@ def main():
         "--amber",
         default=False,
         action="store_true",
-        help="Use amber for structure refinement",
+        help="Use amber for structure refinement."
+        "To control number of top ranked structures are relaxed set --num-relax.",
     )
+    parser.add_argument(
+        "--num-relax",
+        help="specify how many of the top ranked structures to relax using amber.",
+        type=int,
+        default=0,
+    )
+
     parser.add_argument(
         "--templates", default=False, action="store_true", help="Use templates from pdb"
     )
@@ -1790,12 +1750,16 @@ def main():
 
     assert 1 <= args.recompile_padding, "Can't apply negative padding"
 
+    # backward compatibility
+    if args.amber and args.num_relax == 0:
+        args.num_relax = args.num_models * args.num_seeds
+
     run(
         queries=queries,
         result_dir=args.results,
         use_templates=args.templates,
         custom_template_path=args.custom_template_path,
-        use_amber=args.amber,
+        num_relax=args.num_relax,
         msa_mode=args.msa_mode,
         model_type=model_type,
         num_models=args.num_models,
