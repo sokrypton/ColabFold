@@ -29,7 +29,7 @@ def plot_msa_v2(input_features, sort_lines=True, dpi=100):
         else: Ls.append(1)
         k = i
     else:
-      Ls = [len(seq_)]    
+      Ls = [len(seq)]    
     Ln = np.cumsum([0] + Ls)
     msa = input_features["msa"]
     gap = msa != 21
