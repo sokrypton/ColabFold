@@ -64,6 +64,7 @@ def plot_msa_v2(input_features, sort_lines=True, dpi=100):
     for j in Nn[1:-1]:
         plt.plot([0,lines.shape[1]],[j,j],color="black")
     
+    plt.plot((np.isnan(lines) == False).sum(0), color='black')
     plt.xlim(0,lines.shape[1])
     plt.ylim(0,lines.shape[0])
     plt.colorbar(label="Sequence identity to query")
