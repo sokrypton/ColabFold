@@ -375,13 +375,14 @@ def predict_structure(
     seq_len = sum(sequences_lengths)
     model_names = []
     files = file_manager(prefix, result_dir)
+    
     for (model_name, model_runner, params) in model_runner_and_params:
         # swap params to avoid recompiling
         # note: models 1,2 have diff number of params compared to models 3,4,5 (this was handled on construction)
         model_runner.params = params
 
         for seed in range(random_seed, random_seed+num_seeds):
-            model_names.append(f"{model_type}_{model_name}_seed{seed}")
+            model_names.append(f"{model_type}_{model_name}_seed_{seed:03d}")
             files.set_tag(model_names[-1])
             
             logger.info(f"Running {model_names[-1]}")
@@ -534,7 +535,7 @@ def predict_structure(
             logger.info(f"Relaxation took {(time.time() - start):.1f}s")
 
         # rename files to include rank
-        new_tag = f"rank_{n+1}_{tag}"
+        new_tag = f"rank_{(n+1):03d}_{tag}"
         rank.append(new_tag)
         for x, ext, file in files.files[tag]:
             new_file = result_dir.joinpath(f"{prefix}_{x}_{new_tag}.{ext}")
