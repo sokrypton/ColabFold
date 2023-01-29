@@ -369,7 +369,7 @@ def predict_structure(
 ):
     """Predicts structure using AlphaFold for the given sequence."""
 
-    plddts, paes, ptmscore, iptmscore = [], [], [], []
+    plddts, ptmscores, iptmscores = [], [], []
     unrelaxed_pdb_lines = []
     prediction_times = []
     seq_len = sum(sequences_lengths)
@@ -461,12 +461,6 @@ def predict_structure(
                 prediction_callback(unrelaxed_protein, sequences_lengths, 
                     prediction_result, input_features, (model_names[-1], False))
 
-            # gather metrics
-            plddts.append(prediction_result["plddt"][:seq_len])
-            ptmscore.append(prediction_result["ptm"])
-            if "multimer" in model_type: iptmscore.append(prediction_result["iptm"])
-            paes.append(prediction_result["predicted_aligned_error"][:seq_len,:seq_len])
-
             #########################
             # save results
             #########################
@@ -488,15 +482,26 @@ def predict_structure(
                         pickle.dump(prediction_result, handle)
 
             # write an easy-to-use format (pAE and plDDT)
+            pae = prediction_result["predicted_aligned_error"][:seq_len,:seq_len]
+            plddt = prediction_result["plddt"][:seq_len]
+            ptmscore = prediction_result["ptm"]
+
+            # save for ranking
+            plddts.append(plddt.mean())
+            ptmscores.append(ptmscore)
+            if "multimer" in model_type:
+                iptmscore = prediction_result["iptm"]
+                iptmscores.append(iptmscore)
+            
             with files.get("scores","json").open("w") as handle:
                 scores = {
-                    "max_pae": paes[-1].max().astype(float).item(),
-                    "pae":   np.around(paes[-1].astype(float), 2).tolist(),
-                    "plddt": np.around(plddts[-1].astype(float), 2).tolist(),
-                    "ptm":   np.around(ptmscore[-1].astype(float), 2).item(),
+                    "max_pae": pae.max().astype(float).item(),
+                    "pae":   np.around(pae.astype(float), 2).tolist(),
+                    "plddt": np.around(plddt.astype(float), 2).tolist(),
+                    "ptm":   np.around(ptmscore.astype(float), 2).item(),
                 }
                 if "multimer" in model_type:
-                    scores["iptm"] = np.around(iptmscore[-1].astype(float), 2).item()
+                    scores["iptm"] = np.around(iptmscore.astype(float), 2).item()
                 json.dump(scores, handle)
 
             # early stop criteria fulfilled
@@ -509,18 +514,16 @@ def predict_structure(
     # rerank models based on predicted confidence
     ###################################################
     if rank_by == "ptmscore":
-        model_rank = np.array(ptmscore).argsort()[::-1]
+        model_rank = np.array(ptmscores).argsort()[::-1]
     elif rank_by == "multimer":
-        rank_array = np.array(iptmscore) * 0.8 + np.array(ptmscore) * 0.2
-        model_rank = rank_array.argsort()[::-1]
+        model_rank = (np.array(iptmscores) * 0.8 + np.array(ptmscore) * 0.2).argsort()[::-1]
     else:
-        model_rank = np.mean(plddts, -1).argsort()[::-1]
+        model_rank = np.array(plddts).argsort()[::-1]
     
-    out = {}
+    rank = []
     result_files = []
     logger.info(f"reranking models by {rank_by}")
     for n, key in enumerate(model_rank):
-
         tag = model_names[key]
         files.set_tag(tag)
         # save relaxed pdb
@@ -532,20 +535,13 @@ def predict_structure(
 
         # rename files to include rank
         new_tag = f"rank_{n+1}_{tag}"
+        rank.append(new_tag)
         for x, ext, file in files.files[tag]:
             new_file = result_dir.joinpath(f"{prefix}_{x}_{new_tag}.{ext}")
             file.rename(new_file)
             result_files.append(new_file)
         
-        # TODO: get rid of this...
-        out[key] = {
-            "plddt": plddts[key],
-            "pae": paes[key],
-            "max_pae": paes[key].max(),
-            "pTMscore": ptmscore[key],
-            "model_name": model_names[key]}
-
-    return {"out":out, "model_rank":model_rank, "result_files":result_files}
+    return {"rank":rank, "result_files":result_files}
 
 def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
     """Parses FASTA string and returns list of strings with amino-acid sequences.
@@ -1413,8 +1409,6 @@ def run(
                 save_single_representations=save_single_representations,
                 save_pair_representations=save_pair_representations,
             )
-            outs = results["out"]
-            model_rank = results["model_rank"]
             result_files = results["result_files"]
 
         except RuntimeError as e:
@@ -1422,21 +1416,29 @@ def run(
             logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
             continue
 
-        # write alphafold-db format (pAE)
-        alphafold_pae_file = result_dir.joinpath(f"{jobname}_predicted_aligned_error_v1.json")
-        alphafold_pae_file.write_text(get_pae_json(outs[0]["pae"].astype(float),
-                                                   outs[0]["pae"].max().astype(float)))
-        result_files.append(alphafold_pae_file)
-        
         # make msa plot
         msa_plot = plot_msa_v2(input_features,dpi=dpi)
         coverage_png = result_dir.joinpath(f"{jobname}_coverage.png")
         msa_plot.savefig(str(coverage_png), bbox_inches='tight')
         msa_plot.close()
         result_files.append(coverage_png)
+
+        # load the scores
+        scores = []
+        for r in results["rank"][:5]:
+            scores_file = result_dir.joinpath(f"{jobname}_scores_{r}.json")
+            with scores_file.open("r") as handle:
+                scores.append(json.load(handle))
+        
+        # write alphafold-db format (pAE)
+        af_pae_file = result_dir.joinpath(f"{jobname}_predicted_aligned_error_v1.json")
+        af_pae_file.write_text(json.dumps({
+            "predicted_aligned_error":scores[0]["pae"],
+            "max_predicted_aligned_error":scores[0]["max_pae"]}))
+        result_files.append(af_pae_file)
         
         # make pAE plots
-        paes_plot = plot_paes([outs[k]["pae"] for k in model_rank[:5]],
+        paes_plot = plot_paes([np.asarray(x["pae"]) for x in scores],
             Ls=query_sequence_len_array, dpi=dpi)
         pae_png = result_dir.joinpath(f"{jobname}_pae.png")
         paes_plot.savefig(str(pae_png), bbox_inches='tight')
@@ -1444,7 +1446,7 @@ def run(
         result_files.append(pae_png)
 
         # make pLDDT plot
-        plddt_plot = plot_plddts([outs[k]["plddt"] for k in model_rank[:5]],
+        plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
             Ls=query_sequence_len_array, dpi=dpi)
         plddt_png = result_dir.joinpath(f"{jobname}_plddt.png")
         plddt_plot.savefig(str(plddt_png), bbox_inches='tight')
