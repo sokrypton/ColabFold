@@ -1431,23 +1431,23 @@ def run(
         # make msa plot
         msa_plot = plot_msa_v2(input_features,dpi=dpi)
         coverage_png = result_dir.joinpath(f"{jobname}_coverage.png")
-        msa_plot.savefig(str(coverage_png))
+        msa_plot.savefig(str(coverage_png), bbox_inches='tight')
         msa_plot.close()
         result_files.append(coverage_png)
         
         # make pAE plots
-        paes_plot = plot_paes([outs[k]["pae"] for k in model_rank],
+        paes_plot = plot_paes([outs[k]["pae"] for k in model_rank[:5]],
             Ls=query_sequence_len_array, dpi=dpi)
         pae_png = result_dir.joinpath(f"{jobname}_pae.png")
-        paes_plot.savefig(str(pae_png))
+        paes_plot.savefig(str(pae_png), bbox_inches='tight')
         paes_plot.close()
         result_files.append(pae_png)
 
         # make pLDDT plot
-        plddt_plot = plot_plddts([outs[k]["plddt"] for k in model_rank],
+        plddt_plot = plot_plddts([outs[k]["plddt"] for k in model_rank[:5]],
             Ls=query_sequence_len_array, dpi=dpi)
         plddt_png = result_dir.joinpath(f"{jobname}_plddt.png")
-        plddt_plot.savefig(str(plddt_png))
+        plddt_plot.savefig(str(plddt_png), bbox_inches='tight')
         plddt_plot.close()
         result_files.append(plddt_png)
 
