@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-
 os.environ["TF_FORCE_UNIFIED_MEMORY"] = "1"
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "2.0"
 
@@ -301,13 +300,11 @@ def batch_input(
     )  # template_mask (4, 4) second value
     return input_fix
 
-to_np = lambda a: np.asarray(a)
 def class_to_np(c):
   class dict2obj():
     def __init__(self, d):
-      for k,v in d.items(): setattr(self, k, to_np(v))
+      for k,v in d.items(): setattr(self, k, np.asarray(v))
   return dict2obj(c.__dict__)
-
 
 def relax_me(pdb_filename=None, pdb_lines=None, pdb_obj=None, use_gpu=False):
     if "relax" not in dir():
@@ -330,6 +327,23 @@ def relax_me(pdb_filename=None, pdb_lines=None, pdb_obj=None, use_gpu=False):
     
     relaxed_pdb_lines, _, _ = amber_relaxer.process(prot=pdb_obj)
     return relaxed_pdb_lines
+
+class file_manager:
+    def __init__(self, prefix: str, result_dir: Path):
+        self.prefix = prefix
+        self.result_dir = result_dir
+        self.tag = None
+        self.files = {}
+    
+    def get(self, x: str, ext:str) -> Path:
+        if self.tag not in self.files:
+            self.files[self.tag] = []
+        file = self.result_dir.joinpath(f"{self.prefix}_{x}_{self.tag}.{ext}")
+        self.files[self.tag].append([x,ext,file])
+        return file
+
+    def set_tag(self, tag):
+        self.tag = tag
 
 def predict_structure(
     prefix: str,
@@ -356,12 +370,11 @@ def predict_structure(
     """Predicts structure using AlphaFold for the given sequence."""
 
     plddts, paes, ptmscore, iptmscore = [], [], [], []
-    max_paes = []
     unrelaxed_pdb_lines = []
     prediction_times = []
     seq_len = sum(sequences_lengths)
     model_names = []
-    saved_files = []
+    files = file_manager(prefix, result_dir)
     for (model_name, model_runner, params) in model_runner_and_params:
         # swap params to avoid recompiling
         # note: models 1,2 have diff number of params compared to models 3,4,5 (this was handled on construction)
@@ -369,8 +382,12 @@ def predict_structure(
 
         for seed in range(random_seed, random_seed+num_seeds):
             model_names.append(f"{model_type}_{model_name}_seed{seed}")
+            files.set_tag(model_names[-1])
+            
             logger.info(f"Running {model_names[-1]}")
-
+            ########################
+            # process inputs
+            ########################
             processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)
             if model_type.startswith("alphafold2_multimer"):
                 input_features = processed_feature_dict
@@ -382,118 +399,115 @@ def predict_structure(
                     crop_len,
                     use_templates,
                 )
-
+            ########################
+            # predict
+            ########################
             start = time.time()
-
-            # The original alphafold only returns the prediction_result,
-            # but our patched alphafold also returns a tuple (recycles,tol)
             prediction_result, recycles = model_runner.predict(input_features, random_seed=seed)
+            prediction_times.append(time.time() - start)
 
-            prediction_time = time.time() - start
-            prediction_times.append(prediction_time)
+            ########################
+            # parse results
+            ########################
+            # convert to numpy
+            def as_np(x):
+                y = {}
+                for k,v in x.items():
+                    y[k] = as_np(v) if isinstance(v,dict) else np.asarray(v)
+                return y
+            prediction_result = as_np(prediction_result)
+            prediction_result["representations"] = prediction_result.pop("prev")
 
-            # save raw inputs/outputs
-            if save_all or save_single_representations or save_pair_representations:
-                def fn(x):
-                    y = {}
-                    for k,v in x.items():
-                        y[k] = fn(v) if isinstance(v,dict) else np.asarray(v)
-                    return y
-                x = fn(prediction_result)
-                x["representations"] = x.pop("prev")
-                if save_single_representations:
-                    saved_files.append(result_dir.joinpath(f"{prefix}_single_repr_{model_names[-1]}.npy"))
-                    np.save(saved_files[-1], x["representations"]["prev_msa_first_row"])
-                if save_pair_representations:
-                    saved_files.append(result_dir.joinpath(f"{prefix}_pair_repr_{model_names[-1]}.npy"))
-                    np.save(saved_files[-1], x["representations"]["prev_pair"])
-                if save_all:
-                    saved_files.append(result_dir.joinpath(f"{prefix}_unrelaxed_{model_names[-1]}.pickle"))
-                    with open(saved_files[-1], "wb") as handle:
-                        pickle.dump(x, handle)
+            # gather summary metrics
+            mean_plddt = prediction_result["plddt"][:seq_len].mean()
+            mean_ptm = float(prediction_result["ptm"])            
+            mean_score = mean_plddt if rank_by == "plddt" else mean_ptm
 
-            mean_plddt = np.mean(prediction_result["plddt"][:seq_len])
-            mean_ptm = prediction_result["ptm"]
-            if rank_by == "plddt":
-                mean_score = mean_plddt
-            else:
-                mean_score = mean_ptm
-
+            # report summary metrics
+            print_line = f"{model_names[-1]} took {prediction_times[-1]:.1f}s ({recycles} recycles) with pLDDT {mean_plddt:.3g}"
             if is_complex or model_type == "alphafold2_ptm":
-                if model_type.startswith("alphafold2_multimer"):
+                if "multimer" in model_type:
                     mean_iptm = prediction_result["iptm"]
-                    logger.info(
-                        f"{model_names[-1]} took {prediction_time:.1f}s ({recycles} recycles) "
-                        f"with pLDDT {mean_plddt:.3g}, ptmscore {mean_ptm:.3g} and iptm {mean_iptm:.3g}"
-                    )
+                    print_line += f", ptmscore {mean_ptm:.3g} and iptm {mean_iptm:.3g}"
                 else:
-                    logger.info(
-                        f"{model_names[-1]} took {prediction_time:.1f}s ({recycles} recycles) "
-                        f"with pLDDT {mean_plddt:.3g} and ptmscore {mean_ptm:.3g}"
-                    )
-            else:
-                logger.info(
-                    f"{model_names[-1]} took {prediction_time:.1f}s ({recycles} recycles) "
-                    f"with pLDDT {mean_plddt:.3g}"
-                )
+                    print_line += f" and ptmscore {mean_ptm:.3g}"
+            logger.info(print_line)
+
+            # update residue index
+            if model_type == "alphafold2_ptm" and is_complex:
+                input_features["aatype"] = input_features["aatype"][0]
+                input_features["asym_id"] = feature_dict["asym_id"]
+                res_idx, current_chain_idx = [1], input_features["asym_id"][0]
+                for c in input_features["asym_id"]:
+                    if c != current_chain_idx:
+                        res_idx.append(1)
+                        current_chain_idx = c
+                    else:
+                        res_idx.append(res_idx[-1]+1)
+                input_features["residue_index"] = np.array(res_idx)
+
+            # create protein object
             final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
             b_factors = prediction_result["plddt"][:, None] * final_atom_mask
-            if is_complex and model_type == "alphafold2_ptm":
-                input_features["asym_id"] = feature_dict["asym_id"]
-                input_features["aatype"] = input_features["aatype"][0]
-                input_features["residue_index"] = input_features["residue_index"][0]
-                curr_residue_index = 1
-                res_index_array = input_features["residue_index"].copy()
-                res_index_array[0] = 0
-                for i in range(1, input_features["aatype"].shape[0]):
-                    if (
-                        input_features["residue_index"][i]
-                        - input_features["residue_index"][i - 1]
-                    ) > 1:
-                        curr_residue_index = 0
-                    res_index_array[i] = curr_residue_index
-                    curr_residue_index += 1
-                input_features["residue_index"] = res_index_array
-
             unrelaxed_protein = protein.from_prediction(
                 features=input_features,
                 result=prediction_result,
                 b_factors=b_factors,
-                remove_leading_feature_dimension=not is_complex,
-            )
+                remove_leading_feature_dimension=not is_complex)
             unrelaxed_protein = class_to_np(unrelaxed_protein)
 
+            # callback for visualization
             if prediction_callback is not None:
-                prediction_callback(
-                    unrelaxed_protein,
-                    sequences_lengths,
-                    prediction_result,
-                    input_features,
-                    (model_names[-1], False),
-                )
+                prediction_callback(unrelaxed_protein, sequences_lengths, 
+                    prediction_result, input_features, (model_names[-1], False))
 
-            protein_lines = protein.to_pdb(unrelaxed_protein)
-            unrelaxed_pdb_path = result_dir.joinpath(f"{prefix}_unrelaxed_{model_names[-1]}.pdb")
-            unrelaxed_pdb_path.write_text(protein_lines)
-            unrelaxed_pdb_lines.append(protein_lines)
+            # gather metrics
             plddts.append(prediction_result["plddt"][:seq_len])
             ptmscore.append(prediction_result["ptm"])
-            if model_type.startswith("alphafold2_multimer"):
-                iptmscore.append(prediction_result["iptm"])
-            max_paes.append(prediction_result["max_predicted_aligned_error"].item())
-            paes_res = []
+            if "multimer" in model_type: iptmscore.append(prediction_result["iptm"])
+            paes.append(prediction_result["predicted_aligned_error"][:seq_len,:seq_len])
 
-            for i in range(seq_len):
-                paes_res.append(prediction_result["predicted_aligned_error"][i][:seq_len])
-            paes.append(paes_res)
+            #########################
+            # save results
+            #########################
             
+            # save pdb
+            protein_lines = protein.to_pdb(unrelaxed_protein)
+            files.get("unrelaxed","pdb").write_text(protein_lines)
+            unrelaxed_pdb_lines.append(protein_lines)
+
+            # save raw outputs
+            if save_all or save_single_representations or save_pair_representations:
+                rep = prediction_result["representations"]
+                if save_single_representations:
+                    np.save(files.get("single_repr","npy"), rep["prev_msa_first_row"])
+                if save_pair_representations:
+                    np.save(files.get("pair_repr","npy"), rep["prev_pair"])
+                if save_all:
+                    with files.get("all","pickle").open("wb") as handle:
+                        pickle.dump(prediction_result, handle)
+
+            # write an easy-to-use format (pAE and plDDT)
+            with files.get("scores","json").open("w") as handle:
+                scores = {
+                    "max_pae": paes[-1].max().astype(float).item(),
+                    "pae":   np.around(paes[-1].astype(float), 2).tolist(),
+                    "plddt": np.around(plddts[-1].astype(float), 2).tolist(),
+                    "ptm":   np.around(ptmscore[-1].astype(float), 2).item(),
+                }
+                if "multimer" in model_type:
+                    scores["iptm"] = np.around(iptmscore[-1].astype(float), 2).item()
+                json.dump(scores, handle)
+
             # early stop criteria fulfilled
             if mean_score > stop_at_score or mean_score < stop_at_score_below: break
 
         # early stop criteria fulfilled
         if mean_score > stop_at_score or mean_score < stop_at_score_below: break
 
-    # rerank models based on predicted lddt
+    ###################################################
+    # rerank models based on predicted confidence
+    ###################################################
     if rank_by == "ptmscore":
         model_rank = np.array(ptmscore).argsort()[::-1]
     elif rank_by == "multimer":
@@ -502,52 +516,36 @@ def predict_structure(
     else:
         model_rank = np.mean(plddts, -1).argsort()[::-1]
     
-
     out = {}
+    result_files = []
     logger.info(f"reranking models by {rank_by}")
     for n, key in enumerate(model_rank):
-        suffix = f"rank_{n + 1}_{model_names[key]}"
-        # save unrelaxed pdb
-        unrelaxed_pdb_path = result_dir.joinpath(f"{prefix}_unrelaxed_{suffix}.pdb")
-        unrelaxed_pdb_path.write_text(unrelaxed_pdb_lines[key])
 
-        # delete temporary file
-        unrelaxed_pdb_path_unranked = result_dir.joinpath(f"{prefix}_unrelaxed_{model_names[key]}.pdb")
-        if unrelaxed_pdb_path_unranked.is_file(): unrelaxed_pdb_path_unranked.unlink()
-
-        # relax pdb
+        tag = model_names[key]
+        files.set_tag(tag)
+        # save relaxed pdb
         if n < num_relax:
             start = time.time()
-            relaxed_pdb_path = result_dir.joinpath(f"{prefix}_relaxed_{suffix}.pdb")
-            relaxed_pdb_path.write_text(relax_me(pdb_lines=unrelaxed_pdb_lines[key], use_gpu=use_gpu_relax))            
-            relax_time = time.time() - start
-            logger.info(f"Relaxation took {relax_time:.1f}s")
+            pdb_lines = relax_me(pdb_lines=unrelaxed_pdb_lines[key], use_gpu=use_gpu_relax)
+            files.get("relaxed","pdb").write_text(pdb_lines)            
+            logger.info(f"Relaxation took {(time.time() - start):.1f}s")
 
-        # write an easy-to-use format (PAE and plDDT)
-        scores_file = result_dir.joinpath(f"{prefix}_unrelaxed_{suffix}_scores.json")
-        with scores_file.open("w") as fp:
-            # We use astype(np.float64) to prevent very long stringified floats from float imprecision
-            scores = {
-                "max_pae": max_paes[key],
-                "pae": np.around(np.asarray(paes[key]).astype(np.float64), 2).tolist(),
-                "plddt": np.around(np.asarray(plddts[key]), 2).tolist(),
-                "ptm": np.around(ptmscore[key], 2).item(),
-            }
-            if model_type.startswith("alphafold2_multimer"):
-                scores["iptm"] = np.around(iptmscore[key], 2).item()
-            json.dump(scores, fp)
-
+        # rename files to include rank
+        new_tag = f"rank_{n+1}_{tag}"
+        for x, ext, file in files.files[tag]:
+            new_file = result_dir.joinpath(f"{prefix}_{x}_{new_tag}.{ext}")
+            file.rename(new_file)
+            result_files.append(new_file)
+        
+        # TODO: get rid of this...
         out[key] = {
-            "plddt": np.asarray(plddts[key]),
-            "pae": np.asarray(paes[key]),
-            "max_pae": max_paes[key],
+            "plddt": plddts[key],
+            "pae": paes[key],
+            "max_pae": paes[key].max(),
             "pTMscore": ptmscore[key],
-            "model_name": model_names[key],
-        }
-    return {"out":out,
-            "model_rank":model_rank,
-            "saved_files":saved_files}
+            "model_name": model_names[key]}
 
+    return {"out":out, "model_rank":model_rank, "result_files":result_files}
 
 def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
     """Parses FASTA string and returns list of strings with amino-acid sequences.
@@ -578,7 +576,6 @@ def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
         sequences[index] += line
 
     return sequences, descriptions
-
 
 def get_queries(
     input_path: Union[str, Path], sort_queries_by: str = "length"
@@ -681,7 +678,6 @@ def get_queries(
                     break
     return queries, is_complex
 
-
 def pair_sequences(
     a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
 ) -> str:
@@ -696,7 +692,6 @@ def pair_sequences(
             else:
                 a3m_line_paired[i] = a3m_line_paired[i] + line * query_cardinality[n]
     return "\n".join(a3m_line_paired)
-
 
 def pad_sequences(
     a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
@@ -833,9 +828,7 @@ def get_msa_and_templates(
             num = 101
             paired_a3m_lines = []
             for i in range(0, query_seqs_cardinality[0]):
-                paired_a3m_lines.append(
-                    ">" + str(num + i) + "\n" + query_seqs_unique[0] + "\n"
-                )
+                paired_a3m_lines.append(f">{num+i}\n{query_seqs_unique[0]}\n")
     else:
         paired_a3m_lines = None
 
@@ -998,7 +991,7 @@ def generate_input_feature(
         for sequence_index, sequence in enumerate(query_seqs_unique):
             for cardinality in range(0, query_seqs_cardinality[sequence_index]):
                 if unpaired_msa is None:
-                    input_msa = ">" + str(101 + sequence_index) + "\n" + sequence
+                    input_msa = f">{101 + sequence_index}\n{sequence}"
                 else:
                     input_msa = unpaired_msa[sequence_index]
 
@@ -1007,7 +1000,7 @@ def generate_input_feature(
                 )
                 if is_complex:
                     if paired_msa is None:
-                        input_msa = ">" + str(101 + sequence_index) + "\n" + sequence
+                        input_msa = f">{101 + sequence_index}\n{sequence}"
                     else:
                         input_msa = paired_msa[sequence_index]
 
@@ -1422,72 +1415,62 @@ def run(
             )
             outs = results["out"]
             model_rank = results["model_rank"]
-            saved_files = results["saved_files"]
+            result_files = results["result_files"]
 
         except RuntimeError as e:
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
             logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
             continue
 
-        # write alphafold-db format (PAE)
+        # write alphafold-db format (pAE)
         alphafold_pae_file = result_dir.joinpath(f"{jobname}_predicted_aligned_error_v1.json")
-        alphafold_pae_file.write_text(get_pae_json(outs[0]["pae"], outs[0]["max_pae"]))
+        alphafold_pae_file.write_text(get_pae_json(outs[0]["pae"].astype(float),
+                                                   outs[0]["pae"].max().astype(float)))
+        result_files.append(alphafold_pae_file)
         
         # make msa plot
         msa_plot = plot_msa_v2(input_features,dpi=dpi)
         coverage_png = result_dir.joinpath(f"{jobname}_coverage.png")
         msa_plot.savefig(str(coverage_png))
         msa_plot.close()
+        result_files.append(coverage_png)
         
-        # make pae plots
-        paes_plot = plot_paes(
-            [outs[k]["pae"] for k in model_rank], Ls=query_sequence_len_array, dpi=dpi
-        )
-        pae_png = result_dir.joinpath(f"{jobname}_PAE.png")
+        # make pAE plots
+        paes_plot = plot_paes([outs[k]["pae"] for k in model_rank],
+            Ls=query_sequence_len_array, dpi=dpi)
+        pae_png = result_dir.joinpath(f"{jobname}_pae.png")
         paes_plot.savefig(str(pae_png))
         paes_plot.close()
-        plddt_plot = plot_plddts(
-            [outs[k]["plddt"] for k in model_rank], Ls=query_sequence_len_array, dpi=dpi
-        )
+        result_files.append(pae_png)
 
-        # make plddt plot
+        # make pLDDT plot
+        plddt_plot = plot_plddts([outs[k]["plddt"] for k in model_rank],
+            Ls=query_sequence_len_array, dpi=dpi)
         plddt_png = result_dir.joinpath(f"{jobname}_plddt.png")
         plddt_plot.savefig(str(plddt_png))
         plddt_plot.close()
-        result_files = [
-            bibtex_file,
-            config_out_file,
-            alphafold_pae_file,
-            result_dir.joinpath(jobname + ".a3m"),
-            pae_png,
-            coverage_png,
-            plddt_png,
-            *saved_files
-        ]
+        result_files.append(plddt_png)
+
         if use_templates:
             templates_file = result_dir.joinpath(f"{jobname}_template_domain_names.json")
             templates_file.write_text(json.dumps(domain_names))
             result_files.append(templates_file)
 
-        for i, key in enumerate(model_rank):
-            suffix = f"rank_{i + 1}_{outs[key]['model_name']}"
-            result_files.append(result_dir.joinpath(f"{jobname}_unrelaxed_{suffix}.pdb"))
-            result_files.append(result_dir.joinpath(f"{jobname}_unrelaxed_{suffix}_scores.json"))
-            if i < num_relax:
-                result_files.append(result_dir.joinpath(f"{jobname}_relaxed_{suffix}.pdb"))
+        result_files.append(result_dir.joinpath(jobname + ".a3m"))
+        result_files += [bibtex_file, config_out_file]
 
         if zip_results:
             with zipfile.ZipFile(result_zip, "w") as result_zip:
                 for file in result_files:
                     result_zip.write(file, arcname=file.name)
+            
             # Delete only after the zip was successful, and also not the bibtex and config because we need those again
-            for file in result_files[2:]:
+            for file in result_files[:-2]:
                 file.unlink()
         else:
             is_done_marker.touch()
 
     logger.info("Done")
-
 
 def set_model_type(is_complex: bool, model_type: str) -> str:
     # backward-compatibility with old options
@@ -1786,7 +1769,6 @@ def main():
         stop_at_score_below=args.stop_at_score_below,
         save_all=args.save_all,
     )
-
 
 if __name__ == "__main__":
     main()
