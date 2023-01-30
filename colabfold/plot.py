@@ -19,19 +19,25 @@ def plot_predicted_alignment_error(
     plt.close()
 
 
-def plot_msa_v2(input_features, sort_lines=True, dpi=100):
-    seq = input_features["msa"][0]
-    if "asym_id" in input_features:
+def plot_msa_v2(feature_dict, sort_lines=True, dpi=100):
+    seq = feature_dict["msa"][0]
+    if "asym_id" in feature_dict:
       Ls = [0]
-      k = input_features["asym_id"][0]
-      for i in input_features["asym_id"]:
+      k = feature_dict["asym_id"][0]
+      for i in feature_dict["asym_id"]:
         if i == k: Ls[-1] += 1
         else: Ls.append(1)
         k = i
     else:
       Ls = [len(seq)]    
     Ln = np.cumsum([0] + Ls)
-    msa = input_features["msa"]
+
+    try:
+        N = feature_dict["num_alignments"][0]
+    except:
+        N = feature_dict["num_alignments"] 
+    
+    msa = feature_dict["msa"][:N]
     gap = msa != 21
     qid = msa == seq
     gapid = np.stack([gap[:,Ln[i]:Ln[i+1]].max(-1) for i in range(len(Ls))],-1)

@@ -386,13 +386,16 @@ def predict_structure(
             files.set_tag(model_names[-1])
             
             logger.info(f"Running {model_names[-1]}")
+
             ########################
             # process inputs
             ########################
             processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)
-            if model_type.startswith("alphafold2_multimer"):
+            
+            if "multimer" in model_type:
                 input_features = processed_feature_dict
             else:
+                # pad inputs
                 input_features = batch_input(
                     processed_feature_dict,
                     model_runner,
@@ -426,7 +429,7 @@ def predict_structure(
 
             # report summary metrics
             print_line = f"{model_names[-1]} took {prediction_times[-1]:.1f}s ({recycles} recycles) with pLDDT {mean_plddt:.3g}"
-            if is_complex or model_type == "alphafold2_ptm":
+            if is_complex or "ptm" in model_type:
                 if "multimer" in model_type:
                     mean_iptm = prediction_result["iptm"]
                     print_line += f", ptmscore {mean_ptm:.3g} and iptm {mean_iptm:.3g}"
@@ -435,17 +438,16 @@ def predict_structure(
             logger.info(print_line)
 
             # update residue index
-            if model_type == "alphafold2_ptm" and is_complex:
-                input_features["aatype"] = input_features["aatype"][0]
-                input_features["asym_id"] = feature_dict["asym_id"]
-                res_idx, current_chain_idx = [1], input_features["asym_id"][0]
-                for c in input_features["asym_id"]:
+            if "ptm" in model_type and is_complex:
+                input_features["asym_id"] = feature_dict["asym_id"][None]
+                res_idx, current_chain_idx = [1], feature_dict["asym_id"][0]
+                for c in feature_dict["asym_id"]:
                     if c != current_chain_idx:
                         res_idx.append(1)
                         current_chain_idx = c
                     else:
                         res_idx.append(res_idx[-1]+1)
-                input_features["residue_index"] = np.array(res_idx)
+                input_features["residue_index"] = np.array(res_idx)[None]
 
             # create protein object
             final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
@@ -454,7 +456,7 @@ def predict_structure(
                 features=input_features,
                 result=prediction_result,
                 b_factors=b_factors,
-                remove_leading_feature_dimension=not is_complex)
+                remove_leading_feature_dimension=("ptm" in model_type))
             unrelaxed_protein = class_to_np(unrelaxed_protein)
 
             # callback for visualization
@@ -731,19 +733,21 @@ def get_msa_and_templates(
     from colabfold.colabfold import run_mmseqs2
 
     use_env = msa_mode == "mmseqs2_uniref_env"
+    if isinstance(query_sequences, str): query_sequences = [query_sequences]
+
     # remove duplicates before searching
-    query_sequences = (
-        [query_sequences] if isinstance(query_sequences, str) else query_sequences
-    )
     query_seqs_unique = []
     for x in query_sequences:
         if x not in query_seqs_unique:
             query_seqs_unique.append(x)
+
+    # determine how many times is each sequence is used
     query_seqs_cardinality = [0] * len(query_seqs_unique)
     for seq in query_sequences:
         seq_idx = query_seqs_unique.index(seq)
         query_seqs_cardinality[seq_idx] += 1
 
+    # get template features
     template_features = []
     if use_templates:
         a3m_lines_mmseqs2, template_paths = run_mmseqs2(
@@ -795,7 +799,7 @@ def get_msa_and_templates(
             a3m_lines = []
             num = 101
             for i, seq in enumerate(query_seqs_unique):
-                a3m_lines.append(">" + str(num + i) + "\n" + seq)
+                a3m_lines.append(f">{num + i}\n{seq}")
         else:
             # find normal a3ms
             a3m_lines = run_mmseqs2(
@@ -955,7 +959,7 @@ def generate_input_feature(
 
     input_feature = {}
     domain_names = {}
-    if is_complex and model_type == "alphafold2_ptm":
+    if is_complex and "ptm" in model_type:
 
         full_sequence = ""
         Ls = []
@@ -985,30 +989,32 @@ def generate_input_feature(
     else:
         features_for_chain = {}
         chain_cnt = 0
+        # for each unique sequence
         for sequence_index, sequence in enumerate(query_seqs_unique):
-            for cardinality in range(0, query_seqs_cardinality[sequence_index]):
-                if unpaired_msa is None:
+            
+            # get unpaired msa
+            if unpaired_msa is None:
+                input_msa = f">{101 + sequence_index}\n{sequence}"
+            else:
+                input_msa = unpaired_msa[sequence_index]
+
+            feature_dict = build_monomer_feature(
+                sequence, input_msa, template_features[sequence_index])
+
+            if "multimer" in model_type:
+                # get paired msa
+                if paired_msa is None:
                     input_msa = f">{101 + sequence_index}\n{sequence}"
                 else:
-                    input_msa = unpaired_msa[sequence_index]
+                    input_msa = paired_msa[sequence_index]
+                feature_dict.update(build_multimer_feature(input_msa))
 
-                feature_dict = build_monomer_feature(
-                    sequence, input_msa, template_features[sequence_index]
-                )
-                if is_complex:
-                    if paired_msa is None:
-                        input_msa = f">{101 + sequence_index}\n{sequence}"
-                    else:
-                        input_msa = paired_msa[sequence_index]
-
-                    all_seq_features = build_multimer_feature(input_msa)
-                    feature_dict.update(all_seq_features)
-
+            # for each copy
+            for cardinality in range(0, query_seqs_cardinality[sequence_index]):
                 features_for_chain[protein.PDB_CHAIN_IDS[chain_cnt]] = feature_dict
                 chain_cnt += 1
 
-        # Do further feature post-processing depending on the model type.
-        if not is_complex:
+        if "ptm" in model_type:
             input_feature = features_for_chain[protein.PDB_CHAIN_IDS[0]]
             domain_names = {
                 protein.PDB_CHAIN_IDS[0]: [
@@ -1017,7 +1023,8 @@ def generate_input_feature(
                     if name != b"none"
                 ]
             }
-        elif model_type.startswith("alphafold2_multimer"):
+        else:
+            # combine features across all chains
             input_feature = process_multimer_features(features_for_chain)
             domain_names = {
                 chain: [
@@ -1027,8 +1034,6 @@ def generate_input_feature(
                 ]
                 for (chain, feature) in features_for_chain.items()
             }
-        elif is_complex and model_type == "alphafold2_ptm":
-            domain_names = {protein.PDB_CHAIN_IDS[0]: []}
     return (input_feature, domain_names)
 
 
@@ -1183,7 +1188,7 @@ def run(
     stop_at_score_below: float = 0,
     dpi: int = 200,
     max_msa: Optional[str] = None,
-    input_features_callback: Callable[[Any], Any] = None,
+    feature_dict_callback: Callable[[Any], Any] = None,
     **kwargs
 ):
     from alphafold.notebooks.notebook_utils import get_pae_json
@@ -1209,10 +1214,11 @@ def run(
                  "unpaired+paired":"unpaired_paired"}
     msa_mode   = old_names.get(msa_mode,msa_mode)
     pair_mode  = old_names.get(pair_mode,pair_mode)
-    use_cluster_profile = kwargs.pop("use_cluster_profile", None)
-    use_fuse            = kwargs.pop("use_fuse", True)
-    use_bfloat16        = kwargs.pop("use_bfloat16", True)
-    use_dropout         = kwargs.pop("training", use_dropout)
+    feature_dict_callback = kwargs.pop("input_features_callback", feature_dict_callback)
+    use_dropout           = kwargs.pop("training", use_dropout)
+    use_cluster_profile   = kwargs.pop("use_cluster_profile", None)
+    use_fuse              = kwargs.pop("use_fuse", True)
+    use_bfloat16          = kwargs.pop("use_bfloat16", True)
     if kwargs.pop("use_amber", False) and num_relax == 0: 
         num_relax = num_models * num_seeds
 
@@ -1274,6 +1280,10 @@ def run(
     crop_len = 0
     for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
         jobname = safe_filename(raw_jobname)
+        
+        #######################################
+        # check if job has already finished
+        #######################################
         # In the colab version and with --zip we know we're done when a zip file has been written
         result_zip = result_dir.joinpath(jobname).with_suffix(".result.zip")
         if keep_existing_results and result_zip.is_file():
@@ -1285,28 +1295,20 @@ def run(
             logger.info(f"Skipping {jobname} (already done)")
             continue
 
-        # query sequence is either string or list of strings (for complex)
-        query_sequence_len = (
-            len(query_sequence)
-            if isinstance(query_sequence, str)
-            else sum(len(s) for s in query_sequence)
-        )
-        logger.info(
-            f"Query {job_number + 1}/{len(queries)}: {jobname} (length {query_sequence_len})"
-        )
+        query_sequence_len = len("".join(query_sequence))
+        logger.info(f"Query {job_number + 1}/{len(queries)}: {jobname} (length {query_sequence_len})")
 
+        ###########################################
         # generate MSA (a3m_lines) and templates
+        ###########################################
         try:
-            if a3m_lines is None:
+            if use_templates or a3m_lines is None:
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
-                = get_msa_and_templates(jobname, query_sequence, result_dir, msa_mode, 
-                                        use_templates, custom_template_path, pair_mode, host_url)
-            else:
-                (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
+                = get_msa_and_templates(jobname, query_sequence, result_dir, msa_mode, use_templates, 
+                    custom_template_path, pair_mode, host_url)
+            if a3m_lines is not None:
+                (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, _) \
                 = unserialize_msa(a3m_lines, query_sequence)
-                if use_templates:
-                    template_features = get_msa_and_templates(jobname, query_sequence, result_dir, msa_mode,
-                                                              use_templates, custom_template_path, pair_mode, host_url)[4]
 
             # save a3m
             msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
@@ -1316,19 +1318,25 @@ def run(
             logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
             continue
         
-        # parse features
+        #######################
+        # generate features
+        #######################
         try:
-            (input_features, domain_names) \
+            (feature_dict, domain_names) \
             = generate_input_feature(query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa,
                                      template_features, is_complex, model_type)
+            
             # to allow display of MSA info during colab/chimera run (thanks tomgoddard)
-            if input_features_callback is not None: input_features_callback(input_features)
+            if feature_dict_callback is not None:
+                feature_dict_callback(feature_dict)
         
         except Exception as e:
             logger.exception(f"Could not generate input features {jobname}: {e}")
             continue
         
+        ######################
         # predict structures
+        ######################
         try:
             query_sequence_len_array = [
                 len(query_seqs_unique[i])
@@ -1347,10 +1355,10 @@ def run(
                 if len(queries) == 1:
                     
                     # get number of sequences
-                    if "msa_mask" in input_features:
-                        num_seqs = sum(input_features["msa_mask"].max(-1) == 1)
+                    if "msa_mask" in feature_dict:
+                        num_seqs = sum(feature_dict["msa_mask"].max(-1) == 1)
                     else:
-                        num_seqs = len(input_features["msa"])
+                        num_seqs = len(feature_dict["msa"])
 
                     # get max settings
                     if max_msa is not None:
@@ -1391,7 +1399,7 @@ def run(
             results = predict_structure(
                 prefix=jobname,
                 result_dir=result_dir,
-                feature_dict=input_features,
+                feature_dict=feature_dict,
                 is_complex=is_complex,
                 use_templates=use_templates,
                 sequences_lengths=query_sequence_len_array,
@@ -1417,8 +1425,12 @@ def run(
             logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
             continue
 
+        ###############
+        # save plots
+        ###############
+
         # make msa plot
-        msa_plot = plot_msa_v2(input_features,dpi=dpi)
+        msa_plot = plot_msa_v2(feature_dict, dpi=dpi)
         coverage_png = result_dir.joinpath(f"{jobname}_coverage.png")
         msa_plot.savefig(str(coverage_png), bbox_inches='tight')
         msa_plot.close()
