@@ -440,14 +440,19 @@ def predict_structure(
             # update residue index
             if "ptm" in model_type and is_complex:
                 input_features["asym_id"] = feature_dict["asym_id"][None]
-                res_idx, current_chain_idx = [1], feature_dict["asym_id"][0]
-                for c in feature_dict["asym_id"]:
-                    if c != current_chain_idx:
-                        res_idx.append(1)
-                        current_chain_idx = c
-                    else:
-                        res_idx.append(res_idx[-1]+1)
-                input_features["residue_index"] = np.array(res_idx)[None]
+                curr_residue_index = 1
+                res_idx = input_features["residue_index"][0]
+                res_index_array = res_idx.copy()
+                res_index_array[0] = 0
+                for i in range(1, input_features["aatype"][0].shape[0]):
+                    if (res_idx[i] - res_idx[i - 1]) > 1:
+                        curr_residue_index = 0
+                    res_index_array[i] = curr_residue_index
+                    curr_residue_index += 1
+                input_features["residue_index"] = np.array(res_index_array)[None]
+
+            if "asym_id" in input_features:
+                input_features["asym_id"] -= input_features["asym_id"][...,0]
 
             # create protein object
             final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
