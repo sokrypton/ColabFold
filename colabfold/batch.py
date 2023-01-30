@@ -528,7 +528,7 @@ def predict_structure(
     else:
         model_rank = np.array(plddts).argsort()[::-1]
     
-    rank = []
+    rank, metric = [],[]
     result_files = []
     logger.info(f"reranking models by {rank_by}")
     for n, key in enumerate(model_rank):
@@ -544,12 +544,17 @@ def predict_structure(
         # rename files to include rank
         new_tag = f"rank_{(n+1):03d}_{tag}"
         rank.append(new_tag)
+        metric.append({"plddt":float(plddts[key]), "ptm":float(ptmscores[key])})
+        if is_complex and "multimer" in model_type:
+            metric[-1]["iptm"] = float(iptmscores[key])
         for x, ext, file in files.files[tag]:
             new_file = result_dir.joinpath(f"{prefix}_{x}_{new_tag}.{ext}")
             file.rename(new_file)
             result_files.append(new_file)
         
-    return {"rank":rank, "result_files":result_files}
+    return {"rank":rank,
+            "metric":metric,
+            "result_files":result_files}
 
 def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
     """Parses FASTA string and returns list of strings with amino-acid sequences.
@@ -1283,6 +1288,7 @@ def run(
         mk_hhsearch_db(custom_template_path)
 
     crop_len = 0
+    ranks, metrics = [],[]
     for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
         jobname = safe_filename(raw_jobname)
         
@@ -1312,8 +1318,9 @@ def run(
                 = get_msa_and_templates(jobname, query_sequence, result_dir, msa_mode, use_templates, 
                     custom_template_path, pair_mode, host_url)
             if a3m_lines is not None:
-                (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, _) \
+                (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features_) \
                 = unserialize_msa(a3m_lines, query_sequence)
+                if not use_templates: template_features = template_features_
 
             # save a3m
             msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
@@ -1343,6 +1350,7 @@ def run(
         # predict structures
         ######################
         try:
+            # get list of lengths
             query_sequence_len_array = [
                 len(query_seqs_unique[i])
                 for i, cardinality in enumerate(query_seqs_cardinality)
@@ -1424,6 +1432,8 @@ def run(
                 save_pair_representations=save_pair_representations,
             )
             result_files = results["result_files"]
+            ranks.append(results["rank"])
+            metrics.append(results["metric"])
 
         except RuntimeError as e:
             # This normally happens on OOM. TODO: Filter for the specific OOM error message
@@ -1491,6 +1501,7 @@ def run(
             is_done_marker.touch()
 
     logger.info("Done")
+    return {"rank":ranks,"metric":metrics}
 
 def set_model_type(is_complex: bool, model_type: str) -> str:
     # backward-compatibility with old options
