@@ -18,7 +18,8 @@ def load_models_and_params(
     data_dir: Path = Path("."),
     stop_at_score: float = 100,
     rank_by: str = "plddt",
-    max_msa: Optional[str] = None,
+    max_seq: Optional[int] = None,
+    max_extra_seq: Optional[int] = None,
     use_cluster_profile: Optional[bool] = None,
     use_fuse: bool = True,
     use_bfloat16: bool = True,
@@ -37,7 +38,7 @@ def load_models_and_params(
     if model_order is None: model_order = [1, 2, 3, 4, 5]
 
     model_build_order = [3, 4, 5, 1, 2]
-    if model_suffix.startswith("_multimer"):
+    if "multimer" in model_suffix:
         models_need_compilation = [3]
     else:
         # only models 1,2 use templates
@@ -62,23 +63,25 @@ def load_models_and_params(
             # set fuse options
             model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights = use_fuse
             model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights = use_fuse
-            if model_suffix.startswith("_multimer") or model_number in [1,2]:
+            if "multimer" in model_suffix or model_number in [1,2]:
                 model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.fuse_projection_weights = use_fuse
                 model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.fuse_projection_weights = use_fuse
                         
             # set number of sequences options
-            if max_msa is not None:
-                max_msa_clusters, max_extra_msa = [int(x) for x in max_msa.split(":")]
-
-                if model_suffix.startswith("_multimer"):
-                    model_config.model.embeddings_and_evoformer.num_msa = max_msa_clusters
-                    model_config.model.embeddings_and_evoformer.num_extra_msa = max_extra_msa
+            if max_seq is not None:
+                if "multimer" in model_suffix:
+                    model_config.model.embeddings_and_evoformer.num_msa = max_seq
                 else:
-                    model_config.data.eval.max_msa_clusters = max_msa_clusters
-                    model_config.data.common.max_extra_msa = max_extra_msa
+                    model_config.data.eval.max_msa_clusters = max_seq
             
+            if max_extra_seq is not None:
+                if "multimer" in model_suffix:
+                    model_config.model.embeddings_and_evoformer.num_extra_msa = max_extra_seq
+                else:
+                    model_config.data.common.max_extra_msa = max_extra_seq
+
             # set number of recycles and ensembles            
-            if model_suffix.startswith("_multimer"):
+            if "multimer" in model_suffix:
                 if num_recycles is not None:
                     model_config.model.num_recycle = num_recycles
                 if use_cluster_profile is not None:

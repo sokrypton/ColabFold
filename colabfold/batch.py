@@ -1197,7 +1197,8 @@ def run(
     stop_at_score: float = 100,
     stop_at_score_below: float = 0,
     dpi: int = 200,
-    max_msa: Optional[str] = None,
+    max_seq: Optional[int] = None,
+    max_extra_seq: Optional[int] = None,
     feature_dict_callback: Callable[[Any], Any] = None,
     **kwargs
 ):
@@ -1229,6 +1230,10 @@ def run(
     use_cluster_profile   = kwargs.pop("use_cluster_profile", None)
     use_fuse              = kwargs.pop("use_fuse", True)
     use_bfloat16          = kwargs.pop("use_bfloat16", True)
+    max_msa               = kwargs.pop("max_msa",None)
+    if max_msa is not None:
+        max_seq, max_extra_seq = [int(x) for x in max_msa.split(":")]
+
     if kwargs.pop("use_amber", False) and num_relax == 0: 
         num_relax = num_models * num_seeds
 
@@ -1259,7 +1264,8 @@ def run(
         "model_order": model_order,
         "keep_existing_results": keep_existing_results,
         "rank_by": rank_by,
-        "max_msa": max_msa,
+        "max_seq": max_seq,
+        "max_extra_seq": max_extra_seq,
         "pair_mode": pair_mode,
         "host_url": host_url,
         "stop_at_score": stop_at_score,
@@ -1374,22 +1380,24 @@ def run(
                         num_seqs = len(feature_dict["msa"])
 
                     # get max settings
-                    if max_msa is not None:
-                        max_a, max_b = [int(x) for x in max_msa.split(":")]                    
+                    # 512 5120  = alphafold (models 1,3,4)
+                    # 512 1024  = alphafold (models 2,5)
+                    # 508 2048  = alphafold-multimer (v3, models 1,2,3)
+                    # 508 1152  = alphafold-multimer (v3, models 4,5)
+                    # 252 1152  = alphafold-multimer (v1, v2)
+                    set_if = lambda x,y: y if x is None else x
+                    if model_type in ["alphafold2_multimer_v1","alphafold2_multimer_v2"]:
+                        (max_seq, max_extra_seq) = (set_if(max_seq,252), set_if(max_extra_seq,1152))
+                    elif model_type == "alphafold2_multimer_v3":
+                        (max_seq, max_extra_seq) = (set_if(max_seq,508), set_if(max_extra_seq,2048))
                     else:
-                        if model_type in ["alphafold2_multimer_v1","alphafold2_multimer_v2"]:
-                            (max_a, max_b) = (252, 1152)
-                        elif model_type == "alphafold2_multimer_v3":
-                            (max_a, max_b) = (508, 2048)
-                        else:
-                            (max_a, max_b) = (512, 5120)
-                            if use_templates: num_seqs = num_seqs + 4
+                        (max_seq, max_extra_seq) = (set_if(max_seq,512), set_if(max_extra_seq,5120))
+                        if use_templates: num_seqs = num_seqs + 4
                     
                     # adjust max settings
-                    max_a = min(num_seqs, max_a)
-                    max_b = max(min(num_seqs - max_a, max_b), 1)
-                    max_msa = f"{max_a}:{max_b}"
-                    logger.info(f"Setting max_msa='{max_msa}'")
+                    max_seq = min(num_seqs, max_seq)
+                    max_extra_seq = max(min(num_seqs - max_seq, max_extra_seq), 1)
+                    logger.info(f"Setting max_seq={max_seq}, max_extra_seq={max_extra_seq}")
 
                 model_runner_and_params = load_models_and_params(
                     num_models=num_models,
@@ -1402,7 +1410,8 @@ def run(
                     stop_at_score=stop_at_score,
                     rank_by=rank_by,
                     use_dropout=use_dropout,
-                    max_msa=max_msa,
+                    max_seq=max_seq,
+                    max_extra_seq=max_extra_seq,
                     use_cluster_profile=use_cluster_profile,
                     recycle_early_stop_tolerance=recycle_early_stop_tolerance,
                     use_fuse=use_fuse,
@@ -1679,25 +1688,23 @@ def main():
         help="activate dropouts during inference to sample from uncertainity of the models",
     )
     parser.add_argument(
+        "--max-seq",
+        help="number of sequence clusters to use",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-extra-seq",
+        help="number of extra sequences to use",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
         "--max-msa",
-        help="defines: `max_msa_clusters:max_extra_msa` number of sequences to use",
+        help="defines: `max-seq:max-extra-seq` number of sequences to use",
         type=str,
         default=None,
-        choices=[
-            "512:5120", # default used in alphafold (models 1,3,4)
-            "508:2048", # default used in alphafold-multimer (v3, models 1,2,3)
-            "508:1152", # default used in alphafold-multimer (v3, models 4,5)
-            "252:1152", # default used in alphafold-multimer (v1, v2)
-
-            "512:1024", # default used in alphafold (models 2,5)
-            "256:512",
-            "128:256",
-            "64:128",
-            "32:64",
-            "16:32",
-        ],
     )
-
     parser.add_argument(
         "--zip",
         default=False,
@@ -1795,6 +1802,8 @@ def main():
         save_single_representations=args.save_single_representations,
         save_pair_representations=args.save_pair_representations,
         use_dropout=args.use_dropout,
+        max_seq=args.max_seq,
+        max_extra_seq=args.max_extra_seq,
         max_msa=args.max_msa,
         use_gpu_relax = args.use_gpu_relax if DEVICE == "gpu" else False,
         stop_at_score_below=args.stop_at_score_below,
