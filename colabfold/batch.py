@@ -524,7 +524,7 @@ def predict_structure(
     if rank_by == "ptmscore":
         model_rank = np.array(ptmscores).argsort()[::-1]
     elif rank_by == "multimer":
-        model_rank = (np.array(iptmscores) * 0.8 + np.array(ptmscore) * 0.2).argsort()[::-1]
+        model_rank = (np.array(iptmscores) * 0.8 + np.array(ptmscores) * 0.2).argsort()[::-1]
     else:
         model_rank = np.array(plddts).argsort()[::-1]
     
