@@ -1375,9 +1375,9 @@ def run(
                     
                     # get number of sequences
                     if "msa_mask" in feature_dict:
-                        num_seqs = sum(feature_dict["msa_mask"].max(-1) == 1)
+                        num_seqs = int(sum(feature_dict["msa_mask"].max(-1) == 1))
                     else:
-                        num_seqs = len(feature_dict["msa"])
+                        num_seqs = int(len(feature_dict["msa"]))
 
                     # get max settings
                     # 512 5120  = alphafold (models 1,3,4)
