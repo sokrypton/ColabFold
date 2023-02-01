@@ -64,7 +64,6 @@ from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 
 logger = logging.getLogger(__name__)
 
-
 def patch_openmm():
     from simtk.openmm import app
     from simtk.unit import nanometers, sqrt
@@ -1202,6 +1201,27 @@ def run(
     feature_dict_callback: Callable[[Any], Any] = None,
     **kwargs
 ):
+    # check what device is available
+    import jax    
+    try:
+        # check if TPU is available
+        import jax.tools.colab_tpu
+        jax.tools.colab_tpu.setup_tpu()
+        logger.info('Running on TPU')
+        DEVICE = "tpu"
+        use_gpu_relax = False
+    except:
+        if jax.local_devices()[0].platform == 'cpu':
+            logger.info("WARNING: no GPU detected, will be using CPU")
+            DEVICE = "cpu"
+            use_gpu_relax = False
+        else:
+            import tensorflow as tf
+            logger.info('Running on GPU')
+            DEVICE = "gpu"
+            # disable GPU on tensorflow
+            tf.config.set_visible_devices([], 'GPU')
+
     from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
     from colabfold.colabfold import plot_paes, plot_plddts
@@ -1399,6 +1419,7 @@ def run(
                     max_extra_seq = max(min(num_seqs - max_seq, max_extra_seq), 1)
                     logger.info(f"Setting max_seq={max_seq}, max_extra_seq={max_extra_seq}")
 
+                logging.disable(logging.CRITICAL)
                 model_runner_and_params = load_models_and_params(
                     num_models=num_models,
                     use_templates=use_templates,
@@ -1417,6 +1438,7 @@ def run(
                     use_fuse=use_fuse,
                     use_bfloat16=use_bfloat16,
                 )
+                logging.disable(logging.NOTSET)
 
             results = predict_structure(
                 prefix=jobname,
@@ -1740,25 +1762,6 @@ def main():
 
     data_dir = Path(args.data or default_data_dir)
 
-    # check what device is available
-    import jax    
-    try:
-        # check if TPU is available
-        import jax.tools.colab_tpu
-        jax.tools.colab_tpu.setup_tpu()
-        logger.info('Running on TPU')
-        DEVICE = "tpu"
-    except:
-        if jax.local_devices()[0].platform == 'cpu':
-            logger.info("WARNING: no GPU detected, will be using CPU")
-            DEVICE = "cpu"
-        else:
-            import tensorflow as tf
-            logger.info('Running on GPU')
-            DEVICE = "gpu"
-            # disable GPU on tensorflow
-            tf.config.set_visible_devices([], 'GPU')
-
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
     model_type = set_model_type(is_complex, args.model_type)
         
@@ -1805,7 +1808,7 @@ def main():
         max_seq=args.max_seq,
         max_extra_seq=args.max_extra_seq,
         max_msa=args.max_msa,
-        use_gpu_relax = args.use_gpu_relax if DEVICE == "gpu" else False,
+        use_gpu_relax = args.use_gpu_relax,
         stop_at_score_below=args.stop_at_score_below,
         save_all=args.save_all,
     )
