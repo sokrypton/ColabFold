@@ -1289,6 +1289,25 @@ def run(
     bibtex_file = write_bibtex(
         model_type, use_msa, use_env, use_templates, use_amber, result_dir
     )
+    
+    model_runner_and_params = load_models_and_params(
+        num_models=num_models,
+        use_templates=use_templates,
+        num_recycles=num_recycles,
+        num_ensemble=num_ensemble,
+        model_order=model_order,
+        model_suffix=model_suffix,
+        data_dir=data_dir,
+        stop_at_score=stop_at_score,
+        rank_by=rank_by,
+        use_dropout=use_dropout,
+        max_seq=max_seq,
+        max_extra_seq=max_extra_seq,
+        use_cluster_profile=use_cluster_profile,
+        recycle_early_stop_tolerance=recycle_early_stop_tolerance,
+        use_fuse=use_fuse,
+        use_bfloat16=use_bfloat16,
+    )
 
     if custom_template_path is not None:
         mk_hhsearch_db(custom_template_path)
@@ -1398,25 +1417,6 @@ def run(
                     max_seq = min(num_seqs, max_seq)
                     max_extra_seq = max(min(num_seqs - max_seq, max_extra_seq), 1)
                     logger.info(f"Setting max_seq={max_seq}, max_extra_seq={max_extra_seq}")
-
-                model_runner_and_params = load_models_and_params(
-                    num_models=num_models,
-                    use_templates=use_templates,
-                    num_recycles=num_recycles,
-                    num_ensemble=num_ensemble,
-                    model_order=model_order,
-                    model_suffix=model_suffix,
-                    data_dir=data_dir,
-                    stop_at_score=stop_at_score,
-                    rank_by=rank_by,
-                    use_dropout=use_dropout,
-                    max_seq=max_seq,
-                    max_extra_seq=max_extra_seq,
-                    use_cluster_profile=use_cluster_profile,
-                    recycle_early_stop_tolerance=recycle_early_stop_tolerance,
-                    use_fuse=use_fuse,
-                    use_bfloat16=use_bfloat16,
-                )
 
             results = predict_structure(
                 prefix=jobname,
