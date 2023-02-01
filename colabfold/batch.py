@@ -1202,11 +1202,13 @@ def run(
     **kwargs
 ):
     # check what device is available
-    import jax    
+    import jax
     try:
+        logging.disable(logging.CRITICAL)
         # check if TPU is available
         import jax.tools.colab_tpu
         jax.tools.colab_tpu.setup_tpu()
+        logging.disable(logging.NOTSET)
         logger.info('Running on TPU')
         DEVICE = "tpu"
         use_gpu_relax = False
