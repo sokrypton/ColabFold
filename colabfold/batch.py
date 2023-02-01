@@ -1317,6 +1317,7 @@ def run(
 
     crop_len = 0
     ranks, metrics = [],[]
+    first_job = True
     for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
         jobname = safe_filename(raw_jobname)
         
@@ -1390,7 +1391,7 @@ def run(
                 crop_len = math.ceil(sum(query_sequence_len_array) * recompile_padding)
 
             # prep model and params
-            if job_number == 0:            
+            if first_job:            
                 
                 # if one job input adjust max settings
                 if len(queries) == 1:
@@ -1441,7 +1442,7 @@ def run(
                     use_bfloat16=use_bfloat16,
                 )
                 logging.disable(logging.NOTSET)
-
+                first_job = False
             results = predict_structure(
                 prefix=jobname,
                 result_dir=result_dir,
