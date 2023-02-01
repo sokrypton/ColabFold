@@ -20,6 +20,7 @@ def plot_predicted_alignment_error(
 
 
 def plot_msa_v2(feature_dict, sort_lines=True, dpi=100):
+    feature_dict = {k:np.asarray(v) for k,v in feature_dict.items()}
     seq = feature_dict["msa"][0]
     if "asym_id" in feature_dict:
       Ls = [0]

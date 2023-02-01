@@ -66,8 +66,8 @@ def clear_mem(device="gpu"):
 
 TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
 
-def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
-                use_templates=False, filter=None, use_pairing=False,
+def run_mmseqs2(x, prefix, use_env=True, use_pairwise=False, use_filter=True,
+                use_templates=False, filter=None, use_pairing=False, use_taxonomy=False,
                 host_url="https://api.colabfold.com") -> Tuple[List[str], List[str]]:
   submission_endpoint = "ticket/pair" if use_pairing else "ticket/msa"
 
@@ -159,8 +159,16 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
   else:
     mode = "env-nofilter" if use_env else "nofilter"
 
+  if use_taxonomy:
+    mode += "-taxonomy"
+
   if use_pairing:
     mode = ""
+    use_templates = False
+    use_env = False
+
+  if use_pairwise:
+    mode = "pairwise"
     use_templates = False
     use_env = False
 

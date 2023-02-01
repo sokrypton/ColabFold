@@ -22,7 +22,7 @@ from io import StringIO
 import importlib_metadata
 import numpy as np
 import pandas
-
+import jax.numpy as jnp
 try:
     import alphafold
 except ModuleNotFoundError:
@@ -266,6 +266,90 @@ def mk_hhsearch_db(template_dir: str):
                 n += 1
 
 
+def batch_input_multimer(
+    input_features: model.features.FeatureDict,
+    model_runner: model.RunModel,
+    model_name: str,
+    crop_len: int,
+    use_templates: bool,
+) -> model.features.FeatureDict:
+    model_config = model_runner.config
+    shape_schema = {
+        "aatype": ["num residues placeholder"],
+        "residue_index": ["num residues placeholder"],
+        "msa": ["msa placeholder", "num residues placeholder"],
+        "template_all_atom_positions": [
+            "num templates placeholder",
+            "num residues placeholder",
+            None,
+            None,
+        ],
+        "template_all_atom_mask": [
+            "num templates placeholder",
+            "num residues placeholder",
+            None,
+        ],
+        "template_aatype": ["num templates placeholder", "num residues placeholder"],
+        "asym_id": ["num residues placeholder"],
+        "sym_id": ["num residues placeholder"],
+        "entity_id": ["num residues placeholder"],
+        "deletion_matrix": ["msa placeholder", "num residues placeholder"],
+        "deletion_mean": ["num residues placeholder"],
+        "all_atom_mask": ["num residues placeholder", None],
+        "all_atom_positions": ["num residues placeholder", None, None],
+        "entity_mask": ["num residues placeholder"],
+        "cluster_bias_mask": ["msa placeholder"],
+        "bert_mask": ["msa placeholder", "num residues placeholder"],
+        "seq_mask": ["num residues placeholder"],
+        "msa_mask": ["msa placeholder", "num residues placeholder"],
+        "seq_length": [None],
+        "num_alignments": [None],
+        "assembly_num_chains": [None],
+        "num_templates": [None],
+    }
+
+    def make_fixed_size_multimer(
+        protein: Mapping[str, Any], shape_schema, num_res, num_templates
+    ) -> FeatureDict:
+        NUM_RES = "num residues placeholder"
+        NUM_MSA_SEQ = "msa placeholder"
+        NUM_TEMPLATES = "num templates placeholder"
+        msa_cluster_size = protein["bert_mask"].shape[0]
+        pad_size_map = {
+            NUM_RES: num_res,
+            NUM_MSA_SEQ: msa_cluster_size,
+            NUM_TEMPLATES: num_templates,
+        }
+
+        for k, v in protein.items():
+            shape = list(v.shape)
+            schema = shape_schema[k]
+            pad_size = [
+                pad_size_map.get(s2, None) or s1 for (s1, s2) in zip(shape, schema)
+            ]
+            pad_size = [int(i) for i in pad_size]
+            padding = [(0, p - jnp.shape(v)[i]) for i, p in enumerate(pad_size)]
+            if padding:
+                # protein[k] = jnp.pad(
+                #     v, padding, name=f"pad_to_fixed_{k}", constant_values=0
+                # )
+                protein[k] = jnp.pad(
+                    v, padding, mode='constant'
+                )
+                # protein[k].set_shape(pad_size)
+                protein[k] = jnp.reshape(protein[k],pad_size)
+        return {k: np.asarray(v) for k, v in protein.items()}
+
+    input_fix = make_fixed_size_multimer(
+        input_features,
+        shape_schema,
+        crop_len,
+        4,
+    )
+
+    return input_fix
+
+
 def batch_input(
     input_features: model.features.FeatureDict,
     model_runner: model.RunModel,
@@ -366,6 +450,7 @@ def predict_structure(
     save_all: bool = False,
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
+    recompile_padding: float = 1.0,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
 
@@ -393,7 +478,13 @@ def predict_structure(
             processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)
             
             if "multimer" in model_type:
-                input_features = processed_feature_dict
+                input_features = batch_input_multimer(
+                    processed_feature_dict,
+                    model_runner,
+                    model_name,
+                    crop_len,
+                    use_templates,
+                )
             else:
                 # pad inputs
                 input_features = batch_input(
@@ -407,7 +498,7 @@ def predict_structure(
             # predict
             ########################
             start = time.time()
-            prediction_result, recycles = model_runner.predict(input_features, random_seed=seed)
+            prediction_result, recycles = model_runner.predict(input_features, seed, recompile_padding)
             prediction_times.append(time.time() - start)
 
             ########################
@@ -452,11 +543,11 @@ def predict_structure(
                 input_features["residue_index"] = np.array(res_index_array)[None]
 
             if "asym_id" in input_features:
-                input_features["asym_id"] -= input_features["asym_id"][...,0]
+                input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
 
             # create protein object
             final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
-            b_factors = prediction_result["plddt"][:, None] * final_atom_mask
+            b_factors = prediction_result["plddt"][:, None] * final_atom_mask[:seq_len]
             unrelaxed_protein = protein.from_prediction(
                 features=input_features,
                 result=prediction_result,
@@ -474,6 +565,7 @@ def predict_structure(
             #########################
             
             # save pdb
+            unrelaxed_protein.aatype = unrelaxed_protein.aatype[:seq_len]
             protein_lines = protein.to_pdb(unrelaxed_protein)
             files.get("unrelaxed","pdb").write_text(protein_lines)
             unrelaxed_pdb_lines.append(protein_lines)
@@ -687,6 +779,54 @@ def get_queries(
                     break
     return queries, is_complex
 
+def get_queries_pairwise(
+    input_path: Union[str, Path], sort_queries_by: str = "length", batch_size: int = 10,
+) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
+    """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
+    of job name, sequence and the optional a3m lines"""
+    input_path = Path(input_path)
+    if not input_path.exists():
+        raise OSError(f"{input_path} could not be found")
+    if input_path.is_file():
+        if input_path.suffix == ".csv" or input_path.suffix == ".tsv":
+            sep = "\t" if input_path.suffix == ".tsv" else ","
+            df = pandas.read_csv(input_path, sep=sep)
+            assert "id" in df.columns and "sequence" in df.columns
+            queries = []
+            for i, (seq_id, sequence) in enumerate(df[["id", "sequence"]].itertuples(index=False)):
+                if i>0 and i % 10 == 0:
+                    queries.append(queries[0].upper())
+                queries.append(sequence.upper())
+        elif input_path.suffix == ".a3m":
+            raise NotImplementedError()
+        elif input_path.suffix in [".fasta", ".faa", ".fa"]:
+            (sequences, headers) = parse_fasta(input_path.read_text())
+            queries = []
+            for i, (sequence, header) in enumerate(zip(sequences, headers)):
+                sequence = sequence.upper()
+                if sequence.count(":") == 0:
+                    # Single sequence
+                    # if i==0:
+                    #     continue
+                    # # queries.append((headers[0]+'&'+header, sequences[0]+':'+sequence, None))
+                    # queries.append(sequences[0]+':'+sequence)
+                    if i>0 and i % 10 == 0:
+                        queries.append(sequences[0])
+                    queries.append(sequence)
+                else:
+                    # Complex mode
+                    queries.append((header, sequence.upper().split(":"), None))
+        else:
+            raise ValueError(f"Unknown file format {input_path.suffix}")
+    else:
+        raise NotImplementedError()
+    is_complex = True
+    if sort_queries_by == "length":
+        queries.sort(key=lambda t: len(''.join(t[1])),reverse=True)
+    elif sort_queries_by == "random":
+        random.shuffle(queries)
+    return queries, is_complex
+
 def pair_sequences(
     a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
 ) -> str:
@@ -737,6 +877,7 @@ def get_msa_and_templates(
     custom_template_path: str,
     pair_mode: str,
     host_url: str = DEFAULT_API_SERVER,
+    use_pairwise: bool = False,
 ) -> Tuple[
     Optional[List[str]], Optional[List[str]], List[str], List[int], List[Dict[str, Any]]
 ]:
@@ -831,6 +972,7 @@ def get_msa_and_templates(
                 query_seqs_unique,
                 str(result_dir.joinpath(jobname)),
                 use_env,
+                use_pairwise,
                 use_pairing=True,
                 host_url=host_url,
             )
@@ -1089,7 +1231,7 @@ def unserialize_msa(
         )
         prev_query_start += query_len
     paired_msa = [""] * len(query_seq_len)
-    unpaired_msa = [""] * len(query_seq_len)
+    unpaired_msa = None
     already_in = dict()
     for i in range(1, len(a3m_lines), 2):
         header = a3m_lines[i]
@@ -1127,6 +1269,7 @@ def unserialize_msa(
                 paired_msa[j] += ">" + header_no_faster_split[j] + "\n"
                 paired_msa[j] += seqs_line[j] + "\n"
         else:
+            unpaired_msa = [""] * len(query_seq_len)
             for j, seq in enumerate(seqs_line):
                 if has_amino_acid[j]:
                     unpaired_msa[j] += header + "\n"
@@ -1416,6 +1559,7 @@ def run(
                     recycle_early_stop_tolerance=recycle_early_stop_tolerance,
                     use_fuse=use_fuse,
                     use_bfloat16=use_bfloat16,
+                    recompile_padding=recompile_padding
                 )
 
             results = predict_structure(
@@ -1439,6 +1583,7 @@ def run(
                 save_all=save_all,
                 save_single_representations=save_single_representations,
                 save_pair_representations=save_pair_representations,
+                recompile_padding=recompile_padding,
             )
             result_files = results["result_files"]
             ranks.append(results["rank"])
@@ -1524,6 +1669,67 @@ def set_model_type(is_complex: bool, model_type: str) -> str:
     elif model_type == "auto" and not is_complex:
         model_type = "alphafold2_ptm"
     return model_type
+
+def unpack_a3ms(input, outdir):
+    if not os.path.isdir(outdir):
+       os.mkdir(outdir)
+    i = 1
+    count = 0
+    with open(input, "r") as f:
+        lines = f.readlines()
+        a3m = ""
+        hasLen1 = False
+        len1 = 0
+        inMsa2 = False
+        hasLen2 = False
+        switch = False
+        len2 = 0
+        left=[]
+        right=[]
+        descp_l=[]
+        descp_r=[]
+        for idx, line in enumerate(lines):
+            if line.startswith("\x00"):
+                i += 1
+                line = line[1:]
+                inMsa2 = True
+                if i % 2 == 1:
+                    a3m="\n".join([l[:-1]+'\t'+r[:-1]+'\n'+a_[:-1]+b_[:-1]
+                     for l, r, a_, b_ in zip(descp_l, descp_r, left, right)])
+
+                    complex_description = "#" + str(len1) + "," + str(len2) + "\t1,1\n"
+                    a3m = complex_description + a3m
+                    out = Path(outdir) / f"job{count}.a3m"
+                    with open(out, "w") as w:
+                        w.write(a3m)
+                    a3m = ""
+                    count += 1
+                    hasLen1 = False
+                    hasLen2 = False
+                    inMsa2 = False
+                    left = []
+                    right = []
+                    descp_l = []
+                    descp_r = []
+                    switch = False
+                else:
+                    switch = True
+
+            if line.startswith(">") and hasLen2 is False:
+                descp_l.append(line)
+            if not line.startswith(">") and not hasLen1:
+                len1 = len(line)-1
+                hasLen1 = True
+            if not line.startswith(">") and hasLen1 is True and hasLen2 is False:
+                left.append(line)
+            if line.startswith(">") and switch:
+                descp_r.append(line)
+            if not line.startswith(">") and not hasLen2 and inMsa2:
+                len2 = len(line)-1
+                hasLen2 = True
+            if not line.startswith(">") and hasLen1 is True and hasLen2 is True:
+                right.append(line)
+
 
 def main():
     parser = ArgumentParser()
@@ -1726,6 +1932,9 @@ def main():
     parser.add_argument(
         "--overwrite-existing-results", default=False, action="store_true"
     )
+    parser.add_argument(
+        "--interaction-scan", default=False, action="store_true"
+    )
 
     args = parser.parse_args()
 
@@ -1759,13 +1968,15 @@ def main():
             # disable GPU on tensorflow
             tf.config.set_visible_devices([], 'GPU')
 
-    queries, is_complex = get_queries(args.input, args.sort_queries_by)
-    model_type = set_model_type(is_complex, args.model_type)
-        
-    download_alphafold_params(model_type, data_dir)
-    uses_api = any((query[2] is None for query in queries))
-    if uses_api and args.host_url == DEFAULT_API_SERVER:
-        print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
+    def download_model():
+        model_type = set_model_type(is_complex, args.model_type)
+        if model_type.startswith("AlphaFold2-multimer"):
+            logger.info(
+                f"--max-msa can not be used in combination with AlphaFold2-multimer (--max-msa ignored)"
+            )
+            args.max_msa = None
+        download_alphafold_params(model_type, data_dir)
+        return model_type
 
     model_order = [int(i) for i in args.model_order.split(",")]
 
@@ -1775,40 +1986,124 @@ def main():
     if args.amber and args.num_relax == 0:
         args.num_relax = args.num_models * args.num_seeds
 
-    run(
-        queries=queries,
-        result_dir=args.results,
-        use_templates=args.templates,
-        custom_template_path=args.custom_template_path,
-        num_relax=args.num_relax,
-        msa_mode=args.msa_mode,
-        model_type=model_type,
-        num_models=args.num_models,
-        num_recycles=args.num_recycle,
-        recycle_early_stop_tolerance=args.recycle_early_stop_tolerance,
-        num_ensemble=args.num_ensemble,
-        model_order=model_order,
-        is_complex=is_complex,
-        keep_existing_results=not args.overwrite_existing_results,
-        rank_by=args.rank,
-        pair_mode=args.pair_mode,
-        data_dir=data_dir,
-        host_url=args.host_url,
-        random_seed=args.random_seed,
-        num_seeds=args.num_seeds,
-        stop_at_score=args.stop_at_score,
-        recompile_padding=args.recompile_padding,
-        zip_results=args.zip,
-        save_single_representations=args.save_single_representations,
-        save_pair_representations=args.save_pair_representations,
-        use_dropout=args.use_dropout,
-        max_seq=args.max_seq,
-        max_extra_seq=args.max_extra_seq,
-        max_msa=args.max_msa,
-        use_gpu_relax = args.use_gpu_relax if DEVICE == "gpu" else False,
-        stop_at_score_below=args.stop_at_score_below,
-        save_all=args.save_all,
-    )
+    if args.interaction_scan:
+        batch_size = 10
+        batch=0
+        queries, is_complex = get_queries_pairwise(args.input, args.sort_queries_by, batch_size)
+        model_type=download_model()
+        uses_api = any((query[2] is None for query in queries))
+        if uses_api and args.host_url == DEFAULT_API_SERVER:
+            print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
+        output = [queries[i:i + batch_size] for i in range(0, len(queries), batch_size)]
+
+        dirnum=0
+
+        for jobname, batch in enumerate(output):
+            from colabfold.colabfold import run_mmseqs2
+            query_seqs_unique = []
+            for x in batch:
+                if x not in query_seqs_unique:
+                    query_seqs_unique.append(x)
+            use_env = args.msa_mode == "MMseqs2 (UniRef+Environmental)"
+
+            paired_a3m_lines = run_mmseqs2(
+                query_seqs_unique,
+                str(Path(args.results).joinpath(str(jobname))),
+                use_env,
+                use_pairwise=True,
+                use_pairing=True,
+                host_url=args.host_url,
+            )
+            path_o = str(Path(args.results))+"/"+"{}_pairwise".format(jobname)
+            for filenum in Path(path_o).iterdir():
+                queries_new = [] 
+                if Path(filenum).suffix.lower() == ".a3m":
+                    outdir = Path(path_o)/"tmp"
+                    unpack_a3ms(filenum, outdir)
+                    for i, file in enumerate(sorted(outdir.iterdir())):
+                        if outdir.joinpath(file).suffix.lower() == ".a3m":
+                            (seqs, header) = parse_fasta(Path(file).read_text())
+                            query_sequence = seqs[0]
+                            a3m_lines = [Path(file).read_text()]
+                            queries_new.append((outdir.joinpath(file).stem+'_'+str(dirnum), query_sequence, a3m_lines))
+                    
+                            
+                    run(
+                        queries=queries_new,
+                        result_dir=args.results,
+                        use_templates=args.templates,
+                        custom_template_path=args.custom_template_path,
+                        num_relax=args.num_relax,
+                        msa_mode=args.msa_mode,
+                        model_type=model_type,
+                        num_models=args.num_models,
+                        num_recycles=args.num_recycle,
+                        recycle_early_stop_tolerance=args.recycle_early_stop_tolerance,
+                        num_ensemble=args.num_ensemble,
+                        model_order=model_order,
+                        is_complex=is_complex,
+                        keep_existing_results=not args.overwrite_existing_results,
+                        rank_by=args.rank,
+                        pair_mode=args.pair_mode,
+                        data_dir=data_dir,
+                        host_url=args.host_url,
+                        random_seed=args.random_seed,
+                        num_seeds=args.num_seeds,
+                        stop_at_score=args.stop_at_score,
+                        recompile_padding=args.recompile_padding,
+                        zip_results=args.zip,
+                        save_single_representations=args.save_single_representations,
+                        save_pair_representations=args.save_pair_representations,
+                        use_dropout=args.use_dropout,
+                        max_msa=args.max_msa,
+                        use_gpu_relax = args.use_gpu_relax if DEVICE == "gpu" else False,
+                        stop_at_score_below=args.stop_at_score_below,
+                        save_all=args.save_all,
+                    )
+            dirnum+=1
+
+
+    else:
+        queries, is_complex = get_queries(args.input, args.sort_queries_by)
+        model_type=download_model()
+        uses_api = any((query[2] is None for query in queries))
+        if uses_api and args.host_url == DEFAULT_API_SERVER:
+            print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
+
+        
+        run(
+            queries=queries,
+            result_dir=args.results,
+            use_templates=args.templates,
+            custom_template_path=args.custom_template_path,
+            num_relax=args.num_relax,
+            msa_mode=args.msa_mode,
+            model_type=model_type,
+            num_models=args.num_models,
+            num_recycles=args.num_recycle,
+            recycle_early_stop_tolerance=args.recycle_early_stop_tolerance,
+            num_ensemble=args.num_ensemble,
+            model_order=model_order,
+            is_complex=is_complex,
+            keep_existing_results=not args.overwrite_existing_results,
+            rank_by=args.rank,
+            pair_mode=args.pair_mode,
+            data_dir=data_dir,
+            host_url=args.host_url,
+            random_seed=args.random_seed,
+            num_seeds=args.num_seeds,
+            stop_at_score=args.stop_at_score,
+            recompile_padding=args.recompile_padding,
+            zip_results=args.zip,
+            save_single_representations=args.save_single_representations,
+            save_pair_representations=args.save_pair_representations,
+            use_dropout=args.use_dropout,
+            training=args.training,
+            max_msa=args.max_msa,
+            use_gpu_relax = args.use_gpu_relax if DEVICE == "gpu" else False,
+            stop_at_score_below=args.stop_at_score_below,
+            save_all=args.save_all,
+        )
 
 if __name__ == "__main__":
     main()

@@ -11,8 +11,9 @@ import subprocess
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import List, Union
+import os
 
-from colabfold.batch import get_queries, msa_to_str
+from colabfold.batch import get_queries, msa_to_str, get_queries_pairwise
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 def run_mmseqs(mmseqs: Path, params: List[Union[str, Path]]):
     params_log = " ".join(str(i) for i in params)
     logger.info(f"Running {mmseqs} {params_log}")
-    subprocess.check_call([mmseqs] + params)
+    subprocess.check_call([mmseqs] + params, env=os.environ)
 
 
 def mmseqs_search_monomer(
@@ -152,6 +153,7 @@ def mmseqs_search_pair(
     s: float = 8,
     threads: int = 64,
     db_load_mode: int = 2,
+    intersection_scan: bool = False,
 ):
     if not dbbase.joinpath(f"{uniref_db}.dbtype").is_file():
         raise FileNotFoundError(f"Database {uniref_db} does not exist")
@@ -203,6 +205,28 @@ def mmseqs_search_pair(
         ]
         + search_param,
     )
+    if intersection_scan==True:
+        cmd = """awk 'BEGIN { OFS="\t"; cnt = 0; }
+              NR == 1 { off = $2; len = $3; next; }
+              { print (2*cnt),off,len; print (2*cnt)+1,$2,$3; cnt+=1; }' """
+        cmd = cmd.replace("\n", "")
+        for i in ["qdb", "res","qdb_h"]:
+            fin = base.joinpath(i + ".index")
+            fout = base.joinpath(i + ".index_tmp")
+            full_cmd = cmd + f'{fin} > {fout}'
+            process=subprocess.Popen(full_cmd, stdout=subprocess.PIPE, shell=True)
+            process.wait()
+            os.replace(fout, fin)
+        cmd = """awk 'BEGIN { OFS="\t"; cnt = 0; }
+              NR == 1 { off = $2; len = $3; next; }
+              { print (2*cnt),off,cnt; print (2*cnt)+1,$2,cnt; cnt+=1; }' """
+        cmd = cmd.replace("\n", "")
+        fin = base.joinpath("qdb.lookup")
+        fout = base.joinpath("qdb.lookup_tmp")
+        process=subprocess.Popen(cmd + f'{fin} > {fout}', stdout=subprocess.PIPE, shell=True)
+        process.wait()
+        os.replace(fout, fin)
+
     run_mmseqs(
         mmseqs,
         [
@@ -375,9 +399,15 @@ def main():
     parser.add_argument("--max-accept", type=int, default=1000000)
     parser.add_argument("--db-load-mode", type=int, default=0)
     parser.add_argument("--threads", type=int, default=64)
+    parser.add_argument(
+        "--interaction-scan", default=False, action="store_true"
+    )
     args = parser.parse_args()
 
-    queries, is_complex = get_queries(args.query, None)
+    if args.interaction_scan:
+        queries, is_complex = get_queries_pairwise(args.query, None)
+    else:
+        queries, is_complex = get_queries(args.query, None)
 
     queries_unique = []
     for job_number, (raw_jobname, query_sequences, a3m_lines) in enumerate(queries):
@@ -398,15 +428,28 @@ def main():
 
     args.base.mkdir(exist_ok=True, parents=True)
     query_file = args.base.joinpath("query.fas")
-    with query_file.open("w") as f:
-        for job_number, (
-            raw_jobname,
-            query_sequences,
-            query_seqs_cardinality,
-        ) in enumerate(queries_unique):
-            for seq in query_sequences:
-                f.write(f">{raw_jobname}\n{seq}\n")
 
+    if args.interaction_scan:
+        with query_file.open("w") as f:
+            for job_number, (
+                raw_jobname,
+                query_sequences,
+                query_seqs_cardinality,
+            ) in enumerate(queries_unique):
+                if job_number==0:
+                    f.write(f">{raw_jobname}_0\n{query_sequences[0]}\n")
+                    f.write(f">{raw_jobname}\n{query_sequences[1]}\n")
+                else:
+                    f.write(f">{raw_jobname}\n{query_sequences[1]}\n")
+    else:
+        with query_file.open("w") as f:
+            for job_number, (
+                raw_jobname,
+                query_sequences,
+                query_seqs_cardinality,
+            ) in enumerate(queries_unique):
+                for seq in query_sequences:
+                    f.write(f">{raw_jobname}\n{seq}\n")
     run_mmseqs(
         args.mmseqs,
         ["createdb", query_file, args.base.joinpath("qdb"), "--shuffle", "0"],
@@ -452,6 +495,7 @@ def main():
             s=args.s,
             db_load_mode=args.db_load_mode,
             threads=args.threads,
+            intersection_scan=args.interaction_scan,
         )
 
         id = 0
