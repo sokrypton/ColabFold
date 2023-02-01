@@ -1443,7 +1443,6 @@ def run(
                 )
                 logging.disable(logging.NOTSET)
                 first_job = False
-
             results = predict_structure(
                 prefix=jobname,
                 result_dir=result_dir,
