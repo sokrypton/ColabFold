@@ -269,7 +269,7 @@ def batch_input(
     input_features: model.features.FeatureDict,
     model_runner: model.RunModel,
     model_name: str,
-    crop_len: int,
+    pad_len: int,
     use_templates: bool,
 ) -> model.features.FeatureDict:
     from colabfold.alphafold.msa import make_fixed_size
@@ -294,7 +294,7 @@ def batch_input(
         crop_feats,
         msa_cluster_size=max_msa_clusters,  # true_msa (4, 512, 68)
         extra_msa_size=max_extra_msa,  # extra_msa (4, 5120, 68)
-        num_res=crop_len,  # aatype (4, 68)
+        num_res=pad_len,  # aatype (4, 68)
         num_templates=4,
     )  # template_mask (4, 4) second value
     return input_fix
@@ -351,7 +351,7 @@ def predict_structure(
     is_complex: bool,
     use_templates: bool,
     sequences_lengths: List[int],
-    crop_len: int,
+    pad_len: int,
     model_type: str,
     model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
     num_relax: int = 0,
@@ -399,7 +399,7 @@ def predict_structure(
                     processed_feature_dict,
                     model_runner,
                     model_name,
-                    crop_len,
+                    pad_len,
                     use_templates,
                 )
             ########################
@@ -1185,7 +1185,7 @@ def run(
     host_url: str = DEFAULT_API_SERVER,
     random_seed: int = 0,
     num_seeds: int = 1,
-    recompile_padding: float = 1.1,
+    recompile_padding: Union[int, float] = 10,
     zip_results: bool = False,
     prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
     save_single_representations: bool = False,
@@ -1203,12 +1203,11 @@ def run(
 ):
     # check what device is available
     import jax
+    logging.getLogger('jax._src.lib.xla_bridge').addFilter(lambda _: False)
     try:
-        logging.disable(logging.CRITICAL)
         # check if TPU is available
         import jax.tools.colab_tpu
         jax.tools.colab_tpu.setup_tpu()
-        logging.disable(logging.NOTSET)
         logger.info('Running on TPU')
         DEVICE = "tpu"
         use_gpu_relax = False
@@ -1315,7 +1314,13 @@ def run(
     if custom_template_path is not None:
         mk_hhsearch_db(custom_template_path)
 
-    crop_len = 0
+    # get max length (for padding purposes)
+    max_len = 0
+    for _, query_sequence, _ in queries:
+        L = len("".join(query_sequence))
+        if L > max_len: max_len = L
+
+    pad_len = 0
     ranks, metrics = [],[]
     first_job = True
     for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
@@ -1335,8 +1340,8 @@ def run(
             logger.info(f"Skipping {jobname} (already done)")
             continue
 
-        query_sequence_len = len("".join(query_sequence))
-        logger.info(f"Query {job_number + 1}/{len(queries)}: {jobname} (length {query_sequence_len})")
+        total_len = len("".join(query_sequence))
+        logger.info(f"Query {job_number + 1}/{len(queries)}: {jobname} (length {total_len})")
 
         ###########################################
         # generate MSA (a3m_lines) and templates
@@ -1380,27 +1385,32 @@ def run(
         ######################
         try:
             # get list of lengths
-            query_sequence_len_array = [
-                len(query_seqs_unique[i])
-                for i, cardinality in enumerate(query_seqs_cardinality)
-                for _ in range(0, cardinality)
-            ]
-
-            # only use padding if we have more than one sequence
-            if sum(query_sequence_len_array) > crop_len:
-                crop_len = math.ceil(sum(query_sequence_len_array) * recompile_padding)
-
+            query_sequence_len_array = sum([[len(x)] * y 
+                for x,y in zip(query_seqs_unique,query_seqs_cardinality)],[])
+            
+            # decide how much to pad (to avoid recompiling)
+            if total_len > pad_len:
+                if isinstance(recompile_padding, float):
+                    pad_len = math.ceil(total_len * recompile_padding)
+                else:
+                    pad_len = total_len + recompile_padding
+                pad_len = min(pad_len, max_len)
+                logger.info(f"Padding length to {pad_len}")
+                            
             # prep model and params
-            if first_job:            
-                
+            if first_job:
                 # if one job input adjust max settings
-                if len(queries) == 1:
-                    
+                if len(queries) == 1 or msa_mode == "single_sequence":
                     # get number of sequences
-                    if "msa_mask" in feature_dict:
-                        num_seqs = int(sum(feature_dict["msa_mask"].max(-1) == 1))
-                    else:
-                        num_seqs = int(len(feature_dict["msa"]))
+                    if msa_mode == "single_sequence":
+                        num_seqs = 1
+                        if "ptm" in model_type and is_complex:
+                            num_seqs += len(query_sequence_len_array)
+                    else:                    
+                        if "msa_mask" in feature_dict:
+                            num_seqs = int(sum(feature_dict["msa_mask"].max(-1) == 1))
+                        else:
+                            num_seqs = int(len(feature_dict["msa"]))
 
                     # get max settings
                     # 512 5120  = alphafold (models 1,3,4)
@@ -1422,7 +1432,6 @@ def run(
                     max_extra_seq = max(min(num_seqs - max_seq, max_extra_seq), 1)
                     logger.info(f"Setting max_seq={max_seq}, max_extra_seq={max_extra_seq}")
 
-                logging.disable(logging.CRITICAL)
                 model_runner_and_params = load_models_and_params(
                     num_models=num_models,
                     use_templates=use_templates,
@@ -1441,8 +1450,8 @@ def run(
                     use_fuse=use_fuse,
                     use_bfloat16=use_bfloat16,
                 )
-                logging.disable(logging.NOTSET)
                 first_job = False
+
             results = predict_structure(
                 prefix=jobname,
                 result_dir=result_dir,
@@ -1450,7 +1459,7 @@ def run(
                 is_complex=is_complex,
                 use_templates=use_templates,
                 sequences_lengths=query_sequence_len_array,
-                crop_len=crop_len,
+                pad_len=pad_len,
                 model_type=model_type,
                 model_runner_and_params=model_runner_and_params,
                 num_relax=num_relax,
@@ -1615,13 +1624,13 @@ def main():
     parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
     parser.add_argument(
         "--recompile-padding",
-        type=float,
-        default=1.1,
-        help="Whenever the input length changes, the model needs to be recompiled, which is slow. "
-        "We pad sequences by this factor, so we can e.g. compute sequence from length 100 to 110 without recompiling. "
+        type=int,
+        default=10,
+        help="Whenever the input length changes, the model needs to be recompiled."
+        "We pad sequences by specified length, so we can e.g. compute sequence from length 100 to 110 without recompiling."
         "The prediction will become marginally slower for the longer input, "
         "but overall performance increases due to not recompiling. "
-        "Set to 1 to disable.",
+        "Set to 0 to disable.",
     )
     parser.add_argument("--model-order", default="1,2,3,4,5", type=str)
     parser.add_argument("--host-url", default=DEFAULT_API_SERVER)
@@ -1775,7 +1784,7 @@ def main():
 
     model_order = [int(i) for i in args.model_order.split(",")]
 
-    assert 1 <= args.recompile_padding, "Can't apply negative padding"
+    assert args.recompile_padding >= 0, "Can't apply negative padding"
 
     # backward compatibility
     if args.amber and args.num_relax == 0:
