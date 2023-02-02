@@ -63,6 +63,9 @@ from colabfold.utils import (
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 
 logger = logging.getLogger(__name__)
+import jax
+import jax.numpy as jnp
+logging.getLogger('jax._src.lib.xla_bridge').addFilter(lambda _: False)
 
 def patch_openmm():
     from simtk.openmm import app
@@ -265,7 +268,7 @@ def mk_hhsearch_db(template_dir: str):
                 n += 1
 
 
-def batch_input(
+def pad_input(
     input_features: model.features.FeatureDict,
     model_runner: model.RunModel,
     model_name: str,
@@ -299,10 +302,19 @@ def batch_input(
     )  # template_mask (4, 4) second value
     return input_fix
 
+def _jnp_to_np(output: Dict[str, Any]) -> Dict[str, Any]:
+  """Recursively changes jax arrays to numpy arrays."""
+  for k, v in output.items():
+    if isinstance(v, dict):
+      output[k] = _jnp_to_np(v)
+    elif isinstance(v, jnp.ndarray):
+      output[k] = np.array(v)
+  return output
+
 def class_to_np(c):
   class dict2obj():
     def __init__(self, d):
-      for k,v in d.items(): setattr(self, k, np.asarray(v))
+      for k,v in _jnp_to_np(d).items(): setattr(self, k, v)
   return dict2obj(c.__dict__)
 
 def relax_me(pdb_filename=None, pdb_lines=None, pdb_obj=None, use_gpu=False):
@@ -359,7 +371,6 @@ def predict_structure(
     random_seed: int = 0,
     num_seeds: int = 1,
     stop_at_score: float = 100,
-    stop_at_score_below: float = 0,
     prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
     use_gpu_relax: bool = False,
     save_all: bool = False,
@@ -368,77 +379,73 @@ def predict_structure(
 ):
     """Predicts structure using AlphaFold for the given sequence."""
 
-    plddts, ptmscores, iptmscores = [], [], []
+    mean_scores = []
+    conf = []
     unrelaxed_pdb_lines = []
     prediction_times = []
     seq_len = sum(sequences_lengths)
     model_names = []
     files = file_manager(prefix, result_dir)
+    verbose = seq_len >= 1000
     
     for (model_name, model_runner, params) in model_runner_and_params:
         # swap params to avoid recompiling
-        # note: models 1,2 have diff number of params compared to models 3,4,5 (this was handled on construction)
         model_runner.params = params
-
+        
+        # iterate through random seeds
         for seed in range(random_seed, random_seed+num_seeds):
-            model_names.append(f"{model_type}_{model_name}_seed_{seed:03d}")
-            files.set_tag(model_names[-1])
-            
-            logger.info(f"Running {model_names[-1]}")
+            tag = f"{model_type}_{model_name}_seed_{seed:03d}"
+            model_names.append(tag)
+            files.set_tag(tag)
+            if verbose:
+              logger.info(f"Running {tag}")
 
             ########################
             # process inputs
             ########################
-            processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)
-            
+            processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)            
+            # pad inputs
             if "multimer" in model_type:
+                # TODO: add multimer padding
                 input_features = processed_feature_dict
             else:
-                # pad inputs
-                input_features = batch_input(
+                # TODO: move asym_id processing to "process_features"
+                r = processed_feature_dict["aatype"].shape[0]
+                processed_feature_dict["asym_id"] = np.tile(feature_dict["asym_id"],r).reshape(r,-1)
+                input_features = pad_input(
                     processed_feature_dict,
                     model_runner,
                     model_name,
                     pad_len,
-                    use_templates,
-                )
+                    use_templates)
+
             ########################
             # predict
             ########################
             start = time.time()
-            prediction_result, recycles = model_runner.predict(input_features, random_seed=seed)
+            prediction_result, recycles = model_runner.predict(input_features, random_seed=seed, verbose=verbose)
+            prediction_result = _jnp_to_np(prediction_result)
+            prediction_result["representations"] = prediction_result.pop("prev")
             prediction_times.append(time.time() - start)
 
             ########################
             # parse results
             ########################
-            # convert to numpy
-            def as_np(x):
-                y = {}
-                for k,v in x.items():
-                    y[k] = as_np(v) if isinstance(v,dict) else np.asarray(v)
-                return y
-            prediction_result = as_np(prediction_result)
-            prediction_result["representations"] = prediction_result.pop("prev")
 
-            # gather summary metrics
-            mean_plddt = prediction_result["plddt"][:seq_len].mean()
-            mean_ptm = float(prediction_result["ptm"])            
-            mean_score = mean_plddt if rank_by == "plddt" else mean_ptm
+            # summary metrics
+            mean_scores.append(prediction_result["ranking_confidence"])         
+            print_line = ""
+            conf.append({})
+            for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"]]:
+              if x in prediction_result:
+                print_line += f" {y}: {prediction_result[x]:.3f}"
+                conf[-1][x] = prediction_result[x]
+            conf[-1]["print_line"] = print_line
+            logger.info(f"{tag} took {prediction_times[-1]:.1f}s ({recycles} recycles){print_line}")
 
-            # report summary metrics
-            print_line = f"{model_names[-1]} took {prediction_times[-1]:.1f}s ({recycles} recycles) with pLDDT {mean_plddt:.3g}"
-            if is_complex or "ptm" in model_type:
-                if "multimer" in model_type:
-                    mean_iptm = prediction_result["iptm"]
-                    print_line += f", ptmscore {mean_ptm:.3g} and iptm {mean_iptm:.3g}"
-                else:
-                    print_line += f" and ptmscore {mean_ptm:.3g}"
-            logger.info(print_line)
-
-            # update residue index
+            # create protein object
             if "ptm" in model_type and is_complex:
-                input_features["asym_id"] = np.append(feature_dict["asym_id"],np.full(pad_len-seq_len,-1))[None]
+              # update residue index
                 curr_residue_index = 1
                 res_idx = input_features["residue_index"][0]
                 res_index_array = res_idx.copy()
@@ -449,11 +456,8 @@ def predict_structure(
                     res_index_array[i] = curr_residue_index
                     curr_residue_index += 1
                 input_features["residue_index"] = np.array(res_index_array)[None]
+                input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,:1]
 
-            if "asym_id" in input_features:
-                input_features["asym_id"] -= input_features["asym_id"][...,0]
-
-            # create protein object
             final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
             b_factors = prediction_result["plddt"][:, None] * final_atom_mask
             unrelaxed_protein = protein.from_prediction(
@@ -465,8 +469,8 @@ def predict_structure(
 
             # callback for visualization
             if prediction_callback is not None:
-                prediction_callback(unrelaxed_protein, sequences_lengths, 
-                    prediction_result, input_features, (model_names[-1], False))
+                prediction_callback(unrelaxed_protein, sequences_lengths,
+                                    prediction_result, input_features, (tag, False))
 
             #########################
             # save results
@@ -488,49 +492,35 @@ def predict_structure(
                     with files.get("all","pickle").open("wb") as handle:
                         pickle.dump(prediction_result, handle)
 
-            # write an easy-to-use format (pAE and plDDT)
-            pae = prediction_result["predicted_aligned_error"][:seq_len,:seq_len]
-            plddt = prediction_result["plddt"][:seq_len]
-            ptmscore = prediction_result["ptm"]
-
-            # save for ranking
-            plddts.append(plddt.mean())
-            ptmscores.append(ptmscore)
-            if "multimer" in model_type:
-                iptmscore = prediction_result["iptm"]
-                iptmscores.append(iptmscore)
-            
+            # write an easy-to-use format (pAE and pLDDT)
             with files.get("scores","json").open("w") as handle:
+                pae = prediction_result["predicted_aligned_error"][:seq_len,:seq_len]
+                plddt = prediction_result["plddt"][:seq_len]            
                 scores = {
                     "max_pae": pae.max().astype(float).item(),
                     "pae":   np.around(pae.astype(float), 2).tolist(),
                     "plddt": np.around(plddt.astype(float), 2).tolist(),
-                    "ptm":   np.around(ptmscore.astype(float), 2).item(),
                 }
-                if "multimer" in model_type:
-                    scores["iptm"] = np.around(iptmscore.astype(float), 2).item()
+                for k in ["ptm","iptm"]:
+                  if k in conf[-1]: scores[k] = np.around(conf[-1][k].astype(float), 2).item()
                 json.dump(scores, handle)
 
             # early stop criteria fulfilled
-            if mean_score > stop_at_score or mean_score < stop_at_score_below: break
+            if mean_scores[-1] > stop_at_score: break
 
         # early stop criteria fulfilled
-        if mean_score > stop_at_score or mean_score < stop_at_score_below: break
+        if mean_scores[-1] > stop_at_score: break
 
     ###################################################
     # rerank models based on predicted confidence
     ###################################################
-    if rank_by == "ptmscore":
-        model_rank = np.array(ptmscores).argsort()[::-1]
-    elif rank_by == "multimer":
-        model_rank = (np.array(iptmscores) * 0.8 + np.array(ptmscores) * 0.2).argsort()[::-1]
-    else:
-        model_rank = np.array(plddts).argsort()[::-1]
     
     rank, metric = [],[]
     result_files = []
-    logger.info(f"reranking models by {rank_by}")
+    logger.info(f"reranking models by '{rank_by}' metric")
+    model_rank = np.array(mean_scores).argsort()[::-1]
     for n, key in enumerate(model_rank):
+        metric.append(conf[key])
         tag = model_names[key]
         files.set_tag(tag)
         # save relaxed pdb
@@ -543,9 +533,7 @@ def predict_structure(
         # rename files to include rank
         new_tag = f"rank_{(n+1):03d}_{tag}"
         rank.append(new_tag)
-        metric.append({"plddt":float(plddts[key]), "ptm":float(ptmscores[key])})
-        if is_complex and "multimer" in model_type:
-            metric[-1]["iptm"] = float(iptmscores[key])
+        logger.info(f"{new_tag}{metric[-1]['print_line']}")
         for x, ext, file in files.files[tag]:
             new_file = result_dir.joinpath(f"{prefix}_{x}_{new_tag}.{ext}")
             file.rename(new_file)
@@ -864,14 +852,12 @@ def build_monomer_feature(
         **template_features,
     }
 
-
 def build_multimer_feature(paired_msa: str) -> Dict[str, ndarray]:
     parsed_paired_msa = pipeline.parsers.parse_a3m(paired_msa)
     return {
         f"{k}_all_seq": v
         for k, v in pipeline.make_msa_features([parsed_paired_msa]).items()
     }
-
 
 def process_multimer_features(
     features_for_chain: Dict[str, Dict[str, ndarray]]
@@ -1025,6 +1011,7 @@ def generate_input_feature(
 
         if "ptm" in model_type:
             input_feature = features_for_chain[protein.PDB_CHAIN_IDS[0]]
+            input_feature["asym_id"] = np.zeros(input_feature["aatype"].shape[0],dtype=int)
             domain_names = {
                 protein.PDB_CHAIN_IDS[0]: [
                     name.decode("UTF-8")
@@ -1044,7 +1031,6 @@ def generate_input_feature(
                 for (chain, feature) in features_for_chain.items()
             }
     return (input_feature, domain_names)
-
 
 def unserialize_msa(
     a3m_lines: List[str], query_sequence: Union[List[str], str]
@@ -1194,7 +1180,6 @@ def run(
     use_dropout: bool = False,
     use_gpu_relax: bool = False,
     stop_at_score: float = 100,
-    stop_at_score_below: float = 0,
     dpi: int = 200,
     max_seq: Optional[int] = None,
     max_extra_seq: Optional[int] = None,
@@ -1202,8 +1187,6 @@ def run(
     **kwargs
 ):
     # check what device is available
-    import jax
-    logging.getLogger('jax._src.lib.xla_bridge').addFilter(lambda _: False)
     try:
         # check if TPU is available
         import jax.tools.colab_tpu
@@ -1263,13 +1246,7 @@ def run(
 
     # decide how to rank outputs
     if rank_by == "auto":
-        # score complexes by ptmscore and sequences by plddt
-        rank_by = "plddt" if not is_complex else "ptmscore"
-        rank_by = (
-            "multimer"
-            if is_complex and model_type.startswith("alphafold2_multimer")
-            else rank_by
-        )
+      rank_by = "multimer" if is_complex else "plddt"
 
     # Record the parameters of this run
     config = {
@@ -1290,7 +1267,6 @@ def run(
         "pair_mode": pair_mode,
         "host_url": host_url,
         "stop_at_score": stop_at_score,
-        "stop_at_score_below": stop_at_score_below,
         "random_seed": random_seed,
         "num_seeds": num_seeds,
         "recompile_padding": recompile_padding,
@@ -1465,7 +1441,6 @@ def run(
                 num_relax=num_relax,
                 rank_by=rank_by,
                 stop_at_score=stop_at_score,
-                stop_at_score_below=stop_at_score_below,
                 prediction_callback=prediction_callback,
                 use_gpu_relax=use_gpu_relax,
                 random_seed=random_seed,
@@ -1821,7 +1796,6 @@ def main():
         max_extra_seq=args.max_extra_seq,
         max_msa=args.max_msa,
         use_gpu_relax = args.use_gpu_relax,
-        stop_at_score_below=args.stop_at_score_below,
         save_all=args.save_all,
     )
 
