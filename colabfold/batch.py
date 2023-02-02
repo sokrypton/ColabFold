@@ -502,7 +502,7 @@ def predict_structure(
                     "plddt": np.around(plddt.astype(float), 2).tolist(),
                 }
                 for k in ["ptm","iptm"]:
-                  if k in conf[-1]: scores[k] = np.around(conf[-1][k].astype(float), 2).item()
+                  if k in conf[-1]: scores[k] = np.around(conf[-1][k], 2).item()
                 json.dump(scores, handle)
 
             # early stop criteria fulfilled
