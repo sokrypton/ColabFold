@@ -439,7 +439,7 @@ def predict_structure(
             for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"]]:
               if x in prediction_result:
                 print_line += f" {y}: {prediction_result[x]:.3f}"
-                conf[-1][x] = prediction_result[x]
+                conf[-1][x] = float(prediction_result[x])
             conf[-1]["print_line"] = print_line
             logger.info(f"{tag} took {prediction_times[-1]:.1f}s ({recycles} recycles){print_line}")
 
