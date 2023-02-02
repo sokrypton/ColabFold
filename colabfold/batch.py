@@ -438,7 +438,7 @@ def predict_structure(
 
             # update residue index
             if "ptm" in model_type and is_complex:
-                input_features["asym_id"] = feature_dict["asym_id"][None]
+                input_features["asym_id"] = np.append(feature_dict["asym_id"],np.full(pad_len-seq_len,-1))[None]
                 curr_residue_index = 1
                 res_idx = input_features["residue_index"][0]
                 res_index_array = res_idx.copy()
