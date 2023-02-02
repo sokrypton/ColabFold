@@ -805,11 +805,6 @@ def get_queries_pairwise(
             for i, (sequence, header) in enumerate(zip(sequences, headers)):
                 sequence = sequence.upper()
                 if sequence.count(":") == 0:
-                    # Single sequence
-                    # if i==0:
-                    #     continue
-                    # # queries.append((headers[0]+'&'+header, sequences[0]+':'+sequence, None))
-                    # queries.append(sequences[0]+':'+sequence)
                     if i>0 and i % 10 == 0:
                         queries.append(sequences[0])
                     queries.append(sequence)
