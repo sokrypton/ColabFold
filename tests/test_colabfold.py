@@ -18,8 +18,8 @@ from tests.mock import MockRunModel, MMseqs2Mock
 
 # Without this, we're reading the params each time again which is slow
 @lru_cache(maxsize=None)
-def get_model_haiku_params_cached(model_name: str, data_dir: str) -> haiku.Params:
-    return get_model_haiku_params(model_name, data_dir)
+def get_model_haiku_params_cached(model_name: str, data_dir: str, fuse: bool = True) -> haiku.Params:
+    return get_model_haiku_params(model_name, data_dir, fuse)
 
 
 @pytest.fixture
@@ -51,7 +51,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "batch").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs):
         run(
             queries,
@@ -107,7 +107,7 @@ def test_zip(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "batch").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs):
         run(
             queries,
@@ -145,7 +145,7 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "batch").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs):
         run(
             queries,
@@ -190,7 +190,7 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs2 = MMseqs2Mock(pytestconfig.rootpath, "complex").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs2):
         run(
             queries,
@@ -224,7 +224,7 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs2 = MMseqs2Mock(pytestconfig.rootpath, "complex").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs2):
         run(
             queries,
@@ -259,7 +259,7 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     ).mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs2):
         run(
             queries,
@@ -294,7 +294,7 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
     ).mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs2):
         run(
             queries,

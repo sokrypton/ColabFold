@@ -33,8 +33,8 @@ class MockRunModel:
         self.pos = 0
 
     def predict(
-        self, model_runner: RunModel, feat: FeatureDict, random_seed: int
-    ) -> Tuple[Mapping[str, Any], Tuple[Any, Any]]:
+        self, model_runner: RunModel, feat: FeatureDict, random_seed: int, prediction_callback: Any = None
+    ) -> Mapping[str, Any]:
         """feat["msa"] or feat["msa_feat"] for normal/complexes is non-deterministic, so we remove it before storing,
         but we keep it for predicting or returning, where we need it for plotting"""
         feat_no_msa = dict(feat)
@@ -59,7 +59,7 @@ class MockRunModel:
             print("Running new prediction")
             with lzma.open(input_fix_file) as fp:
                 pickle.dump(feat_no_msa, fp)
-            prediction, (_, _) = original_run_model(model_runner, feat)
+            prediction, _ = original_run_model(model_runner, feat)
             del prediction["distogram"]
             del prediction["experimentally_resolved"]
             del prediction["masked_msa"]
@@ -89,10 +89,10 @@ class MockRunModel:
             print("Running new prediction")
             with lzma.open(input_fix_file, "wb") as fp:
                 pickle.dump(feat_no_msa, fp)
-            prediction, (_, _) = original_run_model(model_runner, feat)
+            prediction, _ = original_run_model(model_runner, feat)
             with lzma.open(prediction_file, "wb") as fp:
                 pickle.dump(prediction, fp)
-            return prediction, (None, None)
+            return prediction, _
         else:
             for key in input_fix:
                 # Generate a more helpful error message
