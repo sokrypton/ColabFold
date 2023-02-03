@@ -429,6 +429,7 @@ def predict_structure(
 
                 if save_recycles or save_all:
                     prediction_result = _jnp_to_np(prediction_result)
+                    prediction_result["representations"] = prediction_result.pop("prev")
                 
                 if save_recycles:
                     final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
