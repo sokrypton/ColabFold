@@ -194,19 +194,17 @@ def validate_and_fix_mmcif(cif_file: Path):
         with open(cif_file, "a") as f:
             f.write(CIF_REVISION_DATE)
 
-
 def convert_pdb_to_mmcif(pdb_file: Path):
     """convert existing pdb files into mmcif with the required poly_seq and revision_date"""
-    id = pdb_file.stem
-    cif_file = pdb_file.parent.joinpath(f"{id}.cif")
+    i = pdb_file.stem
+    cif_file = pdb_file.parent.joinpath(f"{i}.cif")
     if cif_file.is_file():
         return
     parser = PDBParser(QUIET=True)
-    structure = parser.get_structure(id, pdb_file)
+    structure = parser.get_structure(i, pdb_file)
     cif_io = CFMMCIFIO()
     cif_io.set_structure(structure)
     cif_io.save(str(cif_file))
-
 
 def mk_hhsearch_db(template_dir: str):
     template_path = Path(template_dir)
@@ -376,6 +374,7 @@ def predict_structure(
     save_all: bool = False,
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
+    save_recycles: bool = False,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
 
@@ -386,8 +385,6 @@ def predict_structure(
     seq_len = sum(sequences_lengths)
     model_names = []
     files = file_manager(prefix, result_dir)
-    verbose = seq_len >= 1000
-    
     for (model_name, model_runner, params) in model_runner_and_params:
         # swap params to avoid recompiling
         model_runner.params = params
@@ -397,8 +394,6 @@ def predict_structure(
             tag = f"{model_type}_{model_name}_seed_{seed:03d}"
             model_names.append(tag)
             files.set_tag(tag)
-            if verbose:
-              logger.info(f"Running {tag}")
 
             ########################
             # process inputs
@@ -423,7 +418,34 @@ def predict_structure(
             # predict
             ########################
             start = time.time()
-            prediction_result, recycles = model_runner.predict(input_features, random_seed=seed, verbose=verbose)
+
+            # monitor intermediate results
+            def callback(prediction_result, recycles):
+                print_line = ""
+                for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"],["diff","tol"]]:
+                  if x in prediction_result:
+                    print_line += f" {y}={prediction_result[x]:.3g}"
+                logger.info(f"{tag} recycle={recycles}{print_line}")
+
+                if save_recycles or save_all:
+                    prediction_result = _jnp_to_np(prediction_result)
+                
+                if save_recycles:
+                    final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
+                    b_factors = prediction_result["plddt"][:, None] * final_atom_mask
+                    unrelaxed_protein = protein.from_prediction(features=input_features,
+                        result=prediction_result, b_factors=b_factors,
+                        remove_leading_feature_dimension=("ptm" in model_type))
+                    
+                    unrelaxed_pdb_lines = protein.to_pdb(class_to_np(unrelaxed_protein))
+                    files.get("unrelaxed",f"r{recycles}.pdb").write_text(unrelaxed_pdb_lines)
+                
+                if save_all:
+                    with files.get("all",f"r{recycles}.pickle").open("wb") as handle:
+                        pickle.dump(prediction_result, handle)
+
+            prediction_result, recycles = \
+            model_runner.predict(input_features, random_seed=seed, prediction_callback=callback)
             prediction_result = _jnp_to_np(prediction_result)
             prediction_result["representations"] = prediction_result.pop("prev")
             prediction_times.append(time.time() - start)
@@ -431,33 +453,18 @@ def predict_structure(
             ########################
             # parse results
             ########################
-
             # summary metrics
             mean_scores.append(prediction_result["ranking_confidence"])         
             print_line = ""
             conf.append({})
             for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"]]:
               if x in prediction_result:
-                print_line += f" {y}: {prediction_result[x]:.3f}"
+                print_line += f" {y}={prediction_result[x]:.3g}"
                 conf[-1][x] = float(prediction_result[x])
             conf[-1]["print_line"] = print_line
-            logger.info(f"{tag} took {prediction_times[-1]:.1f}s ({recycles} recycles){print_line}")
+            logger.info(f"{tag} took {prediction_times[-1]:.1f}s ({recycles} recycles)")
 
             # create protein object
-            if "ptm" in model_type and is_complex:
-              # update residue index
-                curr_residue_index = 1
-                res_idx = input_features["residue_index"][0]
-                res_index_array = res_idx.copy()
-                res_index_array[0] = 0
-                for i in range(1, input_features["aatype"][0].shape[0]):
-                    if (res_idx[i] - res_idx[i - 1]) > 1:
-                        curr_residue_index = 0
-                    res_index_array[i] = curr_residue_index
-                    curr_residue_index += 1
-                input_features["residue_index"] = np.array(res_index_array)[None]
-                input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,:1]
-
             final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
             b_factors = prediction_result["plddt"][:, None] * final_atom_mask
             unrelaxed_protein = protein.from_prediction(
@@ -474,23 +481,19 @@ def predict_structure(
 
             #########################
             # save results
-            #########################
-            
+            #########################            
             # save pdb
             protein_lines = protein.to_pdb(unrelaxed_protein)
             files.get("unrelaxed","pdb").write_text(protein_lines)
             unrelaxed_pdb_lines.append(protein_lines)
 
             # save raw outputs
-            if save_all or save_single_representations or save_pair_representations:
+            if save_single_representations or save_pair_representations:
                 rep = prediction_result["representations"]
                 if save_single_representations:
                     np.save(files.get("single_repr","npy"), rep["prev_msa_first_row"])
                 if save_pair_representations:
                     np.save(files.get("pair_repr","npy"), rep["prev_pair"])
-                if save_all:
-                    with files.get("all","pickle").open("wb") as handle:
-                        pickle.dump(prediction_result, handle)
 
             # write an easy-to-use format (pAE and pLDDT)
             with files.get("scores","json").open("w") as handle:
@@ -838,7 +841,6 @@ def get_msa_and_templates(
         template_features,
     )
 
-
 def build_monomer_feature(
     sequence: str, unpaired_msa: str, template_features: Dict[str, Any]
 ):
@@ -950,7 +952,6 @@ def generate_input_feature(
     is_complex: bool,
     model_type: str,
 ) -> Tuple[Dict[str, Any], Dict[str, str]]:
-    from colabfold.colabfold import chain_break
 
     input_feature = {}
     domain_names = {}
@@ -968,8 +969,8 @@ def generate_input_feature(
         a3m_lines += pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa)        
 
         input_feature = build_monomer_feature(full_sequence, a3m_lines, mk_mock_template(full_sequence))
-        input_feature["residue_index"] = chain_break(input_feature["residue_index"], Ls)
-        input_feature["asym_id"] = np.array([int(n) for n, l in enumerate(Ls) for _ in range(0, l)])
+        input_feature["residue_index"] = np.concatenate([np.arange(L) for L in Ls])
+        input_feature["asym_id"] = np.concatenate([np.full(L,n) for n,L in enumerate(Ls)])
         if any(
             [
                 template != b"none"
@@ -1177,6 +1178,7 @@ def run(
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
     save_all: bool = False,
+    save_recycles: bool = False,
     use_dropout: bool = False,
     use_gpu_relax: bool = False,
     stop_at_score: float = 100,
@@ -1448,6 +1450,7 @@ def run(
                 save_all=save_all,
                 save_single_representations=save_single_representations,
                 save_pair_representations=save_pair_representations,
+                save_recycles=save_recycles,
             )
             result_files = results["result_files"]
             ranks.append(results["rank"])
@@ -1551,13 +1554,6 @@ def main():
         "This can make colabfold much faster by only running the first model for easy queries.",
         type=float,
         default=100,
-    )
-    parser.add_argument(
-        "--stop-at-score-below",
-        help="Stop to compute structures if plddt (single chain) or ptmscore (complex) < threshold. "
-        "This can make colabfold much faster by skipping sequences that do not generate good scores.",
-        type=float,
-        default=0,
     )
 
     parser.add_argument(
@@ -1733,6 +1729,12 @@ def main():
         help="save ALL raw outputs from model to a pickle file",
     )
     parser.add_argument(
+        "--save-recycles",
+        default=False,
+        action="store_true",
+        help="save all intermediate predictions at each recycle",
+    )
+    parser.add_argument(
         "--overwrite-existing-results", default=False, action="store_true"
     )
 
@@ -1797,6 +1799,7 @@ def main():
         max_msa=args.max_msa,
         use_gpu_relax = args.use_gpu_relax,
         save_all=args.save_all,
+        save_recycles=args.save_recycles,
     )
 
 if __name__ == "__main__":
