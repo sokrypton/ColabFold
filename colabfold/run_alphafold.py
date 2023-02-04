@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 # import from colabfold
 from colabfold.inputs import (
-  mk_hhsearch_db, generate_input_feature, msa_to_str,
+  mk_hhsearch_db, generate_input_feature, msa_to_str, parse_fasta,
   pad_input, get_queries, unserialize_msa, 
   pad_input_multimer, get_msa_and_templates, unpack_a3ms, get_queries_pairwise,
   jnp, haiku, 
@@ -100,26 +100,23 @@ def predict_structure(
       ########################
       # process inputs
       ########################
+      
       processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)      
       # pad inputs
       if "multimer" in model_type:
         input_features = pad_input_multimer(
           processed_feature_dict,
-          model_runner,
-          model_name,
-          pad_len,
-          use_templates)
-      
+          model_runner, model_name,
+          pad_len, use_templates)
+        input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
       else:
         # TODO: move asym_id processing to "process_features"
         r = processed_feature_dict["aatype"].shape[0]
         processed_feature_dict["asym_id"] = np.tile(feature_dict["asym_id"],r).reshape(r,-1)
         input_features = pad_input(
           processed_feature_dict,
-          model_runner,
-          model_name,
-          pad_len,
-          use_templates)
+          model_runner, model_name,
+          pad_len, use_templates)
 
       ########################
       # predict
