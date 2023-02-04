@@ -42,3 +42,29 @@ def make_fixed_size(
     if padding:
       feat[k] = np.pad(v, padding)
   return feat
+
+def make_fixed_size_multimer(
+  feat: Mapping[str, Any],
+  shape_schema,
+  num_res,
+  num_templates) -> FeatureDict:
+  NUM_RES = "num residues placeholder"
+  NUM_MSA_SEQ = "msa placeholder"
+  NUM_TEMPLATES = "num templates placeholder"
+  msa_cluster_size = protein["bert_mask"].shape[0]
+  pad_size_map = {
+    NUM_RES: num_res,
+    NUM_MSA_SEQ: msa_cluster_size,
+    NUM_TEMPLATES: num_templates,
+  }
+  for k, v in feat.items():
+    shape = list(v.shape)
+    schema = shape_schema[k]
+    pad_size = [
+      pad_size_map.get(s2, None) or s1 for (s1, s2) in zip(shape, schema)
+    ]
+    pad_size = [int(i) for i in pad_size]
+    padding = [(0, p - v.shape[i]) for i, p in enumerate(pad_size)]
+    if padding:
+      feat[k] = np.pad(v, padding)
+  return feat

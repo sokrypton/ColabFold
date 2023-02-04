@@ -27,7 +27,8 @@ logger = logging.getLogger(__name__)
 # import from colabfold
 from colabfold.inputs import (
   mk_hhsearch_db, generate_input_feature, msa_to_str,
-  pad_input, unserialize_msa, get_msa_and_templates, get_queries,
+  pad_input, unserialize_msa, get_msa_and_templates,
+  get_queries, get_queries_pairwise, unpack_a3ms,
   jnp, haiku, 
 
   # alphafold specific
@@ -102,8 +103,13 @@ def predict_structure(
       processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)      
       # pad inputs
       if "multimer" in model_type:
-        # TODO: add multimer padding
-        input_features = processed_feature_dict
+        input_features = pad_input_multimer(
+          processed_feature_dict,
+          model_runner,
+          model_name,
+          pad_len,
+          use_templates)
+      
       else:
         # TODO: move asym_id processing to "process_features"
         r = processed_feature_dict["aatype"].shape[0]
@@ -841,7 +847,9 @@ def main():
   parser.add_argument(
     "--overwrite-existing-results", default=False, action="store_true"
   )
-
+  parser.add_argument(
+    "--interaction-scan", default=False, action="store_true"
+  )
   args = parser.parse_args()
 
   setup_logging(Path(args.results).joinpath("log.txt"))
@@ -854,25 +862,30 @@ def main():
   logger.info(f"Running colabfold {version}")
 
   data_dir = Path(args.data or default_data_dir)
-
-  queries, is_complex = get_queries(args.input, args.sort_queries_by)
-  model_type = set_model_type(is_complex, args.model_type)
-  
-  download_alphafold_params(model_type, data_dir)
-  uses_api = any((query[2] is None for query in queries))
-  if uses_api and args.host_url == DEFAULT_API_SERVER:
-    print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
-
   model_order = [int(i) for i in args.model_order.split(",")]
-
   assert args.recompile_padding >= 0, "Can't apply negative padding"
 
   # backward compatibility
   if args.amber and args.num_relax == 0:
     args.num_relax = args.num_models * args.num_seeds
 
-  run(
-    queries=queries,
+  if args.interaction_scan:
+    # protocol from @Dohyun-s
+    batch_size = 10
+    queries, is_complex = get_queries_pairwise(args.input, args.sort_queries_by, batch_size)
+  else:
+    queries, is_complex = get_queries(args.input, args.sort_queries_by)
+
+  # download params
+  model_type = set_model_type(is_complex, args.model_type)
+  download_alphafold_params(model_type, data_dir)
+  
+  # warning about api
+  uses_api = any((query[2] is None for query in queries))
+  if uses_api and args.host_url == DEFAULT_API_SERVER:
+    print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
+
+  run_params = dict(
     result_dir=args.results,
     use_templates=args.templates,
     custom_template_path=args.custom_template_path,
@@ -905,6 +918,47 @@ def main():
     save_all=args.save_all,
     save_recycles=args.save_recycles,
   )
+
+  if args.interaction_scan:
+
+    # protocol from @Dohyun-s
+    from colabfold.mmseqs.api import run_mmseqs2
+    output = [queries[i:i + batch_size] for i in range(0, len(queries), batch_size)]
+    dirnum = 0
+    
+    for jobname, batch in enumerate(output):
+      query_seqs_unique = []
+      for x in batch:
+        if x not in query_seqs_unique:
+          query_seqs_unique.append(x)
+      use_env = "env" in args.msa_mode or "Environmental" in args.msa_mode
+      paired_a3m_lines = run_mmseqs2(
+        query_seqs_unique,
+        str(Path(args.results).joinpath(str(jobname))),
+        use_env=use_env,
+        use_pairwise=True,
+        use_pairing=True,
+        host_url=args.host_url,
+      )
+      
+      path_o = Path(args.results).joinpath(f"{jobname}_pairwise")      
+      for filenum in path_o.iterdir():
+        queries_new = [] 
+        if Path(filenum).suffix.lower() == ".a3m":
+          outdir = path_o.joinpath("tmp")
+          unpack_a3ms(filenum, outdir)
+          for i, file in enumerate(sorted(outdir.iterdir())):
+            if outdir.joinpath(file).suffix.lower() == ".a3m":
+              (seqs, header) = parse_fasta(Path(file).read_text())
+              query_sequence = seqs[0]
+              a3m_lines = [Path(file).read_text()]
+              queries_new.append((outdir.joinpath(file).stem+'_'+str(dirnum), query_sequence, a3m_lines))
+
+          run(queries=queries_new, **run_params)
+      dirnum += 1    
+  
+  else:
+    run(queries=queries, **run_params)
 
 if __name__ == "__main__":
   main()

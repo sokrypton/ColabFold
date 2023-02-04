@@ -33,7 +33,7 @@ from alphafold.data import (
 from alphafold.data.tools import hhsearch
 
 # colabfold imports
-from colabfold.alphafold.msa import make_fixed_size
+from colabfold.alphafold.msa import make_fixed_size, make_fixed_size_multimer
 from colabfold.utils import (
   DEFAULT_API_SERVER,
   NO_GPU_FOUND,
@@ -76,6 +76,55 @@ def pad_input(
     num_res=pad_len,  # aatype (4, 68)
     num_templates=4,
   )  # template_mask (4, 4) second value
+  return input_fix
+
+def pad_input_multimer(
+  input_features: model.features.FeatureDict,
+  model_runner: model.RunModel,
+  model_name: str,
+  pad_len: int,
+  use_templates: bool,
+) -> model.features.FeatureDict:
+  model_config = model_runner.config
+  shape_schema = {
+    "aatype": ["num residues placeholder"],
+    "residue_index": ["num residues placeholder"],
+    "msa": ["msa placeholder", "num residues placeholder"],
+    "template_all_atom_positions": [
+      "num templates placeholder",
+      "num residues placeholder",
+      None,
+      None,
+    ],
+    "template_all_atom_mask": [
+      "num templates placeholder",
+      "num residues placeholder",
+      None,
+    ],
+    "template_aatype": ["num templates placeholder", "num residues placeholder"],
+    "asym_id": ["num residues placeholder"],
+    "sym_id": ["num residues placeholder"],
+    "entity_id": ["num residues placeholder"],
+    "deletion_matrix": ["msa placeholder", "num residues placeholder"],
+    "deletion_mean": ["num residues placeholder"],
+    "all_atom_mask": ["num residues placeholder", None],
+    "all_atom_positions": ["num residues placeholder", None, None],
+    "entity_mask": ["num residues placeholder"],
+    "cluster_bias_mask": ["msa placeholder"],
+    "bert_mask": ["msa placeholder", "num residues placeholder"],
+    "seq_mask": ["num residues placeholder"],
+    "msa_mask": ["msa placeholder", "num residues placeholder"],
+    "seq_length": [None],
+    "num_alignments": [None],
+    "assembly_num_chains": [None],
+    "num_templates": [None],
+  }
+  input_fix = make_fixed_size_multimer(
+    input_features,
+    shape_schema,
+    crop_len,
+    4,
+  )
   return input_fix
 
 def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
@@ -209,6 +258,49 @@ def get_queries(
           break
   return queries, is_complex
 
+def get_queries_pairwise(
+  input_path: Union[str, Path], sort_queries_by: str = "length", batch_size: int = 10,
+) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
+  """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
+  of job name, sequence and the optional a3m lines"""
+  input_path = Path(input_path)
+  if not input_path.exists():
+    raise OSError(f"{input_path} could not be found")
+  if input_path.is_file():
+    if input_path.suffix == ".csv" or input_path.suffix == ".tsv":
+      sep = "\t" if input_path.suffix == ".tsv" else ","
+      df = pandas.read_csv(input_path, sep=sep)
+      assert "id" in df.columns and "sequence" in df.columns
+      queries = []
+      for i, (seq_id, sequence) in enumerate(df[["id", "sequence"]].itertuples(index=False)):
+        if i>0 and i % 10 == 0:
+          queries.append(queries[0].upper())
+        queries.append(sequence.upper())
+    elif input_path.suffix == ".a3m":
+      raise NotImplementedError()
+    elif input_path.suffix in [".fasta", ".faa", ".fa"]:
+      (sequences, headers) = parse_fasta(input_path.read_text())
+      queries = []
+      for i, (sequence, header) in enumerate(zip(sequences, headers)):
+        sequence = sequence.upper()
+        if sequence.count(":") == 0:
+          if i>0 and i % 10 == 0:
+            queries.append(sequences[0])
+          queries.append(sequence)
+        else:
+          # Complex mode
+          queries.append((header, sequence.upper().split(":"), None))
+    else:
+      raise ValueError(f"Unknown file format {input_path.suffix}")
+  else:
+    raise NotImplementedError()
+  is_complex = True
+  if sort_queries_by == "length":
+    queries.sort(key=lambda t: len(''.join(t[1])),reverse=True)
+  elif sort_queries_by == "random":
+    random.shuffle(queries)
+  return queries, is_complex
+
 def pair_sequences(
   a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
 ) -> str:
@@ -258,6 +350,7 @@ def get_msa_and_templates(
   custom_template_path: str,
   pair_mode: str,
   host_url: str = DEFAULT_API_SERVER,
+  use_pairwise: bool = False,
 ) -> Tuple[
   Optional[List[str]], Optional[List[str]], List[str], List[int], List[Dict[str, Any]]
 ]:
@@ -284,7 +377,7 @@ def get_msa_and_templates(
     a3m_lines_mmseqs2, template_paths = run_mmseqs2(
       query_seqs_unique,
       str(result_dir.joinpath(jobname)),
-      use_env,
+      use_env=use_env,
       use_templates=True,
       host_url=host_url,
     )
@@ -336,7 +429,8 @@ def get_msa_and_templates(
       a3m_lines = run_mmseqs2(
         query_seqs_unique,
         str(result_dir.joinpath(jobname)),
-        use_env,
+        use_env=use_env,
+        use_pairwise=use_pairwise,
         use_pairing=False,
         host_url=host_url,
       )
@@ -604,7 +698,7 @@ def unserialize_msa(
     )
     prev_query_start += query_len
   paired_msa = [""] * len(query_seq_len)
-  unpaired_msa = [""] * len(query_seq_len)
+  unpaired_msa = None
   already_in = dict()
   for i in range(1, len(a3m_lines), 2):
     header = a3m_lines[i]
@@ -642,6 +736,7 @@ def unserialize_msa(
         paired_msa[j] += ">" + header_no_faster_split[j] + "\n"
         paired_msa[j] += seqs_line[j] + "\n"
     else:
+      unpaired_msa = [""] * len(query_seq_len)
       for j, seq in enumerate(seqs_line):
         if has_amino_acid[j]:
           unpaired_msa[j] += header + "\n"
@@ -666,6 +761,66 @@ def unserialize_msa(
     query_seqs_cardinality,
     template_features,
   )
+
+def unpack_a3ms(input, outdir):
+  if not os.path.isdir(outdir):
+     os.mkdir(outdir)
+  i = 1
+  count = 0
+  with open(input, "r") as f:
+    lines = f.readlines()
+    a3m = ""
+    hasLen1 = False
+    len1 = 0
+    inMsa2 = False
+    hasLen2 = False
+    switch = False
+    len2 = 0
+    left=[]
+    right=[]
+    descp_l=[]
+    descp_r=[]
+    for idx, line in enumerate(lines):
+      if line.startswith("\x00"):
+        i += 1
+        line = line[1:]
+        inMsa2 = True
+        if i % 2 == 1:
+          a3m="\n".join([l[:-1]+'\t'+r[:-1]+'\n'+a_[:-1]+b_[:-1]
+           for l, r, a_, b_ in zip(descp_l, descp_r, left, right)])
+
+          complex_description = "#" + str(len1) + "," + str(len2) + "\t1,1\n"
+          a3m = complex_description + a3m
+          out = Path(outdir) / f"job{count}.a3m"
+          with open(out, "w") as w:
+            w.write(a3m)
+          a3m = ""
+          count += 1
+          hasLen1 = False
+          hasLen2 = False
+          inMsa2 = False
+          left = []
+          right = []
+          descp_l = []
+          descp_r = []
+          switch = False
+        else:
+          switch = True
+
+      if line.startswith(">") and hasLen2 is False:
+        descp_l.append(line)
+      if not line.startswith(">") and not hasLen1:
+        len1 = len(line)-1
+        hasLen1 = True
+      if not line.startswith(">") and hasLen1 is True and hasLen2 is False:
+        left.append(line)
+      if line.startswith(">") and switch:
+        descp_r.append(line)
+      if not line.startswith(">") and not hasLen2 and inMsa2:
+        len2 = len(line)-1
+        hasLen2 = True
+      if not line.startswith(">") and hasLen1 is True and hasLen2 is True:
+        right.append(line)
 
 def msa_to_str(
   unpaired_msa: List[str],
