@@ -12,10 +12,13 @@ import os
 
 import logging
 logger = logging.getLogger(__name__)
+
 import jax
 import jax.numpy as jnp
 import haiku
 logging.getLogger('jax._src.lib.xla_bridge').addFilter(lambda _: False)
+
+# TODO: move alphafold specific functions to alphafold/inputs.py
 
 # alphafold imports
 from alphafold.model import model
@@ -258,7 +261,7 @@ def get_msa_and_templates(
 ) -> Tuple[
   Optional[List[str]], Optional[List[str]], List[str], List[int], List[Dict[str, Any]]
 ]:
-  from colabfold.colabfold import run_mmseqs2
+  from colabfold.mmseqs.api import run_mmseqs2
 
   use_env = msa_mode == "mmseqs2_uniref_env"
   if isinstance(query_sequences, str): query_sequences = [query_sequences]
@@ -739,7 +742,6 @@ def mk_template(
     query_sequence=query_sequence, hits=hhsearch_hits
   )
   return dict(templates_result.features)
-
 
 def validate_and_fix_mmcif(cif_file: Path):
   """validate presence of _entity_poly_seq in cif file and add revision_date if missing"""
