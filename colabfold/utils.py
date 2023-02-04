@@ -273,6 +273,7 @@ _struct_asym.entity_id
       out_file.write(CIF_REVISION_DATE)
 
 import jax.numpy as jnp
+import numpy as np
 def jnp_to_np(output: Dict[str, Any]) -> Dict[str, Any]:
   """Recursively changes jax arrays to numpy arrays."""
   for k, v in output.items():
