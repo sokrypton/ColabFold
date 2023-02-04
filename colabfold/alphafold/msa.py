@@ -37,9 +37,8 @@ def make_fixed_size(
       f"{shape} vs {schema}"
     )
     pad_size = [pad_size_map.get(s2, None) or s1 for (s1, s2) in zip(shape, schema)]
-    padding = [(0, p - tf.shape(v)[i]) for i, p in enumerate(pad_size)]
+    padding = [(0, p - v.shape[i]) for i, p in enumerate(pad_size)]
 
     if padding:
-      # TODO: alphafold's typing is wrong
       feat[k] = np.pad(v, padding)
   return feat

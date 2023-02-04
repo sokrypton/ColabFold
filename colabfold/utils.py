@@ -8,6 +8,8 @@ from absl import logging as absl_logging
 from importlib_metadata import distribution
 from tqdm import TqdmExperimentalWarning
 
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+
 NO_GPU_FOUND = """ERROR: Jax could not find GPU. This can be either because your machine doesn't have a GPU
 or because jax can't find it. You might need to run
 

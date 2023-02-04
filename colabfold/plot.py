@@ -45,9 +45,9 @@ def plot_msa(feature_dict, sort_lines=True, dpi=100):
     Ls = [0]
     k = feature_dict["asym_id"][0]
     for i in feature_dict["asym_id"]:
-    if i == k: Ls[-1] += 1
-    else: Ls.append(1)
-    k = i
+      if i == k: Ls[-1] += 1
+      else: Ls.append(1)
+      k = i
   else:
     Ls = [len(seq)]  
   Ln = np.cumsum([0] + Ls)
