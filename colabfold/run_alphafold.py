@@ -76,6 +76,9 @@ def predict_structure(
 ):
   """Predicts structure using AlphaFold for the given sequence."""
 
+  if num_relax > 0:
+    from colabfold.alphafold.relax import run_relax
+
   mean_scores = []
   conf = []
   unrelaxed_pdb_lines = []
@@ -305,9 +308,6 @@ def run(
   from alphafold.notebooks.notebook_utils import get_pae_json
   from colabfold.alphafold.models import load_models_and_params
   from colabfold.plot import (plot_plddts, plot_paes, plot_msa)
-
-  if num_relax > 0:
-    from colabfold.alphafold.relax import run_relax
 
   data_dir = Path(data_dir)
   result_dir = Path(result_dir)
