@@ -28,8 +28,8 @@ def prediction_test(caplog):
     # otherwise jax will tell us about its search for devices
     absl_logging.set_verbosity("error")
     # We'll also want to mock that out later
-    download_alphafold_params("AlphaFold2-multimer-v1")
-    download_alphafold_params("AlphaFold2-ptm")
+    download_alphafold_params("alphafold2_multimer_v1")
+    download_alphafold_params("alphafold2_ptm")
     # alphafold uses a method called `make_random_seed`, which deterministically starts with a seed
     # of zero and increases it by one for each protein. This means the input features would become
     # dependent on the number and order of tests. Here we just reset the seed to 0
@@ -196,7 +196,7 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
             queries,
             tmp_path,
             num_models=1,
-            model_type="AlphaFold2-multimer-v1",
+            model_type="alphafold2_multimer_v1",
             num_recycles=3,
             model_order=[1, 2, 3, 4, 5],
             is_complex=True,
@@ -229,7 +229,7 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
         run(
             queries,
             tmp_path,
-            model_type="AlphaFold2-ptm",
+            model_type="alphafold2_ptm",
             num_models=1,
             num_recycles=3,
             model_order=[1, 2, 3, 4, 5],
@@ -264,7 +264,7 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
         run(
             queries,
             tmp_path,
-            model_type="AlphaFold2-ptm",
+            model_type="alphafold2_ptm",
             num_models=1,
             num_recycles=3,
             model_order=[1, 2, 3, 4, 5],
@@ -300,7 +300,7 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
             queries,
             tmp_path,
             num_models=1,
-            model_type="AlphaFold2-multimer-v1",
+            model_type="alphafold2_multimer_v1",
             num_recycles=3,
             model_order=[1, 2, 3, 4, 5],
             is_complex=True,
