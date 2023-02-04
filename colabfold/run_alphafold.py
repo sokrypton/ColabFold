@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 # import from colabfold
 from colabfold.inputs import (
   mk_hhsearch_db, generate_input_feature, msa_to_str,
-  pad_input, unserialize_msa, get_msa_and_templates,
-  get_queries, get_queries_pairwise, unpack_a3ms,
+  pad_input, get_queries, unserialize_msa, 
+  pad_input_multimer, get_msa_and_templates, unpack_a3ms, get_queries_pairwise,
   jnp, haiku, 
 
   # alphafold specific

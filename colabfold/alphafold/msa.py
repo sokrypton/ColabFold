@@ -51,7 +51,7 @@ def make_fixed_size_multimer(
   NUM_RES = "num residues placeholder"
   NUM_MSA_SEQ = "msa placeholder"
   NUM_TEMPLATES = "num templates placeholder"
-  msa_cluster_size = protein["bert_mask"].shape[0]
+  msa_cluster_size = feat["bert_mask"].shape[0]
   pad_size_map = {
     NUM_RES: num_res,
     NUM_MSA_SEQ: msa_cluster_size,

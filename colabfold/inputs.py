@@ -122,8 +122,8 @@ def pad_input_multimer(
   input_fix = make_fixed_size_multimer(
     input_features,
     shape_schema,
-    crop_len,
-    4,
+    num_res=pad_len,
+    num_templates=4,
   )
   return input_fix
 
