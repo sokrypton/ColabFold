@@ -315,7 +315,7 @@ def run(
   model_type = set_model_type(is_complex, model_type)
 
   # determine model extension
-  if model_type == "alphafold2_multimer_v1": model_suffix = "_multimer"
+  if   model_type == "alphafold2_multimer_v1": model_suffix = "_multimer"
   elif model_type == "alphafold2_multimer_v2": model_suffix = "_multimer_v2"
   elif model_type == "alphafold2_multimer_v3": model_suffix = "_multimer_v3"
   elif model_type == "alphafold2_ptm": model_suffix = "_ptm"
@@ -323,16 +323,18 @@ def run(
 
   # backward-compatibility with old options
   old_names = {"MMseqs2 (UniRef+Environmental)":"mmseqs2_uniref_env",
-        "MMseqs2 (UniRef only)":"mmseqs2_uniref",
-        "unpaired+paired":"unpaired_paired"}
-  msa_mode = old_names.get(msa_mode,msa_mode)
+               "MMseqs2 (UniRef only)":"mmseqs2_uniref",
+               "unpaired+paired":"unpaired_paired"}
+
+  msa_mode  = old_names.get(msa_mode,msa_mode)
   pair_mode = old_names.get(pair_mode,pair_mode)
   feature_dict_callback = kwargs.pop("input_features_callback", feature_dict_callback)
-  use_dropout = kwargs.pop("training", use_dropout)
-  use_cluster_profile = kwargs.pop("use_cluster_profile", None)
-  use_fuse = kwargs.pop("use_fuse", True)
-  use_bfloat16 = kwargs.pop("use_bfloat16", True)
-  max_msa = kwargs.pop("max_msa",None)
+  use_dropout           = kwargs.pop("training", use_dropout)
+  use_cluster_profile   = kwargs.pop("use_cluster_profile", None)
+  use_fuse              = kwargs.pop("use_fuse", True)
+  use_bfloat16          = kwargs.pop("use_bfloat16", True)
+  max_msa               = kwargs.pop("max_msa",None)
+
   if max_msa is not None:
     max_seq, max_extra_seq = [int(x) for x in max_msa.split(":")]
 
@@ -340,7 +342,11 @@ def run(
     num_relax = num_models * num_seeds
 
   if len(kwargs) > 0:
-    print(f"WARNING: the following options are not being used: {kwargs}")
+    logger.warning(f"WARNING: the following options are not being used: {kwargs}")
+
+  if use_templates and is_complex and "ptm" in model_type:
+    logger.warning("WARNING: templates are not supported for alphafold2_ptm + complex.")
+    use_templates = False
 
   # decide how to rank outputs
   if rank_by == "auto":
@@ -377,12 +383,14 @@ def run(
   }
   config_out_file = result_dir.joinpath("config.json")
   config_out_file.write_text(json.dumps(config, indent=4))
-  use_env = "env" in msa_mode
-  use_msa = "mmseqs2" in msa_mode
-  use_amber = num_relax > 0
 
   bibtex_file = write_bibtex(
-    model_type, use_msa, use_env, use_templates, use_amber, result_dir
+    model=model_type,
+    use_msa="mmseqs2" in msa_mode, 
+    use_env="env" in msa_mode, 
+    use_templates=use_templates,
+    use_amber=num_relax > 0,
+    result_dir=result_dir,
   )
 
   if custom_template_path is not None:
@@ -444,7 +452,7 @@ def run(
     try:
       (feature_dict, domain_names) \
       = generate_input_feature(query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa,
-                  template_features, is_complex, model_type)
+        template_features, is_complex, model_type)
       
       # to allow display of MSA info during colab/chimera run (thanks tomgoddard)
       if feature_dict_callback is not None:
@@ -623,9 +631,9 @@ def run(
 def set_model_type(is_complex: bool, model_type: str) -> str:
   # backward-compatibility with old options
   old_names = {"AlphaFold2-multimer-v1":"alphafold2_multimer_v1",
-        "AlphaFold2-multimer-v2":"alphafold2_multimer_v2",
-        "AlphaFold2-multimer-v3":"alphafold2_multimer_v3",
-        "AlphaFold2-ptm":"alphafold2_ptm"}
+               "AlphaFold2-multimer-v2":"alphafold2_multimer_v2",
+               "AlphaFold2-multimer-v3":"alphafold2_multimer_v3",
+               "AlphaFold2-ptm":"alphafold2_ptm"}
   model_type = old_names.get(model_type, model_type)
   if model_type == "auto" and is_complex:
     model_type = "alphafold2_multimer_v3"
