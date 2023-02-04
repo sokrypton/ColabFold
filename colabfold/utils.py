@@ -43,7 +43,6 @@ class TqdmHandler(logging.StreamHandler):
     msg = self.format(record)
     tqdm.write(msg)
 
-
 def setup_logging(log_file: Path):
   log_file.parent.mkdir(exist_ok=True, parents=True)
   root = logging.getLogger()
@@ -273,6 +272,7 @@ _struct_asym.entity_id
       ### end section copied from Bio.PDB
       out_file.write(CIF_REVISION_DATE)
 
+import jax.numpy as jnp
 def jnp_to_np(output: Dict[str, Any]) -> Dict[str, Any]:
   """Recursively changes jax arrays to numpy arrays."""
   for k, v in output.items():
