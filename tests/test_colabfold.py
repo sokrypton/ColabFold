@@ -18,8 +18,8 @@ from tests.mock import MockRunModel, MMseqs2Mock
 
 # Without this, we're reading the params each time again which is slow
 @lru_cache(maxsize=None)
-def get_model_haiku_params_cached(model_name: str, data_dir: str) -> haiku.Params:
-    return get_model_haiku_params(model_name, data_dir)
+def get_model_haiku_params_cached(model_name: str, data_dir: str, fuse: bool = True) -> haiku.Params:
+    return get_model_haiku_params(model_name, data_dir, fuse)
 
 
 @pytest.fixture
@@ -28,8 +28,8 @@ def prediction_test(caplog):
     # otherwise jax will tell us about its search for devices
     absl_logging.set_verbosity("error")
     # We'll also want to mock that out later
-    download_alphafold_params("AlphaFold2-multimer-v1")
-    download_alphafold_params("AlphaFold2-ptm")
+    download_alphafold_params("alphafold2_multimer_v1")
+    download_alphafold_params("alphafold2_ptm")
     # alphafold uses a method called `make_random_seed`, which deterministically starts with a seed
     # of zero and increases it by one for each protein. This means the input features would become
     # dependent on the number and order of tests. Here we just reset the seed to 0
@@ -51,7 +51,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "batch").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs):
         run(
             queries,
@@ -64,24 +64,26 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     expected = [
-        "Found 5 citations for tools or databases",
-        "Query 1/2: 5AWL_1 (length 10)",
-        "Running model_1",
-        "model_1 took 0.0s (3 recycles) with pLDDT 94.3 and ptmscore 0.0515",
-        "reranking models by plddt",
-        "Query 2/2: 6A5J (length 13)",
-        "Running model_1",
-        "model_1 took 0.0s (3 recycles) with pLDDT 90.8 and ptmscore 0.0394",
-        "reranking models by plddt",
-        "Done"
+      #'Running on GPU',
+      'Found 4 citations for tools or databases',
+      'Query 1/2: 5AWL_1 (length 10)',
+      'Padding length to 13',
+      'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
+      "reranking models by 'plddt' metric",
+      'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=94.2 pTM=0.0567',
+      'Query 2/2: 6A5J (length 13)',
+      'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
+      "reranking models by 'plddt' metric",
+      'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=90.8 pTM=0.0455',
+      'Done'
     ]
-    # We can get extra messages through warnings
-    assert set(expected) < set(messages)
+    for x in expected:
+      assert x in messages
 
     # Very simple test, it would be better to check coordinates
     assert (
         len(
-            tmp_path.joinpath("5AWL_1_unrelaxed_rank_1_model_1.pdb")
+            tmp_path.joinpath("5AWL_1_unrelaxed_rank_001_alphafold2_ptm_model_1_seed_000.pdb")
             .read_text()
             .splitlines()
         )
@@ -89,7 +91,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
     )
     assert (
         len(
-            tmp_path.joinpath("6A5J_unrelaxed_rank_1_model_1.pdb")
+            tmp_path.joinpath("6A5J_unrelaxed_rank_001_alphafold2_ptm_model_1_seed_000.pdb")
             .read_text()
             .splitlines()
         )
@@ -107,7 +109,7 @@ def test_zip(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "batch").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs):
         run(
             queries,
@@ -121,31 +123,31 @@ def test_zip(pytestconfig, caplog, tmp_path, prediction_test):
 
     # Ensure that the correct files are packaged and that they do not contain the dir prefix
     expect_zip = [
-        "cite.bibtex",
-        "config.json",
-        "5AWL_1_predicted_aligned_error_v1.json",
-        "5AWL_1.a3m",
-        "5AWL_1_PAE.png",
-        "5AWL_1_coverage.png",
-        "5AWL_1_plddt.png",
-        "5AWL_1_unrelaxed_rank_1_model_1.pdb",
-        "5AWL_1_unrelaxed_rank_1_model_1_scores.json",
+      '5AWL_1_unrelaxed_rank_001_alphafold2_ptm_model_1_seed_000.pdb', 
+      '5AWL_1_scores_rank_001_alphafold2_ptm_model_1_seed_000.json', 
+      '5AWL_1_coverage.png', '5AWL_1_predicted_aligned_error_v1.json', 
+      '5AWL_1_pae.png', 
+      '5AWL_1_plddt.png', 
+      '5AWL_1.a3m', 
+      'cite.bibtex', 
+      'config.json'
     ]
     with ZipFile(tmp_path.joinpath("5AWL_1.result.zip")) as result_zip:
         actual_zip = [i.filename for i in result_zip.infolist()]
-    assert expect_zip == actual_zip
-
+    
+    for x in expect_zip:
+      assert x in actual_zip
 
 def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
     queries = [("5AWL_1", "YYDPETGTWY", None)]
 
     mock_run_model = MockRunModel(
-        pytestconfig.rootpath.joinpath("test-data/batch"), ["5AWL_1"]
+        pytestconfig.rootpath.joinpath("test-data/single"), ["5AWL_1"]
     )
-    mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "batch").mock_run_mmseqs2
+    mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "single").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs):
         run(
             queries,
@@ -159,25 +161,30 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
         )
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
-    assert messages[0:-1] == [
-        "Found 2 citations for tools or databases",
-        "Query 1/1: 5AWL_1 (length 10)",
-        "Running model_1",
-        "model_1 took 0.0s (3 recycles) with pLDDT 94.3 and ptmscore 0.0515",
-        "reranking models by plddt",
-    ]
+    expected = [
+      #'Running on GPU',
+      'Found 1 citations for tools or databases', 
+      'Query 1/1: 5AWL_1 (length 10)', 
+      'Padding length to 10',
+      'Setting max_seq=1, max_extra_seq=1',
+      'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
+      "reranking models by 'plddt' metric",
+      'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=94.2 pTM=0.0567',
+      'Done']
+
+    for x in expected:
+      assert x in messages
 
     # Very simple test, it would be better to check coordinates
     assert (
         len(
-            tmp_path.joinpath("5AWL_1_unrelaxed_rank_1_model_1.pdb")
+            tmp_path.joinpath("5AWL_1_unrelaxed_rank_001_alphafold2_ptm_model_1_seed_000.pdb")
             .read_text()
             .splitlines()
         )
         == 96
     )
     assert tmp_path.joinpath("config.json").is_file()
-
 
 def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
     pdb_3g50_A = "MRILPISTIKGKLNEFVDAVSSTQDQITITKNGAPAAVLVGADEWESLQETLYWLAQPGIRESIAEADADIASGRTYGEDEIRAEFGVPRRPH"
@@ -190,13 +197,13 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs2 = MMseqs2Mock(pytestconfig.rootpath, "complex").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs2):
         run(
             queries,
             tmp_path,
             num_models=1,
-            model_type="AlphaFold2-multimer-v1",
+            model_type="alphafold2_multimer_v1",
             num_recycles=3,
             model_order=[1, 2, 3, 4, 5],
             is_complex=True,
@@ -204,14 +211,19 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
         )
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
-    assert messages[0:-1] == [
-        "Found 5 citations for tools or databases",
-        "Query 1/1: 3G5O_A_3G5O_B (length 180)",
-        "Running model_1",
-        "model_1 took 0.0s (3 recycles) with pLDDT 94.4, ptmscore 0.884 and iptm 0.877",
-        "reranking models by multimer",
+    expected = [
+      #'Running on GPU',
+      'Found 4 citations for tools or databases',
+      'Query 1/1: 3G5O_A_3G5O_B (length 180)',
+      'Padding length to 180',
+      'Setting max_seq=252, max_extra_seq=1152',
+      'alphafold2_multimer_v1_model_1_seed_000 took 0.0s (3 recycles)',
+      "reranking models by 'multimer' metric",
+      'rank_001_alphafold2_multimer_v1_model_1_seed_000 pLDDT=94.4 pTM=0.884 ipTM=0.878',
+      'Done'
     ]
-
+    for x in expected:
+      assert x in messages
 
 def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     pdb_3g50_A = "MRILPISTIKGKLNEFVDAVSSTQDQITITKNGAPAAVLVGADEWESLQETLYWLAQPGIRESIAEADADIASGRTYGEDEIRAEFGVPRRPH"
@@ -224,12 +236,12 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs2 = MMseqs2Mock(pytestconfig.rootpath, "complex").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs2):
         run(
             queries,
             tmp_path,
-            model_type="AlphaFold2-ptm",
+            model_type="alphafold2_ptm",
             num_models=1,
             num_recycles=3,
             model_order=[1, 2, 3, 4, 5],
@@ -238,14 +250,19 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
         )
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
-    assert messages[0:-1] == [
-        "Found 5 citations for tools or databases",
-        "Query 1/1: 3G5O_A_3G5O_B (length 180)",
-        "Running model_1",
-        "model_1 took 0.0s (3 recycles) with pLDDT 91.9 and ptmscore 0.846",
-        "reranking models by ptmscore",
+    expected = [
+      #'Running on GPU',
+      'Found 4 citations for tools or databases',
+      'Query 1/1: 3G5O_A_3G5O_B (length 180)',
+      'Padding length to 180',
+      'Setting max_seq=512, max_extra_seq=5120',
+      'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
+      "reranking models by 'multimer' metric",
+      'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=92 pTM=0.846 ipTM=0.849',
+      'Done'
     ]
-
+    for x in expected:
+      assert x in messages
 
 def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     A = "PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK"
@@ -259,12 +276,12 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     ).mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs2):
         run(
             queries,
             tmp_path,
-            model_type="AlphaFold2-ptm",
+            model_type="alphafold2_ptm",
             num_models=1,
             num_recycles=3,
             model_order=[1, 2, 3, 4, 5],
@@ -273,14 +290,19 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
         )
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
-    assert messages[0:-1] == [
-        "Found 5 citations for tools or databases",
-        "Query 1/1: A_A (length 118)",
-        "Running model_1",
-        "model_1 took 0.0s (3 recycles) with pLDDT 95.5 and ptmscore 0.867",
-        "reranking models by ptmscore",
+    expected = [
+      #'Running on GPU', 
+      'Found 4 citations for tools or databases', 
+      'Query 1/1: A_A (length 118)', 
+      'Padding length to 118', 
+      'Setting max_seq=512, max_extra_seq=5120', 
+      'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)', 
+      "reranking models by 'multimer' metric", 
+      'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=95.6 pTM=0.867 ipTM=0.864', 
+      'Done'
     ]
-
+    for x in expected:
+      assert x in messages
 
 def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
     A = "PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK"
@@ -294,13 +316,13 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
     ).mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed: mock_run_model.predict(model_runner, feat, random_seed),
+        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs2):
         run(
             queries,
             tmp_path,
             num_models=1,
-            model_type="AlphaFold2-multimer-v1",
+            model_type="alphafold2_multimer_v1",
             num_recycles=3,
             model_order=[1, 2, 3, 4, 5],
             is_complex=True,
@@ -308,14 +330,19 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
         )
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
-    assert messages[0:-1] == [
-        "Found 5 citations for tools or databases",
-        "Query 1/1: A_A (length 118)",
-        "Running model_1",
-        "model_1 took 0.0s (3 recycles) with pLDDT 95.3, ptmscore 0.865 and iptm 0.86",
-        "reranking models by multimer",
+    expected = [
+      #'Running on GPU', 
+      'Found 4 citations for tools or databases', 
+      'Query 1/1: A_A (length 118)', 
+      'Padding length to 118', 
+      'Setting max_seq=252, max_extra_seq=1152', 
+      'alphafold2_multimer_v1_model_1_seed_000 took 0.0s (3 recycles)', 
+      "reranking models by 'multimer' metric", 
+      'rank_001_alphafold2_multimer_v1_model_1_seed_000 pLDDT=95.3 pTM=0.866 ipTM=0.861', 
+      'Done'
     ]
-
+    for x in expected:
+      assert x in messages
 
 def test_msa_serialization(pytestconfig):
     # heteromer

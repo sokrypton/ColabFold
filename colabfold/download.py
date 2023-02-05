@@ -16,15 +16,20 @@ def download_alphafold_params(model_type: str, data_dir: Path = default_data_dir
     import requests
 
     params_dir = data_dir.joinpath("params")
-    if model_type == "AlphaFold2-multimer-v2":
+    if model_type == "alphafold2_multimer_v3":
+        url = "https://storage.googleapis.com/alphafold/alphafold_params_colab_2022-12-06.tar"
+        success_marker = params_dir.joinpath(
+            "download_complexes_multimer_v3_finished.txt"
+        )
+    elif model_type == "alphafold2_multimer_v2":
         url = "https://storage.googleapis.com/alphafold/alphafold_params_colab_2022-03-02.tar"
         success_marker = params_dir.joinpath(
-            "download_complexes_multimer-v2_finished.txt"
+            "download_complexes_multimer_v2_finished.txt"
         )
-    elif model_type == "AlphaFold2-multimer-v1":
+    elif model_type == "alphafold2_multimer_v1":
         url = "https://storage.googleapis.com/alphafold/alphafold_params_colab_2021-10-27.tar"
         success_marker = params_dir.joinpath(
-            "download_complexes_multimer-v1_finished.txt"
+            "download_complexes_multimer_v1_finished.txt"
         )
     else:
         url = "https://storage.googleapis.com/alphafold/alphafold_params_2021-07-14.tar"
@@ -50,5 +55,5 @@ def download_alphafold_params(model_type: str, data_dir: Path = default_data_dir
 
 if __name__ == "__main__":
     # TODO: Arg to select which one
-    download_alphafold_params("AlphaFold2-multimer-v2")
-    download_alphafold_params("AlphaFold2-ptm")
+    download_alphafold_params("alphafold2_multimer_v3")
+    download_alphafold_params("alphafold2_ptm")

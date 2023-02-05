@@ -1,15 +1,7 @@
-# ColabFold
+# ColabFold - v1.5.0
 
 ```diff
-+ 2022/01/03: The MSA server's faulty hardware from 12/26 was replaced.
-+             There were intermittent failures on 12/26 and 1/3. Currently, 
-+             there are no known issues. Let us know if you experience any.
-+ 2022/10/10: Bugfix: random_seed was not being used for alphafold-multimer.
-+             Same structure was returned regardless of defined seed. This
-+             has been fixed!
-+ 2022/07/13: We have set up a new ColabFold MSA server provided by Korean
-+             Bioinformation Center. It provides accelerated MSA generation, 
-+             we updated the UniRef30 to 2022_02 and PDB/PDB70 to 220313.
++ 04Feb2023: ColabFold updated to use AlphaFold v2.3.1!
 ```
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
@@ -28,7 +20,7 @@
 | [OmegaFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/omegafold.ipynb) | Yes | Maybe | No | No| No |
 ||
 | **OLD retired notebooks** | | | | | |
-| [AlphaFold2_complexes](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2_complexes.ipynb) | No | Yes | No | No | No | 
+| [AlphaFold2_complexes](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold2_complexes.ipynb) | No | Yes | No | No | No | 
 | [AlphaFold2_jackhmmer](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold_wJackhmmer.ipynb) | Yes | No | Yes | Yes | No |
 | [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb) |
 | [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb) |
@@ -158,6 +150,15 @@ Searches against the ColabFoldDB can be done in two different modes:
 -----------------
 **OLD Updates**
 ```diff
+  2023/01/03: The MSA server's faulty hardware from 12/26 was replaced.
+              There were intermittent failures on 12/26 and 1/3. Currently, 
+              there are no known issues. Let us know if you experience any.
+  2022/10/10: Bugfix: random_seed was not being used for alphafold-multimer.
+              Same structure was returned regardless of defined seed. This
+              has been fixed!
+  2022/07/13: We have set up a new ColabFold MSA server provided by Korean
+              Bioinformation Center. It provides accelerated MSA generation, 
+              we updated the UniRef30 to 2022_02 and PDB/PDB70 to 220313.
   11Mar2022: We use in default AlphaFold-multimer-v2 weights for complex modeling. 
              We also offer the old complex modes "AlphaFold-ptm" or "AlphaFold-multimer-v1"
   04Mar2022: ColabFold now uses a much more powerful server for MSAs and searches through the ColabFoldDB instead of BFD/MGnify. 
@@ -196,4 +197,3 @@ Searches against the ColabFoldDB can be done in two different modes:
   20Nov2021  "AMBER" is fixed thanks to Kevin Pan
 ```
 -----------------
-
