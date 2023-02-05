@@ -11,8 +11,8 @@ Use the ["main"](https://github.com/sokrypton/ColabFold) for most stable version
 
 | Notebooks | monomers | complexes | mmseqs2 | jackhmmer | templates   |
 | :-------- | -------  | --------- | ------- | --------- | ----------- |
-| [AlphaFold2_mmseqs2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/beta_2/AlphaFold2.ipynb) | Yes | Yes | Yes | No | Yes | 
-| [AlphaFold2_batch](https://colab.research.google.com/github/sokrypton/ColabFold/blob/beta_2/AlphaFold2_batch.ipynb) | Yes | Yes | Yes | No | Yes | 
+| [AlphaFold2_mmseqs2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/beta/AlphaFold2.ipynb) | Yes | Yes | Yes | No | Yes | 
+| [AlphaFold2_batch](https://colab.research.google.com/github/sokrypton/ColabFold/blob/beta/AlphaFold2_batch.ipynb) | Yes | Yes | Yes | No | Yes | 
 | [AlphaFold2](https://colab.research.google.com/github/deepmind/alphafold/blob/main/notebooks/AlphaFold.ipynb) (from Deepmind) | Yes | Yes | No | Yes | No | 
 ||
 | **Experimental notebooks** | | | | | |
