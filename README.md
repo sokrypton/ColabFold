@@ -1,8 +1,11 @@
-# ColabFold - v1.5.0
+# ColabFold - v1.5.1
 
 ```diff
-+ 04Feb2023: ColabFold updated to use AlphaFold v2.3.1!
++ 04Feb2023: v1.5.0 - ColabFold updated to use AlphaFold v2.3.1!
++ 06Feb2023: v1.5.1 - fixing --save-all/--save-recycles option
 ```
+For details of what was changed in v1.5, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.5.0)!
+
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
 ### Making Protein folding accessible to all via Google Colab!

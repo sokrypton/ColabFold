@@ -403,6 +403,7 @@ def predict_structure(
             if "multimer" in model_type:
                 # TODO: add multimer padding
                 input_features = processed_feature_dict
+                input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
             else:
                 # TODO: move asym_id processing to "process_features"
                 r = processed_feature_dict["aatype"].shape[0]
@@ -427,28 +428,24 @@ def predict_structure(
                     print_line += f" {y}={prediction_result[x]:.3g}"
                 logger.info(f"{tag} recycle={recycles}{print_line}")
 
-                if save_recycles or save_all:
-                    prediction_result = _jnp_to_np(prediction_result)
-                    prediction_result["representations"] = prediction_result.pop("prev")
-                
                 if save_recycles:
-                    final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
-                    b_factors = prediction_result["plddt"][:, None] * final_atom_mask
+                    result = _jnp_to_np(prediction_result)
+                    final_atom_mask = result["structure_module"]["final_atom_mask"]
+                    b_factors = result["plddt"][:, None] * final_atom_mask
                     unrelaxed_protein = protein.from_prediction(features=input_features,
-                        result=prediction_result, b_factors=b_factors,
+                        result=result, b_factors=b_factors,
                         remove_leading_feature_dimension=("ptm" in model_type))
                     
                     unrelaxed_pdb_lines = protein.to_pdb(class_to_np(unrelaxed_protein))
                     files.get("unrelaxed",f"r{recycles}.pdb").write_text(unrelaxed_pdb_lines)
                 
-                if save_all:
-                    with files.get("all",f"r{recycles}.pickle").open("wb") as handle:
-                        pickle.dump(prediction_result, handle)
+                    if save_all:
+                        with files.get("all",f"r{recycles}.pickle").open("wb") as handle:
+                            pickle.dump(result, handle)
 
             prediction_result, recycles = \
             model_runner.predict(input_features, random_seed=seed, prediction_callback=callback)
             prediction_result = _jnp_to_np(prediction_result)
-            prediction_result["representations"] = prediction_result.pop("prev")
             prediction_times.append(time.time() - start)
 
             ########################
@@ -482,19 +479,23 @@ def predict_structure(
 
             #########################
             # save results
-            #########################            
+            #########################      
+
             # save pdb
             protein_lines = protein.to_pdb(unrelaxed_protein)
             files.get("unrelaxed","pdb").write_text(protein_lines)
             unrelaxed_pdb_lines.append(protein_lines)
 
             # save raw outputs
-            if save_single_representations or save_pair_representations:
-                rep = prediction_result["representations"]
-                if save_single_representations:
-                    np.save(files.get("single_repr","npy"), rep["prev_msa_first_row"])
-                if save_pair_representations:
-                    np.save(files.get("pair_repr","npy"), rep["prev_pair"])
+            if save_all:
+                with files.get("all","pickle").open("wb") as handle:
+                    pickle.dump(prediction_result, handle)
+            if save_single_representations:
+                np.save(files.get("single_repr","npy"),
+                    prediction_result["prev"]["prev_msa_first_row"])
+            if save_pair_representations:
+                np.save(files.get("pair_repr","npy"),
+                    prediction_result["prev"]["prev_pair"])
 
             # write an easy-to-use format (pAE and pLDDT)
             with files.get("scores","json").open("w") as handle:
@@ -1186,6 +1187,7 @@ def run(
     dpi: int = 200,
     max_seq: Optional[int] = None,
     max_extra_seq: Optional[int] = None,
+    use_cluster_profile: bool = True,
     feature_dict_callback: Callable[[Any], Any] = None,
     **kwargs
 ):
@@ -1234,7 +1236,6 @@ def run(
     pair_mode  = old_names.get(pair_mode,pair_mode)
     feature_dict_callback = kwargs.pop("input_features_callback", feature_dict_callback)
     use_dropout           = kwargs.pop("training", use_dropout)
-    use_cluster_profile   = kwargs.pop("use_cluster_profile", None)
     use_fuse              = kwargs.pop("use_fuse", True)
     use_bfloat16          = kwargs.pop("use_bfloat16", True)
     max_msa               = kwargs.pop("max_msa",None)
@@ -1659,7 +1660,7 @@ def main():
         help="rank models by auto, plddt or ptmscore",
         type=str,
         default="auto",
-        choices=["auto", "plddt", "ptmscore", "multimer"],
+        choices=["auto", "plddt", "ptm", "iptm", "multimer"],
     )
     parser.add_argument(
         "--pair-mode",
@@ -1710,6 +1711,12 @@ def main():
         help="defines: `max-seq:max-extra-seq` number of sequences to use",
         type=str,
         default=None,
+    )
+    parser.add_argument(
+        "--disable-cluster-profile",
+        default=False,
+        action="store_true",
+        help="EXPERIMENTAL: for multimer models, disable cluster profiles",
     )
     parser.add_argument(
         "--zip",
@@ -1798,6 +1805,7 @@ def main():
         max_seq=args.max_seq,
         max_extra_seq=args.max_extra_seq,
         max_msa=args.max_msa,
+        use_cluster_profile=not args.disable_cluster_profile,
         use_gpu_relax = args.use_gpu_relax,
         save_all=args.save_all,
         save_recycles=args.save_recycles,

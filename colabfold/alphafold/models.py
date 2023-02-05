@@ -20,7 +20,7 @@ def load_models_and_params(
     rank_by: str = "auto",
     max_seq: Optional[int] = None,
     max_extra_seq: Optional[int] = None,
-    use_cluster_profile: Optional[bool] = None,
+    use_cluster_profile: bool = True,
     use_fuse: bool = True,
     use_bfloat16: bool = True,
     use_dropout: bool = False,
@@ -84,8 +84,7 @@ def load_models_and_params(
             if "multimer" in model_suffix:
                 if num_recycles is not None:
                     model_config.model.num_recycle = num_recycles
-                if use_cluster_profile is not None:
-                    model_config.model.embeddings_and_evoformer.use_cluster_profile = use_cluster_profile
+                model_config.model.embeddings_and_evoformer.use_cluster_profile = use_cluster_profile
                 model_config.model.num_ensemble_eval = num_ensemble
             else:
                 if num_recycles is not None:
