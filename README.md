@@ -197,4 +197,3 @@ Searches against the ColabFoldDB can be done in two different modes:
   20Nov2021  "AMBER" is fixed thanks to Kevin Pan
 ```
 -----------------
-
