@@ -1,4 +1,4 @@
-# ColabFold_BETA - v0.0.0
+# ColabFold - v1.6.0-beta
 Note this "beta" branch is in active development and may be break without warning.
 Use the ["main"](https://github.com/sokrypton/ColabFold) for most stable version.
 
