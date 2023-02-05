@@ -403,6 +403,7 @@ def predict_structure(
             if "multimer" in model_type:
                 # TODO: add multimer padding
                 input_features = processed_feature_dict
+                input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
             else:
                 # TODO: move asym_id processing to "process_features"
                 r = processed_feature_dict["aatype"].shape[0]
