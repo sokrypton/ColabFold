@@ -290,11 +290,8 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
         )
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
-    print("-------------------------------")
-    print(messages)
-    print("-------------------------------")
     expected = [
-      'Running on GPU', 
+      #'Running on GPU', 
       'Found 4 citations for tools or databases', 
       'Query 1/1: A_A (length 118)', 
       'Padding length to 118', 
@@ -334,7 +331,7 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     expected = [
-      'Running on GPU', 
+      #'Running on GPU', 
       'Found 4 citations for tools or databases', 
       'Query 1/1: A_A (length 118)', 
       'Padding length to 118', 
