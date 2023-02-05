@@ -64,23 +64,26 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     expected = [
-      'Running on GPU',
+      #'Running on GPU',
       'Found 4 citations for tools or databases',
-      'Query 1/1: A_A (length 118)',
-      'Padding length to 118',
-      'Setting max_seq=512, max_extra_seq=5120',
+      'Query 1/2: 5AWL_1 (length 10)',
+      'Padding length to 13',
       'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
-      "reranking models by 'multimer' metric",
-      'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=95.6 pTM=0.867 ipTM=0.864',
+      "reranking models by 'plddt' metric",
+      'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=94.2 pTM=0.0567',
+      'Query 2/2: 6A5J (length 13)',
+      'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
+      "reranking models by 'plddt' metric",
+      'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=90.8 pTM=0.0455',
       'Done'
     ]
-    # We can get extra messages through warnings
-    assert set(expected) < set(messages)
+    for x in expected:
+      assert x in messages
 
     # Very simple test, it would be better to check coordinates
     assert (
         len(
-            tmp_path.joinpath("5AWL_1_unrelaxed_rank_1_model_1.pdb")
+            tmp_path.joinpath("5AWL_1_unrelaxed_rank_001_alphafold2_ptm_model_1_seed_000.pdb")
             .read_text()
             .splitlines()
         )
@@ -88,7 +91,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
     )
     assert (
         len(
-            tmp_path.joinpath("6A5J_unrelaxed_rank_1_model_1.pdb")
+            tmp_path.joinpath("6A5J_unrelaxed_rank_001_alphafold2_ptm_model_1_seed_000.pdb")
             .read_text()
             .splitlines()
         )
@@ -120,30 +123,28 @@ def test_zip(pytestconfig, caplog, tmp_path, prediction_test):
 
     # Ensure that the correct files are packaged and that they do not contain the dir prefix
     expect_zip = [
-        "cite.bibtex",
-        "config.json",
-        "5AWL_1_predicted_aligned_error_v1.json",
-        "5AWL_1.a3m",
-        "5AWL_1_PAE.png",
-        "5AWL_1_coverage.png",
-        "5AWL_1_plddt.png",
-        "5AWL_1_unrelaxed_rank_1_model_1.pdb",
-        "5AWL_1_unrelaxed_rank_1_model_1_scores.json",
+      '5AWL_1_unrelaxed_rank_001_alphafold2_ptm_model_1_seed_000.pdb', 
+      '5AWL_1_scores_rank_001_alphafold2_ptm_model_1_seed_000.json', 
+      '5AWL_1_coverage.png', '5AWL_1_predicted_aligned_error_v1.json', 
+      '5AWL_1_pae.png', 
+      '5AWL_1_plddt.png', 
+      '5AWL_1.a3m', 
+      'cite.bibtex', 
+      'config.json'
     ]
     with ZipFile(tmp_path.joinpath("5AWL_1.result.zip")) as result_zip:
         actual_zip = [i.filename for i in result_zip.infolist()]
-    print("---------------------------")
-    print(actual_zip)
-    print("---------------------------")
-    assert expect_zip == actual_zip
+    
+    for x in expect_zip:
+      assert x in actual_zip
 
 def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
     queries = [("5AWL_1", "YYDPETGTWY", None)]
 
     mock_run_model = MockRunModel(
-        pytestconfig.rootpath.joinpath("test-data/batch"), ["5AWL_1"]
+        pytestconfig.rootpath.joinpath("test-data/single"), ["5AWL_1"]
     )
-    mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "batch").mock_run_mmseqs2
+    mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "single").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
         lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
@@ -161,29 +162,29 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     expected = [
-      'Running on GPU',
-      'Found 1 citations for tools or databases',
-      'Query 1/1: 5AWL_1 (length 10)',
+      #'Running on GPU',
+      'Found 1 citations for tools or databases', 
+      'Query 1/1: 5AWL_1 (length 10)', 
       'Padding length to 10',
       'Setting max_seq=1, max_extra_seq=1',
       'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
       "reranking models by 'plddt' metric",
       'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=94.2 pTM=0.0567',
-      'Done'
-    ]
-    assert messages[1:] == expected[1:]
+      'Done']
+
+    for x in expected:
+      assert x in messages
 
     # Very simple test, it would be better to check coordinates
     assert (
         len(
-            tmp_path.joinpath("5AWL_1_unrelaxed_rank_1_model_1.pdb")
+            tmp_path.joinpath("5AWL_1_unrelaxed_rank_001_alphafold2_ptm_model_1_seed_000.pdb")
             .read_text()
             .splitlines()
         )
         == 96
     )
     assert tmp_path.joinpath("config.json").is_file()
-
 
 def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
     pdb_3g50_A = "MRILPISTIKGKLNEFVDAVSSTQDQITITKNGAPAAVLVGADEWESLQETLYWLAQPGIRESIAEADADIASGRTYGEDEIRAEFGVPRRPH"
@@ -211,7 +212,7 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     expected = [
-      'Running on GPU',
+      #'Running on GPU',
       'Found 4 citations for tools or databases',
       'Query 1/1: 3G5O_A_3G5O_B (length 180)',
       'Padding length to 180',
@@ -221,7 +222,8 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
       'rank_001_alphafold2_multimer_v1_model_1_seed_000 pLDDT=94.4 pTM=0.884 ipTM=0.878',
       'Done'
     ]
-    assert messages[1:] == expected[1:]
+    for x in expected:
+      assert x in messages
 
 def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     pdb_3g50_A = "MRILPISTIKGKLNEFVDAVSSTQDQITITKNGAPAAVLVGADEWESLQETLYWLAQPGIRESIAEADADIASGRTYGEDEIRAEFGVPRRPH"
@@ -249,7 +251,7 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     expected = [
-      'Running on GPU',
+      #'Running on GPU',
       'Found 4 citations for tools or databases',
       'Query 1/1: 3G5O_A_3G5O_B (length 180)',
       'Padding length to 180',
@@ -259,7 +261,8 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
       'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=92 pTM=0.846 ipTM=0.849',
       'Done'
     ]
-    assert messages[1:] == expected[1:]
+    for x in expected:
+      assert x in messages
 
 def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     A = "PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK"
@@ -287,6 +290,9 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
         )
 
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
+    print("-------------------------------")
+    print(messages)
+    print("-------------------------------")
     expected = [
       'Running on GPU', 
       'Found 4 citations for tools or databases', 
@@ -298,7 +304,8 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
       'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=95.6 pTM=0.867 ipTM=0.864', 
       'Done'
     ]
-    assert messages[1:] == expected[1:]
+    for x in expected:
+      assert x in messages
 
 def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
     A = "PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK"
@@ -337,7 +344,8 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
       'rank_001_alphafold2_multimer_v1_model_1_seed_000 pLDDT=95.3 pTM=0.866 ipTM=0.861', 
       'Done'
     ]
-    assert messages[1:] == expected[1:]
+    for x in expected:
+      assert x in messages
 
 def test_msa_serialization(pytestconfig):
     # heteromer

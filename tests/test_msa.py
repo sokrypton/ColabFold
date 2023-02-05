@@ -8,8 +8,8 @@ def test_get_msa_and_templates(pytestconfig, caplog, tmp_path):
     Q60262 = "MEIIALLIEEGIIIIKDKKVAERFLKDLESSQGMDWKEIRERAERAKKQLEEGIEWAKKTKL"
 
     for msa_mode, tag, lines in [
-        ("MMseqs2 (UniRef+Environmental)", "uniref_env", 12),
-        ("MMseqs2 (UniRef only)", "uniref", 8),
+        ("mmseqs2_uniref_env", "uniref_env", 12),
+        ("mmseqs2_uniref", "uniref", 8),
         ("single_sequence", "single_sequence", 2),
     ]:
         mmseqs2mock = MMseqs2Mock(pytestconfig.rootpath, f"get_msa_{tag}")
@@ -27,7 +27,7 @@ def test_get_msa_and_templates(pytestconfig, caplog, tmp_path):
                 msa_mode,
                 False,
                 None,
-                "unpaired+paired",
+                "unpaired_paired",
             )
 
         assert len(unpaired_msa[0].splitlines()) == lines
