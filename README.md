@@ -1,10 +1,11 @@
 # ColabFold - v1.6.0-beta
-Note this "beta" branch is in active development and may be break without warning.
-Use the ["main"](https://github.com/sokrypton/ColabFold) for most stable version.
-
 ```diff
+- WARNING This "beta" branch is in active development and may be break without warning.
+- Use the "main" branch for the most stable version.
 + 04Feb2023: ColabFold updated to use AlphaFold v2.3.1!
 ```
+Link to ["main"](https://github.com/sokrypton/ColabFold) branch.
+
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
 ### Making Protein folding accessible to all via Google Colab!
