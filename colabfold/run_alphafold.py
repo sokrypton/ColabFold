@@ -956,6 +956,3 @@ def main():
   
   else:
     run(queries=queries, **run_params)
-
-if __name__ == "__main__":
-  main()
