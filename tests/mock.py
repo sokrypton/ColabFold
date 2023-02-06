@@ -53,18 +53,17 @@ class MockRunModel:
         )
         self.pos += 1
 
-        if (
-            not prediction_file.is_file() or not input_fix_file.is_file()
-        ) and os.environ.get("UPDATE_SNAPSHOTS"):
+        if (not prediction_file.is_file() or not input_fix_file.is_file()) \
+        and os.environ.get("UPDATE_SNAPSHOTS"):
             print("Running new prediction")
-            with lzma.open(input_fix_file) as fp:
+            with lzma.open(input_fix_file,"wb") as fp:
                 pickle.dump(feat_no_msa, fp)
             prediction, (_, _) = original_run_model(model_runner, feat)
             del prediction["distogram"]
             del prediction["experimentally_resolved"]
             del prediction["masked_msa"]
             del prediction["aligned_confidence_probs"]
-            with lzma.open(prediction_file) as fp:
+            with lzma.open(prediction_file,"wb") as fp:
                 pickle.dump(prediction, fp)
 
         with lzma.open(input_fix_file) as input_fix_fp:

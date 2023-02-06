@@ -153,7 +153,7 @@ def mmseqs_search_pair(
     s: float = 8,
     threads: int = 64,
     db_load_mode: int = 2,
-    intersection_scan: bool = False,
+    interaction_scan: bool = False,
 ):
     if not dbbase.joinpath(f"{uniref_db}.dbtype").is_file():
         raise FileNotFoundError(f"Database {uniref_db} does not exist")
@@ -205,7 +205,7 @@ def mmseqs_search_pair(
         ]
         + search_param,
     )
-    if intersection_scan==True:
+    if interaction_scan==True:
         cmd = """awk 'BEGIN { OFS="\t"; cnt = 0; }
               NR == 1 { off = $2; len = $3; next; }
               { print (2*cnt),off,len; print (2*cnt)+1,$2,$3; cnt+=1; }' """
@@ -214,7 +214,7 @@ def mmseqs_search_pair(
             fin = base.joinpath(i + ".index")
             fout = base.joinpath(i + ".index_tmp")
             full_cmd = cmd + f'{fin} > {fout}'
-            process=subprocess.Popen(full_cmd, stdout=subprocess.PIPE, shell=True)
+            process = subprocess.Popen(full_cmd, stdout=subprocess.PIPE, shell=True)
             process.wait()
             os.replace(fout, fin)
         cmd = """awk 'BEGIN { OFS="\t"; cnt = 0; }
@@ -223,7 +223,7 @@ def mmseqs_search_pair(
         cmd = cmd.replace("\n", "")
         fin = base.joinpath("qdb.lookup")
         fout = base.joinpath("qdb.lookup_tmp")
-        process=subprocess.Popen(cmd + f'{fin} > {fout}', stdout=subprocess.PIPE, shell=True)
+        process = subprocess.Popen(cmd + f'{fin} > {fout}', stdout=subprocess.PIPE, shell=True)
         process.wait()
         os.replace(fout, fin)
 
@@ -495,7 +495,7 @@ def main():
             s=args.s,
             db_load_mode=args.db_load_mode,
             threads=args.threads,
-            intersection_scan=args.interaction_scan,
+            interaction_scan=args.interaction_scan,
         )
 
         id = 0
