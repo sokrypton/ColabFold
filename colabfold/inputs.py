@@ -259,7 +259,7 @@ def get_queries(
   return queries, is_complex
 
 def get_queries_pairwise(
-  input_path: Union[str, Path], sort_queries_by: str = "length", batch_size: int = 10,
+  input_path: Union[str, Path], batch_size: int = 10,
 ) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
   """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
   of job name, sequence and the optional a3m lines"""
@@ -272,10 +272,13 @@ def get_queries_pairwise(
       df = pandas.read_csv(input_path, sep=sep)
       assert "id" in df.columns and "sequence" in df.columns
       queries = []
+      seq_id_list = []
       for i, (seq_id, sequence) in enumerate(df[["id", "sequence"]].itertuples(index=False)):
         if i>0 and i % 10 == 0:
           queries.append(queries[0].upper())
         queries.append(sequence.upper())
+        seq_id_list.append(seq_id)
+      return queries, True, seq_id_list
     elif input_path.suffix == ".a3m":
       raise NotImplementedError()
     elif input_path.suffix in [".fasta", ".faa", ".fa"]:
@@ -290,16 +293,11 @@ def get_queries_pairwise(
         else:
           # Complex mode
           queries.append((header, sequence.upper().split(":"), None))
+      return queries, True, headers
     else:
       raise ValueError(f"Unknown file format {input_path.suffix}")
   else:
     raise NotImplementedError()
-  is_complex = True
-  if sort_queries_by == "length":
-    queries.sort(key=lambda t: len(''.join(t[1])),reverse=True)
-  elif sort_queries_by == "random":
-    random.shuffle(queries)
-  return queries, is_complex
 
 def pair_sequences(
   a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
