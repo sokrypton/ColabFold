@@ -851,9 +851,11 @@ def main():
   download_alphafold_params(model_type, data_dir)
   
   # warning about api
-  uses_api = any((query[2] is None for query in queries))
-  if uses_api and args.host_url == DEFAULT_API_SERVER:
-    print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
+  if "mmseqs2" in args.msa_mode or args.use_templates:
+    # TODO: check if server used in the case of templates
+    uses_api = any((query[2] is None for query in queries))
+    if uses_api and args.host_url == DEFAULT_API_SERVER:
+      print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
 
   run_params = dict(
     result_dir=args.results,
