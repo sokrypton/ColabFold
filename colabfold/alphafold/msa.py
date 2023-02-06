@@ -39,19 +39,9 @@ def make_fixed_size(
     pad_size = [pad_size_map.get(s2, None) or s1 for (s1, s2) in zip(shape, schema)]
     padding = [(0, p - v.shape[i]) for i, p in enumerate(pad_size)]
 
-<<<<<<< HEAD
-        assert len(shape) == len(schema), (
-            f"Rank mismatch between shape and shape schema for {k}: "
-            f"{shape} vs {schema}"
-        )
-        pad_size = [pad_size_map.get(s2, None) or s1 for (s1, s2) in zip(shape, schema)]
-        pad_size = [int(i) for i in pad_size]
-        padding = [(0, p - tf.shape(v)[i]) for i, p in enumerate(pad_size)]
-=======
     if padding:
       feat[k] = np.pad(v, padding)
   return feat
->>>>>>> 6c2001e26d6192cea20d40f76809f08c06524ec0
 
 def make_fixed_size_multimer(
   feat: Mapping[str, Any],
