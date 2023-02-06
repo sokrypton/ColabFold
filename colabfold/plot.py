@@ -72,7 +72,6 @@ def plot_msa(feature_dict, sort_lines=True, dpi=100):
     non_gaps[non_gaps == 0] = np.nan
     if sort_lines:
       lines_ = non_gaps[seqid.argsort()] * seqid[seqid.argsort(),None]
->>>>>>> 6c2001e26d6192cea20d40f76809f08c06524ec0
     else:
       lines_ = non_gaps[::-1] * seqid[::-1,None]
     Nn.append(len(lines_))
