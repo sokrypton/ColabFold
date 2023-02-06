@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from __future__ import annotations
 
 import os
@@ -2100,5 +2101,8 @@ def main():
             save_all=args.save_all,
         )
 
+=======
+from colabfold.run_alphafold import main
+>>>>>>> 6c2001e26d6192cea20d40f76809f08c06524ec0
 if __name__ == "__main__":
-    main()
+  main()

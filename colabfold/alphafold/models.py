@@ -18,7 +18,7 @@ def load_models_and_params(
     model_suffix: str = "_ptm",
     data_dir: Path = Path("."),
     stop_at_score: float = 100,
-    rank_by: str = "plddt",
+    rank_by: str = "auto",
     max_seq: Optional[int] = None,
     max_extra_seq: Optional[int] = None,
     use_cluster_profile: Optional[bool] = None,
@@ -54,7 +54,7 @@ def load_models_and_params(
             # get configurations
             model_config = config.model_config("model_" + str(model_number) + model_suffix)
             model_config.model.stop_at_score = float(stop_at_score)
-            model_config.model.stop_at_score_ranker = rank_by
+            model_config.model.rank_by = rank_by
 
             # set dropouts
             model_config.model.global_config.eval_dropout = use_dropout

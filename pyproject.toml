@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "colabfold"
-version = "1.4.0"
+version = "1.6.0-beta"
 description = "Making protein folding accessible to all. Predict proteins structures both in google colab and on your machine"
 authors = [
     "Milot Mirdita <milot.mirdita@mpibpc.mpg.de>",
@@ -21,8 +21,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.7.1,<3.9"
 absl-py = "^0.13.0"
-# alphafold-colabfold = { version = "2.3.0", optional = true }
-alphafold-colabfold = { git = "https://github.com/sokrypton/alphafold.git" }
+alphafold-colabfold = { version = "2.3.1", optional = true }
 jax = { version = "^0.3.8", optional = true }
 # https://github.com/facebook/prophet/issues/1691#issuecomment-712199609
 matplotlib = "3.1.3"

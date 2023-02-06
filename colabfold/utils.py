@@ -8,6 +8,8 @@ from absl import logging as absl_logging
 from importlib_metadata import distribution
 from tqdm import TqdmExperimentalWarning
 
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+
 NO_GPU_FOUND = """ERROR: Jax could not find GPU. This can be either because your machine doesn't have a GPU
 or because jax can't find it. You might need to run
 
@@ -19,57 +21,58 @@ If you're sure you want to run without a GPU, pass `--cpu`"""
 
 DEFAULT_API_SERVER = "https://api.colabfold.com"
 
-ACCEPT_DEFAULT_TERMS = """WARNING: You are welcome to use the default MSA server, however keep in mind that it's a limited shared resource only capable of processing a few thousand MSAs per day. Please submit jobs only from a single IP address. We reserve the right to limit access to the server case-by-case when usage exceeds fair use.
-
-If you require more MSAs:\n
-* You can precompute all MSAs with `colabfold_search` or\n
-* You can host your own API and pass it to `--host-url`"""
-
+ACCEPT_DEFAULT_TERMS = \
+"""
+WARNING: You are welcome to use the default MSA server, however keep in mind that it's a
+limited shared resource only capable of processing a few thousand MSAs per day. Please
+submit jobs only from a single IP address. We reserve the right to limit access to the
+server case-by-case when usage exceeds fair use. If you require more MSAs: You can 
+precompute all MSAs with `colabfold_search` or host your own API and pass it to `--host-url`
+"""
 
 class TqdmHandler(logging.StreamHandler):
-    """https://stackoverflow.com/a/38895482/3549270"""
+  """https://stackoverflow.com/a/38895482/3549270"""
 
-    def __init__(self):
-        logging.StreamHandler.__init__(self)
+  def __init__(self):
+    logging.StreamHandler.__init__(self)
 
-    def emit(self, record):
-        # We need the native tqdm here
-        from tqdm import tqdm
+  def emit(self, record):
+    # We need the native tqdm here
+    from tqdm import tqdm
 
-        msg = self.format(record)
-        tqdm.write(msg)
-
+    msg = self.format(record)
+    tqdm.write(msg)
 
 def setup_logging(log_file: Path):
-    log_file.parent.mkdir(exist_ok=True, parents=True)
-    root = logging.getLogger()
-    if root.handlers:
-        for handler in root.handlers:
-            root.removeHandler(handler)
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(message)s",
-        handlers=[TqdmHandler(), logging.FileHandler(log_file)],
-    )
-    # otherwise jax will tell us about its search for devices
-    absl_logging.set_verbosity("error")
-    warnings.simplefilter(action="ignore", category=TqdmExperimentalWarning)
+  log_file.parent.mkdir(exist_ok=True, parents=True)
+  root = logging.getLogger()
+  if root.handlers:
+    for handler in root.handlers:
+      root.removeHandler(handler)
+  logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(message)s",
+    handlers=[TqdmHandler(), logging.FileHandler(log_file)],
+  )
+  # otherwise jax will tell us about its search for devices
+  absl_logging.set_verbosity("error")
+  warnings.simplefilter(action="ignore", category=TqdmExperimentalWarning)
 
 
 def safe_filename(file: str) -> str:
-    return "".join([c if c.isalnum() or c in ["_", ".", "-"] else "_" for c in file])
+  return "".join([c if c.isalnum() or c in ["_", ".", "-"] else "_" for c in file])
 
 
 def get_commit() -> Optional[str]:
-    text = distribution("colabfold").read_text("direct_url.json")
-    if not text:
-        return None
-    direct_url = json.loads(text)
-    if "vcs_info" not in direct_url:
-        return None
-    if "commit_id" not in direct_url["vcs_info"]:
-        return None
-    return direct_url["vcs_info"]["commit_id"]
+  text = distribution("colabfold").read_text("direct_url.json")
+  if not text:
+    return None
+  direct_url = json.loads(text)
+  if "vcs_info" not in direct_url:
+    return None
+  if "commit_id" not in direct_url["vcs_info"]:
+    return None
+  return direct_url["vcs_info"]["commit_id"]
 
 
 # Copied from Bio.PDB to override _save_dict method
@@ -92,179 +95,213 @@ _pdbx_audit_revision_history.revision_date
 
 ### begin section copied from Bio.PDB
 mmcif_order = {
-    "_atom_site": [
-        "group_PDB",
-        "id",
-        "type_symbol",
-        "label_atom_id",
-        "label_alt_id",
-        "label_comp_id",
-        "label_asym_id",
-        "label_entity_id",
-        "label_seq_id",
-        "pdbx_PDB_ins_code",
-        "Cartn_x",
-        "Cartn_y",
-        "Cartn_z",
-        "occupancy",
-        "B_iso_or_equiv",
-        "pdbx_formal_charge",
-        "auth_seq_id",
-        "auth_comp_id",
-        "auth_asym_id",
-        "auth_atom_id",
-        "pdbx_PDB_model_num",
-    ]
+  "_atom_site": [
+    "group_PDB",
+    "id",
+    "type_symbol",
+    "label_atom_id",
+    "label_alt_id",
+    "label_comp_id",
+    "label_asym_id",
+    "label_entity_id",
+    "label_seq_id",
+    "pdbx_PDB_ins_code",
+    "Cartn_x",
+    "Cartn_y",
+    "Cartn_z",
+    "occupancy",
+    "B_iso_or_equiv",
+    "pdbx_formal_charge",
+    "auth_seq_id",
+    "auth_comp_id",
+    "auth_asym_id",
+    "auth_atom_id",
+    "pdbx_PDB_model_num",
+  ]
 }
 
 
 class CFMMCIFIO(MMCIFIO):
-    def _save_dict(self, out_file):
-        # Form dictionary where key is first part of mmCIF key and value is list
-        # of corresponding second parts
-        key_lists = {}
-        for key in self.dic:
-            if key == "data_":
-                data_val = self.dic[key]
-            else:
-                s = re.split(r"\.", key)
-                if len(s) == 2:
-                    if s[0] in key_lists:
-                        key_lists[s[0]].append(s[1])
-                    else:
-                        key_lists[s[0]] = [s[1]]
-                else:
-                    raise ValueError("Invalid key in mmCIF dictionary: " + key)
+  def _save_dict(self, out_file):
+    # Form dictionary where key is first part of mmCIF key and value is list
+    # of corresponding second parts
+    key_lists = {}
+    for key in self.dic:
+      if key == "data_":
+        data_val = self.dic[key]
+      else:
+        s = re.split(r"\.", key)
+        if len(s) == 2:
+          if s[0] in key_lists:
+            key_lists[s[0]].append(s[1])
+          else:
+            key_lists[s[0]] = [s[1]]
+        else:
+          raise ValueError("Invalid key in mmCIF dictionary: " + key)
 
-        # Re-order lists if an order has been specified
-        # Not all elements from the specified order are necessarily present
-        for key, key_list in key_lists.items():
-            if key in mmcif_order:
-                inds = []
-                for i in key_list:
-                    try:
-                        inds.append(mmcif_order[key].index(i))
-                    # Unrecognised key - add at end
-                    except ValueError:
-                        inds.append(len(mmcif_order[key]))
-                key_lists[key] = [k for _, k in sorted(zip(inds, key_list))]
+    # Re-order lists if an order has been specified
+    # Not all elements from the specified order are necessarily present
+    for key, key_list in key_lists.items():
+      if key in mmcif_order:
+        inds = []
+        for i in key_list:
+          try:
+            inds.append(mmcif_order[key].index(i))
+          # Unrecognised key - add at end
+          except ValueError:
+            inds.append(len(mmcif_order[key]))
+        key_lists[key] = [k for _, k in sorted(zip(inds, key_list))]
 
-        # Write out top data_ line
-        if data_val:
-            out_file.write("data_" + data_val + "\n#\n")
-            ### end section copied from Bio.PDB
-            # Add poly_seq as default MMCIFIO doesn't handle this
-            out_file.write(
-                """loop_
+    # Write out top data_ line
+    if data_val:
+      out_file.write("data_" + data_val + "\n#\n")
+      ### end section copied from Bio.PDB
+      # Add poly_seq as default MMCIFIO doesn't handle this
+      out_file.write(
+        """loop_
 _entity_poly_seq.entity_id
 _entity_poly_seq.num
 _entity_poly_seq.mon_id
 _entity_poly_seq.hetero
 #\n"""
+      )
+      poly_seq = []
+      chain_idx = 1
+      for model in self.structure:
+        for chain in model:
+          res_idx = 1
+          for residue in chain:
+            poly_seq.append(
+              (chain_idx, res_idx, residue.get_resname(), "n")
             )
-            poly_seq = []
-            chain_idx = 1
-            for model in self.structure:
-                for chain in model:
-                    res_idx = 1
-                    for residue in chain:
-                        poly_seq.append(
-                            (chain_idx, res_idx, residue.get_resname(), "n")
-                        )
-                        res_idx += 1
-                    chain_idx += 1
-            for seq in poly_seq:
-                out_file.write(f"{seq[0]} {seq[1]} {seq[2]}  {seq[3]}\n")
-            out_file.write("#\n")
-            out_file.write(
-                """loop_
+            res_idx += 1
+          chain_idx += 1
+      for seq in poly_seq:
+        out_file.write(f"{seq[0]} {seq[1]} {seq[2]}  {seq[3]}\n")
+      out_file.write("#\n")
+      out_file.write(
+        """loop_
 _chem_comp.id
 _chem_comp.type
 #\n"""
-            )
-            for three in standard_aa_names:
-                out_file.write(f'{three} "peptide linking"\n')
-            out_file.write("#\n")
-            out_file.write(
-                """loop_
+      )
+      for three in standard_aa_names:
+        out_file.write(f'{three} "peptide linking"\n')
+      out_file.write("#\n")
+      out_file.write(
+        """loop_
 _struct_asym.id
 _struct_asym.entity_id
 #\n"""
-            )
-            chain_idx = 1
-            for model in self.structure:
-                for chain in model:
-                    out_file.write(f"{chain.get_id()} {chain_idx}\n")
-                    chain_idx += 1
-            out_file.write("#\n")
+      )
+      chain_idx = 1
+      for model in self.structure:
+        for chain in model:
+          out_file.write(f"{chain.get_id()} {chain_idx}\n")
+          chain_idx += 1
+      out_file.write("#\n")
 
-        ### begin section copied from Bio.PDB
-        for key, key_list in key_lists.items():
-            # Pick a sample mmCIF value, which can be a list or a single value
-            sample_val = self.dic[key + "." + key_list[0]]
-            n_vals = len(sample_val)
-            # Check the mmCIF dictionary has consistent list sizes
-            for i in key_list:
-                val = self.dic[key + "." + i]
-                if (
-                    isinstance(sample_val, list)
-                    and (isinstance(val, str) or len(val) != n_vals)
-                ) or (isinstance(sample_val, str) and isinstance(val, list)):
-                    raise ValueError(
-                        "Inconsistent list sizes in mmCIF dictionary: " + key + "." + i
-                    )
-            # If the value is a single value, write as key-value pairs
-            if isinstance(sample_val, str) or (
-                isinstance(sample_val, list) and len(sample_val) == 1
+    ### begin section copied from Bio.PDB
+    for key, key_list in key_lists.items():
+      # Pick a sample mmCIF value, which can be a list or a single value
+      sample_val = self.dic[key + "." + key_list[0]]
+      n_vals = len(sample_val)
+      # Check the mmCIF dictionary has consistent list sizes
+      for i in key_list:
+        val = self.dic[key + "." + i]
+        if (
+          isinstance(sample_val, list)
+          and (isinstance(val, str) or len(val) != n_vals)
+        ) or (isinstance(sample_val, str) and isinstance(val, list)):
+          raise ValueError(
+            "Inconsistent list sizes in mmCIF dictionary: " + key + "." + i
+          )
+      # If the value is a single value, write as key-value pairs
+      if isinstance(sample_val, str) or (
+        isinstance(sample_val, list) and len(sample_val) == 1
+      ):
+        m = 0
+        # Find the maximum key length
+        for i in key_list:
+          if len(i) > m:
+            m = len(i)
+        for i in key_list:
+          # If the value is a single item list, just take the value
+          if isinstance(sample_val, str):
+            value_no_list = self.dic[key + "." + i]
+          else:
+            value_no_list = self.dic[key + "." + i][0]
+          out_file.write(
+            "{k: <{width}}".format(k=key + "." + i, width=len(key) + m + 4)
+            + self._format_mmcif_col(value_no_list, len(value_no_list))
+            + "\n"
+          )
+      # If the value is more than one value, write as keys then a value table
+      elif isinstance(sample_val, list):
+        out_file.write("loop_\n")
+        col_widths = {}
+        # Write keys and find max widths for each set of values
+        for i in key_list:
+          out_file.write(key + "." + i + "\n")
+          col_widths[i] = 0
+          for val in self.dic[key + "." + i]:
+            len_val = len(val)
+            # If the value requires quoting it will add 2 characters
+            if self._requires_quote(val) and not self._requires_newline(
+              val
             ):
-                m = 0
-                # Find the maximum key length
-                for i in key_list:
-                    if len(i) > m:
-                        m = len(i)
-                for i in key_list:
-                    # If the value is a single item list, just take the value
-                    if isinstance(sample_val, str):
-                        value_no_list = self.dic[key + "." + i]
-                    else:
-                        value_no_list = self.dic[key + "." + i][0]
-                    out_file.write(
-                        "{k: <{width}}".format(k=key + "." + i, width=len(key) + m + 4)
-                        + self._format_mmcif_col(value_no_list, len(value_no_list))
-                        + "\n"
-                    )
-            # If the value is more than one value, write as keys then a value table
-            elif isinstance(sample_val, list):
-                out_file.write("loop_\n")
-                col_widths = {}
-                # Write keys and find max widths for each set of values
-                for i in key_list:
-                    out_file.write(key + "." + i + "\n")
-                    col_widths[i] = 0
-                    for val in self.dic[key + "." + i]:
-                        len_val = len(val)
-                        # If the value requires quoting it will add 2 characters
-                        if self._requires_quote(val) and not self._requires_newline(
-                            val
-                        ):
-                            len_val += 2
-                        if len_val > col_widths[i]:
-                            col_widths[i] = len_val
-                # Technically the max of the sum of the column widths is 2048
+              len_val += 2
+            if len_val > col_widths[i]:
+              col_widths[i] = len_val
+        # Technically the max of the sum of the column widths is 2048
 
-                # Write the values as rows
-                for i in range(n_vals):
-                    for col in key_list:
-                        out_file.write(
-                            self._format_mmcif_col(
-                                self.dic[key + "." + col][i], col_widths[col] + 1
-                            )
-                        )
-                    out_file.write("\n")
-            else:
-                raise ValueError(
-                    "Invalid type in mmCIF dictionary: " + str(type(sample_val))
-                )
-            out_file.write("#\n")
-            ### end section copied from Bio.PDB
-            out_file.write(CIF_REVISION_DATE)
+        # Write the values as rows
+        for i in range(n_vals):
+          for col in key_list:
+            out_file.write(
+              self._format_mmcif_col(
+                self.dic[key + "." + col][i], col_widths[col] + 1
+              )
+            )
+          out_file.write("\n")
+      else:
+        raise ValueError(
+          "Invalid type in mmCIF dictionary: " + str(type(sample_val))
+        )
+      out_file.write("#\n")
+      ### end section copied from Bio.PDB
+      out_file.write(CIF_REVISION_DATE)
+
+import jax.numpy as jnp
+import numpy as np
+def jnp_to_np(output: Dict[str, Any]) -> Dict[str, Any]:
+  """Recursively changes jax arrays to numpy arrays."""
+  for k, v in output.items():
+    if isinstance(v, dict):
+      output[k] = jnp_to_np(v)
+    elif isinstance(v, jnp.ndarray):
+      output[k] = np.array(v)
+  return output
+
+def class_to_np(c):
+  class dict2obj():
+    def __init__(self, d):
+      for k,v in jnp_to_np(d).items(): setattr(self, k, v)
+  return dict2obj(c.__dict__)
+
+class file_manager:
+  def __init__(self, prefix: str, result_dir: Path):
+    self.prefix = prefix
+    self.result_dir = result_dir
+    self.tag = None
+    self.files = {}
+  
+  def get(self, x: str, ext:str) -> Path:
+    if self.tag not in self.files:
+      self.files[self.tag] = []
+    file = self.result_dir.joinpath(f"{self.prefix}_{x}_{self.tag}.{ext}")
+    self.files[self.tag].append([x,ext,file])
+    return file
+
+  def set_tag(self, tag):
+    self.tag = tag
