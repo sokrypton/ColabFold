@@ -100,7 +100,6 @@ def predict_structure(
       ########################
       # process inputs
       ########################
-      
       processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)      
       # pad inputs
       if "multimer" in model_type:
@@ -130,12 +129,9 @@ def predict_structure(
           if x in prediction_result:
             print_line += f" {y}={prediction_result[x]:.3g}"
         logger.info(f"{tag} recycle={recycles}{print_line}")
-
-        if save_recycles or save_all:
-          prediction_result = jnp_to_np(prediction_result)
-          prediction_result["representations"] = prediction_result.pop("prev")
-        
+      
         if save_recycles:
+          prediction_result = jnp_to_np(prediction_result)
           final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
           b_factors = prediction_result["plddt"][:, None] * final_atom_mask
           unrelaxed_protein = protein.from_prediction(features=input_features,
@@ -145,9 +141,9 @@ def predict_structure(
           unrelaxed_pdb_lines = protein.to_pdb(class_to_np(unrelaxed_protein))
           files.get("unrelaxed",f"r{recycles}.pdb").write_text(unrelaxed_pdb_lines)
         
-        if save_all:
-          with files.get("all",f"r{recycles}.pickle").open("wb") as handle:
-            pickle.dump(prediction_result, handle)
+          if save_all:
+            with files.get("all",f"r{recycles}.pickle").open("wb") as handle:
+              pickle.dump(prediction_result, handle)
 
       prediction_result, recycles = \
       model_runner.predict(input_features, random_seed=seed, prediction_callback=callback)
@@ -193,6 +189,10 @@ def predict_structure(
       unrelaxed_pdb_lines.append(protein_lines)
 
       # save raw outputs
+      if save_all:
+        with files.get("all","pickle").open("wb") as handle:
+          pickle.dump(prediction_result, handle)
+      
       if save_single_representations or save_pair_representations:
         rep = prediction_result["representations"]
         if save_single_representations:
