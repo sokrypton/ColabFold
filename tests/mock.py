@@ -26,91 +26,6 @@ def jnp_to_np(output: Dict[str, Any]) -> Dict[str, Any]:
 original_run_model = RunModel.predict
 
 class MockRunModel:
-<<<<<<< HEAD
-    """Mocks FeatureDict -> prediction
-
-    The class is stateful, i.e. predictions need to be done in the given order
-
-    msa_feat is a) large and b) has some variance between machines, so we ignore it
-    """
-
-    fixture_dir: Path
-    predictions: List[str]
-    pos: int
-
-    def __init__(self, fixture_dir: Path, predictions: List[str]):
-        self.fixture_dir = fixture_dir
-        self.predictions = predictions
-        self.pos = 0
-
-    def predict(
-        self, model_runner: RunModel, feat: FeatureDict, random_seed: int
-    ) -> Tuple[Mapping[str, Any], Tuple[Any, Any]]:
-        """feat["msa"] or feat["msa_feat"] for normal/complexes is non-deterministic, so we remove it before storing,
-        but we keep it for predicting or returning, where we need it for plotting"""
-        feat_no_msa = dict(feat)
-        if "msa_feat" in feat_no_msa.keys():
-            del feat_no_msa["msa_feat"]
-        elif "msa" in feat_no_msa.keys():
-            del feat_no_msa["msa"]
-        else:
-            raise AssertionError("neither msa nor msa_feat in feat")
-
-        prediction_file = self.fixture_dir.joinpath(
-            self.predictions[self.pos]
-        ).joinpath("model_prediction_result.pkl.xz")
-        input_fix_file = self.fixture_dir.joinpath(self.predictions[self.pos]).joinpath(
-            "model_input_fix.pkl.xz"
-        )
-        self.pos += 1
-
-        if (not prediction_file.is_file() or not input_fix_file.is_file()) \
-        and os.environ.get("UPDATE_SNAPSHOTS"):
-            print("Running new prediction")
-            with lzma.open(input_fix_file,"wb") as fp:
-                pickle.dump(feat_no_msa, fp)
-            prediction, (_, _) = original_run_model(model_runner, feat)
-            del prediction["distogram"]
-            del prediction["experimentally_resolved"]
-            del prediction["masked_msa"]
-            del prediction["aligned_confidence_probs"]
-            with lzma.open(prediction_file,"wb") as fp:
-                pickle.dump(prediction, fp)
-
-        with lzma.open(input_fix_file) as input_fix_fp:
-            input_fix = pickle.load(input_fix_fp)
-        with lzma.open(prediction_file) as prediction_fp:
-            prediction = pickle.load(prediction_fp)
-
-        is_same = True
-        for key in input_fix:
-            if (
-                key not in feat_no_msa
-                or feat_no_msa[key].shape != input_fix[key].shape
-                or not numpy.allclose(feat_no_msa[key], input_fix[key])
-            ):
-                is_same = False
-                break
-
-        if is_same:
-            return prediction, 3
-
-        if os.environ.get("UPDATE_SNAPSHOTS"):
-            print("Running new prediction")
-            with lzma.open(input_fix_file, "wb") as fp:
-                pickle.dump(feat_no_msa, fp)
-            prediction, (_, _) = original_run_model(model_runner, feat)
-            with lzma.open(prediction_file, "wb") as fp:
-                pickle.dump(prediction, fp)
-            return prediction, (None, None)
-        else:
-            for key in input_fix:
-                # Generate a more helpful error message
-                assert feat_no_msa[key].shape != input_fix[
-                    key
-                ].shape and numpy.allclose(feat_no_msa[key], input_fix[key]), key
-
-=======
   """Mocks FeatureDict -> prediction
   The class is stateful, i.e. predictions need to be done in the given order
   msa_feat is a) large and b) has some variance between machines, so we ignore it
@@ -177,7 +92,6 @@ class MockRunModel:
 
     self.pos += 1
     return prev_pred, 3
->>>>>>> 6c2001e26d6192cea20d40f76809f08c06524ec0
 
 class MMseqs2Mock:
   """Mocks out the call to the mmseqs2 api

@@ -20,6 +20,7 @@ import importlib_metadata
 import numpy as np
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 from pathlib import Path
+import random
 
 import logging
 logger = logging.getLogger(__name__)
@@ -129,7 +130,7 @@ def predict_structure(
           if x in prediction_result:
             print_line += f" {y}={prediction_result[x]:.3g}"
         logger.info(f"{tag} recycle={recycles}{print_line}")
-      
+
         if save_recycles:
           prediction_result = jnp_to_np(prediction_result)
           final_atom_mask = prediction_result["structure_module"]["final_atom_mask"]
@@ -869,7 +870,7 @@ def main():
   if args.interaction_scan:
     # protocol from @Dohyun-s
     batch_size = 10
-    queries, is_complex = get_queries_pairwise(args.input, args.sort_queries_by, batch_size)
+    queries, is_complex, headers = get_queries_pairwise(args.input, batch_size)
   else:
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
 
@@ -921,7 +922,9 @@ def main():
     # protocol from @Dohyun-s
     from colabfold.mmseqs.api import run_mmseqs2
     output = [queries[i:i + batch_size] for i in range(0, len(queries), batch_size)]
-    dirnum = 0
+    headers_list = [headers[i:i + batch_size] for i in range(0, len(headers), batch_size)]
+    headers_list[0].remove(headers_list[0][0])
+    header_first = headers[0]
     
     for jobname, batch in enumerate(output):
       query_seqs_unique = []
@@ -949,10 +952,18 @@ def main():
               (seqs, header) = parse_fasta(Path(file).read_text())
               query_sequence = seqs[0]
               a3m_lines = [Path(file).read_text()]
-              queries_new.append((outdir.joinpath(file).stem+'_'+str(dirnum), query_sequence, a3m_lines))
+              val = int(header[0].split('\t')[1][1:]) - 102
+              queries_new.append((header_first + '_' + headers_list[jobname][val], query_sequence, a3m_lines))
+
+          if args.sort_queries_by == "length":
+            queries_new.sort(key=lambda t: len(''.join(t[1])),reverse=True)
+          elif args.sort_queries_by == "random":
+            random.shuffle(queries_new)
 
           run(queries=queries_new, **run_params)
-      dirnum += 1    
   
   else:
     run(queries=queries, **run_params)
+
+if __name__ == "__main__":
+  main()

@@ -5,7 +5,6 @@ import haiku
 from alphafold.model import model, config, data
 from alphafold.model.modules import AlphaFold
 from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
-import numpy as np
 
 
 def load_models_and_params(
@@ -25,7 +24,6 @@ def load_models_and_params(
     use_fuse: bool = True,
     use_bfloat16: bool = True,
     use_dropout: bool = False,
-    recompile_padding: float = 1.0,
 
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
@@ -75,8 +73,6 @@ def load_models_and_params(
                     model_config.model.embeddings_and_evoformer.num_msa = max_seq
                 else:
                     model_config.data.eval.max_msa_clusters = max_seq
-            #set recompile-padding
-            model_config.model.global_config.recompile_padding = np.asarray([recompile_padding])
             
             if max_extra_seq is not None:
                 if "multimer" in model_suffix:
