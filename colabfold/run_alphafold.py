@@ -763,7 +763,7 @@ def main():
     help="rank models by auto, plddt or ptmscore",
     type=str,
     default="auto",
-    choices=["auto", "plddt", "ptmscore", "multimer"],
+    choices=["auto", "plddt", "ptm", "iptm", "multimer"],
   )
   parser.add_argument(
     "--pair-mode",
