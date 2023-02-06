@@ -70,7 +70,7 @@ def predict_structure(
   random_seed: int = 0,
   num_seeds: int = 1,
   stop_at_score: float = 100,
-  prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
+  outputs_callback: Callable[Any] = None,
   use_gpu_relax: bool = False,
   save_all: bool = False,
   save_single_representations: bool = False,
@@ -119,7 +119,7 @@ def predict_structure(
       files.set_tag(tag)
 
       # monitor intermediate results
-      def callback(prediction_result, recycles):
+      def prediction_callback(prediction_result, recycles):
         print_line = ""
         for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"],["diff","tol"]]:
           if x in prediction_result:
@@ -146,7 +146,7 @@ def predict_structure(
       ########################
       start = time.time()
       prediction_result, recycles = \
-      model_runner.predict(input_features, random_seed=seed, prediction_callback=callback)
+      model_runner.predict(input_features, random_seed=seed, prediction_callback=prediction_callback)
       prediction_result = jnp_to_np(prediction_result)
       prediction_times.append(time.time() - start)
 
@@ -173,11 +173,6 @@ def predict_structure(
         b_factors=b_factors,
         remove_leading_feature_dimension=("ptm" in model_type))
       unrelaxed_protein = class_to_np(unrelaxed_protein)
-
-      # callback for visualization
-      if prediction_callback is not None:
-        prediction_callback(unrelaxed_protein, sequences_lengths,
-                  prediction_result, input_features, (tag, False))
 
       #########################
       # save results
@@ -211,6 +206,17 @@ def predict_structure(
         for k in ["ptm","iptm"]:
           if k in conf[-1]: scores[k] = np.around(conf[-1][k], 2).item()
         json.dump(scores, handle)
+
+      ###############################
+      # callback for visualization
+      ###############################
+      if outputs_callback is not None:
+        outputs_callback({
+          "unrelaxed_protein":unrelaxed_protein,
+          "sequences_lengths":sequences_lengths,
+          "prediction_result":prediction_result,
+          "input_features":input_features,
+          "tag":tag, "files":files.files[tag]})
 
       # early stop criteria fulfilled
       if mean_scores[-1] > stop_at_score: break
@@ -246,9 +252,7 @@ def predict_structure(
       file.rename(new_file)
       result_files.append(new_file)
     
-  return {"rank":rank,
-      "metric":metric,
-      "result_files":result_files}
+  return {"rank":rank, "metric":metric, "result_files":result_files}
 
 def run(
   queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]]]],
@@ -273,7 +277,6 @@ def run(
   num_seeds: int = 1,
   recompile_padding: Union[int, float] = 10,
   zip_results: bool = False,
-  prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
   save_single_representations: bool = False,
   save_pair_representations: bool = False,
   save_all: bool = False,
@@ -284,7 +287,8 @@ def run(
   dpi: int = 200,
   max_seq: Optional[int] = None,
   max_extra_seq: Optional[int] = None,
-  feature_dict_callback: Callable[[Any], Any] = None,
+  inputs_callback: Callable[[Any], Any] = None,
+  outputs_callback: Callable[[Any], Any] = None,
   **kwargs
 ):
   # check what device is available
@@ -330,7 +334,6 @@ def run(
 
   msa_mode  = old_names.get(msa_mode,msa_mode)
   pair_mode = old_names.get(pair_mode,pair_mode)
-  feature_dict_callback = kwargs.pop("input_features_callback", feature_dict_callback)
   use_dropout           = kwargs.pop("training", use_dropout)
   use_cluster_profile   = kwargs.pop("use_cluster_profile", None)
   use_fuse              = kwargs.pop("use_fuse", True)
@@ -457,8 +460,8 @@ def run(
         template_features, is_complex, model_type)
       
       # to allow display of MSA info during colab/chimera run (thanks tomgoddard)
-      if feature_dict_callback is not None:
-        feature_dict_callback(feature_dict)
+      if inputs_callback is not None:
+        inputs_callback({"feature_dict":feature_dict})
     
     except Exception as e:
       logger.exception(f"Could not generate input features {jobname}: {e}")
@@ -549,7 +552,7 @@ def run(
         num_relax=num_relax,
         rank_by=rank_by,
         stop_at_score=stop_at_score,
-        prediction_callback=prediction_callback,
+        outputs_callback=outputs_callback,
         use_gpu_relax=use_gpu_relax,
         random_seed=random_seed,
         num_seeds=num_seeds,

@@ -10,17 +10,13 @@ from tqdm import TqdmExperimentalWarning
 
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
-NO_GPU_FOUND = """ERROR: Jax could not find GPU. This can be either because your machine doesn't have a GPU
-or because jax can't find it. You might need to run
-
-pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_releases.html  # Note: wheels only available on linux.
-
-See https://github.com/google/jax/#pip-installation-gpu-cuda for more details.
-
-If you're sure you want to run without a GPU, pass `--cpu`"""
-
+NO_GPU_FOUND = \
+"""
+WARNING: Jax could not find GPU. This can be either because your machine doesn't have a 
+GPU or because jax can't find it. For instructions how to fix this, see: 
+https://github.com/YoshitakaMo/localcolabfold
+"""
 DEFAULT_API_SERVER = "https://api.colabfold.com"
-
 ACCEPT_DEFAULT_TERMS = \
 """
 WARNING: You are welcome to use the default MSA server, however keep in mind that it's a
@@ -58,10 +54,8 @@ def setup_logging(log_file: Path):
   absl_logging.set_verbosity("error")
   warnings.simplefilter(action="ignore", category=TqdmExperimentalWarning)
 
-
 def safe_filename(file: str) -> str:
   return "".join([c if c.isalnum() or c in ["_", ".", "-"] else "_" for c in file])
-
 
 def get_commit() -> Optional[str]:
   text = distribution("colabfold").read_text("direct_url.json")
@@ -119,7 +113,6 @@ mmcif_order = {
     "pdbx_PDB_model_num",
   ]
 }
-
 
 class CFMMCIFIO(MMCIFIO):
   def _save_dict(self, out_file):
