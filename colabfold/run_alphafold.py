@@ -63,6 +63,7 @@ def predict_structure(
   pad_len: int,
   model_type: str,
   model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
+  model_order: List[int],
   num_relax: int = 0,
   rank_by: str = "auto",
   random_seed: int = 0,
@@ -87,40 +88,34 @@ def predict_structure(
   seq_len = sum(sequences_lengths)
   model_names = []
   files = file_manager(prefix, result_dir)
-  for (model_name, model_runner, params) in model_runner_and_params:
-    # swap params to avoid recompiling
-    model_runner.params = params
+
+  # process input features
+  if "multimer" in model_type:
+    input_features = feature_dict
+    if pad_len > seq_len: # pad inputs
+      input_features = pad_input_multimer(feature_dict, model_runner, model_name, pad_len, use_templates)
+    input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
+  
+  # iterate through random seeds
+  for seed in range(random_seed, random_seed+num_seeds):
     
-    # iterate through random seeds
-    for seed in range(random_seed, random_seed+num_seeds):
+    # process input features
+    if "ptm" in model_type:
+      (model_name, model_runner, params) = model_runner_and_params[0]
+      input_features = model_runner.process_features(feature_dict, random_seed=seed)      
+      r = input_features["aatype"].shape[0]
+      input_features["asym_id"] = np.tile(feature_dict["asym_id"],r).reshape(r,-1)
+      if pad_len > seq_len: # pad inputs
+        input_features = pad_input(input_features, model_runner, model_name, pad_len, use_templates)
+
+    # iterate through models
+    for m in model_order:
+      (model_name, model_runner, params) = model_runner_and_params[m-1]
+      model_runner.params = params
+
       tag = f"{model_type}_{model_name}_seed_{seed:03d}"
       model_names.append(tag)
       files.set_tag(tag)
-
-      ########################
-      # process inputs
-      ########################
-      processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)      
-      # pad inputs
-      if "multimer" in model_type:
-        input_features = pad_input_multimer(
-          processed_feature_dict,
-          model_runner, model_name,
-          pad_len, use_templates)
-        input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
-      else:
-        # TODO: move asym_id processing to "process_features"
-        r = processed_feature_dict["aatype"].shape[0]
-        processed_feature_dict["asym_id"] = np.tile(feature_dict["asym_id"],r).reshape(r,-1)
-        input_features = pad_input(
-          processed_feature_dict,
-          model_runner, model_name,
-          pad_len, use_templates)
-
-      ########################
-      # predict
-      ########################
-      start = time.time()
 
       # monitor intermediate results
       def callback(prediction_result, recycles):
@@ -145,10 +140,13 @@ def predict_structure(
             with files.get("all",f"r{recycles}.pickle").open("wb") as handle:
               pickle.dump(prediction_result, handle)
 
+      ########################
+      # predict
+      ########################
+      start = time.time()
       prediction_result, recycles = \
       model_runner.predict(input_features, random_seed=seed, prediction_callback=callback)
       prediction_result = jnp_to_np(prediction_result)
-      prediction_result["representations"] = prediction_result.pop("prev")
       prediction_times.append(time.time() - start)
 
       ########################
@@ -194,7 +192,7 @@ def predict_structure(
           pickle.dump(prediction_result, handle)
       
       if save_single_representations or save_pair_representations:
-        rep = prediction_result["representations"]
+        rep = prediction_result["prev"]
         if save_single_representations:
           np.save(files.get("single_repr","npy"), rep["prev_msa_first_row"])
         if save_pair_representations:
@@ -522,7 +520,6 @@ def run(
           use_templates=use_templates,
           num_recycles=num_recycles,
           num_ensemble=num_ensemble,
-          model_order=model_order,
           model_suffix=model_suffix,
           data_dir=data_dir,
           stop_at_score=stop_at_score,
@@ -547,6 +544,7 @@ def run(
         pad_len=pad_len,
         model_type=model_type,
         model_runner_and_params=model_runner_and_params,
+        model_order=model_order,
         num_relax=num_relax,
         rank_by=rank_by,
         stop_at_score=stop_at_score,
