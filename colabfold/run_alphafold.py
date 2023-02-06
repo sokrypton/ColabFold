@@ -185,14 +185,13 @@ def predict_structure(
       # save raw outputs
       if save_all:
         with files.get("all","pickle").open("wb") as handle:
-          pickle.dump(prediction_result, handle)
-      
-      if save_single_representations or save_pair_representations:
-        rep = prediction_result["prev"]
-        if save_single_representations:
-          np.save(files.get("single_repr","npy"), rep["prev_msa_first_row"])
-        if save_pair_representations:
-          np.save(files.get("pair_repr","npy"), rep["prev_pair"])
+          pickle.dump(prediction_result, handle)      
+      if save_single_representations:
+        np.save(files.get("single_repr","npy"),
+          prediction_result["prev"]["prev_msa_first_row"])
+      if save_pair_representations:
+        np.save(files.get("pair_repr","npy"),
+          prediction_result["prev"]["prev_pair"])
 
       # write an easy-to-use format (pAE and pLDDT)
       with files.get("scores","json").open("w") as handle:
