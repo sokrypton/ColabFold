@@ -28,30 +28,6 @@ aatypes = set('ACDEFGHIKLMNPQRSTVWY')
 def plot_predicted_alignment_error(
   jobname: str, num_models: int, outs: dict, result_dir: Path, show: bool = False
 ):
-<<<<<<< HEAD
-    plt.figure(figsize=(3 * num_models, 2), dpi=100)
-    for n, (model_name, value) in enumerate(outs.items()):
-        plt.subplot(1, num_models, n + 1)
-        plt.title(model_name)
-        plt.imshow(value["pae"], label=model_name, cmap="bwr", vmin=0, vmax=30)
-        plt.colorbar()
-    plt.savefig(result_dir.joinpath(jobname + "_PAE.png"))
-    if show:
-        plt.show()
-    plt.close()
-
-
-def plot_msa_v2(feature_dict, sort_lines=True, dpi=100):
-    feature_dict = {k:np.asarray(v) for k,v in feature_dict.items()}
-    seq = feature_dict["msa"][0]
-    if "asym_id" in feature_dict:
-      Ls = [0]
-      k = feature_dict["asym_id"][0]
-      for i in feature_dict["asym_id"]:
-        if i == k: Ls[-1] += 1
-        else: Ls.append(1)
-        k = i
-=======
   plt.figure(figsize=(3 * num_models, 2), dpi=100)
   for n, (model_name, value) in enumerate(outs.items()):
     plt.subplot(1, num_models, n + 1)
