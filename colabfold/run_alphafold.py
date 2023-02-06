@@ -811,6 +811,7 @@ def main():
   parser.add_argument("--disable-cluster-profile",    default=False, action="store_true")
 
   # backward compatability
+  parser.add_argument('--training',    default=False, action="store_true", help=argparse.SUPPRESS)
   parser.add_argument('--templates',   default=False, action="store_true", help=argparse.SUPPRESS)
   parser.add_argument('--zip',         default=False, action="store_true", help=argparse.SUPPRESS)
   parser.add_argument('--amber',       default=False, action="store_true", help=argparse.SUPPRESS)
@@ -821,11 +822,12 @@ def main():
   args = parser.parse_args()
 
   # backward compatability
+  if args.training:  args.use_dropout   = True
   if args.templates: args.use_templates = True
-  if args.zip:       args.zip_results = True
+  if args.zip:       args.zip_results   = True
   if args.amber and args.num_relax == 0: args.num_relax = args.num_models * args.num_seeds
   if args.num_recycle is not None: args.num_recycles = args.num_recycle
-  if args.max_msa is not None: (args.max_seq, args.max_extra_seq) = (int(x) for x in args.max_msa.split(":"))
+  if args.max_msa     is not None: (args.max_seq, args.max_extra_seq) = (int(x) for x in args.max_msa.split(":"))
   
   # setup logging
   setup_logging(Path(args.results).joinpath("log.txt"))
