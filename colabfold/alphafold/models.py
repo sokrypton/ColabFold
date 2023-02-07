@@ -8,7 +8,6 @@ from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
 
 
 def load_models_and_params(
-  num_models: int,
   use_templates: bool,
   num_recycles: Optional[int] = None,
   recycle_early_stop_tolerance: Optional[float] = None,
@@ -118,8 +117,6 @@ def load_models_and_params(
     )
   # reorder model
   for n, model_number in enumerate(model_order):
-    if n == num_models:
-      break
     model_name = f"model_{model_number}"
     for m in model_runner_and_params_build_order:
       if model_name == m[0]:
