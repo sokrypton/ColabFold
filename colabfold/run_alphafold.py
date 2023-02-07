@@ -65,6 +65,7 @@ def predict_structure(
   model_type: str,
   model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
   model_order: List[int],
+  num_models: int = 5,
   num_relax: int = 0,
   rank_by: str = "auto",
   random_seed: int = 0,
@@ -110,7 +111,7 @@ def predict_structure(
         input_features = pad_input(input_features, model_runner, model_name, pad_len, use_templates)
 
     # iterate through models
-    for m in model_order:
+    for m in model_order[:num_models]:
       (model_name, model_runner, params) = model_runner_and_params[m-1]
       model_runner.params = params
 
@@ -256,11 +257,11 @@ def predict_structure(
 def run(
   queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]]]],
   result_dir: Union[str, Path],
-  num_models: int,
   is_complex: bool,
   num_recycles: Optional[int] = None,
   recycle_early_stop_tolerance: Optional[float] = None,
   model_order: List[int] = [1,2,3,4,5],
+  num_models: int = 5,
   num_ensemble: int = 1,
   model_type: str = "auto",
   msa_mode: str = "mmseqs2_uniref_env",
@@ -360,11 +361,11 @@ def run(
     "num_relax": num_relax,
     "msa_mode": msa_mode,
     "model_type": model_type,
-    "num_models": num_models,
     "num_recycles": num_recycles,
     "recycle_early_stop_tolerance": recycle_early_stop_tolerance,
     "num_ensemble": num_ensemble,
     "model_order": model_order,
+    "num_models": num_models,
     "keep_existing_results": keep_existing_results,
     "rank_by": rank_by,
     "max_seq": max_seq,
@@ -516,7 +517,6 @@ def run(
           logger.info(f"Setting max_seq={max_seq}, max_extra_seq={max_extra_seq}")
 
         model_runner_and_params = load_models_and_params(
-          num_models=num_models,
           use_templates=use_templates,
           num_recycles=num_recycles,
           num_ensemble=num_ensemble,
@@ -545,6 +545,7 @@ def run(
         model_type=model_type,
         model_runner_and_params=model_runner_and_params,
         model_order=model_order,
+        num_models=num_models,
         num_relax=num_relax,
         rank_by=rank_by,
         stop_at_score=stop_at_score,
