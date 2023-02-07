@@ -15,7 +15,7 @@ import sys
 import time
 import zipfile
 import pickle
-from argparse import ArgumentParser
+import argparse
 import importlib_metadata
 import numpy as np
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
@@ -70,7 +70,7 @@ def predict_structure(
   random_seed: int = 0,
   num_seeds: int = 1,
   stop_at_score: float = 100,
-  prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
+  outputs_callback: Callable[Any] = None,
   use_gpu_relax: bool = False,
   save_all: bool = False,
   save_single_representations: bool = False,
@@ -119,7 +119,7 @@ def predict_structure(
       files.set_tag(tag)
 
       # monitor intermediate results
-      def callback(prediction_result, recycles):
+      def prediction_callback(prediction_result, recycles):
         print_line = ""
         for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"],["diff","tol"]]:
           if x in prediction_result:
@@ -146,7 +146,7 @@ def predict_structure(
       ########################
       start = time.time()
       prediction_result, recycles = \
-      model_runner.predict(input_features, random_seed=seed, prediction_callback=callback)
+      model_runner.predict(input_features, random_seed=seed, prediction_callback=prediction_callback)
       prediction_result = jnp_to_np(prediction_result)
       prediction_times.append(time.time() - start)
 
@@ -174,11 +174,6 @@ def predict_structure(
         remove_leading_feature_dimension=("ptm" in model_type))
       unrelaxed_protein = class_to_np(unrelaxed_protein)
 
-      # callback for visualization
-      if prediction_callback is not None:
-        prediction_callback(unrelaxed_protein, sequences_lengths,
-                  prediction_result, input_features, (tag, False))
-
       #########################
       # save results
       #########################      
@@ -190,14 +185,13 @@ def predict_structure(
       # save raw outputs
       if save_all:
         with files.get("all","pickle").open("wb") as handle:
-          pickle.dump(prediction_result, handle)
-      
-      if save_single_representations or save_pair_representations:
-        rep = prediction_result["prev"]
-        if save_single_representations:
-          np.save(files.get("single_repr","npy"), rep["prev_msa_first_row"])
-        if save_pair_representations:
-          np.save(files.get("pair_repr","npy"), rep["prev_pair"])
+          pickle.dump(prediction_result, handle)      
+      if save_single_representations:
+        np.save(files.get("single_repr","npy"),
+          prediction_result["prev"]["prev_msa_first_row"])
+      if save_pair_representations:
+        np.save(files.get("pair_repr","npy"),
+          prediction_result["prev"]["prev_pair"])
 
       # write an easy-to-use format (pAE and pLDDT)
       with files.get("scores","json").open("w") as handle:
@@ -211,6 +205,17 @@ def predict_structure(
         for k in ["ptm","iptm"]:
           if k in conf[-1]: scores[k] = np.around(conf[-1][k], 2).item()
         json.dump(scores, handle)
+
+      ###############################
+      # callback for visualization
+      ###############################
+      if outputs_callback is not None:
+        outputs_callback({
+          "unrelaxed_protein":unrelaxed_protein,
+          "sequences_lengths":sequences_lengths,
+          "prediction_result":prediction_result,
+          "input_features":input_features,
+          "tag":tag, "files":files.files[tag]})
 
       # early stop criteria fulfilled
       if mean_scores[-1] > stop_at_score: break
@@ -246,9 +251,7 @@ def predict_structure(
       file.rename(new_file)
       result_files.append(new_file)
     
-  return {"rank":rank,
-      "metric":metric,
-      "result_files":result_files}
+  return {"rank":rank, "metric":metric, "result_files":result_files}
 
 def run(
   queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]]]],
@@ -273,7 +276,6 @@ def run(
   num_seeds: int = 1,
   recompile_padding: Union[int, float] = 10,
   zip_results: bool = False,
-  prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
   save_single_representations: bool = False,
   save_pair_representations: bool = False,
   save_all: bool = False,
@@ -284,7 +286,8 @@ def run(
   dpi: int = 200,
   max_seq: Optional[int] = None,
   max_extra_seq: Optional[int] = None,
-  feature_dict_callback: Callable[[Any], Any] = None,
+  inputs_callback: Callable[[Any], Any] = None,
+  outputs_callback: Callable[[Any], Any] = None,
   **kwargs
 ):
   # check what device is available
@@ -330,7 +333,6 @@ def run(
 
   msa_mode  = old_names.get(msa_mode,msa_mode)
   pair_mode = old_names.get(pair_mode,pair_mode)
-  feature_dict_callback = kwargs.pop("input_features_callback", feature_dict_callback)
   use_dropout           = kwargs.pop("training", use_dropout)
   use_cluster_profile   = kwargs.pop("use_cluster_profile", None)
   use_fuse              = kwargs.pop("use_fuse", True)
@@ -339,9 +341,6 @@ def run(
 
   if max_msa is not None:
     max_seq, max_extra_seq = [int(x) for x in max_msa.split(":")]
-
-  if kwargs.pop("use_amber", False) and num_relax == 0: 
-    num_relax = num_models * num_seeds
 
   if len(kwargs) > 0:
     logger.warning(f"WARNING: the following options are not being used: {kwargs}")
@@ -457,8 +456,8 @@ def run(
         template_features, is_complex, model_type)
       
       # to allow display of MSA info during colab/chimera run (thanks tomgoddard)
-      if feature_dict_callback is not None:
-        feature_dict_callback(feature_dict)
+      if inputs_callback is not None:
+        inputs_callback({"feature_dict":feature_dict})
     
     except Exception as e:
       logger.exception(f"Could not generate input features {jobname}: {e}")
@@ -549,7 +548,7 @@ def run(
         num_relax=num_relax,
         rank_by=rank_by,
         stop_at_score=stop_at_score,
-        prediction_callback=prediction_callback,
+        outputs_callback=outputs_callback,
         use_gpu_relax=use_gpu_relax,
         random_seed=random_seed,
         num_seeds=num_seeds,
@@ -644,9 +643,8 @@ def set_model_type(is_complex: bool, model_type: str) -> str:
   return model_type
 
 def main():
-  parser = ArgumentParser()
-  parser.add_argument(
-    "input",
+  parser = argparse.ArgumentParser()
+  parser.add_argument("input",
     default="input",
     help="Can be one of the following: "
     "Directory with fasta/a3m files, a csv/tsv file, a fasta file or an a3m file",
@@ -654,53 +652,45 @@ def main():
   parser.add_argument("results", help="Directory to write the results to")
 
   # Main performance parameter
-  parser.add_argument(
-    "--stop-at-score",
+  parser.add_argument("--stop-at-score",
     help="Compute models until plddt (single chain) or ptmscore (complex) > threshold is reached. "
     "This can make colabfold much faster by only running the first model for easy queries.",
     type=float,
     default=100,
   )
 
-  parser.add_argument(
-    "--num-recycle",
+  parser.add_argument("--num-recycles",
     help="Number of prediction recycles."
     "Increasing recycles can improve the quality but slows down the prediction.",
     type=int,
     default=None,
   )
-  parser.add_argument(
-    "--recycle-early-stop-tolerance",
+  parser.add_argument("--recycle-early-stop-tolerance",
     help="Specify convergence criteria."
     "Run until the distance between recycles is within specified value.",
     type=float,
     default=None,
   )
 
-  parser.add_argument(
-    "--num-ensemble",
+  parser.add_argument("--num-ensemble",
     help="Number of ensembles."
     "The trunk of the network is run multiple times with different random choices for the MSA cluster centers.",
     type=int,
     default=1,
   )
-  parser.add_argument(
-    "--num-seeds",
+  parser.add_argument("--num-seeds",
     help="Number of seeds to try. Will iterate from range(random_seed, random_seed+num_seeds)."
     ".",
     type=int,
     default=1,
   )
-  parser.add_argument(
-    "--random-seed",
+  parser.add_argument("--random-seed",
     help="Changing the seed for the random number generator can result in different structure predictions.",
     type=int,
     default=0,
   )
-
   parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
-  parser.add_argument(
-    "--recompile-padding",
+  parser.add_argument("--recompile-padding",
     type=int,
     default=10,
     help="Whenever the input length changes, the model needs to be recompiled."
@@ -712,8 +702,7 @@ def main():
   parser.add_argument("--model-order", default="1,2,3,4,5", type=str)
   parser.add_argument("--host-url", default=DEFAULT_API_SERVER)
   parser.add_argument("--data")
-  parser.add_argument(
-    "--msa-mode",
+  parser.add_argument("--msa-mode",
     default="mmseqs2_uniref_env",
     choices=[
       "mmseqs2_uniref_env",
@@ -722,8 +711,7 @@ def main():
     ],
     help="Using an a3m file as input overwrites this option",
   )
-  parser.add_argument(
-    "--model-type",
+  parser.add_argument("--model-type",
     help="predict strucutre/complex using the following model."
     'Auto will pick "alphafold2_ptm" for structure predictions and "alphafold2_multimer_v3" for complexes.',
     type=str,
@@ -736,58 +724,45 @@ def main():
       "alphafold2_multimer_v3",
     ],
   )
-  parser.add_argument(
-    "--amber",
-    default=False,
-    action="store_true",
-    help="Use amber for structure refinement."
-    "To control number of top ranked structures are relaxed set --num-relax.",
-  )
-  parser.add_argument(
-    "--num-relax",
+  parser.add_argument("--num-relax",
     help="specify how many of the top ranked structures to relax using amber.",
     type=int,
     default=0,
   )
-
-  parser.add_argument(
-    "--templates", default=False, action="store_true", help="Use templates from pdb"
+  parser.add_argument("--use-templates",
+    default=False,
+    action="store_true",
+    help="Use templates from pdb"
   )
-  parser.add_argument(
-    "--custom-template-path",
+  parser.add_argument("--custom-template-path",
     type=str,
     default=None,
     help="Directory with pdb files to be used as input",
   )
-  parser.add_argument(
-    "--rank",
+  parser.add_argument("--rank_by",
     help="rank models by auto, plddt or ptmscore",
     type=str,
     default="auto",
     choices=["auto", "plddt", "ptm", "iptm", "multimer"],
   )
-  parser.add_argument(
-    "--pair-mode",
+  parser.add_argument("--pair-mode",
     help="rank models by auto, unpaired, paired, unpaired_paired",
     type=str,
     default="unpaired_paired",
     choices=["unpaired", "paired", "unpaired_paired"],
   )
-  parser.add_argument(
-    "--sort-queries-by",
+  parser.add_argument("--sort-queries-by",
     help="sort queries by: none, length, random",
     type=str,
     default="length",
     choices=["none", "length", "random"],
   )
-  parser.add_argument(
-    "--save-single-representations",
+  parser.add_argument("--save-single-representations",
     default=False,
     action="store_true",
     help="saves the single representation embeddings of all models",
   )
-  parser.add_argument(
-    "--save-pair-representations",
+  parser.add_argument("--save-pair-representations",
     default=False,
     action="store_true",
     help="saves the pair representation embeddings of all models",
@@ -798,73 +773,73 @@ def main():
     action="store_true",
     help="activate dropouts during inference to sample from uncertainity of the models",
   )
-  parser.add_argument(
-    "--max-seq",
+  parser.add_argument("--max-seq",
     help="number of sequence clusters to use",
     type=int,
     default=None,
   )
-  parser.add_argument(
-    "--max-extra-seq",
+  parser.add_argument("--max-extra-seq",
     help="number of extra sequences to use",
     type=int,
     default=None,
   )
-  parser.add_argument(
-    "--max-msa",
-    help="defines: `max-seq:max-extra-seq` number of sequences to use",
-    type=str,
-    default=None,
-  )
-  parser.add_argument(
-    "--zip",
+  parser.add_argument("--zip-results",
     default=False,
     action="store_true",
     help="zip all results into one <jobname>.result.zip and delete the original files",
   )
-  parser.add_argument(
-    "--use-gpu-relax",
+  parser.add_argument("--use-gpu-relax",
     default=False,
     action="store_true",
     help="run amber on GPU instead of CPU",
   )
-  parser.add_argument(
-    "--save-all",
+  parser.add_argument("--save-all",
     default=False,
     action="store_true",
     help="save ALL raw outputs from model to a pickle file",
   )
-  parser.add_argument(
-    "--save-recycles",
+  parser.add_argument("--save-recycles",
     default=False,
     action="store_true",
     help="save all intermediate predictions at each recycle",
   )
-  parser.add_argument(
-    "--overwrite-existing-results", default=False, action="store_true"
-  )
-  parser.add_argument(
-    "--interaction-scan", default=False, action="store_true"
-  )
+  
+  # undocumented arguements
+  parser.add_argument("--overwrite-existing-results", default=False, action="store_true")
+  parser.add_argument("--interaction-scan",           default=False, action="store_true")
+  parser.add_argument("--disable-cluster-profile",    default=False, action="store_true")
+
+  # backward compatability
+  parser.add_argument('--training',    default=False, action="store_true", help=argparse.SUPPRESS)
+  parser.add_argument('--templates',   default=False, action="store_true", help=argparse.SUPPRESS)
+  parser.add_argument('--zip',         default=False, action="store_true", help=argparse.SUPPRESS)
+  parser.add_argument('--amber',       default=False, action="store_true", help=argparse.SUPPRESS)
+  parser.add_argument('--num-recycle', default=None,  type=int,            help=argparse.SUPPRESS)
+  parser.add_argument("--max-msa",     default=None,  type=str,            help=argparse.SUPPRESS)
+
+  # parse arguments
   args = parser.parse_args()
 
+  # backward compatability
+  if args.training:  args.use_dropout   = True
+  if args.templates: args.use_templates = True
+  if args.zip:       args.zip_results   = True
+  if args.amber and args.num_relax == 0: args.num_relax = args.num_models * args.num_seeds
+  if args.num_recycle is not None: args.num_recycles = args.num_recycle
+  if args.max_msa     is not None: (args.max_seq, args.max_extra_seq) = (int(x) for x in args.max_msa.split(":"))
+  
+  # setup logging
   setup_logging(Path(args.results).joinpath("log.txt"))
-
   version = importlib_metadata.version("colabfold")
   commit = get_commit()
-  if commit:
-    version += f" ({commit})"
+  if commit: version += f" ({commit})"
 
   logger.info(f"Running colabfold {version}")
-
   data_dir = Path(args.data or default_data_dir)
   model_order = [int(i) for i in args.model_order.split(",")]
   assert args.recompile_padding >= 0, "Can't apply negative padding"
 
-  # backward compatibility
-  if args.amber and args.num_relax == 0:
-    args.num_relax = args.num_models * args.num_seeds
-
+  # parse queries
   if args.interaction_scan:
     # protocol from @Dohyun-s
     batch_size = 10
@@ -877,25 +852,27 @@ def main():
   download_alphafold_params(model_type, data_dir)
   
   # warning about api
-  uses_api = any((query[2] is None for query in queries))
-  if uses_api and args.host_url == DEFAULT_API_SERVER:
-    print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
+  if "mmseqs2" in args.msa_mode or args.use_templates:
+    # TODO: check if server used in the case of templates
+    uses_api = any((query[2] is None for query in queries))
+    if uses_api and args.host_url == DEFAULT_API_SERVER:
+      print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
 
   run_params = dict(
     result_dir=args.results,
-    use_templates=args.templates,
+    use_templates=args.use_templates,
     custom_template_path=args.custom_template_path,
     num_relax=args.num_relax,
     msa_mode=args.msa_mode,
     model_type=model_type,
     num_models=args.num_models,
-    num_recycles=args.num_recycle,
+    num_recycles=args.num_recycles,
     recycle_early_stop_tolerance=args.recycle_early_stop_tolerance,
     num_ensemble=args.num_ensemble,
     model_order=model_order,
     is_complex=is_complex,
     keep_existing_results=not args.overwrite_existing_results,
-    rank_by=args.rank,
+    rank_by=args.rank_by,
     pair_mode=args.pair_mode,
     data_dir=data_dir,
     host_url=args.host_url,
@@ -903,13 +880,13 @@ def main():
     num_seeds=args.num_seeds,
     stop_at_score=args.stop_at_score,
     recompile_padding=args.recompile_padding,
-    zip_results=args.zip,
+    zip_results=args.zip_results,
     save_single_representations=args.save_single_representations,
     save_pair_representations=args.save_pair_representations,
     use_dropout=args.use_dropout,
     max_seq=args.max_seq,
     max_extra_seq=args.max_extra_seq,
-    max_msa=args.max_msa,
+    use_cluster_profile=not args.disable_cluster_profile,
     use_gpu_relax = args.use_gpu_relax,
     save_all=args.save_all,
     save_recycles=args.save_recycles,
