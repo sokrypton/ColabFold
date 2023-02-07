@@ -232,7 +232,7 @@ def get_queries(
 
   # sort by seq. len
   if sort_queries_by == "length":
-    queries.sort(key=lambda t: len(t[1]))
+    queries.sort(key=lambda t: len("".join(t[1])))
   elif sort_queries_by == "random":
     random.shuffle(queries)
   is_complex = False
