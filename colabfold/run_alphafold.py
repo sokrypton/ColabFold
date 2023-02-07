@@ -95,6 +95,7 @@ def predict_structure(
   if "multimer" in model_type:
     input_features = feature_dict
     if pad_len > seq_len: # pad inputs
+      (model_name, model_runner, params) = model_runner_and_params[0]
       input_features = pad_input_multimer(feature_dict, model_runner, model_name, pad_len, use_templates)
     input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
   
