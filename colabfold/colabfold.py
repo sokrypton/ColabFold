@@ -655,10 +655,10 @@ def plot_dists(dists, Ls=None, dpi=100, fig=True):
 ##########################################################################
 
 def kabsch(a, b, weights=None, return_v=False):
-  a = np.asarray(a)
-  b = np.asarray(b)
+  a = np.asarray(a,float)
+  b = np.asarray(b,float)
   if weights is None: weights = np.ones(len(b))
-  else: weights = np.asarray(weights)
+  else: weights = np.asarray(weights,float)
   B = np.einsum('ji,jk->ik', weights[:, None] * a, b)
   u, s, vh = np.linalg.svd(B)
   if np.linalg.det(u @ vh) < 0: u[:, -1] = -u[:, -1]
