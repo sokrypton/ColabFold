@@ -51,7 +51,8 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "batch").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
+        lambda model_runner, feat, random_seed, return_representations, callback: \
+        mock_run_model.predict(model_runner, feat, random_seed, return_representations, callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs):
         run(
             queries,
@@ -109,7 +110,8 @@ def test_zip(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "batch").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
+        lambda model_runner, feat, random_seed, return_representations, callback: \
+        mock_run_model.predict(model_runner, feat, random_seed, return_representations, callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs):
         run(
             queries,
@@ -125,7 +127,8 @@ def test_zip(pytestconfig, caplog, tmp_path, prediction_test):
     expect_zip = [
       '5AWL_1_unrelaxed_rank_001_alphafold2_ptm_model_1_seed_000.pdb', 
       '5AWL_1_scores_rank_001_alphafold2_ptm_model_1_seed_000.json', 
-      '5AWL_1_coverage.png', '5AWL_1_predicted_aligned_error_v1.json', 
+      '5AWL_1_coverage.png',
+      '5AWL_1_predicted_aligned_error_v1.json', 
       '5AWL_1_pae.png', 
       '5AWL_1_plddt.png', 
       '5AWL_1.a3m', 
@@ -147,7 +150,8 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs = MMseqs2Mock(pytestconfig.rootpath, "single").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
+        lambda model_runner, feat, random_seed, return_representations, callback: \
+        mock_run_model.predict(model_runner, feat, random_seed, return_representations, callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs):
         run(
             queries,
@@ -165,8 +169,6 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
       #'Running on GPU',
       'Found 1 citations for tools or databases', 
       'Query 1/1: 5AWL_1 (length 10)', 
-      'Padding length to 10',
-      'Setting max_seq=1, max_extra_seq=1',
       'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
       "reranking models by 'plddt' metric",
       'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=94.2 pTM=0.0567',
@@ -197,7 +199,8 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs2 = MMseqs2Mock(pytestconfig.rootpath, "complex").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
+        lambda model_runner, feat, random_seed, return_representations, callback: \
+        mock_run_model.predict(model_runner, feat, random_seed, return_representations, callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs2):
         run(
             queries,
@@ -215,7 +218,6 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
       #'Running on GPU',
       'Found 4 citations for tools or databases',
       'Query 1/1: 3G5O_A_3G5O_B (length 180)',
-      'Padding length to 180',
       'Setting max_seq=252, max_extra_seq=1152',
       'alphafold2_multimer_v1_model_1_seed_000 took 0.0s (3 recycles)',
       "reranking models by 'multimer' metric",
@@ -236,7 +238,8 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     mock_run_mmseqs2 = MMseqs2Mock(pytestconfig.rootpath, "complex").mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
+        lambda model_runner, feat, random_seed, return_representations, callback: \
+        mock_run_model.predict(model_runner, feat, random_seed, return_representations, callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs2):
         run(
             queries,
@@ -254,7 +257,6 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
       #'Running on GPU',
       'Found 4 citations for tools or databases',
       'Query 1/1: 3G5O_A_3G5O_B (length 180)',
-      'Padding length to 180',
       'Setting max_seq=512, max_extra_seq=5120',
       'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
       "reranking models by 'multimer' metric",
@@ -276,7 +278,8 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     ).mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
+        lambda model_runner, feat, random_seed, return_representations, callback: \
+        mock_run_model.predict(model_runner, feat, random_seed, return_representations, callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs2):
         run(
             queries,
@@ -294,7 +297,6 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
       #'Running on GPU', 
       'Found 4 citations for tools or databases', 
       'Query 1/1: A_A (length 118)', 
-      'Padding length to 118', 
       'Setting max_seq=512, max_extra_seq=5120', 
       'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)', 
       "reranking models by 'multimer' metric", 
@@ -316,7 +318,8 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
     ).mock_run_mmseqs2
     with mock.patch(
         "alphafold.model.model.RunModel.predict",
-        lambda model_runner, feat, random_seed, prediction_callback: mock_run_model.predict(model_runner, feat, random_seed, prediction_callback),
+        lambda model_runner, feat, random_seed, return_representations, callback: \
+        mock_run_model.predict(model_runner, feat, random_seed, return_representations, callback),
     ), mock.patch("colabfold.colabfold.run_mmseqs2", mock_run_mmseqs2):
         run(
             queries,
@@ -334,7 +337,6 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
       #'Running on GPU', 
       'Found 4 citations for tools or databases', 
       'Query 1/1: A_A (length 118)', 
-      'Padding length to 118', 
       'Setting max_seq=252, max_extra_seq=1152', 
       'alphafold2_multimer_v1_model_1_seed_000 took 0.0s (3 recycles)', 
       "reranking models by 'multimer' metric", 

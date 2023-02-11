@@ -41,7 +41,12 @@ class MockRunModel:
     self.pos = 0
 
   def predict(
-    self, model_runner: RunModel, feat: FeatureDict, random_seed: int, prediction_callback: Any = None
+    self,
+    model_runner: RunModel,
+    feat: FeatureDict,
+    random_seed: int,
+    return_representations: bool = False,
+    callback: Any = None
   ) -> Mapping[str, Any]:
     """feat["msa"] or feat["msa_feat"] for normal/complexes is non-deterministic, so we remove it before storing,
     but we keep it for predicting or returning, where we need it for plotting"""
@@ -78,6 +83,12 @@ class MockRunModel:
             if isinstance(v, dict):
               test.append(chk(v,b[k]))
             else:
+              if not np.allclose(v,b[k]):
+                print("--------------------")
+                print(k)
+                print(v)
+                print(b[k])
+                print("--------------------")
               test.append(np.allclose(v,b[k]))
         return test
       

@@ -23,6 +23,7 @@ def test_get_queries_csv(pytestconfig, caplog, tmp_path):
     )
 
     assert queries == [
+        ("5AWL_1", "YYDPETGTWY", None),
         (
             "3G5O_A_3G5O_B",
             [
@@ -31,7 +32,6 @@ def test_get_queries_csv(pytestconfig, caplog, tmp_path):
             ],
             None,
         ),
-        ("5AWL_1", "YYDPETGTWY", None),
     ]
     assert is_complex
     assert caplog.messages == []

@@ -1,8 +1,10 @@
-# ColabFold - v1.5.1
+# ColabFold - v1.5.2
 
 ```diff
 + 04Feb2023: v1.5.0 - ColabFold updated to use AlphaFold v2.3.1!
-+ 06Feb2023: v1.5.1 - fixing --save-all/--save-recycles option
++ 06Feb2023: v1.5.1 - fixing: --save-all/--save-recycles
++ 10Feb2023: v1.5.2 - fixing: fixing memory leak for large proteins
++                   - fixing: --use_dropout (random seed was not changing between recycles)
 ```
 For details of what was changed in v1.5, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.5.0)!
 
@@ -65,9 +67,9 @@ For details of what was changed in v1.5, see [change log](https://github.com/sok
 
 ### Running locally
 
-_Note: Checkout [localcolabfold](https://github.com/YoshitakaMo/localcolabfold) too
+Note: Checkout out [localcolabfold](https://github.com/YoshitakaMo/localcolabfold) for instructions on how to run on more diverse environments (Windows/Mac etc.)
 
-It is recommended that you create a conda environment with python version 3.7. If you use a newer python version, you might run into problems when installing tensorflow, as the required version may not be found.
+It is recommended that you create a conda environment with python version >=3.7.
 
 ```shell
 conda create --name my_colabfold python=3.7
@@ -77,7 +79,7 @@ Then activate it with `activate my_colabfold`.
 Install ColabFold using the `pip` commands below. `pip` will resolve and install all required dependencies and ColabFold should be ready within a few minutes to use. Please check the [JAX documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to get JAX to work on your GPU or TPU.
 
 ```shell
-pip install "colabfold[alphafold] @ git+https://github.com/sokrypton/ColabFold"
+pip install "colabfold[alphafold-minus-jax] @ git+https://github.com/sokrypton/ColabFold"
 pip install -q "jax[cuda]>=0.3.8,<0.4" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 # For template-based predictions also install kalign and hhsuite
 conda install -c conda-forge -c bioconda kalign2=2.04 hhsuite=3.3.0
@@ -89,7 +91,7 @@ conda install -c conda-forge openmm=7.5.1 pdbfixer
 colabfold_batch <directory_with_fasta_files> <result_dir> 
 ```
 
-If no GPU or TPU is present, `colabfold_batch` can be executed (slowly) using only a CPU with the `--cpu` parameter.
+If no GPU or TPU is present, `colabfold_batch` will execute VERY SLOWLY.
 
 ### Generating MSAs for large scale structure/complex predictions
 

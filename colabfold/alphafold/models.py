@@ -24,6 +24,7 @@ def load_models_and_params(
     use_fuse: bool = True,
     use_bfloat16: bool = True,
     use_dropout: bool = False,
+    save_all: bool = False,
 
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
@@ -79,6 +80,12 @@ def load_models_and_params(
                     model_config.model.embeddings_and_evoformer.num_extra_msa = max_extra_seq
                 else:
                     model_config.data.common.max_extra_msa = max_extra_seq
+
+            # disable some outputs if not being saved
+            if not save_all:
+                model_config.model.heads.distogram.weight = 0.0
+                model_config.model.heads.masked_msa.weight = 0.0
+                model_config.model.heads.experimentally_resolved.weight = 0.0
 
             # set number of recycles and ensembles            
             if "multimer" in model_suffix:
