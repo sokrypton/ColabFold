@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import os
-os.environ["TF_FORCE_UNIFIED_MEMORY"] = "1"
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "2.0"
+if "TF_FORCE_UNIFIED_MEMORY" not in os.environ:
+    os.environ["TF_FORCE_UNIFIED_MEMORY"] = "1"
+if "XLA_PYTHON_CLIENT_MEM_FRACTION" not in os.environ:
+    os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "4.0"
 
 import warnings
 from Bio import BiopythonDeprecationWarning # what can possibly go wrong...
