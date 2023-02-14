@@ -1207,6 +1207,7 @@ def run(
             use_gpu_relax = False
         else:
             import tensorflow as tf
+            tf.get_logger().setLevel(logging.ERROR)
             logger.info('Running on GPU')
             DEVICE = "gpu"
             # disable GPU on tensorflow
