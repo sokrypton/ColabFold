@@ -386,7 +386,7 @@ def predict_structure(
             #########################
             # process input features
             #########################
-            if "ptm" in model_type and model_num == 0:
+            if "multimer" not in model_type and model_num == 0:
                 input_features = model_runner.process_features(feature_dict, random_seed=seed)            
                 r = input_features["aatype"].shape[0]
                 input_features["asym_id"] = np.tile(feature_dict["asym_id"],r).reshape(r,-1)
@@ -423,7 +423,7 @@ def predict_structure(
                     unrelaxed_protein = protein.from_prediction(
                         features=input_features,
                         result=result, b_factors=b_factors,
-                        remove_leading_feature_dimension=("ptm" in model_type))
+                        remove_leading_feature_dimension=("multimer" not in model_type))
                     unrelaxed_pdb_lines = protein.to_pdb(unrelaxed_protein)
                     files.get("unrelaxed",f"r{recycles}.pdb").write_text(unrelaxed_pdb_lines)
                 
@@ -465,7 +465,7 @@ def predict_structure(
                 features=input_features,
                 result=result,
                 b_factors=b_factors,
-                remove_leading_feature_dimension=("ptm" in model_type))
+                remove_leading_feature_dimension=("multimer" not in model_type))
 
             # callback for visualization
             if prediction_callback is not None:
@@ -513,7 +513,7 @@ def predict_structure(
         if mean_scores[-1] > stop_at_score: break
 
         # cleanup
-        if "ptm"  in model_type: del input_features
+        if "multimer" not in model_type: del input_features
     if "multimer" in model_type: del input_features
 
     ###################################################
@@ -721,7 +721,6 @@ def pad_sequences(
             pos += 1
     return "\n".join(a3m_lines_combined)
 
-
 def get_msa_and_templates(
     jobname: str,
     query_sequences: Union[str, List[str]],
@@ -922,7 +921,6 @@ def process_multimer_features(
     np_example = pipeline_multimer.pad_msa(np_example, min_num_seq=min_num_seq)
     return np_example
 
-
 def pair_msa(
     query_seqs_unique: List[str],
     query_seqs_cardinality: List[int],
@@ -947,7 +945,6 @@ def pair_msa(
         raise ValueError(f"Invalid pairing")
     return a3m_lines
 
-
 def generate_input_feature(
     query_seqs_unique: List[str],
     query_seqs_cardinality: List[int],
@@ -961,7 +958,7 @@ def generate_input_feature(
 
     input_feature = {}
     domain_names = {}
-    if is_complex and "ptm" in model_type:
+    if is_complex and "multimer" not in model_type:
 
         full_sequence = ""
         Ls = []
@@ -1016,7 +1013,7 @@ def generate_input_feature(
                 features_for_chain[protein.PDB_CHAIN_IDS[chain_cnt]] = feature_dict
                 chain_cnt += 1
 
-        if "ptm" in model_type:
+        if "multimer" not in model_type:
             input_feature = features_for_chain[protein.PDB_CHAIN_IDS[0]]
             input_feature["asym_id"] = np.zeros(input_feature["aatype"].shape[0],dtype=int)
             domain_names = {
@@ -1230,6 +1227,7 @@ def run(
     elif model_type == "alphafold2_multimer_v2": model_suffix = "_multimer_v2"
     elif model_type == "alphafold2_multimer_v3": model_suffix = "_multimer_v3"
     elif model_type == "alphafold2_ptm":         model_suffix = "_ptm"
+    elif model_type == "alphafold2":             model_suffix = ""
     else: raise ValueError(f"Unknown model_type {model_type}")
 
     # backward-compatibility with old options
@@ -1254,7 +1252,9 @@ def run(
 
     # decide how to rank outputs
     if rank_by == "auto":
-      rank_by = "multimer" if is_complex else "plddt"
+        rank_by = "multimer" if is_complex else "plddt"
+    if "ptm" not in model_type and "multimer" not in model_type:
+        rank_by = "plddt"
 
     # get max length
     max_len = 0
@@ -1282,7 +1282,7 @@ def run(
     
     if msa_mode == "single_sequence":
         num_seqs = 1
-        if "ptm" in model_type and is_complex: num_seqs += max_num
+        if "multimer" not in model_type and is_complex: num_seqs += max_num
         if use_templates: num_seqs += 4
         max_seq = min(num_seqs, max_seq)
         max_extra_seq = max(min(num_seqs - max_seq, max_extra_seq), 1)
@@ -1543,12 +1543,14 @@ def set_model_type(is_complex: bool, model_type: str) -> str:
     old_names = {"AlphaFold2-multimer-v1":"alphafold2_multimer_v1",
                  "AlphaFold2-multimer-v2":"alphafold2_multimer_v2",
                  "AlphaFold2-multimer-v3":"alphafold2_multimer_v3",
-                 "AlphaFold2-ptm":"alphafold2_ptm"}
+                 "AlphaFold2-ptm":        "alphafold2_ptm",
+                 "AlphaFold2":            "alphafold2"}
     model_type = old_names.get(model_type, model_type)
-    if model_type == "auto" and is_complex:
-        model_type = "alphafold2_multimer_v3"
-    elif model_type == "auto" and not is_complex:
-        model_type = "alphafold2_ptm"
+    if model_type == "auto":
+        if is_complex:
+            model_type = "alphafold2_multimer_v3"
+        else:
+            model_type = "alphafold2_ptm"
     return model_type
 
 def main():
@@ -1623,6 +1625,7 @@ def main():
         default="auto",
         choices=[
             "auto",
+            "alphafold2",
             "alphafold2_ptm",
             "alphafold2_multimer_v1",
             "alphafold2_multimer_v2",
