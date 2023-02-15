@@ -121,7 +121,7 @@ def predict_structure(
       files.set_tag(tag)
 
       # monitor intermediate results
-      def prediction_callback(prediction_result, recycles):
+      def callback(prediction_result, recycles):
         print_line = ""
         for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"],["diff","tol"]]:
           if x in prediction_result:
@@ -148,7 +148,7 @@ def predict_structure(
       ########################
       start = time.time()
       prediction_result, recycles = \
-      model_runner.predict(input_features, random_seed=seed, prediction_callback=prediction_callback)
+      model_runner.predict(input_features, random_seed=seed, callback=callback)
       prediction_result = jnp_to_np(prediction_result)
       prediction_times.append(time.time() - start)
 
