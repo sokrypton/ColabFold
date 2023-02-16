@@ -14,13 +14,12 @@ files = [
 
 [[package]]
 name = "alphafold-colabfold"
-version = "2.3.3"
-description = ""
+version = "2.3.4"
+description = "An implementation of the inference pipeline of AlphaFold v2.3.1. This is a completely new model that was entered as AlphaFold2 in CASP14 and published in Nature. This package contains patches for colabfold"
 category = "main"
-optional = false
+optional = true
 python-versions = "*"
 files = []
-develop = false
 
 [package.dependencies]
 absl-py = "*"
@@ -36,12 +35,6 @@ numpy = "*"
 pandas = "*"
 scipy = "*"
 tensorflow-cpu = "*"
-
-[package.source]
-type = "git"
-url = "https://github.com/sokrypton/alphafold.git"
-reference = "v2.3.3"
-resolved_reference = "b0de1b731e8818b1638d0dd315568a262a935885"
 
 [[package]]
 name = "anyio"

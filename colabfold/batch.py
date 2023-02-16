@@ -413,8 +413,10 @@ def predict_structure(
             
             # monitor intermediate results
             def callback(result, recycles):
+                if not is_complex: result.pop("iptm",None)
+                if recycles == 0: result.pop("tol",None)
                 print_line = ""
-                for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"],["diff","tol"]]:
+                for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"],["tol","tol"]]:
                   if x in result:
                     print_line += f" {y}={result[x]:.3g}"
                 logger.info(f"{tag} recycle={recycles}{print_line}")
@@ -451,6 +453,7 @@ def predict_structure(
             
             # summary metrics
             mean_scores.append(result["ranking_confidence"])         
+            if not is_complex: result.pop("iptm",None)
             print_line = ""
             conf.append({})
             for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"]]:

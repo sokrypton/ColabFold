@@ -106,7 +106,7 @@ def load_models_and_params(
             # get model runner
             params = data.get_model_haiku_params(
                 model_name="model_" + str(model_number) + model_suffix,
-                data_dir=str(data_dir), fuse=use_fuse)
+                data_dir=str(data_dir), fuse=use_fuse, to_jnp=False)
             model_runner = model.RunModel(
                 model_config,
                 params,
