@@ -436,13 +436,10 @@ def predict_structure(
                             pickle.dump(result, handle)
                     del unrelaxed_protein
             
-            return_representations = save_all or save_single_representations or save_pair_representations
-
             # predict
             result, recycles = \
             model_runner.predict(input_features,
                 random_seed=seed,
-                return_representations=return_representations,
                 callback=callback)
 
             prediction_times.append(time.time() - start)
