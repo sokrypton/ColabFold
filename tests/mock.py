@@ -45,7 +45,6 @@ class MockRunModel:
     model_runner: RunModel,
     feat: FeatureDict,
     random_seed: int,
-    return_representations: bool = False,
     callback: Any = None
   ) -> Mapping[str, Any]:
     """feat["msa"] or feat["msa_feat"] for normal/complexes is non-deterministic, so we remove it before storing,
