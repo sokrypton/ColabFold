@@ -492,9 +492,9 @@ def predict_structure(
                 with files.get("all","pickle").open("wb") as handle:
                     pickle.dump(result, handle)
             if save_single_representations:
-                np.save(files.get("single_repr","npy"),result["representation"]["single"])
+                np.save(files.get("single_repr","npy"),result["representations"]["single"])
             if save_pair_representations:
-                np.save(files.get("pair_repr","npy"),result["representation"]["pair"])
+                np.save(files.get("pair_repr","npy"),result["representations"]["pair"])
 
             # write an easy-to-use format (pAE and pLDDT)
             with files.get("scores","json").open("w") as handle:
