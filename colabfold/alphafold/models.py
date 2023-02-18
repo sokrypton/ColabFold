@@ -8,6 +8,7 @@ from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
 
 
 def load_models_and_params(
+  num_models: int,
   use_templates: bool,
   num_recycles: Optional[int] = None,
   recycle_early_stop_tolerance: Optional[float] = None,
@@ -22,7 +23,7 @@ def load_models_and_params(
   use_fuse: bool = True,
   use_bfloat16: bool = True,
   use_dropout: bool = False,
-
+  save_all: bool = False,
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
   """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -77,6 +78,12 @@ def load_models_and_params(
         else:
           model_config.data.common.max_extra_msa = max_extra_seq
 
+      # disable some outputs if not being saved
+      if not save_all:
+        model_config.model.heads.distogram.weight = 0.0
+        model_config.model.heads.masked_msa.weight = 0.0
+        model_config.model.heads.experimentally_resolved.weight = 0.0
+
       # set number of recycles and ensembles      
       if "multimer" in model_suffix:
         if num_recycles is not None:
@@ -117,6 +124,8 @@ def load_models_and_params(
     )
   # reorder model
   for n, model_number in enumerate(model_order):
+    if n == num_models:
+      break
     model_name = f"model_{model_number}"
     for m in model_runner_and_params_build_order:
       if model_name == m[0]:

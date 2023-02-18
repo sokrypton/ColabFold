@@ -8,6 +8,10 @@ from absl import logging as absl_logging
 from importlib_metadata import distribution
 from tqdm import TqdmExperimentalWarning
 
+import jax.numpy as jnp
+import numpy as np
+
+
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
 NO_GPU_FOUND = \
@@ -264,23 +268,6 @@ _struct_asym.entity_id
       out_file.write("#\n")
       ### end section copied from Bio.PDB
       out_file.write(CIF_REVISION_DATE)
-
-import jax.numpy as jnp
-import numpy as np
-def jnp_to_np(output: Dict[str, Any]) -> Dict[str, Any]:
-  """Recursively changes jax arrays to numpy arrays."""
-  for k, v in output.items():
-    if isinstance(v, dict):
-      output[k] = jnp_to_np(v)
-    elif isinstance(v, jnp.ndarray):
-      output[k] = np.array(v)
-  return output
-
-def class_to_np(c):
-  class dict2obj():
-    def __init__(self, d):
-      for k,v in jnp_to_np(d).items(): setattr(self, k, v)
-  return dict2obj(c.__dict__)
 
 class file_manager:
   def __init__(self, prefix: str, result_dir: Path):

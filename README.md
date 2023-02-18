@@ -36,7 +36,7 @@ Link to ["main"](https://github.com/sokrypton/ColabFold) branch.
   - Yes, but be **CAREFUL**, the bfactor column is populated with pLDDT confidence values (higher = better). Phenix.phaser expects a "real" bfactor, where (lower = better). See [post](https://twitter.com/cheshireminima/status/1423929241675120643) from Claudia Millán.
 - What is the maximum length?
   - Limits depends on free GPU provided by Google-Colab `fingers-crossed`
-  - For GPU: `Tesla T4` or `Tesla P100` with ~16G the max length is ~1400
+  - For GPU: `Tesla T4` or `Tesla P100` with ~16G the max length is ~2000
   - For GPU: `Tesla K80` with ~12G the max length is ~1000
   - To check what GPU you got, open a new code cell and type `!nvidia-smi`
 - Is it okay to use the MMseqs2 MSA server (`cf.run_mmseqs2`) on a local computer?
@@ -62,34 +62,8 @@ Link to ["main"](https://github.com/sokrypton/ColabFold) branch.
 - Is there a way to amber-relax structures without having to rerun alphafold/colabfold from scratch?
   - Yes, see this [notebook](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/relax_amber.ipynb).
 
-
 ### Running locally
-
-_Note: Checkout [localcolabfold](https://github.com/YoshitakaMo/localcolabfold) too
-
-It is recommended that you create a conda environment with python version 3.7. If you use a newer python version, you might run into problems when installing tensorflow, as the required version may not be found.
-
-```shell
-conda create --name my_colabfold python=3.7
-```
-Then activate it with `activate my_colabfold`.
-
-Install ColabFold using the `pip` commands below. `pip` will resolve and install all required dependencies and ColabFold should be ready within a few minutes to use. Please check the [JAX documentation](https://github.com/google/jax#pip-installation-gpu-cuda) for how to get JAX to work on your GPU or TPU.
-
-```shell
-pip install "colabfold[alphafold] @ git+https://github.com/sokrypton/ColabFold"
-pip install -q "jax[cuda]>=0.3.8,<0.4" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-# For template-based predictions also install kalign and hhsuite
-conda install -c conda-forge -c bioconda kalign2=2.04 hhsuite=3.3.0
-# For amber also install openmm and pdbfixer
-conda install -c conda-forge openmm=7.5.1 pdbfixer
-```
-
-```shell
-colabfold_batch <directory_with_fasta_files> <result_dir> 
-```
-
-If no GPU or TPU is present, `colabfold_batch` can be executed (slowly) using only a CPU with the `--cpu` parameter.
+For instructions on how to install ColabFold locally see: [localcolabfold](https://github.com/YoshitakaMo/localcolabfold) 
 
 ### Generating MSAs for large scale structure/complex predictions
 
@@ -153,15 +127,15 @@ Searches against the ColabFoldDB can be done in two different modes:
 -----------------
 **OLD Updates**
 ```diff
-  2023/01/03: The MSA server's faulty hardware from 12/26 was replaced.
-              There were intermittent failures on 12/26 and 1/3. Currently, 
-              there are no known issues. Let us know if you experience any.
-  2022/10/10: Bugfix: random_seed was not being used for alphafold-multimer.
-              Same structure was returned regardless of defined seed. This
-              has been fixed!
-  2022/07/13: We have set up a new ColabFold MSA server provided by Korean
-              Bioinformation Center. It provides accelerated MSA generation, 
-              we updated the UniRef30 to 2022_02 and PDB/PDB70 to 220313.
+  03Jan2023: The MSA server's faulty hardware from 12/26 was replaced.
+             There were intermittent failures on 12/26 and 1/3. Currently, 
+             there are no known issues. Let us know if you experience any.
+  10Oct2022: Bugfix: random_seed was not being used for alphafold-multimer.
+             Same structure was returned regardless of defined seed. This
+             has been fixed!
+  13Jul2022: We have set up a new ColabFold MSA server provided by Korean
+             Bioinformation Center. It provides accelerated MSA generation, 
+             we updated the UniRef30 to 2022_02 and PDB/PDB70 to 220313.
   11Mar2022: We use in default AlphaFold-multimer-v2 weights for complex modeling. 
              We also offer the old complex modes "AlphaFold-ptm" or "AlphaFold-multimer-v1"
   04Mar2022: ColabFold now uses a much more powerful server for MSAs and searches through the ColabFoldDB instead of BFD/MGnify. 
