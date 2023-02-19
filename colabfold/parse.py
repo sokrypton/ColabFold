@@ -150,7 +150,7 @@ def csv_queries(csv_path):
 
   '''
   sep = "\t" if csv_path.suffix == ".tsv" else ","
-  df = pandas.read_csv(input_path, sep=sep)
+  df = pandas.read_csv(csv_path, sep=sep)
   assert "id" in df.columns and "sequence" in df.columns
   queries, is_complex = [], False
   for header, sequence in df[["id", "sequence"]].itertuples(index=False):
