@@ -47,7 +47,6 @@ def predict_structure(
 
   mean_scores = []
   conf = []
-  unrelaxed_pdb_lines = []
   prediction_times = []
   seq_len = sum(sequences_lengths)
   model_names = []
@@ -103,8 +102,7 @@ def predict_structure(
             result=result, b_factors=b_factors,
             remove_leading_feature_dimension=("multimer" not in model_type))
           
-          unrelaxed_pdb_lines = protein.to_pdb(unrelaxed_protein)
-          files.get("unrelaxed",f"r{recycles}.pdb").write_text(unrelaxed_pdb_lines)
+          files.get("unrelaxed",f"r{recycles}.pdb").write_text(protein.to_pdb(unrelaxed_protein))
         
           if save_all:
             with files.get("all",f"r{recycles}.pickle").open("wb") as handle:
@@ -113,83 +111,110 @@ def predict_structure(
       ########################
       # predict
       ########################
-      start = time.time()
-      result, recycles = \
-      model_runner.predict(input_features,
-        random_seed=seed,
-        return_representations=(save_all or save_single_representations or save_pair_representations),
-        callback=callback)
-      prediction_times.append(time.time() - start)
+      scores_path = files.get("scores","json")
+      if scores_path.is_file(): 
+        # if score file already exists, log scores and continue        
+        
+        with scores_path.open("r") as handle:
+          scores = json.load(handle)
+                  
+        mean_scores.append(float(scores["ranking_confidence"]))
+        
+        print_line = ""
+        conf.append({})
+        for x,y in [["plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"]]:
+          if x in scores:
+            conf[-1][x] = float(np.mean(scores[x]) if x == "plddt" else scores[x])
+            print_line += f" {y}={conf[-1][x]:.3g}"
+        conf[-1]["print_line"] = print_line
+        logger.info(f"{tag}{print_line}")
 
-      ########################
-      # parse results
-      ########################
-      # summary metrics
-      mean_scores.append(result["ranking_confidence"])     
-      if recycles == 0: result.pop("tol",None)
-      if not is_complex: result.pop("iptm",None)
-      print_line = ""
-      conf.append({})
-      for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"]]:
-        if x in result:
-          print_line += f" {y}={result[x]:.3g}"
-          conf[-1][x] = float(result[x])
-      conf[-1]["print_line"] = print_line
-      logger.info(f"{tag} took {prediction_times[-1]:.1f}s ({recycles} recycles)")
+        files.get("unrelaxed","pdb")
+        if save_all: files.get("all","pickle")
+        if save_single_representations: files.get("single_repr","npy")
+        if save_pair_representations: files.get("pair_repr","npy")
 
-      # create protein object
-      final_atom_mask = result["structure_module"]["final_atom_mask"]
-      b_factors = result["plddt"][:, None] * final_atom_mask
-      unrelaxed_protein = protein.from_prediction(
-        features=input_features,
-        result=result,
-        b_factors=b_factors,
-        remove_leading_feature_dimension=("multimer" not in model_type))
+      else:
+        ###########################################################       
+        start = time.time()
+        result, recycles = \
+        model_runner.predict(input_features,
+          random_seed=seed,
+          return_representations=(save_all or save_single_representations or save_pair_representations),
+          callback=callback)
+        prediction_times.append(time.time() - start)
 
-      #########################
-      # save results
-      #########################      
-      # save pdb
-      protein_lines = protein.to_pdb(unrelaxed_protein)
-      files.get("unrelaxed","pdb").write_text(protein_lines)
-      unrelaxed_pdb_lines.append(protein_lines)
+        ########################
+        # parse results
+        ########################
+        # summary metrics
+        mean_scores.append(result["ranking_confidence"])
+        if recycles == 0: result.pop("tol",None)
+        if not is_complex: result.pop("iptm",None)
+        print_line = ""
+        conf.append({})
+        for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"]]:
+          if x in result:
+            print_line += f" {y}={result[x]:.3g}"
+            conf[-1][x] = float(result[x])
+        conf[-1]["print_line"] = print_line
+        logger.info(f"{tag} took {prediction_times[-1]:.1f}s ({recycles} recycles)")
 
-      # save raw outputs
-      if save_all:
-        with files.get("all","pickle").open("wb") as handle:
-          pickle.dump(result, handle)      
-      if save_single_representations:
-        np.save(files.get("single_repr","npy"),result["representations"]["single"])
-      if save_pair_representations:
-        np.save(files.get("pair_repr","npy"),result["representations"]["pair"])
+        # create protein object
+        final_atom_mask = result["structure_module"]["final_atom_mask"]
+        b_factors = result["plddt"][:, None] * final_atom_mask
+        unrelaxed_protein = protein.from_prediction(
+          features=input_features,
+          result=result,
+          b_factors=b_factors,
+          remove_leading_feature_dimension=("multimer" not in model_type))
 
-      # write an easy-to-use format (pAE and pLDDT)
-      with files.get("scores","json").open("w") as handle:
-        plddt = result["plddt"][:seq_len]
-        scores = {"plddt": np.around(plddt.astype(float), 2).tolist()}
-        if "predicted_aligned_error" in result:
-          pae = result["predicted_aligned_error"][:seq_len,:seq_len]
-          scores.update({"max_pae": pae.max().astype(float).item(),
-                         "pae": np.around(pae.astype(float), 2).tolist()})
-          for k in ["ptm","iptm"]:
-            if k in conf[-1]: scores[k] = np.around(conf[-1][k], 2).item()
-          del pae
-        del plddt
-        json.dump(scores, handle)
+        #########################
+        # save results
+        #########################      
+        # save pdb
+        files.get("unrelaxed","pdb").write_text(protein.to_pdb(unrelaxed_protein))
 
-      ###############################
-      # callback for visualization
-      ###############################
-      if outputs_callback is not None:
-        outputs_callback({
-          "unrelaxed_protein":unrelaxed_protein,
-          "sequences_lengths":sequences_lengths,
-          "result":result,
-          "input_features":input_features,
-          "tag":tag,
-          "files":files.files[tag]})
+        # save raw outputs
+        if save_all:
+          with files.get("all","pickle").open("wb") as handle:
+            pickle.dump(result, handle)      
+        if save_single_representations:
+          np.save(files.get("single_repr","npy"),result["representations"]["single"])
+        if save_pair_representations:
+          np.save(files.get("pair_repr","npy"),result["representations"]["pair"])
 
-      del result, unrelaxed_protein
+        # write an easy-to-use format (pAE and pLDDT)
+        with scores_path.open("w") as handle:
+          plddt = result["plddt"][:seq_len]
+          scores = {
+            "plddt": np.around(plddt.astype(float), 2).tolist(),
+            "ranking_confidence": np.around(result["ranking_confidence"], 2).tolist()
+          }
+          if "predicted_aligned_error" in result:
+            pae = result["predicted_aligned_error"][:seq_len,:seq_len]
+            scores.update({"max_pae": pae.max().astype(float).item(),
+                           "pae": np.around(pae.astype(float), 2).tolist()})
+            for k in ["ptm","iptm"]:
+              if k in conf[-1]: scores[k] = np.around(conf[-1][k], 2).item()
+            del pae
+          del plddt
+          json.dump(scores, handle)
+
+        ###############################
+        # callback for visualization
+        ###############################
+        if outputs_callback is not None:
+          outputs_callback({
+            "unrelaxed_protein":unrelaxed_protein,
+            "sequences_lengths":sequences_lengths,
+            "result":result,
+            "input_features":input_features,
+            "tag":tag,
+            "files":files.files[tag]})
+
+        del result, unrelaxed_protein
+        ###########################################################       
 
       # early stop criteria fulfilled
       if mean_scores[-1] > stop_at_score: break
@@ -215,7 +240,8 @@ def predict_structure(
     # save relaxed pdb
     if n < num_relax:
       start = time.time()
-      pdb_lines = run_relax(pdb_lines=unrelaxed_pdb_lines[key], use_gpu=use_gpu_relax)
+      pdb_filename = result_dir.joinpath(f"{prefix}_unrelaxed_{tag}.pdb")
+      pdb_lines = run_relax(pdb_filename=pdb_filename, use_gpu=use_gpu_relax)
       files.get("relaxed","pdb").write_text(pdb_lines)      
       logger.info(f"Relaxation took {(time.time() - start):.1f}s")
 
