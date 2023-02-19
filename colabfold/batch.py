@@ -428,8 +428,7 @@ def predict_structure(
                         features=input_features,
                         result=result, b_factors=b_factors,
                         remove_leading_feature_dimension=("multimer" not in model_type))
-                    unrelaxed_pdb_lines = protein.to_pdb(unrelaxed_protein)
-                    files.get("unrelaxed",f"r{recycles}.pdb").write_text(unrelaxed_pdb_lines)
+                    files.get("unrelaxed",f"r{recycles}.pdb").write_text(protein.to_pdb(unrelaxed_protein))
                 
                     if save_all:
                         with files.get("all",f"r{recycles}.pickle").open("wb") as handle:
@@ -1293,6 +1292,9 @@ def run(
         if use_templates: num_seqs += 4
         max_seq = min(num_seqs, max_seq)
         max_extra_seq = max(min(num_seqs - max_seq, max_extra_seq), 1)
+
+    # sort model order
+    model_order.sort()
 
     # Record the parameters of this run
     config = {

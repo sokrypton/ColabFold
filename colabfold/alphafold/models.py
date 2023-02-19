@@ -36,7 +36,10 @@ def load_models_and_params(
     # Use only two model and later swap params to avoid recompiling
     model_runner_and_params: [Tuple[str, model.RunModel, haiku.Params]] = []
 
-    if model_order is None: model_order = [1, 2, 3, 4, 5]
+    if model_order is None:
+        model_order = [1, 2, 3, 4, 5]
+    else:
+        model_order.sort()
 
     model_build_order = [3, 4, 5, 1, 2]
     if "multimer" in model_suffix:
