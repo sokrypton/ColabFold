@@ -15,6 +15,10 @@ from pathlib import Path
 import logging
 logger = logging.getLogger(__name__)
 
+import jax
+import jax.numpy as jnp
+logging.getLogger('jax._src.lib.xla_bridge').addFilter(lambda _: False)
+
 # import from colabfold
 from colabfold.inputs import (
   mk_hhsearch_db, generate_input_feature, msa_to_str,

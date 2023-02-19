@@ -8,9 +8,11 @@ import logging
 logger = logging.getLogger(__name__)
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import haiku
+
 from colabfold.inputs import (
   pad_input, pad_input_multimer,
-  haiku, model, protein
+  model, protein
 )
 from colabfold.utils import file_manager
 
