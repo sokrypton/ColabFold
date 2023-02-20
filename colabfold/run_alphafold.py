@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-import warnings
-from Bio import BiopythonDeprecationWarning # what can possibly go wrong...
-warnings.simplefilter(action='ignore', category=BiopythonDeprecationWarning)
-
 import json
 import math
 import zipfile
