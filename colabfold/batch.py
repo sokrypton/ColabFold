@@ -135,7 +135,7 @@ def main():
     choices=["auto", "plddt", "ptm", "iptm", "multimer"],
   )
   parser.add_argument("--pair-mode",
-    help="rank models by auto, unpaired, paired, unpaired_paired",
+    help="how to generate MSA for multimeric inputs: unpaired, paired, unpaired_paired",
     type=str,
     default="unpaired_paired",
     choices=["unpaired", "paired", "unpaired_paired"],
