@@ -6,7 +6,6 @@ from alphafold.model import model, config, data
 from alphafold.model.modules import AlphaFold
 from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
 
-
 def load_models_and_params(
   num_models: int,
   use_templates: bool,
@@ -23,6 +22,7 @@ def load_models_and_params(
   use_fuse: bool = True,
   use_bfloat16: bool = True,
   use_dropout: bool = False,
+  use_masking: bool = True,
   save_all: bool = False,
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
   """We use only two actual models and swap the parameters to avoid recompiling.
@@ -77,6 +77,13 @@ def load_models_and_params(
           model_config.model.embeddings_and_evoformer.num_extra_msa = max_extra_seq
         else:
           model_config.data.common.max_extra_msa = max_extra_seq
+      
+      # disable masking
+      if not use_masking:
+        if "multimer" in model_suffix:
+          model_config.model.embeddings_and_evoformer.masked_msa.replace_fraction = 0.0
+        else:
+          model_config.data.masked_msa_replace_fraction = 0.0
 
       # disable some outputs if not being saved
       if not save_all:

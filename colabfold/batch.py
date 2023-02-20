@@ -156,11 +156,15 @@ def main():
     action="store_true",
     help="saves the pair representation embeddings of all models",
   )
-  parser.add_argument(
-    "--use-dropout",
+  parser.add_argument("--use-dropout",
     default=False,
     action="store_true",
     help="activate dropouts during inference to sample from uncertainity of the models",
+  )
+  parser.add_argument("--disable-masking",
+    default=False,
+    action="store_true",
+    help='by default, 15% of the input MSA is randomly masked, set this flag to disable this',
   )
   parser.add_argument("--max-seq",
     help="number of sequence clusters to use",
@@ -282,10 +286,11 @@ def main():
     save_single_representations=args.save_single_representations,
     save_pair_representations=args.save_pair_representations,
     use_dropout=args.use_dropout,
+    use_masking=not args.disable_masking,
     max_seq=args.max_seq,
     max_extra_seq=args.max_extra_seq,
     use_cluster_profile=not args.disable_cluster_profile,
-    use_gpu_relax = args.use_gpu_relax,
+    use_gpu_relax=args.use_gpu_relax,
     save_all=args.save_all,
     save_recycles=args.save_recycles,
   )
