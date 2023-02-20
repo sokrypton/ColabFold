@@ -576,7 +576,7 @@ def generate_input_feature(
 
   input_feature = {}
   domain_names = {}
-  if is_complex and "ptm" in model_type:
+  if is_complex and "multimer" not in model_type:
 
     full_sequence = ""
     Ls = []
@@ -631,7 +631,7 @@ def generate_input_feature(
         features_for_chain[protein.PDB_CHAIN_IDS[chain_cnt]] = feature_dict
         chain_cnt += 1
 
-    if "ptm" in model_type:
+    if "multimer" not in model_type:
       input_feature = features_for_chain[protein.PDB_CHAIN_IDS[0]]
       input_feature["asym_id"] = np.zeros(input_feature["aatype"].shape[0],dtype=int)
       domain_names = {

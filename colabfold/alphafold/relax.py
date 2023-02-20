@@ -1,7 +1,7 @@
 #############
 # relax functions
 #############
-
+from pathlib import Path
 from alphafold.relax import relax
 from alphafold.common import protein
 
