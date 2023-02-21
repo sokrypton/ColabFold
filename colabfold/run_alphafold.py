@@ -181,6 +181,8 @@ def run(
     max_seq = min(num_seqs, max_seq)
     max_extra_seq = max(min(num_seqs - max_seq, max_extra_seq), 1)
 
+  model_order.sort()
+
   # Record the parameters of this run
   config = {
     "num_queries": len(queries),
@@ -324,6 +326,7 @@ def run(
           use_templates=use_templates,
           num_recycles=num_recycles,
           num_ensemble=num_ensemble,
+          model_order=model_order,
           model_suffix=model_suffix,
           data_dir=data_dir,
           stop_at_score=stop_at_score,

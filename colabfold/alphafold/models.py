@@ -12,6 +12,7 @@ def load_models_and_params(
   num_recycles: Optional[int] = None,
   recycle_early_stop_tolerance: Optional[float] = None,
   num_ensemble: int = 1,
+  model_order: Optional[List[int]] = None,
   model_suffix: str = "_ptm",
   data_dir: Path = Path("."),
   stop_at_score: float = 100,
@@ -34,7 +35,11 @@ def load_models_and_params(
   # Use only two model and later swap params to avoid recompiling
   model_runner_and_params: [Tuple[str, model.RunModel, haiku.Params]] = []
 
-  model_order = [1, 2, 3, 4, 5]
+  if model_order is None:
+    model_order = [1, 2, 3, 4, 5]
+  else:
+    model_order.sort()
+
   model_build_order = [3, 4, 5, 1, 2]
   if "multimer" in model_suffix:
     models_need_compilation = [3]
