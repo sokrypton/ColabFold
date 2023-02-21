@@ -69,8 +69,6 @@ def run(
   num_seeds: int = 1,
   recompile_padding: Union[int, float] = 10,
   zip_results: bool = False,
-  save_single_representations: bool = False,
-  save_pair_representations: bool = False,
   save_all: bool = False,
   save_recycles: bool = False,
   use_dropout: bool = False,
@@ -82,8 +80,6 @@ def run(
   max_extra_seq: Optional[int] = None,
   inputs_callback: Callable[[Any], Any] = None,
   outputs_callback: Callable[[Any], Any] = None,
-  cyclic: bool = False,
-  save_best: bool = False,
   **kwargs
 ):
   # check what device is available
@@ -131,11 +127,17 @@ def run(
 
   msa_mode  = old_names.get(msa_mode,msa_mode)
   pair_mode = old_names.get(pair_mode,pair_mode)
-  use_dropout           = kwargs.pop("training", use_dropout)
-  use_cluster_profile   = kwargs.pop("use_cluster_profile", None)
-  use_fuse              = kwargs.pop("use_fuse", True)
-  use_bfloat16          = kwargs.pop("use_bfloat16", True)
-  max_msa               = kwargs.pop("max_msa",None)
+  use_dropout                 = kwargs.pop("training", use_dropout)
+  use_cluster_profile         = kwargs.pop("use_cluster_profile", None)
+  use_fuse                    = kwargs.pop("use_fuse", True)
+  use_bfloat16                = kwargs.pop("use_bfloat16", True)
+  max_msa                     = kwargs.pop("max_msa",None)
+  save_single_representations = kwargs.pop("save_single_representations", False)
+  save_pair_representations   = kwargs.pop("save_pair_representations", False)
+
+  # undocumented inputs
+  save_best                   = kwargs.pop("save_best", False)
+  cyclic                      = kwargs.pop("cyclic", False)
 
   if max_msa is not None:
     max_seq, max_extra_seq = [int(x) for x in max_msa.split(":")]
@@ -214,6 +216,8 @@ def run(
     "use_bfloat16":use_bfloat16,
     "version": importlib_metadata.version("colabfold"),
     "use_masking":use_masking,
+    "cyclic":cyclic,
+    "save_best":save_best,
   }
   config_out_file = result_dir.joinpath("config.json")
   config_out_file.write_text(json.dumps(config, indent=4))

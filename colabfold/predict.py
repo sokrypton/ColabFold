@@ -79,20 +79,19 @@ def predict_structure(
           input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
           if cyclic:
             input_features["offset"] = cyclic_offset(seq_len)
-          
-          # TODO
+
+          # TODO: add support for multimer padding
           # if seq_len < pad_len:
           #   input_features = pad_input_multimer(input_features, model_runner, model_name, pad_len, use_templates)
           #   logger.info(f"Padding length to {pad_len}")
+
       else:
         if model_num == 0:
           input_features = model_runner.process_features(feature_dict, random_seed=seed)            
-          r = input_features["aatype"].shape[0]
-          input_features["asym_id"] = np.tile(feature_dict["asym_id"],r).reshape(r,-1)
-          
+          batch_size = input_features["aatype"].shape[0]
+          input_features["asym_id"] = np.tile(feature_dict["asym_id"][None],(batch_size,1))          
           if cyclic:
-            B = input_features["aatype"].shape[0]
-            input_features["offset"] = np.tile(cyclic_offset(seq_len)[None],(B,1,1))
+            input_features["offset"] = np.tile(cyclic_offset(seq_len)[None],(batch_size,1,1))
           
           if seq_len < pad_len:
             input_features = pad_input(input_features, model_runner, model_name, pad_len, use_templates)
