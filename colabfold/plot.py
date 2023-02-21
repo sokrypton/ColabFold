@@ -17,8 +17,12 @@ pymol_color_list = ["#33ff33","#00ffff","#ff33cc","#ffff00","#ff9999","#e5e5e5",
                     "#8cb266","#00bfbf","#b27f7f","#fcd1a5","#ff7f7f","#ffbfdd","#7fffff","#ffff7f",
                     "#00ff7f","#337fcc","#d8337f","#bfff3f","#ff7fff","#d8d8ff","#3fffbf","#b78c4c",
                     "#339933","#66b2b2","#ba8c84","#84bf00","#b24c66","#7f7f7f","#3f3fa5","#a5512b"]
-
 pymol_cmap = matplotlib.colors.ListedColormap(pymol_color_list)
+
+# colorbind-friendly colors
+cb_pymol_color_list = ["#e69f00","#56b4e9","#009e73","#f0e442","#0072b2","#d55e00","#cc79a7"]
+cb_pymol_cmap = matplotlib.colors.ListedColormap(cb_pymol_color_list)
+
 alphabet_list = list(ascii_uppercase+ascii_lowercase)
 aatypes = set('ACDEFGHIKLMNPQRSTVWY')
 
@@ -26,7 +30,11 @@ aatypes = set('ACDEFGHIKLMNPQRSTVWY')
 # plotting
 ##################################################
 def plot_predicted_alignment_error(
-  jobname: str, num_models: int, outs: dict, result_dir: Path, show: bool = False
+  jobname: str,
+  num_models: int,
+  outs: dict,
+  result_dir: Path,
+  show: bool = False
 ):
   plt.figure(figsize=(3 * num_models, 2), dpi=100)
   for n, (model_name, value) in enumerate(outs.items()):
