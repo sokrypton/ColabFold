@@ -82,6 +82,8 @@ def run(
   max_extra_seq: Optional[int] = None,
   inputs_callback: Callable[[Any], Any] = None,
   outputs_callback: Callable[[Any], Any] = None,
+  cyclic: bool = False,
+  save_best: bool = False,
   **kwargs
 ):
   # check what device is available
@@ -211,6 +213,7 @@ def run(
     "use_fuse": use_fuse,
     "use_bfloat16":use_bfloat16,
     "version": importlib_metadata.version("colabfold"),
+    "use_masking":use_masking,
   }
   config_out_file = result_dir.joinpath("config.json")
   config_out_file.write_text(json.dumps(config, indent=4))
@@ -364,6 +367,8 @@ def run(
         save_single_representations=save_single_representations,
         save_pair_representations=save_pair_representations,
         save_recycles=save_recycles,
+        cyclic=cyclic,
+        save_best=save_best,
       )
       result_files = results["result_files"]
       ranks.append(results["rank"])

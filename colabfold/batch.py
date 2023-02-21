@@ -1,4 +1,4 @@
-import os
+import os,sys 
 ENV = {"TF_FORCE_UNIFIED_MEMORY":"1", "XLA_PYTHON_CLIENT_MEM_FRACTION":"4.0"}
 for k,v in ENV.items():
     if k not in os.environ: os.environ[k] = v
@@ -13,7 +13,7 @@ import importlib_metadata
 from pathlib import Path
 import random
 
-from colabfold.run_alphafold import run
+from colabfold.run_alphafold import run, set_model_type
 from colabfold.utils import (
   DEFAULT_API_SERVER, ACCEPT_DEFAULT_TERMS,
   get_commit, setup_logging
@@ -206,6 +206,9 @@ def main():
   parser.add_argument("--interaction-scan",           default=False, action="store_true")
   parser.add_argument("--disable-cluster-profile",    default=False, action="store_true")
 
+  parser.add_argument("--cyclic",                     default=False, action="store_true")
+  parser.add_argument("--save-best",                  default=False, action="store_true")
+
   # backward compatability
   parser.add_argument('--training',    default=False, action="store_true", help=argparse.SUPPRESS)
   parser.add_argument('--templates',   default=False, action="store_true", help=argparse.SUPPRESS)
@@ -293,6 +296,8 @@ def main():
     use_gpu_relax=args.use_gpu_relax,
     save_all=args.save_all,
     save_recycles=args.save_recycles,
+    cyclic=args.cyclic,
+    save_best=args.save_best,
   )
 
   if args.interaction_scan:

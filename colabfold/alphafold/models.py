@@ -88,7 +88,7 @@ def load_models_and_params(
         if "multimer" in model_suffix:
           model_config.model.embeddings_and_evoformer.masked_msa.replace_fraction = 0.0
         else:
-          model_config.data.masked_msa_replace_fraction = 0.0
+          model_config.data.eval.masked_msa_replace_fraction = 0.0
 
       # disable some outputs if not being saved
       if not save_all:

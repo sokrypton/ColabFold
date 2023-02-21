@@ -41,6 +41,7 @@ def predict_structure(
   save_pair_representations: bool = False,
   save_recycles: bool = False,
   save_best: bool = False,
+  cyclic: bool = False
 ):
   """Predicts structure using AlphaFold for the given sequence."""
 
@@ -66,22 +67,37 @@ def predict_structure(
       #########################
       # process input features
       #########################
+      def cyclic_offset(L):
+        i = np.arange(L)
+        ij = np.stack([i,i+L],-1)
+        offset = i[:,None] - i[None,:]
+        c_offset = np.abs(ij[:,None,:,None] - ij[None,:,None,:]).min((2,3))
+        return np.sign(offset) * c_offset
       if "multimer" in model_type:
         if model_num == 0 and seed_num == 0:
           input_features = feature_dict
           input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
+          if cyclic:
+            input_features["offset"] = cyclic_offset(seq_len)
+          
           # TODO
-          if seq_len < pad_len:
-            input_features = pad_input_multimer(input_features, model_runner, model_name, pad_len, use_templates)
-            logger.info(f"Padding length to {pad_len}")
+          # if seq_len < pad_len:
+          #   input_features = pad_input_multimer(input_features, model_runner, model_name, pad_len, use_templates)
+          #   logger.info(f"Padding length to {pad_len}")
       else:
         if model_num == 0:
           input_features = model_runner.process_features(feature_dict, random_seed=seed)            
           r = input_features["aatype"].shape[0]
           input_features["asym_id"] = np.tile(feature_dict["asym_id"],r).reshape(r,-1)
+          
+          if cyclic:
+            B = input_features["aatype"].shape[0]
+            input_features["offset"] = np.tile(cyclic_offset(seq_len)[None],(B,1,1))
+          
           if seq_len < pad_len:
             input_features = pad_input(input_features, model_runner, model_name, pad_len, use_templates)
             logger.info(f"Padding length to {pad_len}")
+            
 
       tag = f"{model_type}_{model_name}_seed_{seed:03d}"
       model_names.append(tag)
