@@ -38,12 +38,6 @@ pandas = "*"
 scipy = "*"
 tensorflow-cpu = "*"
 
-[package.source]
-type = "git"
-url = "https://github.com/sokrypton/alphafold.git"
-reference = "v2.3.4"
-resolved_reference = "6af117ea7e5190f1f72fb9585afb25c79e2f6bf4"
-
 [[package]]
 name = "anyio"
 version = "3.6.2"
