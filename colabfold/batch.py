@@ -21,11 +21,12 @@ from colabfold.utils import (
 
 from colabfold.inputs import (
   get_queries_pairwise, unpack_a3ms,
-  parse_fasta, get_queries,
+  parse_fasta, get_queries, msa_to_str
 )
+from colabfold.run_alphafold import set_model_type
 
 from colabfold.download import default_data_dir, download_alphafold_params
-
+import sys
 import logging
 logger = logging.getLogger(__name__)
 
@@ -304,17 +305,31 @@ def main():
       for x in batch:
         if x not in query_seqs_unique:
           query_seqs_unique.append(x)
+      query_seqs_cardinality = [0] * len(query_seqs_unique)
+      for seq in batch:
+          seq_idx = query_seqs_unique.index(seq)
+          query_seqs_cardinality[seq_idx] += 1
       use_env = "env" in args.msa_mode or "Environmental" in args.msa_mode
       paired_a3m_lines = run_mmseqs2(
         query_seqs_unique,
-        str(Path(args.results).joinpath(str(jobname))),
+        str(Path(args.results).joinpath(str(jobname)+"_paired")),
         use_env=use_env,
         use_pairwise=True,
         use_pairing=True,
         host_url=args.host_url,
       )
       
-      path_o = Path(args.results).joinpath(f"{jobname}_pairwise")      
+      if args.pair_mode == "none" or args.pair_mode == "unpaired" or args.pair_mode == "unpaired_paired":
+        unpaired_path = Path(args.results).joinpath(str(jobname)+"_unpaired_env")
+        unpaired_a3m_lines = run_mmseqs2(
+          query_seqs_unique,
+          str(Path(args.results).joinpath(str(jobname)+"_unpaired")),
+          use_env=use_env,
+          use_pairwise=False,
+          use_pairing=False,
+          host_url=args.host_url,
+        )
+      path_o = Path(args.results).joinpath(f"{jobname}_paired_pairwise")
       for filenum in path_o.iterdir():
         queries_new = [] 
         if Path(filenum).suffix.lower() == ".a3m":
@@ -326,6 +341,16 @@ def main():
               query_sequence = seqs[0]
               a3m_lines = [Path(file).read_text()]
               val = int(header[0].split('\t')[1][1:]) - 102
+              # match paired seq id and unpaired seq id
+              if args.pair_mode == "none" or "unpaired" or "unpaired_paired":
+                tmp = '>101\n' + paired_a3m_lines[0].split('>101\n')[val+1]
+                a3m_lines = [msa_to_str(
+                  [unpaired_a3m_lines[0], unpaired_a3m_lines[val+1]], [tmp, paired_a3m_lines[val+1]], [batch[0], batch[val+1]], [1, 1]
+                )]
+                ## Another way: do not use msa_to_str and unserialize function rather
+                ## send unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality as arguments.. 
+                ##
+                # a3m_lines = [[unpaired_a3m_lines[0], unpaired_a3m_lines[val+1]], [tmp, paired_a3m_lines[val+1]], [batch[0], batch[val+1]], [1, 1]]
               queries_new.append((header_first + '_' + headers_list[jobname][val], query_sequence, a3m_lines))
 
           if args.sort_queries_by == "length":

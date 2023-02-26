@@ -32,12 +32,9 @@ def get_queries_pairwise(
             df = pandas.read_csv(input_path, sep=sep)
             assert "id" in df.columns and "sequence" in df.columns
             queries = [
-                (str(df["id"][0])+'&'+str(seq_id), [df["sequence"][0].upper(),sequence.upper()], None)
-                for i, (seq_id, sequence) in enumerate(df[["id", "sequence"]].itertuples(index=False)) if i!=0 
+                (str(df["id"][0])+'&'+str(seq_id), sequence.upper(), None)
+                for i, (seq_id, sequence) in enumerate(df[["id", "sequence"]].itertuples(index=False))
             ]
-            for i in range(len(queries)):
-                if len(queries[i][1]) == 1:
-                    queries[i] = (queries[i][0], queries[i][1][0], None)
         elif input_path.suffix == ".a3m":
             raise NotImplementedError()
         elif input_path.suffix in [".fasta", ".faa", ".fa"]:
@@ -47,9 +44,7 @@ def get_queries_pairwise(
                 sequence = sequence.upper()
                 if sequence.count(":") == 0:
                     # Single sequence
-                    if i==0:
-                        continue
-                    queries.append((headers[0]+'&'+header, [sequences[0],sequence], None))
+                    queries.append((header, sequence, None))
                 else:
                     # Complex mode
                     queries.append((header, sequence.upper().split(":"), None))
@@ -449,9 +444,9 @@ def main():
     args = parser.parse_args()
 
     if args.interaction_scan:
-        queries, is_complex = get_queries_pairwise(args.query, None)
+        queries, is_complex = get_queries_pairwise(args.query)
     else:
-        queries, is_complex = get_queries(args.query, None)
+        queries, is_complex = get_queries(args.query)
 
     queries_unique = []
     for job_number, (raw_jobname, query_sequences, a3m_lines) in enumerate(queries):
@@ -481,10 +476,9 @@ def main():
                 query_seqs_cardinality,
             ) in enumerate(queries_unique):
                 if job_number==0:
-                    f.write(f">{raw_jobname}_0\n{query_sequences[0]}\n")
-                    f.write(f">{raw_jobname}\n{query_sequences[1]}\n")
+                    f.write(f">{raw_jobname}_0\n{query_sequences}\n")
                 else:
-                    f.write(f">{raw_jobname}\n{query_sequences[1]}\n")
+                    f.write(f">{queries_unique[0][0]+'&'+raw_jobname}\n{query_sequences}\n")
     else:
         with query_file.open("w") as f:
             for job_number, (
@@ -498,18 +492,6 @@ def main():
         args.mmseqs,
         ["createdb", query_file, args.base.joinpath("qdb"), "--shuffle", "0"],
     )
-    with args.base.joinpath("qdb.lookup").open("w") as f:
-        id = 0
-        file_number = 0
-        for job_number, (
-            raw_jobname,
-            query_sequences,
-            query_seqs_cardinality,
-        ) in enumerate(queries_unique):
-            for seq in query_sequences:
-                f.write(f"{id}\t{raw_jobname}\t{file_number}\n")
-                id += 1
-            file_number += 1
 
     mmseqs_search_monomer(
         mmseqs=args.mmseqs,
@@ -542,30 +524,66 @@ def main():
             interaction_scan=args.interaction_scan,
         )
 
-        id = 0
-        for job_number, (
-            raw_jobname,
-            query_sequences,
-            query_seqs_cardinality,
-        ) in enumerate(queries_unique):
-            unpaired_msa = []
-            paired_msa = None
-            if len(query_seqs_cardinality) > 1:
-                paired_msa = []
-            for seq in query_sequences:
-                with args.base.joinpath(f"{id}.a3m").open("r") as f:
-                    unpaired_msa.append(f.read())
-                args.base.joinpath(f"{id}.a3m").unlink()
-                if len(query_seqs_cardinality) > 1:
-                    with args.base.joinpath(f"{id}.paired.a3m").open("r") as f:
-                        paired_msa.append(f.read())
-                args.base.joinpath(f"{id}.paired.a3m").unlink()
-                id += 1
-            msa = msa_to_str(
-                unpaired_msa, paired_msa, query_sequences, query_seqs_cardinality
-            )
-            args.base.joinpath(f"{job_number}.a3m").write_text(msa)
+        if args.interaction_scan:
+            if len(queries_unique) > 1:
+                for i in range(len(queries_unique)-2):
+                    idx = 2 + i*2
+                    ## delete duplicated query files 2.paired, 4.paired...
+                    os.remove(args.base.joinpath(f"{idx}.paired.a3m"))
+                for j in range(len(queries_unique)-2):
+                    # replace targets' right file  name
+                    id1 = j*2 + 3
+                    id2 = j + 2
+                    os.replace(args.base.joinpath(f"{id1}.paired.a3m"), args.base.joinpath(f"{id2}.paired.a3m"))
 
+        id = 0
+        if not args.interaction_scan:
+            for job_number, (
+                raw_jobname,
+                query_sequences,
+                query_seqs_cardinality,
+            ) in enumerate(queries_unique):
+                unpaired_msa = []
+                paired_msa = None
+                if len(query_seqs_cardinality) > 1:
+                    paired_msa = []
+                else:
+                    for seq in query_sequences:
+                        with args.base.joinpath(f"{id}.a3m").open("r") as f:
+                            unpaired_msa.append(f.read())
+                        args.base.joinpath(f"{id}.a3m").unlink()
+                        if len(query_seqs_cardinality) > 1:
+                            with args.base.joinpath(f"{id}.paired.a3m").open("r") as f:
+                                paired_msa.append(f.read())
+                        args.base.joinpath(f"{id}.paired.a3m").unlink()
+                        id += 1
+                msa = msa_to_str(
+                    unpaired_msa, paired_msa, query_sequences, query_seqs_cardinality
+                )
+                args.base.joinpath(f"{job_number}.a3m").write_text(msa)
+        else:
+            for job_number, _ in enumerate(queries_unique[:-1]):
+                query_sequences = [queries_unique[0][1], queries_unique[job_number+1][1]]
+                unpaired_msa = []
+                paired_msa = []
+                with args.base.joinpath(f"0.a3m").open("r") as f:
+                    unpaired_msa.append(f.read())
+                with args.base.joinpath(f"{job_number+1}.a3m").open("r") as f:
+                    unpaired_msa.append(f.read())
+
+                with args.base.joinpath(f"0.paired.a3m").open("r") as f:
+                    paired_msa.append(f.read())
+                with args.base.joinpath(f"{job_number+1}.paired.a3m").open("r") as f:
+                    paired_msa.append(f.read())
+                msa = msa_to_str(
+                    unpaired_msa, paired_msa, query_sequences, [1,1]
+                )
+                args.base.joinpath(f"{job_number}_final.a3m").write_text(msa)
+            for job_number, _ in enumerate(queries_unique):
+                args.base.joinpath(f"{job_number}.a3m").unlink()
+                args.base.joinpath(f"{job_number}.paired.a3m").unlink()
+            for job_number, _ in enumerate(queries_unique[:-1]):
+                os.replace(args.base.joinpath(f"{job_number}_final.a3m"), args.base.joinpath(f"{job_number}.a3m"))
     query_file.unlink()
     run_mmseqs(args.mmseqs, ["rmdb", args.base.joinpath("qdb")])
     run_mmseqs(args.mmseqs, ["rmdb", args.base.joinpath("qdb_h")])

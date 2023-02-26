@@ -85,7 +85,6 @@ def pad_input_multimer(
   pad_len: int,
   use_templates: bool,
 ) -> model.features.FeatureDict:
-  model_config = model_runner.config
   shape_schema = {
     "aatype": ["num residues placeholder"],
     "residue_index": ["num residues placeholder"],
@@ -696,7 +695,7 @@ def unserialize_msa(
     )
     prev_query_start += query_len
   paired_msa = [""] * len(query_seq_len)
-  unpaired_msa = None
+  unpaired_msa = [""] * len(query_seq_len)
   already_in = dict()
   for i in range(1, len(a3m_lines), 2):
     header = a3m_lines[i]
@@ -734,7 +733,6 @@ def unserialize_msa(
         paired_msa[j] += ">" + header_no_faster_split[j] + "\n"
         paired_msa[j] += seqs_line[j] + "\n"
     else:
-      unpaired_msa = [""] * len(query_seq_len)
       for j, seq in enumerate(seqs_line):
         if has_amino_acid[j]:
           unpaired_msa[j] += header + "\n"
@@ -752,6 +750,8 @@ def unserialize_msa(
     template_feature = mk_mock_template(query_seq)
     template_features.append(template_feature)
 
+  if unpaired_msa == [""] * len(query_seq_len):
+    unpaired_msa = None
   return (
     unpaired_msa,
     paired_msa,
