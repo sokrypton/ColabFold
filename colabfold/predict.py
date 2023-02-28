@@ -8,16 +8,17 @@ import logging
 logger = logging.getLogger(__name__)
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import haiku, jax
+
 from colabfold.inputs import (
   pad_input, pad_input_multimer,
-  haiku, model, protein
+  model, protein
 )
 from colabfold.utils import file_manager
 
 ################################
 # main prediction function
 ################################
-
 def predict_structure(
   prefix: str,
   result_dir: Path,
@@ -39,6 +40,8 @@ def predict_structure(
   save_single_representations: bool = False,
   save_pair_representations: bool = False,
   save_recycles: bool = False,
+  save_best: bool = False,
+  cyclic: bool = False
 ):
   """Predicts structure using AlphaFold for the given sequence."""
 
@@ -64,22 +67,36 @@ def predict_structure(
       #########################
       # process input features
       #########################
+      def cyclic_offset(L):
+        i = np.arange(L)
+        ij = np.stack([i,i+L],-1)
+        offset = i[:,None] - i[None,:]
+        c_offset = np.abs(ij[:,None,:,None] - ij[None,:,None,:]).min((2,3))
+        return np.sign(offset) * c_offset
       if "multimer" in model_type:
         if model_num == 0 and seed_num == 0:
           input_features = feature_dict
           input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
-          # TODO
-          if seq_len < pad_len:
-            input_features = pad_input_multimer(input_features, model_runner, model_name, pad_len, use_templates)
-            logger.info(f"Padding length to {pad_len}")
+          if cyclic:
+            input_features["offset"] = cyclic_offset(seq_len)
+
+          # TODO: add support for multimer padding
+          # if seq_len < pad_len:
+          #   input_features = pad_input_multimer(input_features, model_runner, model_name, pad_len, use_templates)
+          #   logger.info(f"Padding length to {pad_len}")
+
       else:
         if model_num == 0:
           input_features = model_runner.process_features(feature_dict, random_seed=seed)            
-          r = input_features["aatype"].shape[0]
-          input_features["asym_id"] = np.tile(feature_dict["asym_id"],r).reshape(r,-1)
+          batch_size = input_features["aatype"].shape[0]
+          input_features["asym_id"] = np.tile(feature_dict["asym_id"][None],(batch_size,1))          
+          if cyclic:
+            input_features["offset"] = np.tile(cyclic_offset(seq_len)[None],(batch_size,1,1))
+          
           if seq_len < pad_len:
             input_features = pad_input(input_features, model_runner, model_name, pad_len, use_templates)
             logger.info(f"Padding length to {pad_len}")
+            
 
       tag = f"{model_type}_{model_name}_seed_{seed:03d}"
       model_names.append(tag)
@@ -138,10 +155,14 @@ def predict_structure(
         ###########################################################       
         start = time.time()
         result, recycles = \
-        model_runner.predict(input_features,
+        _predict(
+          self=model_runner,
+          feat=input_features,
           random_seed=seed,
           return_representations=(save_all or save_single_representations or save_pair_representations),
-          callback=callback)
+          callback=callback,
+          return_best=save_best,
+        )
         prediction_times.append(time.time() - start)
 
         ########################
@@ -255,3 +276,83 @@ def predict_structure(
       result_files.append(new_file)
     
   return {"rank":rank, "metric":metric, "result_files":result_files}
+
+def _predict(self,
+  feat,
+  random_seed=0,
+  return_representations=False,
+  callback=None,
+  return_best=False):
+  '''
+  This is a copy of the predict function from model.py (alphafold).
+  Moving here to make easier to modify without making edits to alphafold branch.
+  '''
+  
+  self.init_params(feat)
+
+  # get shapes
+  aatype = feat["aatype"]
+  num_iters = self.config.model.num_recycle + 1
+  if self.multimer_mode:
+    L = aatype.shape[0]
+  else:
+    num_ensemble = self.config.data.eval.num_ensemble
+    L = aatype.shape[1]
+  
+  # initialize
+  zeros = lambda shape: np.zeros(shape, dtype=np.float16)
+  prev = {'prev_msa_first_row': zeros([L,256]),
+          'prev_pair':          zeros([L,L,128]),
+          'prev_pos':           zeros([L,37,3])}
+  
+  def run(key, feat, prev):
+    def _jnp_to_np(x):
+      for k, v in x.items():
+        if isinstance(v, dict):
+          x[k] = _jnp_to_np(v)
+        else:
+          x[k] = np.asarray(v,np.float16)
+      return x
+    result = _jnp_to_np(self.apply(self.params, key, {**feat, "prev":prev}))
+    prev = result.pop("prev")
+    return result, prev
+
+  # initialize random key
+  key = jax.random.PRNGKey(random_seed)
+  
+  # iterate through recycles
+  best_result, best_score, best_r = {}, 0, 0
+  for r in range(num_iters):      
+    # grab subset of features
+    if self.multimer_mode:
+      sub_feat = feat
+    else:
+      s = r * num_ensemble
+      e = (r+1) * num_ensemble
+      sub_feat = jax.tree_map(lambda x:x[s:e], feat)
+        
+    # run
+    key, sub_key = jax.random.split(key)
+    result, prev = run(sub_key, sub_feat, prev)
+    
+    if return_representations:
+      result["representations"] = {"pair":   prev["prev_pair"],
+                                   "single": prev["prev_msa_first_row"]}                                     
+    # callback
+    if callback is not None: callback(result, r)
+
+    if return_best and result["ranking_confidence"] > best_score:
+      best_score = result["ranking_confidence"]
+      best_result = jax.tree_map(lambda x:x, result)
+      best_r = r
+
+    # decide when to stop
+    if result["ranking_confidence"] > self.config.model.stop_at_score:
+      break
+    if r > 0 and result["tol"] < self.config.model.recycle_early_stop_tolerance:
+      break
+  
+  if return_best:
+    return best_result, best_r
+  else:
+    return result, r

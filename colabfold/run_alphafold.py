@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-import warnings
-from Bio import BiopythonDeprecationWarning # what can possibly go wrong...
-warnings.simplefilter(action='ignore', category=BiopythonDeprecationWarning)
-
 import json
 import math
 import zipfile
@@ -14,6 +10,10 @@ from pathlib import Path
 
 import logging
 logger = logging.getLogger(__name__)
+
+import jax
+import jax.numpy as jnp
+logging.getLogger('jax._src.lib.xla_bridge').addFilter(lambda _: False)
 
 # import from colabfold
 from colabfold.inputs import (
@@ -69,11 +69,10 @@ def run(
   num_seeds: int = 1,
   recompile_padding: Union[int, float] = 10,
   zip_results: bool = False,
-  save_single_representations: bool = False,
-  save_pair_representations: bool = False,
   save_all: bool = False,
   save_recycles: bool = False,
   use_dropout: bool = False,
+  use_masking: bool = True,
   use_gpu_relax: bool = False,
   stop_at_score: float = 100,
   dpi: int = 200,
@@ -128,11 +127,17 @@ def run(
 
   msa_mode  = old_names.get(msa_mode,msa_mode)
   pair_mode = old_names.get(pair_mode,pair_mode)
-  use_dropout           = kwargs.pop("training", use_dropout)
-  use_cluster_profile   = kwargs.pop("use_cluster_profile", None)
-  use_fuse              = kwargs.pop("use_fuse", True)
-  use_bfloat16          = kwargs.pop("use_bfloat16", True)
-  max_msa               = kwargs.pop("max_msa",None)
+  use_dropout                 = kwargs.pop("training", use_dropout)
+  use_cluster_profile         = kwargs.pop("use_cluster_profile", None)
+  use_fuse                    = kwargs.pop("use_fuse", True)
+  use_bfloat16                = kwargs.pop("use_bfloat16", True)
+  max_msa                     = kwargs.pop("max_msa",None)
+  save_single_representations = kwargs.pop("save_single_representations", False)
+  save_pair_representations   = kwargs.pop("save_pair_representations", False)
+
+  # undocumented inputs
+  save_best                   = kwargs.pop("save_best", False)
+  cyclic                      = kwargs.pop("cyclic", False)
 
   if max_msa is not None:
     max_seq, max_extra_seq = [int(x) for x in max_msa.split(":")]
@@ -180,6 +185,8 @@ def run(
     max_seq = min(num_seqs, max_seq)
     max_extra_seq = max(min(num_seqs - max_seq, max_extra_seq), 1)
 
+  model_order.sort()
+
   # Record the parameters of this run
   config = {
     "num_queries": len(queries),
@@ -208,6 +215,9 @@ def run(
     "use_fuse": use_fuse,
     "use_bfloat16":use_bfloat16,
     "version": importlib_metadata.version("colabfold"),
+    "use_masking":use_masking,
+    "cyclic":cyclic,
+    "save_best":save_best,
   }
   config_out_file = result_dir.joinpath("config.json")
   config_out_file.write_text(json.dumps(config, indent=4))
@@ -323,11 +333,13 @@ def run(
           use_templates=use_templates,
           num_recycles=num_recycles,
           num_ensemble=num_ensemble,
+          model_order=model_order,
           model_suffix=model_suffix,
           data_dir=data_dir,
           stop_at_score=stop_at_score,
           rank_by=rank_by,
           use_dropout=use_dropout,
+          use_masking=use_masking,
           max_seq=max_seq,
           max_extra_seq=max_extra_seq,
           use_cluster_profile=use_cluster_profile,
@@ -359,6 +371,8 @@ def run(
         save_single_representations=save_single_representations,
         save_pair_representations=save_pair_representations,
         save_recycles=save_recycles,
+        cyclic=cyclic,
+        save_best=save_best,
       )
       result_files = results["result_files"]
       ranks.append(results["rank"])
