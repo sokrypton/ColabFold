@@ -28,15 +28,14 @@ from alphafold.data.tools import hhsearch
 from colabfold.alphafold.msa import make_fixed_size, make_fixed_size_multimer
 from colabfold.utils import (
   DEFAULT_API_SERVER,
-  NO_GPU_FOUND,
-  CIF_REVISION_DATE,
-  CFMMCIFIO,
-)
+  NO_GPU_FOUND)
 from colabfold.parse import (
   parse_fasta, get_queries, 
   get_queries_pairwise, 
   unserialize_msa, unpack_a3ms, 
-  convert_pdb_to_mmcif, mk_hhsearch_db
+  convert_pdb_to_mmcif, mk_hhsearch_db,
+  CIF_REVISION_DATE,
+  CFMMCIFIO
 )
 
 ###############################
