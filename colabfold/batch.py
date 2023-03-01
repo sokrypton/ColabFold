@@ -319,7 +319,7 @@ def main():
         host_url=args.host_url,
       )
       
-      if args.pair_mode == "none" or args.pair_mode == "unpaired" or args.pair_mode == "unpaired_paired":
+      if args.pair_mode == "none" or "unpaired" or "unpaired_paired":
         unpaired_path = Path(args.results).joinpath(str(jobname)+"_unpaired_env")
         unpaired_a3m_lines = run_mmseqs2(
           query_seqs_unique,

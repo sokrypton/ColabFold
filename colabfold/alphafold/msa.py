@@ -4,6 +4,7 @@ import numpy as np
 
 from alphafold.model.features import FeatureDict
 from alphafold.model.tf import shape_placeholders
+import jax.numpy as jnp
 
 NUM_RES = shape_placeholders.NUM_RES
 NUM_MSA_SEQ = shape_placeholders.NUM_MSA_SEQ
@@ -51,7 +52,7 @@ def make_fixed_size_multimer(
   NUM_RES = "num residues placeholder"
   NUM_MSA_SEQ = "msa placeholder"
   NUM_TEMPLATES = "num templates placeholder"
-  msa_cluster_size = feat["bert_mask"].shape[0]
+  msa_cluster_size = jnp.array(feat["bert_mask"]).shape[0]
   pad_size_map = {
     NUM_RES: num_res,
     NUM_MSA_SEQ: msa_cluster_size,
