@@ -269,7 +269,15 @@ def run(
         (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features_) \
         = unserialize_msa(a3m_lines, query_sequence)
         if not use_templates: template_features = template_features_
-
+        ## Another way passing argument
+        ##
+        # (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality) = a3m_lines
+        # template_features_ = []
+        # from colabfold.inputs import mk_mock_template
+        # for query_seq in query_seqs_unique:
+        #   template_feature = mk_mock_template(query_seq)
+        #   template_features_.append(template_feature)
+        # if not use_templates: template_features = template_features_
       # save a3m
       msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
       result_dir.joinpath(f"{jobname}.a3m").write_text(msa)

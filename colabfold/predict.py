@@ -77,13 +77,11 @@ def predict_structure(
         if model_num == 0 and seed_num == 0:
           input_features = feature_dict
           input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
-          if cyclic:
-            input_features["offset"] = cyclic_offset(seq_len)
 
-          # TODO: add support for multimer padding
-          # if seq_len < pad_len:
-          #   input_features = pad_input_multimer(input_features, model_runner, model_name, pad_len, use_templates)
-          #   logger.info(f"Padding length to {pad_len}")
+          # TODO
+          input_features = pad_input_multimer(input_features, model_runner, model_name, pad_len,  use_templates)
+          if seq_len < pad_len:
+            logger.info(f"Padding length to {pad_len}")
 
       else:
         if model_num == 0:

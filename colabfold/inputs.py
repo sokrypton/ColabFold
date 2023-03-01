@@ -81,7 +81,6 @@ def pad_input_multimer(
   pad_len: int,
   use_templates: bool,
 ) -> model.features.FeatureDict:
-  model_config = model_runner.config
   shape_schema = {
     "aatype": ["num residues placeholder"],
     "residue_index": ["num residues placeholder"],
@@ -477,6 +476,175 @@ def generate_input_feature(
         for (chain, feature) in features_for_chain.items()
       }
   return (input_feature, domain_names)
+
+
+def unserialize_msa(
+  a3m_lines: List[str], query_sequence: Union[List[str], str]
+) -> Tuple[
+  Optional[List[str]],
+  Optional[List[str]],
+  List[str],
+  List[int],
+  List[Dict[str, Any]],
+]:
+  a3m_lines = a3m_lines[0].replace("\x00", "").splitlines()
+  if not a3m_lines[0].startswith("#") or len(a3m_lines[0][1:].split("\t")) != 2:
+    assert isinstance(query_sequence, str)
+    return (
+      ["\n".join(a3m_lines)],
+      None,
+      [query_sequence],
+      [1],
+      [mk_mock_template(query_sequence)],
+    )
+
+  if len(a3m_lines) < 3:
+    raise ValueError(f"Unknown file format a3m")
+  tab_sep_entries = a3m_lines[0][1:].split("\t")
+  query_seq_len = tab_sep_entries[0].split(",")
+  query_seq_len = list(map(int, query_seq_len))
+  query_seqs_cardinality = tab_sep_entries[1].split(",")
+  query_seqs_cardinality = list(map(int, query_seqs_cardinality))
+  is_homooligomer = (
+    True if len(query_seq_len) == 1 and query_seqs_cardinality[0] > 1 else False
+  )
+  is_single_protein = (
+    True if len(query_seq_len) == 1 and query_seqs_cardinality[0] == 1 else False
+  )
+  query_seqs_unique = []
+  prev_query_start = 0
+  # we store the a3m with cardinality of 1
+  for n, query_len in enumerate(query_seq_len):
+    query_seqs_unique.append(
+      a3m_lines[2][prev_query_start : prev_query_start + query_len]
+    )
+    prev_query_start += query_len
+  paired_msa = [""] * len(query_seq_len)
+  unpaired_msa = [""] * len(query_seq_len)
+  already_in = dict()
+  for i in range(1, len(a3m_lines), 2):
+    header = a3m_lines[i]
+    seq = a3m_lines[i + 1]
+    if (header, seq) in already_in:
+      continue
+    already_in[(header, seq)] = 1
+    has_amino_acid = [False] * len(query_seq_len)
+    seqs_line = []
+    prev_pos = 0
+    for n, query_len in enumerate(query_seq_len):
+      paired_seq = ""
+      curr_seq_len = 0
+      for pos in range(prev_pos, len(seq)):
+        if curr_seq_len == query_len:
+          prev_pos = pos
+          break
+        paired_seq += seq[pos]
+        if seq[pos].islower():
+          continue
+        if seq[pos] != "-":
+          has_amino_acid[n] = True
+        curr_seq_len += 1
+      seqs_line.append(paired_seq)
+
+    # is sequence is paired add them to output
+    if (
+      not is_single_protein
+      and not is_homooligomer
+      and sum(has_amino_acid) == len(query_seq_len)
+    ):
+      header_no_faster = header.replace(">", "")
+      header_no_faster_split = header_no_faster.split("\t")
+      for j in range(0, len(seqs_line)):
+        paired_msa[j] += ">" + header_no_faster_split[j] + "\n"
+        paired_msa[j] += seqs_line[j] + "\n"
+    else:
+      for j, seq in enumerate(seqs_line):
+        if has_amino_acid[j]:
+          unpaired_msa[j] += header + "\n"
+          unpaired_msa[j] += seq + "\n"
+  if is_homooligomer:
+    # homooligomers
+    num = 101
+    paired_msa = [""] * query_seqs_cardinality[0]
+    for i in range(0, query_seqs_cardinality[0]):
+      paired_msa[i] = ">" + str(num + i) + "\n" + query_seqs_unique[0] + "\n"
+  if is_single_protein:
+    paired_msa = None
+  template_features = []
+  for query_seq in query_seqs_unique:
+    template_feature = mk_mock_template(query_seq)
+    template_features.append(template_feature)
+
+  if unpaired_msa == [""] * len(query_seq_len):
+    unpaired_msa = None
+  return (
+    unpaired_msa,
+    paired_msa,
+    query_seqs_unique,
+    query_seqs_cardinality,
+    template_features,
+  )
+
+def unpack_a3ms(input, outdir):
+  if not os.path.isdir(outdir):
+     os.mkdir(outdir)
+  i = 1
+  count = 0
+  with open(input, "r") as f:
+    lines = f.readlines()
+    a3m = ""
+    hasLen1 = False
+    len1 = 0
+    inMsa2 = False
+    hasLen2 = False
+    switch = False
+    len2 = 0
+    left=[]
+    right=[]
+    descp_l=[]
+    descp_r=[]
+    for idx, line in enumerate(lines):
+      if line.startswith("\x00"):
+        i += 1
+        line = line[1:]
+        inMsa2 = True
+        if i % 2 == 1:
+          a3m="\n".join([l[:-1]+'\t'+r[:-1]+'\n'+a_[:-1]+b_[:-1]
+           for l, r, a_, b_ in zip(descp_l, descp_r, left, right)])
+
+          complex_description = "#" + str(len1) + "," + str(len2) + "\t1,1\n"
+          a3m = complex_description + a3m
+          out = Path(outdir) / f"job{count}.a3m"
+          with open(out, "w") as w:
+            w.write(a3m)
+          a3m = ""
+          count += 1
+          hasLen1 = False
+          hasLen2 = False
+          inMsa2 = False
+          left = []
+          right = []
+          descp_l = []
+          descp_r = []
+          switch = False
+        else:
+          switch = True
+
+      if line.startswith(">") and hasLen2 is False:
+        descp_l.append(line)
+      if not line.startswith(">") and not hasLen1:
+        len1 = len(line)-1
+        hasLen1 = True
+      if not line.startswith(">") and hasLen1 is True and hasLen2 is False:
+        left.append(line)
+      if line.startswith(">") and switch:
+        descp_r.append(line)
+      if not line.startswith(">") and not hasLen2 and inMsa2:
+        len2 = len(line)-1
+        hasLen2 = True
+      if not line.startswith(">") and hasLen1 is True and hasLen2 is True:
+        right.append(line)
+
 
 def msa_to_str(
   unpaired_msa: List[str],
