@@ -3,7 +3,6 @@
 #########################################################
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 from pathlib import Path
-import pandas
 import random
 from io import StringIO
 import shutil
@@ -12,13 +11,6 @@ import os
 
 import logging
 logger = logging.getLogger(__name__)
-
-import jax
-import jax.numpy as jnp
-import haiku
-logging.getLogger('jax._src.lib.xla_bridge').addFilter(lambda _: False)
-
-# TODO: move alphafold specific functions to alphafold/inputs.py
 
 # alphafold imports
 from alphafold.model import model
@@ -36,11 +28,15 @@ from alphafold.data.tools import hhsearch
 from colabfold.alphafold.msa import make_fixed_size, make_fixed_size_multimer
 from colabfold.utils import (
   DEFAULT_API_SERVER,
-  NO_GPU_FOUND,
+  NO_GPU_FOUND)
+from colabfold.parse import (
+  parse_fasta, get_queries, 
+  get_queries_pairwise, 
+  unserialize_msa, unpack_a3ms, 
+  convert_pdb_to_mmcif, mk_hhsearch_db,
   CIF_REVISION_DATE,
-  CFMMCIFIO,
+  CFMMCIFIO
 )
-from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 
 ###############################
 # INPUTS
@@ -125,178 +121,6 @@ def pad_input_multimer(
     num_templates=4,
   )
   return input_fix
-
-def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
-  """Parses FASTA string and returns list of strings with amino-acid sequences.
-
-  Arguments:
-    fasta_string: The string contents of a FASTA file.
-
-  Returns:
-    A tuple of two lists:
-    * A list of sequences.
-    * A list of sequence descriptions taken from the comment lines. In the
-    same order as the sequences.
-  """
-  sequences = []
-  descriptions = []
-  index = -1
-  for line in fasta_string.splitlines():
-    line = line.strip()
-    if line.startswith("#"):
-      continue
-    if line.startswith(">"):
-      index += 1
-      descriptions.append(line[1:])  # Remove the '>' at the beginning.
-      sequences.append("")
-      continue
-    elif not line:
-      continue  # Skip blank lines.
-    sequences[index] += line
-
-  return sequences, descriptions
-
-def get_queries(
-  input_path: Union[str, Path], sort_queries_by: str = "length"
-) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
-  """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
-  of job name, sequence and the optional a3m lines"""
-
-  input_path = Path(input_path)
-  if not input_path.exists():
-    raise OSError(f"{input_path} could not be found")
-
-  if input_path.is_file():
-    if input_path.suffix == ".csv" or input_path.suffix == ".tsv":
-      sep = "\t" if input_path.suffix == ".tsv" else ","
-      df = pandas.read_csv(input_path, sep=sep)
-      assert "id" in df.columns and "sequence" in df.columns
-      queries = [
-        (seq_id, sequence.upper().split(":"), None)
-        for seq_id, sequence in df[["id", "sequence"]].itertuples(index=False)
-      ]
-      for i in range(len(queries)):
-        if len(queries[i][1]) == 1:
-          queries[i] = (queries[i][0], queries[i][1][0], None)
-    elif input_path.suffix == ".a3m":
-      (seqs, header) = parse_fasta(input_path.read_text())
-      if len(seqs) == 0:
-        raise ValueError(f"{input_path} is empty")
-      query_sequence = seqs[0]
-      # Use a list so we can easily extend this to multiple msas later
-      a3m_lines = [input_path.read_text()]
-      queries = [(input_path.stem, query_sequence, a3m_lines)]
-    elif input_path.suffix in [".fasta", ".faa", ".fa"]:
-      (sequences, headers) = parse_fasta(input_path.read_text())
-      queries = []
-      for sequence, header in zip(sequences, headers):
-        sequence = sequence.upper()
-        if sequence.count(":") == 0:
-          # Single sequence
-          queries.append((header, sequence, None))
-        else:
-          # Complex mode
-          queries.append((header, sequence.upper().split(":"), None))
-    else:
-      raise ValueError(f"Unknown file format {input_path.suffix}")
-  else:
-    assert input_path.is_dir(), "Expected either an input file or a input directory"
-    queries = []
-    for file in sorted(input_path.iterdir()):
-      if not file.is_file():
-        continue
-      if file.suffix.lower() not in [".a3m", ".fasta", ".faa"]:
-        logger.warning(f"non-fasta/a3m file in input directory: {file}")
-        continue
-      (seqs, header) = parse_fasta(file.read_text())
-      if len(seqs) == 0:
-        logger.error(f"{file} is empty")
-        continue
-      query_sequence = seqs[0]
-      if len(seqs) > 1 and file.suffix in [".fasta", ".faa", ".fa"]:
-        logger.warning(
-          f"More than one sequence in {file}, ignoring all but the first sequence"
-        )
-
-      if file.suffix.lower() == ".a3m":
-        a3m_lines = [file.read_text()]
-        queries.append((file.stem, query_sequence.upper(), a3m_lines))
-      else:
-        if query_sequence.count(":") == 0:
-          # Single sequence
-          queries.append((file.stem, query_sequence, None))
-        else:
-          # Complex mode
-          queries.append((file.stem, query_sequence.upper().split(":"), None))
-
-  # sort by seq. len
-  if sort_queries_by == "length":
-    queries.sort(key=lambda t: len("".join(t[1])))
-  elif sort_queries_by == "random":
-    random.shuffle(queries)
-  is_complex = False
-  for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
-    if isinstance(query_sequence, list):
-      is_complex = True
-      break
-    if a3m_lines is not None and a3m_lines[0].startswith("#"):
-      a3m_line = a3m_lines[0].splitlines()[0]
-      tab_sep_entries = a3m_line[1:].split("\t")
-      if len(tab_sep_entries) == 2:
-        query_seq_len = tab_sep_entries[0].split(",")
-        query_seq_len = list(map(int, query_seq_len))
-        query_seqs_cardinality = tab_sep_entries[1].split(",")
-        query_seqs_cardinality = list(map(int, query_seqs_cardinality))
-        is_single_protein = (
-          True
-          if len(query_seq_len) == 1 and query_seqs_cardinality[0] == 1
-          else False
-        )
-        if not is_single_protein:
-          is_complex = True
-          break
-  return queries, is_complex
-
-def get_queries_pairwise(
-  input_path: Union[str, Path], batch_size: int = 10,
-) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
-  """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
-  of job name, sequence and the optional a3m lines"""
-  input_path = Path(input_path)
-  if not input_path.exists():
-    raise OSError(f"{input_path} could not be found")
-  if input_path.is_file():
-    if input_path.suffix == ".csv" or input_path.suffix == ".tsv":
-      sep = "\t" if input_path.suffix == ".tsv" else ","
-      df = pandas.read_csv(input_path, sep=sep)
-      assert "id" in df.columns and "sequence" in df.columns
-      queries = []
-      seq_id_list = []
-      for i, (seq_id, sequence) in enumerate(df[["id", "sequence"]].itertuples(index=False)):
-        if i>0 and i % 10 == 0:
-          queries.append(queries[0].upper())
-        queries.append(sequence.upper())
-        seq_id_list.append(seq_id)
-      return queries, True, seq_id_list
-    elif input_path.suffix == ".a3m":
-      raise NotImplementedError()
-    elif input_path.suffix in [".fasta", ".faa", ".fa"]:
-      (sequences, headers) = parse_fasta(input_path.read_text())
-      queries = []
-      for i, (sequence, header) in enumerate(zip(sequences, headers)):
-        sequence = sequence.upper()
-        if sequence.count(":") == 0:
-          if i>0 and i % 10 == 0:
-            queries.append(sequences[0])
-          queries.append(sequence)
-        else:
-          # Complex mode
-          queries.append((header, sequence.upper().split(":"), None))
-      return queries, True, headers
-    else:
-      raise ValueError(f"Unknown file format {input_path.suffix}")
-  else:
-    raise NotImplementedError()
 
 def pair_sequences(
   a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
@@ -653,6 +477,7 @@ def generate_input_feature(
       }
   return (input_feature, domain_names)
 
+
 def unserialize_msa(
   a3m_lines: List[str], query_sequence: Union[List[str], str]
 ) -> Tuple[
@@ -820,6 +645,7 @@ def unpack_a3ms(input, outdir):
       if not line.startswith(">") and hasLen1 is True and hasLen2 is True:
         right.append(line)
 
+
 def msa_to_str(
   unpaired_msa: List[str],
   paired_msa: List[str],
@@ -872,7 +698,6 @@ def mk_mock_template(
   }
   return template_features
 
-
 def mk_template(
   a3m_lines: str, template_path: str, query_sequence: str
 ) -> Dict[str, Any]:
@@ -895,96 +720,3 @@ def mk_template(
     query_sequence=query_sequence, hits=hhsearch_hits
   )
   return dict(templates_result.features)
-
-def validate_and_fix_mmcif(cif_file: Path):
-  """validate presence of _entity_poly_seq in cif file and add revision_date if missing"""
-  # check that required poly_seq and revision_date fields are present
-  cif_dict = MMCIF2Dict.MMCIF2Dict(cif_file)
-  required = [
-    "_chem_comp.id",
-    "_chem_comp.type",
-    "_struct_asym.id",
-    "_struct_asym.entity_id",
-    "_entity_poly_seq.mon_id",
-  ]
-  for r in required:
-    if r not in cif_dict:
-      raise ValueError(f"mmCIF file {cif_file} is missing required field {r}.")
-  if "_pdbx_audit_revision_history.revision_date" not in cif_dict:
-    logger.info(
-      f"Adding missing field revision_date to {cif_file}. Backing up original file to {cif_file}.bak."
-    )
-    shutil.copy2(cif_file, str(cif_file) + ".bak")
-    with open(cif_file, "a") as f:
-      f.write(CIF_REVISION_DATE)
-
-def convert_pdb_to_mmcif(pdb_file: Path):
-  """convert existing pdb files into mmcif with the required poly_seq and revision_date"""
-  i = pdb_file.stem
-  cif_file = pdb_file.parent.joinpath(f"{i}.cif")
-  if cif_file.is_file():
-    return
-  parser = PDBParser(QUIET=True)
-  structure = parser.get_structure(i, pdb_file)
-  cif_io = CFMMCIFIO()
-  cif_io.set_structure(structure)
-  cif_io.save(str(cif_file))
-
-def mk_hhsearch_db(template_dir: str):
-  template_path = Path(template_dir)
-
-  cif_files = template_path.glob("*.cif")
-  for cif_file in cif_files:
-    validate_and_fix_mmcif(cif_file)
-
-  pdb_files = template_path.glob("*.pdb")
-  for pdb_file in pdb_files:
-    convert_pdb_to_mmcif(pdb_file)
-
-  pdb70_db_files = template_path.glob("pdb70*")
-  for f in pdb70_db_files:
-    os.remove(f)
-
-  with open(template_path.joinpath("pdb70_a3m.ffdata"), "w") as a3m, open(
-    template_path.joinpath("pdb70_cs219.ffindex"), "w"
-  ) as cs219_index, open(
-    template_path.joinpath("pdb70_a3m.ffindex"), "w"
-  ) as a3m_index, open(
-    template_path.joinpath("pdb70_cs219.ffdata"), "w"
-  ) as cs219:
-    n = 1000000
-    index_offset = 0
-    cif_files = template_path.glob("*.cif")
-    for cif_file in cif_files:
-      with open(cif_file) as f:
-        cif_string = f.read()
-      cif_fh = StringIO(cif_string)
-      parser = MMCIFParser(QUIET=True)
-      structure = parser.get_structure("none", cif_fh)
-      models = list(structure.get_models())
-      if len(models) != 1:
-        raise ValueError(
-          f"Only single model PDBs are supported. Found {len(models)} models."
-        )
-      model = models[0]
-      for chain in model:
-        amino_acid_res = []
-        for res in chain:
-          if res.id[2] != " ":
-            raise ValueError(
-              f"PDB contains an insertion code at chain {chain.id} and residue "
-              f"index {res.id[1]}. These are not supported."
-            )
-          amino_acid_res.append(
-            residue_constants.restype_3to1.get(res.resname, "X")
-          )
-
-        protein_str = "".join(amino_acid_res)
-        a3m_str = f">{cif_file.stem}_{chain.id}\n{protein_str}\n\0"
-        a3m_str_len = len(a3m_str)
-        a3m_index.write(f"{n}\t{index_offset}\t{a3m_str_len}\n")
-        cs219_index.write(f"{n}\t{index_offset}\t{len(protein_str)}\n")
-        index_offset += a3m_str_len
-        a3m.write(a3m_str)
-        cs219.write("\n\0")
-        n += 1

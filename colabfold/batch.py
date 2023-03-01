@@ -1,4 +1,4 @@
-import os
+import os,sys 
 ENV = {"TF_FORCE_UNIFIED_MEMORY":"1", "XLA_PYTHON_CLIENT_MEM_FRACTION":"4.0"}
 for k,v in ENV.items():
     if k not in os.environ: os.environ[k] = v
@@ -13,7 +13,7 @@ import importlib_metadata
 from pathlib import Path
 import random
 
-from colabfold.run_alphafold import run
+from colabfold.run_alphafold import run, set_model_type
 from colabfold.utils import (
   DEFAULT_API_SERVER, ACCEPT_DEFAULT_TERMS,
   get_commit, setup_logging
@@ -136,7 +136,7 @@ def main():
     choices=["auto", "plddt", "ptm", "iptm", "multimer"],
   )
   parser.add_argument("--pair-mode",
-    help="rank models by auto, unpaired, paired, unpaired_paired",
+    help="how to generate MSA for multimeric inputs: unpaired, paired, unpaired_paired",
     type=str,
     default="unpaired_paired",
     choices=["unpaired", "paired", "unpaired_paired"],
@@ -157,11 +157,15 @@ def main():
     action="store_true",
     help="saves the pair representation embeddings of all models",
   )
-  parser.add_argument(
-    "--use-dropout",
+  parser.add_argument("--use-dropout",
     default=False,
     action="store_true",
     help="activate dropouts during inference to sample from uncertainity of the models",
+  )
+  parser.add_argument("--disable-masking",
+    default=False,
+    action="store_true",
+    help='by default, 15% of the input MSA is randomly masked, set this flag to disable this',
   )
   parser.add_argument("--max-seq",
     help="number of sequence clusters to use",
@@ -202,6 +206,9 @@ def main():
   parser.add_argument("--overwrite-existing-results", default=False, action="store_true")
   parser.add_argument("--interaction-scan",           default=False, action="store_true")
   parser.add_argument("--disable-cluster-profile",    default=False, action="store_true")
+
+  parser.add_argument("--cyclic",                     default=False, action="store_true")
+  parser.add_argument("--save-best",                  default=False, action="store_true")
 
   # backward compatability
   parser.add_argument('--training',    default=False, action="store_true", help=argparse.SUPPRESS)
@@ -283,12 +290,15 @@ def main():
     save_single_representations=args.save_single_representations,
     save_pair_representations=args.save_pair_representations,
     use_dropout=args.use_dropout,
+    use_masking=not args.disable_masking,
     max_seq=args.max_seq,
     max_extra_seq=args.max_extra_seq,
     use_cluster_profile=not args.disable_cluster_profile,
-    use_gpu_relax = args.use_gpu_relax,
+    use_gpu_relax=args.use_gpu_relax,
     save_all=args.save_all,
     save_recycles=args.save_recycles,
+    cyclic=args.cyclic,
+    save_best=args.save_best,
   )
 
   if args.interaction_scan:

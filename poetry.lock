@@ -14,15 +14,13 @@ files = [
 
 [[package]]
 name = "alphafold-colabfold"
-version = "2.3.4"
+version = "2.3.5"
 description = "An implementation of the inference pipeline of AlphaFold v2.3.1. This is a completely new model that was entered as AlphaFold2 in CASP14 and published in Nature. This package contains patches for colabfold"
 category = "main"
 optional = true
 python-versions = "*"
-files = [
-    {file = "alphafold-colabfold-2.3.4.tar.gz", hash = "sha256:ddc0fbaa15385e0d161029a129a52bec7a9c796f5a7b34a1159d6e43d47cd4fa"},
-    {file = "alphafold_colabfold-2.3.4-py3-none-any.whl", hash = "sha256:1687bc1b29c42594dce03884288fcad9a7ba79934b4085d520749cff56e2d561"},
-]
+files = []
+
 [package.dependencies]
 absl-py = "*"
 biopython = "*"
