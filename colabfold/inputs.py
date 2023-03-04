@@ -83,6 +83,7 @@ def pad_input_multimer(
   model_runner: model.RunModel,
   model_name: str,
   pad_len: int,
+  msa_cluster_size: Optional[int],
   use_templates: bool,
 ) -> model.features.FeatureDict:
   shape_schema = {
@@ -122,6 +123,7 @@ def pad_input_multimer(
     input_features,
     shape_schema,
     num_res=pad_len,
+    msa_cluster_size=msa_cluster_size,
     num_templates=4,
   )
   return input_fix

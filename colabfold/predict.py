@@ -39,6 +39,7 @@ def predict_structure(
   save_single_representations: bool = False,
   save_pair_representations: bool = False,
   save_recycles: bool = False,
+  max_msa_cluster: Optional[int] = None,
 ):
   """Predicts structure using AlphaFold for the given sequence."""
 
@@ -69,8 +70,12 @@ def predict_structure(
           input_features = feature_dict
           input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
           # TODO
+          if max_msa_cluster == None:
+            msa_cluster_size = input_features["bert_mask"].shape[0]
+          else:
+            msa_cluster_size = max_msa_cluster
+          input_features = pad_input_multimer(input_features, model_runner, model_name, pad_len, msa_cluster_size, use_templates)
           if seq_len < pad_len:
-            input_features = pad_input_multimer(input_features, model_runner, model_name, pad_len, use_templates)
             logger.info(f"Padding length to {pad_len}")
       else:
         if model_num == 0:

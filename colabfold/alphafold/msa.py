@@ -47,11 +47,11 @@ def make_fixed_size_multimer(
   feat: Mapping[str, Any],
   shape_schema,
   num_res,
+  msa_cluster_size,
   num_templates) -> FeatureDict:
   NUM_RES = "num residues placeholder"
   NUM_MSA_SEQ = "msa placeholder"
   NUM_TEMPLATES = "num templates placeholder"
-  msa_cluster_size = feat["bert_mask"].shape[0]
   pad_size_map = {
     NUM_RES: num_res,
     NUM_MSA_SEQ: msa_cluster_size,

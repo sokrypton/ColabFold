@@ -318,7 +318,7 @@ def main():
         use_pairing=True,
         host_url=args.host_url,
       )
-      
+      max_msa_cluster = None
       if args.pair_mode == "none" or args.pair_mode == "unpaired" or args.pair_mode == "unpaired_paired":
         unpaired_path = Path(args.results).joinpath(str(jobname)+"_unpaired_env")
         unpaired_a3m_lines = run_mmseqs2(
@@ -329,6 +329,7 @@ def main():
           use_pairing=False,
           host_url=args.host_url,
         )
+        max_msa_cluster = 0
       path_o = Path(args.results).joinpath(f"{jobname}_paired_pairwise")
       for filenum in path_o.iterdir():
         queries_new = [] 
@@ -342,21 +343,36 @@ def main():
               a3m_lines = [Path(file).read_text()]
               val = int(header[0].split('\t')[1][1:]) - 102
               # match paired seq id and unpaired seq id
-              if args.pair_mode == "none" or "unpaired" or "unpaired_paired":
+              if args.pair_mode == "none" or args.pair_mode == "unpaired" or args.pair_mode == "unpaired_paired":
                 tmp = '>101\n' + paired_a3m_lines[0].split('>101\n')[val+1]
-                a3m_lines = [msa_to_str(
-                  [unpaired_a3m_lines[0], unpaired_a3m_lines[val+1]], [tmp, paired_a3m_lines[val+1]], [batch[0], batch[val+1]], [1, 1]
-                )]
+                # a3m_lines = [msa_to_str(
+                #   [unpaired_a3m_lines[0], unpaired_a3m_lines[val+1]], [tmp, paired_a3m_lines[val+1]], [batch[0], batch[val+1]], [1, 1]
+                # )]
                 ## Another way: do not use msa_to_str and unserialize function rather
                 ## send unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality as arguments.. 
-                ##
-                # a3m_lines = [[unpaired_a3m_lines[0], unpaired_a3m_lines[val+1]], [tmp, paired_a3m_lines[val+1]], [batch[0], batch[val+1]], [1, 1]]
+                a3m_lines = [[unpaired_a3m_lines[0], unpaired_a3m_lines[val+1]], [tmp, paired_a3m_lines[val+1]], [batch[0], batch[val+1]], [1, 1]]
               queries_new.append((header_first + '_' + headers_list[jobname][val], query_sequence, a3m_lines))
+
+              ### generate features then find max_msa_cluster
+              if args.pair_mode == "none" or args.pair_mode == "unpaired" or args.pair_mode == "unpaired_paired":
+                template_features_ = []
+                from colabfold.inputs import mk_mock_template
+                for query_seq in query_seqs_unique:
+                  template_feature = mk_mock_template(query_seq)
+                  template_features_.append(template_feature)
+                if not args.use_templates: template_features = template_features_
+
+                from colabfold.inputs import generate_input_feature
+                (feature_dict, domain_names) \
+                = generate_input_feature([batch[0], batch[val+1]], [1, 1], [unpaired_a3m_lines[0], unpaired_a3m_lines[val+1]], [tmp, paired_a3m_lines[val+1]],
+                  template_features, is_complex, model_type)
+                max_msa_cluster = max(max_msa_cluster, feature_dict["bert_mask"].shape[0])
 
           if args.sort_queries_by == "length":
             queries_new.sort(key=lambda t: len(''.join(t[1])),reverse=True)
           elif args.sort_queries_by == "random":
             random.shuffle(queries_new)
+          run_params["max_msa_cluster"] = max_msa_cluster
 
           run(queries=queries_new, **run_params)
   
