@@ -329,11 +329,12 @@ def main():
           use_pairing=False,
           host_url=args.host_url,
         )
-        max_msa_cluster = 0
       path_o = Path(args.results).joinpath(f"{jobname}_paired_pairwise")
       for filenum in path_o.iterdir():
         queries_new = [] 
         if Path(filenum).suffix.lower() == ".a3m":
+          if args.pair_mode == "none" or args.pair_mode == "unpaired" or args.pair_mode == "unpaired_paired":
+            max_msa_cluster = 0
           outdir = path_o.joinpath("tmp")
           unpack_a3ms(filenum, outdir)
           for i, file in enumerate(sorted(outdir.iterdir())):
