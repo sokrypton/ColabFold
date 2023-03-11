@@ -100,8 +100,6 @@ def mmseqs_search_monomer(
     if use_env:
         used_dbs.append(metagenomic_db)
     for db in used_dbs:
-        if str(db) == '.':
-            continue
         if not dbbase.joinpath(f"{db}.dbtype").is_file():
             raise FileNotFoundError(f"Database {db} does not exist")
         if (
