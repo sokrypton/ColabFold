@@ -347,6 +347,13 @@ def run(
         )
         first_job = False
 
+      if "multimer" in model_suffix:
+        for idx in range(num_models):
+          if max_msa_cluster == None:
+            model_runner_and_params[idx][1].config.model.embeddings_and_evoformer.num_unpadded_seqs = 0
+          else:
+            model_runner_and_params[idx][1].config.model.embeddings_and_evoformer.num_unpadded_seqs = int(len(feature_dict["msa"]))
+            model_runner_and_params[idx][1].config.model.embeddings_and_evoformer.extra_msa_seqs = int(len(feature_dict["msa"])) - 508
       results = predict_structure(
         prefix=jobname,
         result_dir=result_dir,
