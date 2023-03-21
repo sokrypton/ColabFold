@@ -300,6 +300,12 @@ def main():
     headers_list[0].remove(headers_list[0][0])
     header_first = headers[0]
     
+    queries_temp = []
+    queries_rest = []
+    if args.pair_mode in ("none", "unpaired", "unpaired_paired"):
+      max_msa_cluster = 0
+    else:
+      max_msa_cluster = None
     for jobname, batch in enumerate(output):
       query_seqs_unique = []
       for x in batch:
@@ -318,8 +324,7 @@ def main():
         use_pairing=True,
         host_url=args.host_url,
       )
-      max_msa_cluster = None
-      if args.pair_mode == "none" or args.pair_mode == "unpaired" or args.pair_mode == "unpaired_paired":
+      if args.pair_mode in ("none", "unpaired", "unpaired_paired"):
         unpaired_path = Path(args.results).joinpath(str(jobname)+"_unpaired_env")
         unpaired_a3m_lines = run_mmseqs2(
           query_seqs_unique,
@@ -331,10 +336,8 @@ def main():
         )
       path_o = Path(args.results).joinpath(f"{jobname}_paired_pairwise")
       for filenum in path_o.iterdir():
-        queries_new = [] 
+        queries_new = []
         if Path(filenum).suffix.lower() == ".a3m":
-          if args.pair_mode == "none" or args.pair_mode == "unpaired" or args.pair_mode == "unpaired_paired":
-            max_msa_cluster = 0
           outdir = path_o.joinpath("tmp")
           unpack_a3ms(filenum, outdir)
           for i, file in enumerate(sorted(outdir.iterdir())):
@@ -344,38 +347,48 @@ def main():
               a3m_lines = [Path(file).read_text()]
               val = int(header[0].split('\t')[1][1:]) - 102
               # match paired seq id and unpaired seq id
-              if args.pair_mode == "none" or args.pair_mode == "unpaired" or args.pair_mode == "unpaired_paired":
-                tmp = '>101\n' + paired_a3m_lines[0].split('>101\n')[val+1]
+              if args.pair_mode in ("none", "unpaired", "unpaired_paired"):
+                paired_query_a3m_lines = '>101\n' + paired_a3m_lines[0].split('>101\n')[val+1]
                 # a3m_lines = [msa_to_str(
                 #   [unpaired_a3m_lines[0], unpaired_a3m_lines[val+1]], [tmp, paired_a3m_lines[val+1]], [batch[0], batch[val+1]], [1, 1]
                 # )]
                 ## Another way: do not use msa_to_str and unserialize function rather
                 ## send unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality as arguments.. 
-                a3m_lines = [[unpaired_a3m_lines[0], unpaired_a3m_lines[val+1]], [tmp, paired_a3m_lines[val+1]], [batch[0], batch[val+1]], [1, 1]]
+                a3m_lines = [[unpaired_a3m_lines[0], unpaired_a3m_lines[val+1]], [paired_query_a3m_lines, paired_a3m_lines[val+1]], [batch[0], batch[val+1]], [1, 1]]
               queries_new.append((header_first + '_' + headers_list[jobname][val], query_sequence, a3m_lines))
 
               ### generate features then find max_msa_cluster
-              if args.pair_mode == "none" or args.pair_mode == "unpaired" or args.pair_mode == "unpaired_paired":
-                template_features_ = []
-                from colabfold.inputs import mk_mock_template
-                for query_seq in query_seqs_unique:
-                  template_feature = mk_mock_template(query_seq)
-                  template_features_.append(template_feature)
-                if not args.use_templates: template_features = template_features_
-
-                from colabfold.inputs import generate_input_feature
-                (feature_dict, domain_names) \
-                = generate_input_feature([batch[0], batch[val+1]], [1, 1], [unpaired_a3m_lines[0], unpaired_a3m_lines[val+1]], [tmp, paired_a3m_lines[val+1]],
-                  template_features, is_complex, model_type)
-                max_msa_cluster = max(max_msa_cluster, feature_dict["bert_mask"].shape[0])
+              if args.pair_mode in ("none", "unpaired", "unpaired_paired"):
+                inputs = ([batch[0], batch[val+1]], [1, 1], [unpaired_a3m_lines[0], unpaired_a3m_lines[val+1]], [paired_query_a3m_lines, paired_a3m_lines[val+1]])
+                from colabfold.inputs import generate_msa_size
+                msa_size = generate_msa_size(inputs, query_seqs_unique, args.use_templates, is_complex, model_type)
+                # config.model.embeddings_and_evoformer.extra_msa_seqs=2048
+                # config.model.embeddings_and_evoformer.num_msa=508
+                # if msa_size < 2048 + 508, pop the sequences and run the model with recompilation
+                if msa_size < 2556:
+                  queries_rest.append(queries_new.pop())
+                  continue
+                max_msa_cluster = max(max_msa_cluster, msa_size)
 
           if args.sort_queries_by == "length":
             queries_new.sort(key=lambda t: len(''.join(t[1])),reverse=True)
           elif args.sort_queries_by == "random":
             random.shuffle(queries_new)
-          run_params["max_msa_cluster"] = max_msa_cluster
+          queries_temp.append(queries_new)
 
-          run(queries=queries_new, **run_params)
+    queries_sel = sum(queries_temp, [])
+    run_params["max_msa_cluster"] = max_msa_cluster
+    run_params["interaction_scan"] = args.interaction_scan
+    run(queries=queries_sel, **run_params)
+
+    if args.pair_mode in ("none", "unpaired", "unpaired_paired"):
+      if len(queries_rest) > 0:
+        if args.sort_queries_by == "length":
+          queries_rest.sort(key=lambda t: len(''.join(t[1])),reverse=True)
+        elif args.sort_queries_by == "random":
+          random.shuffle(queries_rest)
+        run_params["max_msa_cluster"] = None
+        run(queries=queries_rest, **run_params)
   
   else:
     run(queries=queries, **run_params)

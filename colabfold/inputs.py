@@ -655,6 +655,20 @@ def generate_input_feature(
       }
   return (input_feature, domain_names)
 
+def generate_msa_size(inputs, query_seqs_unique, use_templates, is_complex, model_type):
+  template_features_ = []
+  from colabfold.inputs import mk_mock_template
+  from colabfold.inputs import generate_input_feature
+  for query_seq in query_seqs_unique:
+    template_feature = mk_mock_template(query_seq)
+    template_features_.append(template_feature)
+  if not use_templates: template_features = template_features_
+  else: raise NotImplementedError
+
+  (feature_dict, _) \
+  = generate_input_feature(*inputs, template_features, is_complex, model_type)
+  return feature_dict["bert_mask"].shape[0]
+
 def unserialize_msa(
   a3m_lines: List[str], query_sequence: Union[List[str], str]
 ) -> Tuple[

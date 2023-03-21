@@ -134,6 +134,7 @@ def run(
   use_bfloat16          = kwargs.pop("use_bfloat16", True)
   max_msa               = kwargs.pop("max_msa",None)
   max_msa_cluster       = kwargs.pop("max_msa_cluster", None)
+  interaction_scan      = kwargs.pop("interaction_scan", True)
 
   if max_msa is not None:
     max_seq, max_extra_seq = [int(x) for x in max_msa.split(":")]
@@ -262,13 +263,18 @@ def run(
         # if not use_templates: template_features = template_features_
         ## Another way passing argument
         ##
-        (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality) = a3m_lines
-        template_features_ = []
-        from colabfold.inputs import mk_mock_template
-        for query_seq in query_seqs_unique:
-          template_feature = mk_mock_template(query_seq)
-          template_features_.append(template_feature)
-        if not use_templates: template_features = template_features_
+        if interaction_scan == True and pair_mode in ("none", "unpaired", "unpaired_paired"):
+          (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality) = a3m_lines
+          template_features_ = []
+          from colabfold.inputs import mk_mock_template
+          for query_seq in query_seqs_unique:
+            template_feature = mk_mock_template(query_seq)
+            template_features_.append(template_feature)
+          if not use_templates: template_features = template_features_
+        else:
+          (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features_) \
+          = unserialize_msa(a3m_lines, query_sequence)
+          if not use_templates: template_features = template_features_
       # save a3m
       msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
       result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
@@ -347,13 +353,6 @@ def run(
         )
         first_job = False
 
-      if "multimer" in model_suffix:
-        for idx in range(num_models):
-          if max_msa_cluster == None:
-            model_runner_and_params[idx][1].config.model.embeddings_and_evoformer.num_unpadded_seqs = 0
-          else:
-            model_runner_and_params[idx][1].config.model.embeddings_and_evoformer.num_unpadded_seqs = int(len(feature_dict["msa"]))
-            model_runner_and_params[idx][1].config.model.embeddings_and_evoformer.extra_msa_seqs = int(len(feature_dict["msa"])) - 508
       results = predict_structure(
         prefix=jobname,
         result_dir=result_dir,
