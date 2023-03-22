@@ -67,6 +67,7 @@ from colabfold.utils import (
 )
 
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
+from Bio.PDB.PDBIO import Select
 
 # logging settings
 logger = logging.getLogger(__name__)
@@ -198,6 +199,39 @@ def validate_and_fix_mmcif(cif_file: Path):
         with open(cif_file, "a") as f:
             f.write(CIF_REVISION_DATE)
 
+modified_mapping = {
+  "MSE" : "MET", "MLY" : "LYS", "FME" : "MET", "HYP" : "PRO",
+  "TPO" : "THR", "CSO" : "CYS", "SEP" : "SER", "M3L" : "LYS",
+  "HSK" : "HIS", "SAC" : "SER", "PCA" : "GLU", "DAL" : "ALA",
+  "CME" : "CYS", "CSD" : "CYS", "OCS" : "CYS", "DPR" : "PRO",
+  "B3K" : "LYS", "ALY" : "LYS", "YCM" : "CYS", "MLZ" : "LYS",
+  "4BF" : "TYR", "KCX" : "LYS", "B3E" : "GLU", "B3D" : "ASP",
+  "HZP" : "PRO", "CSX" : "CYS", "BAL" : "ALA", "HIC" : "HIS",
+  "DBZ" : "ALA", "DCY" : "CYS", "DVA" : "VAL", "NLE" : "LEU",
+  "SMC" : "CYS", "AGM" : "ARG", "B3A" : "ALA", "DAS" : "ASP",
+  "DLY" : "LYS", "DSN" : "SER", "DTH" : "THR", "GL3" : "GLY",
+  "HY3" : "PRO", "LLP" : "LYS", "MGN" : "GLN", "MHS" : "HIS",
+  "TRQ" : "TRP", "B3Y" : "TYR", "PHI" : "PHE", "PTR" : "TYR",
+  "TYS" : "TYR", "IAS" : "ASP", "GPL" : "LYS", "KYN" : "TRP",
+  "CSD" : "CYS", "SEC" : "CYS"
+}
+
+class ReplaceOrRemoveHetatmSelect(Select):
+  def accept_residue(self, residue):
+    hetfield, _, _ = residue.get_id()
+    if hetfield != " ":
+      if residue.resname in modified_mapping:
+        # set unmodified resname
+        residue.resname = modified_mapping[residue.resname]
+        # clear hetatm flag
+        residue._id = (" ", residue._id[1], " ")
+        t = residue.full_id
+        residue.full_id = (t[0], t[1], t[2], residue._id)
+        return 1
+      return 0
+    else:
+      return 1
+
 def convert_pdb_to_mmcif(pdb_file: Path):
     """convert existing pdb files into mmcif with the required poly_seq and revision_date"""
     i = pdb_file.stem
@@ -208,7 +242,7 @@ def convert_pdb_to_mmcif(pdb_file: Path):
     structure = parser.get_structure(i, pdb_file)
     cif_io = CFMMCIFIO()
     cif_io.set_structure(structure)
-    cif_io.save(str(cif_file))
+    cif_io.save(str(cif_file), ReplaceOrRemoveHetatmSelect())
 
 def mk_hhsearch_db(template_dir: str):
     template_path = Path(template_dir)

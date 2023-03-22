@@ -170,6 +170,9 @@ _entity_poly_seq.hetero
                 for chain in model:
                     res_idx = 1
                     for residue in chain:
+                        hetatm, _, _ = residue.get_id()
+                        if hetatm != " ":
+                            continue
                         poly_seq.append(
                             (chain_idx, res_idx, residue.get_resname(), "n")
                         )
