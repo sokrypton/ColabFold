@@ -792,17 +792,19 @@ def get_msa_and_templates(
     # get template features
     template_features = []
     if use_templates:
-        a3m_lines_mmseqs2, template_paths = run_mmseqs2(
-            query_seqs_unique,
-            str(result_dir.joinpath(jobname)),
-            use_env,
-            use_templates=True,
-            host_url=host_url,
-        )
-        if custom_template_path is not None:
+        if custom_template_path is not None: 
             template_paths = {}
             for index in range(0, len(query_seqs_unique)):
                 template_paths[index] = custom_template_path
+        else:
+            a3m_lines_mmseqs2, template_paths = run_mmseqs2(
+                query_seqs_unique,
+                str(result_dir.joinpath(jobname)),
+                use_env,
+                use_templates=True,
+                host_url=host_url,
+            )
+
         if template_paths is None:
             logger.info("No template detected")
             for index in range(0, len(query_seqs_unique)):
@@ -828,7 +830,7 @@ def get_msa_and_templates(
                     logger.info(f"Sequence {index} found no templates")
 
                 template_features.append(template_feature)
-    else:
+    else: # dont use templates at all, mock them up
         for index in range(0, len(query_seqs_unique)):
             template_feature = mk_mock_template(query_seqs_unique[index])
             template_features.append(template_feature)
