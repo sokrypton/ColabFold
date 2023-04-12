@@ -1399,15 +1399,19 @@ def run(
         # generate MSA (a3m_lines) and templates
         ###########################################
         try:
-            if use_templates or a3m_lines is None:
+            if a3m_lines is None: 
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
                 = get_msa_and_templates(jobname, query_sequence, result_dir, msa_mode, use_templates, 
                     custom_template_path, pair_mode, host_url)
-            if a3m_lines is not None:
-                (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features_) \
+            
+            elif a3m_lines is not None: 
+                (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
                 = unserialize_msa(a3m_lines, query_sequence)
-                if not use_templates: template_features = template_features_
-
+                if use_templates: 
+                    (_, _, _, _, template_features) \
+                        = get_msa_and_templates(jobname, query_seqs_unique, result_dir, 'single_sequence', use_templates, 
+                            custom_template_path, pair_mode, host_url)
+                        
             # save a3m
             msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
             result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
