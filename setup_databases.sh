@@ -48,6 +48,12 @@ if [ ! -f UNIREF30_READY ]; then
   tar xzvf "uniref30_2202.tar.gz"
   mmseqs tsv2exprofiledb "uniref30_2202" "uniref30_2202_db"
   mmseqs createindex "uniref30_2202_db" tmp1 --remove-tmp-files 1
+  if [ -e uniref30_2202_db_mapping ]; then
+    ln -sf uniref30_2202_db_mapping uniref30_2202_db.idx_mapping
+  fi
+  if [ -e uniref30_2202_db_taxonomy ]; then
+    ln -sf uniref30_2202_db_taxonomy uniref30_2202_db.idx_taxonomy
+  fi
   touch UNIREF30_READY
 fi
 
