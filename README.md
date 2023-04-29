@@ -6,6 +6,8 @@
 + 18Feb2023: v1.5.2 - fixing: fixing memory leak for large proteins
 +                   - fixing: --use_dropout (random seed was not changing between recycles)
 - 29Apr2023: Amber is not working in our Notebook due to Colab update
++ 30Apr2023: Amber is working again in our ColabFold Notebook
+
 ```
 For details of what was changed in v1.5, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.5.0)!
 
