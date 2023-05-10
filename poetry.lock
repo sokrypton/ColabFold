@@ -39,8 +39,8 @@ tensorflow-cpu = "*"
 [package.source]
 type = "git"
 url = "https://github.com/sokrypton/alphafold.git"
-reference = "v2.3.4"
-resolved_reference = "6af117ea7e5190f1f72fb9585afb25c79e2f6bf4"
+reference = "v2.3.5"
+resolved_reference = "ba597e0b7d10f63e5887a5f6a71336d4168cd5d8"
 
 [[package]]
 name = "anyio"
