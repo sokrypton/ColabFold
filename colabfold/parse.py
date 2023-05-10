@@ -11,6 +11,9 @@ from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 from Bio.PDB import MMCIFIO
 from Bio.PDB.Polypeptide import standard_aa_names
 
+
+from colabfold.inputs import mk_mock_template
+
 def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
   """Parses FASTA string and returns list of strings with amino-acid sequences.
 
