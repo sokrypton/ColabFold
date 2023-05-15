@@ -4,9 +4,7 @@
 ############################################
 # imports
 ############################################
-import jax
 import requests
-import hashlib
 import tarfile
 import time
 import os
