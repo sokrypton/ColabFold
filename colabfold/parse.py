@@ -11,9 +11,6 @@ from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 from Bio.PDB import MMCIFIO
 from Bio.PDB.Polypeptide import standard_aa_names
 
-
-from colabfold.inputs import mk_mock_template
-
 def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
   """Parses FASTA string and returns list of strings with amino-acid sequences.
 
@@ -270,6 +267,7 @@ def unserialize_msa(
   List[int],
   List[Dict[str, Any]],
 ]:
+  from colabfold.inputs import mk_mock_template
   a3m_lines = a3m_lines[0].replace("\x00", "").splitlines()
   if not a3m_lines[0].startswith("#") or len(a3m_lines[0][1:].split("\t")) != 2:
     assert isinstance(query_sequence, str)
