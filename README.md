@@ -1,14 +1,5 @@
 # ColabFold - v1.5.2
 
-```diff
-+ 04Feb2023: v1.5.0 - ColabFold updated to use AlphaFold v2.3.1!
-+ 06Feb2023: v1.5.1 - fixing: --save-all/--save-recycles
-+ 18Feb2023: v1.5.2 - fixing: fixing memory leak for large proteins
-+                   - fixing: --use_dropout (random seed was not changing between recycles)
-- 29Apr2023: Amber is not working in our Notebook due to Colab update
-+ 30Apr2023: Amber is working again in our ColabFold Notebook
-
-```
 For details of what was changed in v1.5, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.5.0)!
 
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
@@ -134,6 +125,12 @@ Searches against the ColabFoldDB can be done in two different modes:
 -----------------
 **OLD Updates**
 ```diff
+  30Apr2023: Amber is working again in our ColabFold Notebook
+  29Apr2023: Amber is not working in our Notebook due to Colab update
+  18Feb2023: v1.5.2 - fixing: fixing memory leak for large proteins
+                    - fixing: --use_dropout (random seed was not changing between recycles)
+  06Feb2023: v1.5.1 - fixing: --save-all/--save-recycles
+  04Feb2023: v1.5.0 - ColabFold updated to use AlphaFold v2.3.1!
   03Jan2023: The MSA server's faulty hardware from 12/26 was replaced.
              There were intermittent failures on 12/26 and 1/3. Currently, 
              there are no known issues. Let us know if you experience any.
