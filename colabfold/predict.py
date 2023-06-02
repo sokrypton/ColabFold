@@ -319,7 +319,7 @@ def _predict(self,
     return result, prev
 
   if return_representations and fix_single_representation:
-    single_act = self._params['alphafold/alphafold_iteration/evoformer/single_activations']
+    single_act = self.params['alphafold/alphafold_iteration/evoformer/single_activations']
     single_act = jax.tree_map(lambda x:np.asarray(x, dtype=np.float16), single_act)
 
   # initialize random key
