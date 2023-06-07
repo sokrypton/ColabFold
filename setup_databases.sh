@@ -43,6 +43,9 @@ downloadFile() {
     fail "Could not download $URL to $OUTPUT"
 }
 
+# Make MMseqs2 merge the databases to avoid spamming the folder with files
+export MMSEQS_FORCE_MERGE=1
+
 if [ ! -f UNIREF30_READY ]; then
   downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/uniref30_2202.tar.gz" "uniref30_2202.tar.gz"
   tar xzvf "uniref30_2202.tar.gz"
