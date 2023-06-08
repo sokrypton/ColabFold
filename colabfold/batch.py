@@ -724,6 +724,7 @@ def get_msa_and_templates(
     use_templates: bool,
     custom_template_path: str,
     pair_mode: str,
+    pairing_strategy: str = "greedy",
     host_url: str = DEFAULT_API_SERVER,
 ) -> Tuple[
     Optional[List[str]], Optional[List[str]], List[str], List[int], List[Dict[str, Any]]
@@ -820,6 +821,7 @@ def get_msa_and_templates(
                 str(result_dir.joinpath(jobname)),
                 use_env,
                 use_pairing=True,
+                pairing_strategy=pairing_strategy,
                 host_url=host_url,
             )
         else:
@@ -1166,6 +1168,7 @@ def run(
     keep_existing_results: bool = True,
     rank_by: str = "auto",
     pair_mode: str = "unpaired_paired",
+    pairing_strategy: str = "greedy",
     data_dir: Union[str, Path] = default_data_dir,
     host_url: str = DEFAULT_API_SERVER,
     random_seed: int = 0,
@@ -1303,6 +1306,7 @@ def run(
         "max_seq": max_seq,
         "max_extra_seq": max_extra_seq,
         "pair_mode": pair_mode,
+        "pairing_strategy": pairing_strategy,
         "host_url": host_url,
         "stop_at_score": stop_at_score,
         "random_seed": random_seed,
@@ -1358,7 +1362,7 @@ def run(
             if a3m_lines is None: 
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
                 = get_msa_and_templates(jobname, query_sequence, result_dir, msa_mode, use_templates, 
-                    custom_template_path, pair_mode, host_url)
+                    custom_template_path, pair_mode, pairing_strategy, host_url)
             
             elif a3m_lines is not None: 
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
@@ -1366,7 +1370,7 @@ def run(
                 if use_templates: 
                     (_, _, _, _, template_features) \
                         = get_msa_and_templates(jobname, query_seqs_unique, result_dir, 'single_sequence', use_templates, 
-                            custom_template_path, pair_mode, host_url)
+                            custom_template_path, pair_mode, pairing_strategy, host_url)
                         
             # save a3m
             msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
