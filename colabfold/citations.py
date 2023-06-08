@@ -71,6 +71,14 @@ volume = {20},
 year = {2019},
 comment = {PDB70 database}
 }""",
+    "VanKempen2023": """@article{VanKempen2023,
+author = {van Kempen, Michel and Kim, Stephanie S and Tumescheit, Charlotte and Mirdita, Milot and Lee, Jeongjae and Gilchrist, Cameron L M and S{\"{o}}ding, Johannes and Steinegger, Martin},
+doi = {10.1038/s41587-023-01773-0},
+journal = {Nature Biotechnology},
+title = {{Fast and accurate protein structure search with Foldseek}},
+year = {2023},
+comment = {PDB100 database}
+}""",
     "Mirdita2017": """@article{Mirdita2017,
 author = {Mirdita, Milot and von den Driesch, Lars and Galiez, Clovis and Martin, Maria J. and S{\"{o}}ding, Johannes and Steinegger, Martin},
 doi = {10.1093/nar/gkw1081},
@@ -118,6 +126,8 @@ def write_bibtex(
         to_cite += ["Mirdita2017"]
     if use_env:
         to_cite += ["Mitchell2019"]
+    if use_templates:
+        to_cite += ["VanKempen2023"]
     if use_templates:
         to_cite += ["Steinegger2019"]
     if use_templates:
