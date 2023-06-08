@@ -12,10 +12,10 @@ For details of what was changed in v1.5, see [change log](https://github.com/sok
 | [AlphaFold2_batch](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/batch/AlphaFold2_batch.ipynb) | Yes | Yes | Yes | No | Yes | 
 | [AlphaFold2](https://colab.research.google.com/github/deepmind/alphafold/blob/main/notebooks/AlphaFold.ipynb) (from Deepmind) | Yes | Yes | No | Yes | No | 
 | [relax_amber](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/relax_amber.ipynb) (relax input structure) | | | | | | 
+| [ESMFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/ESMFold.ipynb) | Yes | Maybe | No | No| No |
 ||
 | **BETA (in development) notebooks** | | | | | |
 | [RoseTTAFold2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold2.ipynb) | Yes | Yes | Yes | No | WIP | 
-| [ESMFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/ESMFold.ipynb) | Yes | Maybe | No | No| No |
 | [OmegaFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/omegafold.ipynb) | Yes | Maybe | No | No| No |
 ||
 | **OLD retired notebooks** | | | | | |
