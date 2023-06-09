@@ -1,9 +1,9 @@
 # ColabFold - v1.5.2
 
 ```diff
-+ 08Jun2023: New databases! UniRef30 updated to 2302 and PDB to 230517.
-+            We now use PDB100 instead of PDB70 (see notes in the main notebook).
-+ 08Jun2023: We introduced a new default pairing strategy:
++ 12Jun2023: New databases! UniRef30 updated to 2302 and PDB to 230517.
++            We now use PDB100 instead of PDB70 (see notes in the [main](https://colabfold.com) notebook).
++ 12Jun2023: We introduced a new default pairing strategy:
 +            Previously, for multimer predictions with more than 2 chains,
 +            we only pair if all sequences taxonomically match ("complete" pairing).
 +            The new default "greedy" strategy pairs any taxonomically matching subsets.
