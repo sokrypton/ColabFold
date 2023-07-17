@@ -72,7 +72,11 @@ def predict_structure(
         ij = np.stack([i,i+L],-1)
         offset = i[:,None] - i[None,:]
         c_offset = np.abs(ij[:,None,:,None] - ij[None,:,None,:]).min((2,3))
-        return np.sign(offset) * c_offset
+        # fix
+        a = c_offset < np.abs(offset)
+        c_offset[a] = -c_offset[a]
+        return c_offset * np.sign(offset)
+
       if "multimer" in model_type:
         if model_num == 0 and seed_num == 0:
           input_features = feature_dict
