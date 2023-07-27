@@ -1,6 +1,9 @@
 # ColabFold - v1.5.2
 
 ```diff
+- 27Jul2023: ColabFold MSA server issue:
+-            We are using the backup server with old databases
+-            (UniRef30 2202/PDB70 220313) starting from ~8:30 AM CEST until we resolve the issue.
 + 12Jun2023: New databases! UniRef30 updated to 2302 and PDB to 230517.
 +            We now use PDB100 instead of PDB70 (see notes in the [main](https://colabfold.com) notebook).
 + 12Jun2023: We introduced a new default pairing strategy:
