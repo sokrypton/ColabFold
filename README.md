@@ -1,9 +1,8 @@
 # ColabFold - v1.5.2
 
 ```diff
-- 27Jul2023: ColabFold MSA server issue:
--            We are using the backup server with old databases
--            (UniRef30 2202/PDB70 220313) starting from ~8:30 AM CEST until we resolve the issue.
++ 31Jul2023: 2023/07/31: The ColabFold MSA server is back to normal
++            It was using older DB (UniRef30 2202/PDB70 220313) from 27th ~8:30 AM CEST to 31st ~11:10 AM CEST.
 + 12Jun2023: New databases! UniRef30 updated to 2302 and PDB to 230517.
 +            We now use PDB100 instead of PDB70 (see notes in the [main](https://colabfold.com) notebook).
 + 12Jun2023: We introduced a new default pairing strategy:
@@ -138,6 +137,10 @@ Searches against the ColabFoldDB can be done in two different modes:
 -----------------
 **OLD Updates**
 ```diff
+  27Jul2023: ColabFold MSA server issue:
+             We are using the backup server with old databases
+             (UniRef30 2202/PDB70 220313) starting from ~8:30 AM CEST until we resolve the issue.
+             Resolved on 31Jul2023 ~11:10 CEST.
   30Apr2023: Amber is working again in our ColabFold Notebook
   29Apr2023: Amber is not working in our Notebook due to Colab update
   18Feb2023: v1.5.2 - fixing: fixing memory leak for large proteins
