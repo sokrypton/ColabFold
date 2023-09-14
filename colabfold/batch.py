@@ -727,6 +727,7 @@ def get_msa_and_templates(
     pair_mode: str,
     pairing_strategy: str = "greedy",
     host_url: str = DEFAULT_API_SERVER,
+    software_tocken: str = "",
 ) -> Tuple[
     Optional[List[str]], Optional[List[str]], List[str], List[int], List[Dict[str, Any]]
 ]:
@@ -759,6 +760,7 @@ def get_msa_and_templates(
                     use_env,
                     use_templates=False,
                     host_url=host_url,
+                    software_tocken=software_tocken
                 )
             else:
                 a3m_lines_mmseqs2 = a3m_lines
@@ -772,6 +774,7 @@ def get_msa_and_templates(
                 use_env,
                 use_templates=True,
                 host_url=host_url,
+                software_tocken=software_tocken
             )
         if template_paths is None:
             logger.info("No template detected")
@@ -820,6 +823,7 @@ def get_msa_and_templates(
                 use_env,
                 use_pairing=False,
                 host_url=host_url,
+                software_tocken=software_tocken
             )
     else:
         a3m_lines = None
@@ -836,6 +840,7 @@ def get_msa_and_templates(
                 use_pairing=True,
                 pairing_strategy=pairing_strategy,
                 host_url=host_url,
+                software_tocken=software_tocken
             )
         else:
             # homooligomers
