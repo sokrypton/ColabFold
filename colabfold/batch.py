@@ -727,7 +727,7 @@ def get_msa_and_templates(
     pair_mode: str,
     pairing_strategy: str = "greedy",
     host_url: str = DEFAULT_API_SERVER,
-    software_tocken: str = "",
+    user_agent: str = "",
 ) -> Tuple[
     Optional[List[str]], Optional[List[str]], List[str], List[int], List[Dict[str, Any]]
 ]:
@@ -760,7 +760,7 @@ def get_msa_and_templates(
                     use_env,
                     use_templates=False,
                     host_url=host_url,
-                    software_tocken=software_tocken
+                    user_agent=user_agent,
                 )
             else:
                 a3m_lines_mmseqs2 = a3m_lines
@@ -774,7 +774,7 @@ def get_msa_and_templates(
                 use_env,
                 use_templates=True,
                 host_url=host_url,
-                software_tocken=software_tocken
+                user_agent=user_agent,
             )
         if template_paths is None:
             logger.info("No template detected")
@@ -823,7 +823,7 @@ def get_msa_and_templates(
                 use_env,
                 use_pairing=False,
                 host_url=host_url,
-                software_tocken=software_tocken
+                user_agent=user_agent,
             )
     else:
         a3m_lines = None
@@ -840,7 +840,7 @@ def get_msa_and_templates(
                 use_pairing=True,
                 pairing_strategy=pairing_strategy,
                 host_url=host_url,
-                software_tocken=software_tocken
+                user_agent=user_agent,
             )
         else:
             # homooligomers
@@ -1189,6 +1189,7 @@ def run(
     pairing_strategy: str = "greedy",
     data_dir: Union[str, Path] = default_data_dir,
     host_url: str = DEFAULT_API_SERVER,
+    user_agent: str = "",
     random_seed: int = 0,
     num_seeds: int = 1,
     recompile_padding: Union[int, float] = 10,
@@ -1326,6 +1327,7 @@ def run(
         "pair_mode": pair_mode,
         "pairing_strategy": pairing_strategy,
         "host_url": host_url,
+        "user_agent": user_agent,
         "stop_at_score": stop_at_score,
         "random_seed": random_seed,
         "num_seeds": num_seeds,
@@ -1380,7 +1382,7 @@ def run(
             if a3m_lines is None:
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
                 = get_msa_and_templates(jobname, query_sequence, a3m_lines, result_dir, msa_mode, use_templates,
-                    custom_template_path, pair_mode, pairing_strategy, host_url)
+                    custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
 
             elif a3m_lines is not None:
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
@@ -1388,7 +1390,7 @@ def run(
                 if use_templates:
                     (_, _, _, _, template_features) \
                         = get_msa_and_templates(jobname, query_seqs_unique, a3m_lines, result_dir, 'single_sequence', use_templates,
-                            custom_template_path, pair_mode, pairing_strategy, host_url)
+                            custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
 
             # save a3m
             msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
@@ -1790,6 +1792,8 @@ def main():
     if args.amber and args.num_relax == 0:
         args.num_relax = args.num_models * args.num_seeds
 
+    user_agent = f"colabfold/{version}"
+
     run(
         queries=queries,
         result_dir=args.results,
@@ -1809,6 +1813,7 @@ def main():
         pair_mode=args.pair_mode,
         data_dir=data_dir,
         host_url=args.host_url,
+        user_agent=user_agent,
         random_seed=args.random_seed,
         num_seeds=args.num_seeds,
         stop_at_score=args.stop_at_score,

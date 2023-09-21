@@ -68,9 +68,15 @@ TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaini
 
 def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
                 use_templates=False, filter=None, use_pairing=False, pairing_strategy="greedy",
-                software_tocken: str="",
-                host_url="https://api.colabfold.com") -> Tuple[List[str], List[str]]:
+                host_url="https://api.colabfold.com",
+                user_agent: str = "") -> Tuple[List[str], List[str]]:
   submission_endpoint = "ticket/pair" if use_pairing else "ticket/msa"
+
+  headers = {}
+  if user_agent != "":
+    headers['User-Agent'] = user_agent
+  else:
+    logger.warning("No user agent specified. Please set a user agent (e.g., 'toolname/version contact@email') to help us debug in case of problems. This warning will become an error in the future.")
 
   def submit(seqs, mode, N=101):
     n, query = N, ""
@@ -83,7 +89,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
       try:
         # https://requests.readthedocs.io/en/latest/user/advanced/#advanced
         # "good practice to set connect timeouts to slightly larger than a multiple of 3"
-        res = requests.post(f'{host_url}/{submission_endpoint}', data={'q':query,'mode': mode,'software':software_tocken}, timeout=6.02)
+        res = requests.post(f'{host_url}/{submission_endpoint}', data={ 'q': query, 'mode': mode }, timeout=6.02, headers=headers)
       except requests.exceptions.Timeout:
         logger.warning("Timeout while submitting to MSA server. Retrying...")
         continue
@@ -108,7 +114,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
     while True:
       error_count = 0
       try:
-        res = requests.get(f'{host_url}/ticket/{ID}', timeout=6.02)
+        res = requests.get(f'{host_url}/ticket/{ID}', timeout=6.02, headers=headers)
       except requests.exceptions.Timeout:
         logger.warning("Timeout while fetching status from MSA server. Retrying...")
         continue
@@ -132,7 +138,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
     error_count = 0
     while True:
       try:
-        res = requests.get(f'{host_url}/result/download/{ID}', timeout=6.02)
+        res = requests.get(f'{host_url}/result/download/{ID}', timeout=6.02, headers=headers)
       except requests.exceptions.Timeout:
         logger.warning("Timeout while fetching result from MSA server. Retrying...")
         continue
@@ -271,7 +277,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
           try:
             # https://requests.readthedocs.io/en/latest/user/advanced/#advanced
             # "good practice to set connect timeouts to slightly larger than a multiple of 3"
-            response = requests.get(f"{host_url}/template/{TMPL_LINE}", stream=True, timeout=6.02)
+            response = requests.get(f"{host_url}/template/{TMPL_LINE}", stream=True, timeout=6.02, headers=headers)
           except requests.exceptions.Timeout:
             logger.warning("Timeout while submitting to template server. Retrying...")
             continue
