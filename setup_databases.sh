@@ -71,16 +71,17 @@ if [ ! -f COLABDB_READY ]; then
 fi
 
 if [ ! -f PDB_READY ]; then
-  downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/pdb70_220313.fasta.gz" "pdb70_220313.fasta.gz"
-  mmseqs createdb pdb70_220313.fasta.gz pdb70_220313
-  mmseqs createindex pdb70_220313 tmp3 --remove-tmp-files 1
+  downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/pdb100_230517.fasta.gz" "pdb100_230517.fasta.gz"
+  mmseqs createdb pdb100_230517.fasta.gz pdb100_230517
+  mmseqs createindex pdb100_230517 tmp3 --remove-tmp-files 1
   touch PDB_READY
 fi
 
-if [ ! -f PDB70_READY ]; then
-  downloadFile "https://wwwuser.gwdg.de/~compbiol/data/hhsuite/databases/hhsuite_dbs/pdb70_from_mmcif_220313.tar.gz" "pdb70_from_mmcif_220313.tar.gz"
-  tar xzvf pdb70_from_mmcif_220313.tar.gz pdb70_a3m.ffdata pdb70_a3m.ffindex
-  touch PDB70_READY
+
+if [ ! -f PDB100_READY ]; then
+  downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/pdb100_foldseek_230517.tar.gz" "pdb100_foldseek_230517.tar.gz"
+  tar xzvf pdb100_foldseek_230517.tar.gz pdb100_a3m.ffdata pdb100_a3m.ffindex
+  touch PDB100_READY
 fi
 
 if [ ! -f PDB_MMCIF_READY ]; then
