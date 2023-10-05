@@ -79,7 +79,7 @@ fi
 
 
 if [ ! -f PDB100_READY ]; then
-  downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/pdb100_foldseek_230517.tar.gz" "pdb100_foldseek_230517.tar.gz"
+  downloadFile "https://wwwuser.gwdg.de/~compbiol/data/hhsuite/databases/hhsuite_dbs/pdb100_foldseek_230517.tar.gz" "pdb100_foldseek_230517.tar.gz"
   tar xzvf pdb100_foldseek_230517.tar.gz pdb100_a3m.ffdata pdb100_a3m.ffindex
   touch PDB100_READY
 fi
