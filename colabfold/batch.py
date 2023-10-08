@@ -1389,7 +1389,7 @@ def run(
                 = unserialize_msa(a3m_lines, query_sequence)
                 if use_templates:
                     (_, _, _, _, template_features) \
-                        = get_msa_and_templates(jobname, query_seqs_unique, a3m_lines, result_dir, 'single_sequence', use_templates,
+                        = get_msa_and_templates(jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
                             custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
 
             # save a3m
