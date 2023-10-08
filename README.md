@@ -17,24 +17,24 @@ For details of what was changed in v1.5, see [change log](https://github.com/sok
 
 ### Making Protein folding accessible to all via Google Colab!
 
-| Notebooks | monomers | complexes | mmseqs2 | jackhmmer | templates   |
-| :-------- | -------  | --------- | ------- | --------- | ----------- |
-| [AlphaFold2_mmseqs2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb) | Yes | Yes | Yes | No | Yes | 
-| [AlphaFold2_batch](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/batch/AlphaFold2_batch.ipynb) | Yes | Yes | Yes | No | Yes | 
-| [AlphaFold2](https://colab.research.google.com/github/deepmind/alphafold/blob/main/notebooks/AlphaFold.ipynb) (from Deepmind) | Yes | Yes | No | Yes | No | 
-| [relax_amber](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/relax_amber.ipynb) (relax input structure) | | | | | | 
-| [ESMFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/ESMFold.ipynb) | Yes | Maybe | No | No| No |
-||
-| **BETA (in development) notebooks** | | | | | |
-| [RoseTTAFold2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold2.ipynb) | Yes | Yes | Yes | No | WIP | 
-| [OmegaFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/omegafold.ipynb) | Yes | Maybe | No | No| No |
-||
-| **OLD retired notebooks** | | | | | |
-| [RoseTTAFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold.ipynb) | Yes | No | Yes | No | No | 
-| [AlphaFold2_advanced](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold2_advanced.ipynb) | Yes | Yes | Yes | Yes | No |
-| [AlphaFold2_complexes](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold2_complexes.ipynb) | No | Yes | No | No | No | 
-| [AlphaFold2_jackhmmer](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold_wJackhmmer.ipynb) | Yes | No | Yes | Yes | No |
-| [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb) |
+| Notebooks                                                                                                                                        | monomers | complexes | mmseqs2 | jackhmmer | templates |
+| :----------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------- | ------- | --------- | --------- |
+| [AlphaFold2_mmseqs2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb)                                    | Yes      | Yes       | Yes     | No        | Yes       |
+| [AlphaFold2_batch](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/batch/AlphaFold2_batch.ipynb)                          | Yes      | Yes       | Yes     | No        | Yes       |
+| [AlphaFold2](https://colab.research.google.com/github/deepmind/alphafold/blob/main/notebooks/AlphaFold.ipynb) (from Deepmind)                    | Yes      | Yes       | No      | Yes       | No        |
+| [relax_amber](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/relax_amber.ipynb) (relax input structure)             |          |           |         |           |           |
+| [ESMFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/ESMFold.ipynb)                                                  | Yes      | Maybe     | No      | No        | No        |
+|                                                                                                                                                  |
+| **BETA (in development) notebooks**                                                                                                              |          |           |         |           |           |
+| [RoseTTAFold2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold2.ipynb)                                        | Yes      | Yes       | Yes     | No        | WIP       |
+| [OmegaFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/omegafold.ipynb)                                         | Yes      | Maybe     | No      | No        | No        |
+|                                                                                                                                                  |
+| **OLD retired notebooks**                                                                                                                        |          |           |         |           |           |
+| [RoseTTAFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold.ipynb)                                          | Yes      | No        | Yes     | No        | No        |
+| [AlphaFold2_advanced](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold2_advanced.ipynb)                     | Yes      | Yes       | Yes     | Yes       | No        |
+| [AlphaFold2_complexes](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold2_complexes.ipynb)                   | No       | Yes       | No      | No        | No        |
+| [AlphaFold2_jackhmmer](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold_wJackhmmer.ipynb)                   | Yes      | No        | Yes     | Yes       | No        |
+| [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb)   |
 | [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb) |
 
 
@@ -64,7 +64,7 @@ For details of what was changed in v1.5, see [change log](https://github.com/sok
     color n2, b < 70;  color n3, b < 50
     ```
   - In pymol for RoseTTAFold structures: `spectrum b, red_yellow_green_cyan_blue, minimum=0.5, maximum=0.9`
-- What is the difference between the AlphaFold2_advanced and AlphaFold2_mmseqs2 (_batch) notebook for complex prediction? 
+- What is the difference between the AlphaFold2_advanced and AlphaFold2_mmseqs2 (_batch) notebook for complex prediction?
   - We currently have two different ways to predict protein complexes: (1) using the AlphaFold2 model with residue index jump and (2) using the AlphaFold2-multimer model. AlphaFold2_advanced supports (1) and AlphaFold2_mmseqs2 (_batch) (2).
 - What is the difference between localcolabfold and the pip installable colabfold_batch?
   -  [LocalColabFold](https://github.com/YoshitakaMo/localcolabfold) is an installer script designed to make ColabFold functionality available on local users' machines. It supports wide range of operating systems, such as Windows 10 or later (using Windows Subsystem for Linux 2), macOS, and Linux.
@@ -73,26 +73,29 @@ For details of what was changed in v1.5, see [change log](https://github.com/sok
 
 
 ### Running locally
-For instructions on how to install ColabFold locally see: [localcolabfold](https://github.com/YoshitakaMo/localcolabfold) 
+For instructions on how to install ColabFold locally see: [localcolabfold](https://github.com/YoshitakaMo/localcolabfold)
 
 ### Generating MSAs for large scale structure/complex predictions
 
-First create a directory for the databases on a disk with sufficient storage (940GB (!)). Depending on where you are, this will take a couple of hours: 
+First create a directory for the databases on a disk with sufficient storage (940GB (!)). Depending on where you are, this will take a couple of hours:
+
+Note: [MMseqs2 `71dd32ec43e3ac4dabf111bbc4b124f1c66a85f1` (May 28, 2023)](https://github.com/soedinglab/MMseqs2/archive/71dd32ec43e3ac4dabf111bbc4b124f1c66a85f1.zip) is used to create the databases and perform sequece search in the ColabFold MSA server. Please use this version if you want to obtain the same MSAs as the server.
 
 ```shell
 ./setup_databases.sh /path/to/db_folder
 ```
 
-Download and unpack mmseqs (Note: The required features aren't in a release yet, so currently, you need to compile the latest version from source yourself or use a [static binary](https://mmseqs.com/latest/mmseqs-linux-avx2.tar.gz)). If mmseqs is not in your `PATH`, replace `mmseqs` below with the path to your mmseqs:
+
+If mmseqs is not in your `PATH`, add `--mmseqs <path to mmseqs>` to your mmseqs in `colabfold_search`:
 
 ```shell
 # This needs a lot of CPU
-colabfold_search input_sequences.fasta /path/to/db_folder msas
+colabfold_search --mmseqs /path/to/bin/mmseqs input_sequences.fasta /path/to/db_folder msas
 # This needs a GPU
 colabfold_batch msas predictions
 ```
 
-This will create intermediate folder `msas` that contains all input multiple sequence alignments formated as a3m files and a `predictions` folder with all predicted pdb,json and png files. 
+This will create intermediate folder `msas` that contains all input multiple sequence alignments formated as a3m files and a `predictions` folder with all predicted pdb,json and png files.
 
 Searches against the ColabFoldDB can be done in two different modes:
 
@@ -101,7 +104,7 @@ Searches against the ColabFoldDB can be done in two different modes:
 (2) single query searches require the full index (the .idx files) to be kept in memory. This can be done with e.g. by using [vmtouch](https://github.com/hoytech/vmtouch). Thus, this type of search requires a machine with at least 768GB RAM for the ColabfoldDB. If the index is in memory use to `--db-load-mode 3` parameter in `colabfold_search` to avoid index loading overhead. If they database is already in memory use `--db-load-mode 2` option.
 
 ### Tutorials & Presentations
-- ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI). 
+- ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI).
 
 ### Projects based on ColabFold or helpers
 
@@ -114,7 +117,7 @@ Searches against the ColabFoldDB can be done in two different modes:
 - [AlphaPickle: making AlphaFold2/ColabFold outputs interpretable](https://colab.research.google.com/github/mattarnoldbio/alphapickle/blob/main/AlphaPickle.ipynb) by Matt Arnold
 
 ### Acknowledgments
-- We would like to thank the [RoseTTAFold](https://github.com/RosettaCommons/RoseTTAFold) and [AlphaFold](https://github.com/deepmind/alphafold) team for doing an excellent job open sourcing the software. 
+- We would like to thank the [RoseTTAFold](https://github.com/RosettaCommons/RoseTTAFold) and [AlphaFold](https://github.com/deepmind/alphafold) team for doing an excellent job open sourcing the software.
 - Also credit to [David Koes](https://github.com/dkoes) for his awesome [py3Dmol](https://3dmol.csb.pitt.edu/) plugin, without whom these notebooks would be quite boring!
 - A colab by Sergey Ovchinnikov (@sokrypton), Milot Mirdita (@milot_mirdita) and Martin Steinegger (@thesteinegger).
 
@@ -148,25 +151,25 @@ Searches against the ColabFoldDB can be done in two different modes:
   06Feb2023: v1.5.1 - fixing: --save-all/--save-recycles
   04Feb2023: v1.5.0 - ColabFold updated to use AlphaFold v2.3.1!
   03Jan2023: The MSA server's faulty hardware from 12/26 was replaced.
-             There were intermittent failures on 12/26 and 1/3. Currently, 
+             There were intermittent failures on 12/26 and 1/3. Currently,
              there are no known issues. Let us know if you experience any.
   10Oct2022: Bugfix: random_seed was not being used for alphafold-multimer.
              Same structure was returned regardless of defined seed. This
              has been fixed!
   13Jul2022: We have set up a new ColabFold MSA server provided by Korean
-             Bioinformation Center. It provides accelerated MSA generation, 
+             Bioinformation Center. It provides accelerated MSA generation,
              we updated the UniRef30 to 2022_02 and PDB/PDB70 to 220313.
-  11Mar2022: We use in default AlphaFold-multimer-v2 weights for complex modeling. 
+  11Mar2022: We use in default AlphaFold-multimer-v2 weights for complex modeling.
              We also offer the old complex modes "AlphaFold-ptm" or "AlphaFold-multimer-v1"
-  04Mar2022: ColabFold now uses a much more powerful server for MSAs and searches through the ColabFoldDB instead of BFD/MGnify. 
+  04Mar2022: ColabFold now uses a much more powerful server for MSAs and searches through the ColabFoldDB instead of BFD/MGnify.
              Please let us know if you observe any issues.
-  26Jan2022: AlphaFold2_mmseqs2, AlphaFold2_batch and colabfold_batch's multimer complexes predictions are 
+  26Jan2022: AlphaFold2_mmseqs2, AlphaFold2_batch and colabfold_batch's multimer complexes predictions are
              now in default reranked by iptmscore*0.8+ptmscore*0.2 instead of ptmscore
   16Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
   17Aug2021: If you see any errors, please report them.
   17Aug2021: We are still debugging the MSA generation procedure...
   20Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
-             To avoid Google Colab from crashing, for large MSA we did -diff 1000 to get 
+             To avoid Google Colab from crashing, for large MSA we did -diff 1000 to get
              1K most diverse sequences. This caused some large MSA to degrade in quality,
              as sequences close to query were being merged to single representive.
              We are working on updating the server (today) to fix this, by making sure
@@ -174,7 +177,7 @@ Searches against the ColabFoldDB can be done in two different modes:
              We'll post update here when update is complete.
   21Aug2021  The MSA issues should now be resolved! Please report any errors you see.
              In short, to reduce MSA size we filter (qsc > 0.8, id > 0.95) and take 3K
-             most diverse sequences at different qid (sequence identity to query) intervals 
+             most diverse sequences at different qid (sequence identity to query) intervals
              and merge them. More specifically 3K sequences at qid at (0→0.2),(0.2→0.4),
              (0.4→0.6),(0.6→0.8) and (0.8→1). If you submitted your sequence between
              16Aug2021 and 20Aug2021, we recommend submitting again for best results!
@@ -183,13 +186,13 @@ Searches against the ColabFoldDB can be done in two different modes:
              the results. Other notebooks that do not use_templates are unaffected.
   21Aug2021  The templates issue is resolved!
   11Nov2021  [AlphaFold2_mmseqs2] now uses Alphafold-multimer for complex (homo/hetero-oligomer) modeling.
-             Use [AlphaFold2_advanced] notebook for the old complex prediction logic. 
+             Use [AlphaFold2_advanced] notebook for the old complex prediction logic.
   11Nov2021  ColabFold can be installed locally using pip!
   14Nov2021  Template based predictions works again in the Alphafold2_mmseqs2 notebook.
-  14Nov2021  WARNING "Single-sequence" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken 
+  14Nov2021  WARNING "Single-sequence" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken
              starting 11Nov2021. The MMseqs2 MSA was being used regardless of selection.
   14Nov2021  "Single-sequence" mode is now fixed.
-  20Nov2021  WARNING "AMBER" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken 
+  20Nov2021  WARNING "AMBER" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken
              starting 11Nov2021. Unrelaxed proteins were returned instead.
   20Nov2021  "AMBER" is fixed thanks to Kevin Pan
 ```
