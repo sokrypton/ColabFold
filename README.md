@@ -28,6 +28,7 @@ For details of what was changed in v1.5, see [change log](https://github.com/sok
 | **BETA (in development) notebooks**                                                                                                              |          |           |         |           |           |
 | [RoseTTAFold2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold2.ipynb)                                        | Yes      | Yes       | Yes     | No        | WIP       |
 | [OmegaFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/omegafold.ipynb)                                         | Yes      | Maybe     | No      | No        | No        |
+| [AlphaFold2_advanced_v2](https://colab.research.google.com/github/sokrypton/ColabDesign/blob/gamma/af/examples/predict.ipynb) (new experimental notebook)                  | Yes      | Yes       | Yes     | No        | Yes       |
 |                                                                                                                                                  |
 | **OLD retired notebooks**                                                                                                                        |          |           |         |           |           |
 | [RoseTTAFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold.ipynb)                                          | Yes      | No        | Yes     | No        | No        |
