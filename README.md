@@ -1,16 +1,5 @@
 # ColabFold - v1.5.2
 
-```diff
-+ 31Jul2023: 2023/07/31: The ColabFold MSA server is back to normal
-+            It was using older DB (UniRef30 2202/PDB70 220313) from 27th ~8:30 AM CEST to 31st ~11:10 AM CEST.
-+ 12Jun2023: New databases! UniRef30 updated to 2302 and PDB to 230517.
-+            We now use PDB100 instead of PDB70 (see notes in the [main](https://colabfold.com) notebook).
-+ 12Jun2023: We introduced a new default pairing strategy:
-+            Previously, for multimer predictions with more than 2 chains,
-+            we only pair if all sequences taxonomically match ("complete" pairing).
-+            The new default "greedy" strategy pairs any taxonomically matching subsets.
-```
-
 For details of what was changed in v1.5, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.5.0)!
 
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
@@ -29,9 +18,8 @@ For details of what was changed in v1.5, see [change log](https://github.com/sok
 | [RoseTTAFold2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold2.ipynb)                                        | Yes      | Yes       | Yes     | No        | WIP       |
 | [OmegaFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/omegafold.ipynb)                                         | Yes      | Maybe     | No      | No        | No        |
 | [AlphaFold2_advanced_v2](https://colab.research.google.com/github/sokrypton/ColabDesign/blob/gamma/af/examples/predict.ipynb) (new experimental notebook)                  | Yes      | Yes       | Yes     | No        | Yes       |
-|                                                                                                                                                  |
-| **[OLD retired notebooks](https://github.com/sokrypton/ColabFold/wiki/old_notebooks)**                                                                                                                        |          |           |         |           |           |
 
+Check the wiki page [old retired notebooks](https://github.com/sokrypton/ColabFold/wiki/Old-retired-notebooks) for unsupported notebooks.
 
 ### FAQ
 - Where can I chat with other ColabFold users?
@@ -65,7 +53,10 @@ For details of what was changed in v1.5, see [change log](https://github.com/sok
   -  [LocalColabFold](https://github.com/YoshitakaMo/localcolabfold) is an installer script designed to make ColabFold functionality available on local users' machines. It supports wide range of operating systems, such as Windows 10 or later (using Windows Subsystem for Linux 2), macOS, and Linux.
 - Is there a way to amber-relax structures without having to rerun alphafold/colabfold from scratch?
   - Yes, see this [notebook](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/relax_amber.ipynb).
-
+- Where can I find the old notebooks that were previously developed and are now retired?
+  - You can find the list of retired notebooks in the [old retired notebooks](https://github.com/sokrypton/ColabFold/wiki/Old-retired-notebooks) wiki page.
+- Where can I find the history of MSA Server Databases used in ColabFold?
+  - You can view the database version history on the [MSA Server Database History](https://github.com/sokrypton/ColabFold/wiki/MSA-Server-Database-History) wiki page.
 
 ### Running locally
 For instructions on how to install ColabFold locally see: [localcolabfold](https://github.com/YoshitakaMo/localcolabfold)
@@ -135,10 +126,18 @@ Searches against the ColabFoldDB can be done in two different modes:
 -----------------
 **OLD Updates**
 ```diff
+  31Jul2023: 2023/07/31: The ColabFold MSA server is back to normal
+             It was using older DB (UniRef30 2202/PDB70 220313) from 27th ~8:30 AM CEST to 31st ~11:10 AM CEST.
   27Jul2023: ColabFold MSA server issue:
              We are using the backup server with old databases
              (UniRef30 2202/PDB70 220313) starting from ~8:30 AM CEST until we resolve the issue.
              Resolved on 31Jul2023 ~11:10 CEST.
+  12Jun2023: New databases! UniRef30 updated to 2302 and PDB to 230517.
+             We now use PDB100 instead of PDB70 (see notes in the [main](https://colabfold.com) notebook).
+  12Jun2023: We introduced a new default pairing strategy:
+             Previously, for multimer predictions with more than 2 chains,
+             we only pair if all sequences taxonomically match ("complete" pairing).
+             The new default "greedy" strategy pairs any taxonomically matching subsets.
   30Apr2023: Amber is working again in our ColabFold Notebook
   29Apr2023: Amber is not working in our Notebook due to Colab update
   18Feb2023: v1.5.2 - fixing: fixing memory leak for large proteins
