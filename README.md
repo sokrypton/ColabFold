@@ -30,13 +30,7 @@ For details of what was changed in v1.5, see [change log](https://github.com/sok
 | [OmegaFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/omegafold.ipynb)                                         | Yes      | Maybe     | No      | No        | No        |
 | [AlphaFold2_advanced_v2](https://colab.research.google.com/github/sokrypton/ColabDesign/blob/gamma/af/examples/predict.ipynb) (new experimental notebook)                  | Yes      | Yes       | Yes     | No        | Yes       |
 |                                                                                                                                                  |
-| **OLD retired notebooks**                                                                                                                        |          |           |         |           |           |
-| [RoseTTAFold](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/RoseTTAFold.ipynb)                                          | Yes      | No        | Yes     | No        | No        |
-| [AlphaFold2_advanced](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold2_advanced.ipynb)                     | Yes      | Yes       | Yes     | Yes       | No        |
-| [AlphaFold2_complexes](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold2_complexes.ipynb)                   | No       | Yes       | No      | No        | No        |
-| [AlphaFold2_jackhmmer](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/AlphaFold_wJackhmmer.ipynb)                   | Yes      | No        | Yes     | Yes       | No        |
-| [AlphaFold2_noTemplates_noMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_noMD.ipynb)   |
-| [AlphaFold2_noTemplates_yesMD](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/verbose/alphafold_noTemplates_yesMD.ipynb) |
+| **[OLD retired notebooks](https://github.com/sokrypton/ColabFold/wiki/old_notebooks)**                                                                                                                        |          |           |         |           |           |
 
 
 ### FAQ
