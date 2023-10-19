@@ -1401,10 +1401,10 @@ def run(
     config_out_file.write_text(json.dumps(config, indent=4))
     use_env = "env" in msa_mode
     use_msa = "mmseqs2" in msa_mode
-    use_amber = num_relax > 0
+    use_amber = num_models > 0 and num_relax > 0
 
     bibtex_file = write_bibtex(
-        model_type, use_msa, use_env, use_templates, use_amber, result_dir
+        model_type if num_models > 0 else "", use_msa, use_env, use_templates, use_amber, result_dir
     )
 
     if pdb_hit_file is not None:
@@ -1444,18 +1444,30 @@ def run(
         # generate MSA (a3m_lines) and templates
         ###########################################
         try:
-            if a3m_lines is None:
-                (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
-                = get_msa_and_templates(jobname, query_sequence, a3m_lines, result_dir, msa_mode, use_templates,
-                    custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+            pickled_msa_and_templates = result_dir.joinpath(f"{jobname}.pickle")
+            if pickled_msa_and_templates.is_file():
+                with open(pickled_msa_and_templates, 'rb') as f:
+                    (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) = pickle.load(f)
+                logger.info(f"Loaded {pickled_msa_and_templates}")
 
-            elif a3m_lines is not None:
-                (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
-                = unserialize_msa(a3m_lines, query_sequence)
-                if use_templates:
-                    (_, _, _, _, template_features) \
-                        = get_msa_and_templates(jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
-                            custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+            else:
+                if a3m_lines is None:
+                    (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
+                    = get_msa_and_templates(jobname, query_sequence, a3m_lines, result_dir, msa_mode, use_templates,
+                        custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+
+                elif a3m_lines is not None:
+                    (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
+                    = unserialize_msa(a3m_lines, query_sequence)
+                    if use_templates:
+                        (_, _, _, _, template_features) \
+                            = get_msa_and_templates(jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
+                                custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+
+                if num_models == 0:
+                    with open(pickled_msa_and_templates, 'wb') as f:
+                        pickle.dump((unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features), f)
+                    logger.info(f"Saved {pickled_msa_and_templates}")
 
             # save a3m
             msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
@@ -1481,94 +1493,11 @@ def run(
             logger.exception(f"Could not generate input features {jobname}: {e}")
             continue
 
-        ######################
-        # predict structures
-        ######################
-        try:
-            # get list of lengths
-            query_sequence_len_array = sum([[len(x)] * y
-                for x,y in zip(query_seqs_unique, query_seqs_cardinality)],[])
-
-            # decide how much to pad (to avoid recompiling)
-            if seq_len > pad_len:
-                if isinstance(recompile_padding, float):
-                    pad_len = math.ceil(seq_len * recompile_padding)
-                else:
-                    pad_len = seq_len + recompile_padding
-                pad_len = min(pad_len, max_len)
-
-            # prep model and params
-            if first_job:
-                # if one job input adjust max settings
-                if len(queries) == 1 and msa_mode != "single_sequence":
-                    # get number of sequences
-                    if "msa_mask" in feature_dict:
-                        num_seqs = int(sum(feature_dict["msa_mask"].max(-1) == 1))
-                    else:
-                        num_seqs = int(len(feature_dict["msa"]))
-
-                    if use_templates: num_seqs += 4
-
-                    # adjust max settings
-                    max_seq = min(num_seqs, max_seq)
-                    max_extra_seq = max(min(num_seqs - max_seq, max_extra_seq), 1)
-                    logger.info(f"Setting max_seq={max_seq}, max_extra_seq={max_extra_seq}")
-
-                model_runner_and_params = load_models_and_params(
-                    num_models=num_models,
-                    use_templates=use_templates,
-                    num_recycles=num_recycles,
-                    num_ensemble=num_ensemble,
-                    model_order=model_order,
-                    model_suffix=model_suffix,
-                    data_dir=data_dir,
-                    stop_at_score=stop_at_score,
-                    rank_by=rank_by,
-                    use_dropout=use_dropout,
-                    max_seq=max_seq,
-                    max_extra_seq=max_extra_seq,
-                    use_cluster_profile=use_cluster_profile,
-                    recycle_early_stop_tolerance=recycle_early_stop_tolerance,
-                    use_fuse=use_fuse,
-                    use_bfloat16=use_bfloat16,
-                    save_all=save_all,
-                )
-                first_job = False
-
-            results = predict_structure(
-                prefix=jobname,
-                result_dir=result_dir,
-                feature_dict=feature_dict,
-                is_complex=is_complex,
-                use_templates=use_templates,
-                sequences_lengths=query_sequence_len_array,
-                pad_len=pad_len,
-                model_type=model_type,
-                model_runner_and_params=model_runner_and_params,
-                num_relax=num_relax,
-                rank_by=rank_by,
-                stop_at_score=stop_at_score,
-                prediction_callback=prediction_callback,
-                use_gpu_relax=use_gpu_relax,
-                random_seed=random_seed,
-                num_seeds=num_seeds,
-                save_all=save_all,
-                save_single_representations=save_single_representations,
-                save_pair_representations=save_pair_representations,
-                save_recycles=save_recycles,
-            )
-            result_files = results["result_files"]
-            ranks.append(results["rank"])
-            metrics.append(results["metric"])
-
-        except RuntimeError as e:
-            # This normally happens on OOM. TODO: Filter for the specific OOM error message
-            logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
-            continue
-
         ###############
-        # save plots
+        # save plots not requiring prediction
         ###############
+
+        result_files = []
 
         # make msa plot
         msa_plot = plot_msa_v2(feature_dict, dpi=dpi)
@@ -1577,37 +1506,6 @@ def run(
         msa_plot.close()
         result_files.append(coverage_png)
 
-        # load the scores
-        scores = []
-        for r in results["rank"][:5]:
-            scores_file = result_dir.joinpath(f"{jobname}_scores_{r}.json")
-            with scores_file.open("r") as handle:
-                scores.append(json.load(handle))
-
-        # write alphafold-db format (pAE)
-        if "pae" in scores[0]:
-          af_pae_file = result_dir.joinpath(f"{jobname}_predicted_aligned_error_v1.json")
-          af_pae_file.write_text(json.dumps({
-              "predicted_aligned_error":scores[0]["pae"],
-              "max_predicted_aligned_error":scores[0]["max_pae"]}))
-          result_files.append(af_pae_file)
-
-          # make pAE plots
-          paes_plot = plot_paes([np.asarray(x["pae"]) for x in scores],
-              Ls=query_sequence_len_array, dpi=dpi)
-          pae_png = result_dir.joinpath(f"{jobname}_pae.png")
-          paes_plot.savefig(str(pae_png), bbox_inches='tight')
-          paes_plot.close()
-          result_files.append(pae_png)
-
-        # make pLDDT plot
-        plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
-            Ls=query_sequence_len_array, dpi=dpi)
-        plddt_png = result_dir.joinpath(f"{jobname}_plddt.png")
-        plddt_plot.savefig(str(plddt_png), bbox_inches='tight')
-        plddt_plot.close()
-        result_files.append(plddt_png)
-
         if use_templates:
             templates_file = result_dir.joinpath(f"{jobname}_template_domain_names.json")
             templates_file.write_text(json.dumps(domain_names))
@@ -1615,6 +1513,127 @@ def run(
 
         result_files.append(result_dir.joinpath(jobname + ".a3m"))
         result_files += [bibtex_file, config_out_file]
+
+        ######################
+        # predict structures
+        ######################
+        if num_models > 0:
+            try:
+                # get list of lengths
+                query_sequence_len_array = sum([[len(x)] * y
+                    for x,y in zip(query_seqs_unique, query_seqs_cardinality)],[])
+
+                # decide how much to pad (to avoid recompiling)
+                if seq_len > pad_len:
+                    if isinstance(recompile_padding, float):
+                        pad_len = math.ceil(seq_len * recompile_padding)
+                    else:
+                        pad_len = seq_len + recompile_padding
+                    pad_len = min(pad_len, max_len)
+
+                # prep model and params
+                if first_job:
+                    # if one job input adjust max settings
+                    if len(queries) == 1 and msa_mode != "single_sequence":
+                        # get number of sequences
+                        if "msa_mask" in feature_dict:
+                            num_seqs = int(sum(feature_dict["msa_mask"].max(-1) == 1))
+                        else:
+                            num_seqs = int(len(feature_dict["msa"]))
+
+                        if use_templates: num_seqs += 4
+
+                        # adjust max settings
+                        max_seq = min(num_seqs, max_seq)
+                        max_extra_seq = max(min(num_seqs - max_seq, max_extra_seq), 1)
+                        logger.info(f"Setting max_seq={max_seq}, max_extra_seq={max_extra_seq}")
+
+                    model_runner_and_params = load_models_and_params(
+                        num_models=num_models,
+                        use_templates=use_templates,
+                        num_recycles=num_recycles,
+                        num_ensemble=num_ensemble,
+                        model_order=model_order,
+                        model_suffix=model_suffix,
+                        data_dir=data_dir,
+                        stop_at_score=stop_at_score,
+                        rank_by=rank_by,
+                        use_dropout=use_dropout,
+                        max_seq=max_seq,
+                        max_extra_seq=max_extra_seq,
+                        use_cluster_profile=use_cluster_profile,
+                        recycle_early_stop_tolerance=recycle_early_stop_tolerance,
+                        use_fuse=use_fuse,
+                        use_bfloat16=use_bfloat16,
+                        save_all=save_all,
+                    )
+                    first_job = False
+
+                results = predict_structure(
+                    prefix=jobname,
+                    result_dir=result_dir,
+                    feature_dict=feature_dict,
+                    is_complex=is_complex,
+                    use_templates=use_templates,
+                    sequences_lengths=query_sequence_len_array,
+                    pad_len=pad_len,
+                    model_type=model_type,
+                    model_runner_and_params=model_runner_and_params,
+                    num_relax=num_relax,
+                    rank_by=rank_by,
+                    stop_at_score=stop_at_score,
+                    prediction_callback=prediction_callback,
+                    use_gpu_relax=use_gpu_relax,
+                    random_seed=random_seed,
+                    num_seeds=num_seeds,
+                    save_all=save_all,
+                    save_single_representations=save_single_representations,
+                    save_pair_representations=save_pair_representations,
+                    save_recycles=save_recycles,
+                )
+                result_files += results["result_files"]
+                ranks.append(results["rank"])
+                metrics.append(results["metric"])
+
+            except RuntimeError as e:
+                # This normally happens on OOM. TODO: Filter for the specific OOM error message
+                logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
+                continue
+
+            ###############
+            # save prediction plots
+            ###############
+
+            # load the scores
+            scores = []
+            for r in results["rank"][:5]:
+                scores_file = result_dir.joinpath(f"{jobname}_scores_{r}.json")
+                with scores_file.open("r") as handle:
+                    scores.append(json.load(handle))
+
+            # write alphafold-db format (pAE)
+            if "pae" in scores[0]:
+                af_pae_file = result_dir.joinpath(f"{jobname}_predicted_aligned_error_v1.json")
+                af_pae_file.write_text(json.dumps({
+                    "predicted_aligned_error":scores[0]["pae"],
+                    "max_predicted_aligned_error":scores[0]["max_pae"]}))
+                result_files.append(af_pae_file)
+
+            # make pAE plots
+            paes_plot = plot_paes([np.asarray(x["pae"]) for x in scores],
+                Ls=query_sequence_len_array, dpi=dpi)
+            pae_png = result_dir.joinpath(f"{jobname}_pae.png")
+            paes_plot.savefig(str(pae_png), bbox_inches='tight')
+            paes_plot.close()
+            result_files.append(pae_png)
+
+            # make pLDDT plot
+            plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
+                Ls=query_sequence_len_array, dpi=dpi)
+            plddt_png = result_dir.joinpath(f"{jobname}_plddt.png")
+            plddt_plot.savefig(str(plddt_png), bbox_inches='tight')
+            plddt_plot.close()
+            result_files.append(plddt_png)
 
         if zip_results:
             with zipfile.ZipFile(result_zip, "w") as result_zip:
@@ -1625,7 +1644,8 @@ def run(
             for file in result_files[:-2]:
                 file.unlink()
         else:
-            is_done_marker.touch()
+            if num_models > 0:
+                is_done_marker.touch()
 
     logger.info("Done")
     return {"rank":ranks,"metric":metrics}
@@ -1688,7 +1708,12 @@ def main():
         type=int,
         default=0,
     )
-    parser.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
+    group.add_argument('--msa-only', action='store_const', const=0, dest='num_models',
+                    help='Do not run structure prediction, only make MSAs.')
+
     parser.add_argument("--recompile-padding",
         type=int,
         default=10,
@@ -1855,7 +1880,8 @@ def main():
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
     model_type = set_model_type(is_complex, args.model_type)
 
-    download_alphafold_params(model_type, data_dir)
+    if args.num_models > 0:
+        download_alphafold_params(model_type, data_dir)
 
     if args.msa_mode != "single_sequence" and not args.templates:
         uses_api = any((query[2] is None for query in queries))
