@@ -1204,15 +1204,25 @@ def put_mmciffiles_into_resultdir(
             else:
                 pdb_id = line.split("\t")[1][0:4]
                 divided_pdb_id = pdb_id[1:3]
-                pdb_file = local_pdb_path / divided_pdb_id / (pdb_id + ".cif.gz")
+                gzipped_divided_mmcif_file = local_pdb_path / divided_pdb_id / (pdb_id + ".cif.gz")
+                gzipped_mmcif_file = local_pdb_path / (pdb_id + ".cif.gz")
+                unzipped_mmcif_file = local_pdb_path / (pdb_id + ".cif")
                 result_file = result_dir / (pdb_id + ".cif")
-                if pdb_file.exists():
-                    with gzip.open(pdb_file, "rb") as f_in:
-                        with open(result_file, "wb") as f_out:
-                            shutil.copyfileobj(f_in, f_out)
-                else:
-                    print(f"WARNING: {pdb_file} does not exist.")
-                    continue
+                possible_files = [gzipped_divided_mmcif_file, gzipped_mmcif_file, unzipped_mmcif_file]
+                for file in possible_files:
+                    if file == gzipped_divided_mmcif_file or file == gzipped_mmcif_file:
+                        if file.exists():
+                            with gzip.open(file, "rb") as f_in:
+                                with open(result_file, "wb") as f_out:
+                                    shutil.copyfileobj(f_in, f_out)
+                                    break
+                    else:
+                        # unzipped_mmcif_file
+                        if file.exists():
+                            shutil.copyfile(file, result_file)
+                            break
+                if not result_file.exists():
+                    print(f"WARNING: {pdb_id} does not exist in {local_pdb_path}.")
 
 
 def run(
