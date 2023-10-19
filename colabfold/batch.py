@@ -244,10 +244,13 @@ def mk_hhsearch_db(template_dir: str):
                 amino_acid_res = []
                 for res in chain:
                     if res.id[2] != " ":
-                        raise ValueError(
-                            f"PDB contains an insertion code at chain {chain.id} and residue "
-                            f"index {res.id[1]}. These are not supported."
-                        )
+                        logger.warning(f"WARNING: Found insertion code at chain {chain.id} and residue index {res.id[1]} of {cif_file}. "
+                                       "This file cannot be used as a template.")
+                        continue
+                        # raise ValueError(
+                        #     f"PDB {cif_file} contains an insertion code at chain {chain.id} and residue "
+                        #     f"index {res.id[1]}. These are not supported."
+                        # )
                     amino_acid_res.append(
                         residue_constants.restype_3to1.get(res.resname, "X")
                     )
