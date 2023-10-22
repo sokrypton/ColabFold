@@ -18,6 +18,7 @@ import time
 import zipfile
 import shutil
 import pickle
+import gzip
 
 from argparse import ArgumentParser
 from pathlib import Path
@@ -234,18 +235,22 @@ def mk_hhsearch_db(template_dir: str):
             structure = parser.get_structure("none", cif_fh)
             models = list(structure.get_models())
             if len(models) != 1:
-                raise ValueError(
-                    f"Only single model PDBs are supported. Found {len(models)} models."
-                )
+                logger.warning(f"WARNING: Found {len(models)} models in {cif_file}. The first model will be used as a template.", )
+                # raise ValueError(
+                #     f"Only single model PDBs are supported. Found {len(models)} models in {cif_file}."
+                # )
             model = models[0]
             for chain in model:
                 amino_acid_res = []
                 for res in chain:
                     if res.id[2] != " ":
-                        raise ValueError(
-                            f"PDB contains an insertion code at chain {chain.id} and residue "
-                            f"index {res.id[1]}. These are not supported."
-                        )
+                        logger.warning(f"WARNING: Found insertion code at chain {chain.id} and residue index {res.id[1]} of {cif_file}. "
+                                       "This file cannot be used as a template.")
+                        continue
+                        # raise ValueError(
+                        #     f"PDB {cif_file} contains an insertion code at chain {chain.id} and residue "
+                        #     f"index {res.id[1]}. These are not supported."
+                        # )
                     amino_acid_res.append(
                         residue_constants.restype_3to1.get(res.resname, "X")
                     )
@@ -1169,6 +1174,57 @@ def msa_to_str(
     msa += pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa)
     return msa
 
+
+def put_mmciffiles_into_resultdir(
+    pdb_hit_file: Path,
+    local_pdb_path: Path,
+    result_dir: Path,
+    max_num_templates: int = 20,
+):
+    """Put mmcif files from local_pdb_path into result_dir and unzip them.
+    max_num_templates is the maximum number of templates to use (default: 20).
+    Args:
+        pdb_hit_file (Path): Path to pdb_hit_file
+        local_pdb_path (Path): Path to local_pdb_path
+        result_dir (Path): Path to result_dir
+        max_num_templates (int): Maximum number of templates to use
+    """
+    pdb_hit_file = Path(pdb_hit_file)
+    local_pdb_path = Path(local_pdb_path)
+    result_dir = Path(result_dir)
+    result_dir.mkdir(parents=True, exist_ok=True)
+
+    query_ids = []
+    with open(pdb_hit_file, "r") as f:
+        for line in f:
+            query_id = line.split("\t")[0]
+            query_ids.append(query_id)
+            if query_ids.count(query_id) > max_num_templates:
+                continue
+            else:
+                pdb_id = line.split("\t")[1][0:4]
+                divided_pdb_id = pdb_id[1:3]
+                gzipped_divided_mmcif_file = local_pdb_path / divided_pdb_id / (pdb_id + ".cif.gz")
+                gzipped_mmcif_file = local_pdb_path / (pdb_id + ".cif.gz")
+                unzipped_mmcif_file = local_pdb_path / (pdb_id + ".cif")
+                result_file = result_dir / (pdb_id + ".cif")
+                possible_files = [gzipped_divided_mmcif_file, gzipped_mmcif_file, unzipped_mmcif_file]
+                for file in possible_files:
+                    if file == gzipped_divided_mmcif_file or file == gzipped_mmcif_file:
+                        if file.exists():
+                            with gzip.open(file, "rb") as f_in:
+                                with open(result_file, "wb") as f_out:
+                                    shutil.copyfileobj(f_in, f_out)
+                                    break
+                    else:
+                        # unzipped_mmcif_file
+                        if file.exists():
+                            shutil.copyfile(file, result_file)
+                            break
+                if not result_file.exists():
+                    print(f"WARNING: {pdb_id} does not exist in {local_pdb_path}.")
+
+
 def run(
     queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]]]],
     result_dir: Union[str, Path],
@@ -1205,6 +1261,8 @@ def run(
     dpi: int = 200,
     max_seq: Optional[int] = None,
     max_extra_seq: Optional[int] = None,
+    pdb_hit_file: Optional[Path] = None,
+    local_pdb_path: Optional[Path] = None,
     use_cluster_profile: bool = True,
     feature_dict_callback: Callable[[Any], Any] = None,
     **kwargs
@@ -1336,7 +1394,7 @@ def run(
         "use_dropout": use_dropout,
         "use_cluster_profile": use_cluster_profile,
         "use_fuse": use_fuse,
-        "use_bfloat16":use_bfloat16,
+        "use_bfloat16": use_bfloat16,
         "version": importlib_metadata.version("colabfold"),
     }
     config_out_file = result_dir.joinpath("config.json")
@@ -1348,6 +1406,13 @@ def run(
     bibtex_file = write_bibtex(
         model_type, use_msa, use_env, use_templates, use_amber, result_dir
     )
+
+    if pdb_hit_file is not None:
+        if local_pdb_path is None:
+            raise ValueError("local_pdb_path is not specified.")
+        else:
+            custom_template_path = result_dir / "templates"
+            put_mmciffiles_into_resultdir(pdb_hit_file, local_pdb_path, custom_template_path)
 
     if custom_template_path is not None:
         mk_hhsearch_db(custom_template_path)
@@ -1635,7 +1700,7 @@ def main():
     )
     parser.add_argument("--model-order", default="1,2,3,4,5", type=str)
     parser.add_argument("--host-url", default=DEFAULT_API_SERVER)
-    parser.add_argument("--data")
+    parser.add_argument("--data", help="Path to alphafold2 params directory.")
     parser.add_argument("--msa-mode",
         default="mmseqs2_uniref_env",
         choices=[
@@ -1734,6 +1799,17 @@ def main():
         action="store_true",
         help="zip all results into one <jobname>.result.zip and delete the original files",
     )
+    parser.add_argument("--pdb-hit-file",
+        default=None,
+        help="Path to a BLAST-m8-formatted pdb hit file corresponding to the input a3m file. (e.g. pdb70.m8) "
+        "Typically, this arg should be used for a MSA file generated by 'colabfold_search'. "
+        "'--templates' arg is also required to enable this.",
+    )
+    parser.add_argument("--local-pdb-path",
+        default=None,
+        help="Directory of locally installed pdb mmcif database. (e.g. /path/to/pdb/divided) "
+        "If provided, pdb files are obtained from the directory.",
+    )
     parser.add_argument("--use-gpu-relax",
         default=False,
         action="store_true",
@@ -1758,6 +1834,8 @@ def main():
 
     args = parser.parse_args()
 
+    if (args.custom_template_path is not None) and (args.pdb_hit_file is not None):
+        raise RuntimeError("arguments --pdb-hit-file and --custom-template-path cannot be used simultaneously.")
     # disable unified memory
     if args.disable_unified_memory:
         for k in ENV.keys():
@@ -1825,6 +1903,8 @@ def main():
         max_seq=args.max_seq,
         max_extra_seq=args.max_extra_seq,
         max_msa=args.max_msa,
+        pdb_hit_file=args.pdb_hit_file,
+        local_pdb_path=args.local_pdb_path,
         use_cluster_profile=not args.disable_cluster_profile,
         use_gpu_relax = args.use_gpu_relax,
         save_all=args.save_all,
