@@ -80,7 +80,11 @@ def mmseqs_search_monomer(
 
     # fmt: off
     # @formatter:off
-    search_param = ["--num-iterations", "3", "--db-load-mode", str(db_load_mode), "-a", "--k-score", "'seq:96,prof:80'", "-e", "0.1", "--max-seqs", "10000",]
+    search_param = ["--num-iterations", "3", "--db-load-mode", str(db_load_mode), "-a", "-e", "0.1", "--max-seqs", "10000"]
+    if s is not None:
+        search_param += ["-s", "{:.1f}".format(s)]
+    else:
+        search_param += ["--k-score", "'seq:96,prof:80'"]
     filter_param = ["--filter-msa", str(filter), "--filter-min-enable", "1000", "--diff", str(diff), "--qid", "0.0,0.2,0.4,0.6,0.8,1.0", "--qsc", "0", "--max-seq-id", "0.95",]
     expand_param = ["--expansion-mode", "0", "-e", str(expand_eval), "--expand-filter-clusters", str(filter), "--max-seq-id", "0.95",]
 
@@ -181,7 +185,11 @@ def mmseqs_search_pair(
 
     # fmt: off
     # @formatter:off
-    search_param = ["--num-iterations", "3", "--db-load-mode", str(db_load_mode), "-a", "--k-score", "'seq:96,prof:80'", "-e", "0.1", "--max-seqs", "10000",]
+    search_param = ["--num-iterations", "3", "--db-load-mode", str(db_load_mode), "-a", "-e", "0.1", "--max-seqs", "10000",]
+    if s is not None:
+        search_param += ["-s", "{:.1f}".format(s)]
+    else:
+        search_param += ["--k-score", "'seq:96,prof:80'"]
     expand_param = ["--expansion-mode", "0", "-e", "inf", "--expand-filter-clusters", "0", "--max-seq-id", "0.95",]
     run_mmseqs(mmseqs, ["search", base.joinpath("qdb"), dbbase.joinpath(uniref_db), base.joinpath("res"), base.joinpath("tmp"), "--threads", str(threads),] + search_param,)
     run_mmseqs(mmseqs, ["expandaln", base.joinpath("qdb"), dbbase.joinpath(f"{uniref_db}{dbSuffix1}"), base.joinpath("res"), dbbase.joinpath(f"{uniref_db}{dbSuffix2}"), base.joinpath("res_exp"), "--db-load-mode", str(db_load_mode), "--threads", str(threads),] + expand_param,)
@@ -222,9 +230,9 @@ def main():
     )
     parser.add_argument(
         "-s",
-        type=int,
-        default=8,
-        help="mmseqs sensitivity. Lowering this will result in a much faster search but possibly sparser msas",
+        type=float,
+        default=None,
+        help="MMseqs2 sensitivity. Lowering this will result in a much faster search but possibly sparser MSAs. By default, the k-mer threshold is directly set to the same one of the server, which corresponds to a sensitivity of ~8.",
     )
     # dbs are uniref, templates and environmental
     # We normally don't use templates
