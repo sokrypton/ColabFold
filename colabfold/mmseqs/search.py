@@ -149,8 +149,10 @@ def mmseqs_search_monomer(
     for file in base.glob("prof_res*"):
         file.unlink()
     shutil.rmtree(base.joinpath("tmp"))
-    shutil.rmtree(base.joinpath("tmp2"))
-    shutil.rmtree(base.joinpath("tmp3"))
+    if use_templates:
+        shutil.rmtree(base.joinpath("tmp2"))
+    if use_env:
+        shutil.rmtree(base.joinpath("tmp3"))
 
 
 def mmseqs_search_pair(
