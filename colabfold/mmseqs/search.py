@@ -361,16 +361,16 @@ def main():
                 unpaired_msa, paired_msa, query_sequences, query_seqs_cardinality
             )
             args.base.joinpath(f"{job_number}.a3m").write_text(msa)
-    # add raw_jobname to the output file
-    os.rename(
-        args.base.joinpath(f"{job_number}.a3m"),
-        args.base.joinpath(f"{safe_filename(raw_jobname)}.a3m"),
-    )
-    if args.use_templates:
-        os.rename(
-            args.base.joinpath(f"{args.db2}.m8"),
-            args.base.joinpath(f"{safe_filename(raw_jobname)}_{args.db2}.m8"),
-        )
+            # add raw_jobname to the output file
+            os.rename(
+                args.base.joinpath(f"{job_number}.a3m"),
+                args.base.joinpath(f"{safe_filename(raw_jobname)}.a3m"),
+            )
+            if args.use_templates:
+                os.rename(
+                    args.base.joinpath(f"{args.db2}.m8"),
+                    args.base.joinpath(f"{safe_filename(raw_jobname)}_{args.db2}.m8"),
+                )
 
     query_file.unlink()
     run_mmseqs(args.mmseqs, ["rmdb", args.base.joinpath("qdb")])
