@@ -1,0 +1,25 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - v*.*.*
+      - v*.*.*-*
+
+jobs:
+  release-pypi:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install tools
+        run: pip install -U pip build twine
+      - name: Build
+        run: python -m build --sdist --wheel --outdir dist/
+      - name: Publish distribution 📦 to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
