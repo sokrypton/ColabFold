@@ -68,11 +68,10 @@ First create a directory for the databases on a disk with sufficient storage (94
 Note: [MMseqs2 `71dd32ec43e3ac4dabf111bbc4b124f1c66a85f1` (May 28, 2023)](https://github.com/soedinglab/MMseqs2/archive/71dd32ec43e3ac4dabf111bbc4b124f1c66a85f1.zip) is used to create the databases and perform sequece search in the ColabFold MSA server. Please use this version if you want to obtain the same MSAs as the server.
 
 ```shell
-./setup_databases.sh /path/to/db_folder
+MMSEQS_NO_INDEX=1 ./setup_databases.sh /path/to/db_folder
 ```
 
-
-If mmseqs is not in your `PATH`, add `--mmseqs <path to mmseqs>` to your mmseqs in `colabfold_search`:
+If MMseqs2 is not installed in your `PATH`, add `--mmseqs <path to mmseqs>` to your `mmseqs` in `colabfold_search`:
 
 ```shell
 # This needs a lot of CPU
@@ -83,11 +82,17 @@ colabfold_batch msas predictions
 
 This will create intermediate folder `msas` that contains all input multiple sequence alignments formated as a3m files and a `predictions` folder with all predicted pdb,json and png files.
 
-Searches against the ColabFoldDB can be done in two different modes:
+The procedure above disables MMseqs2 preindexing of the various ColabFold databases by setting the `MMSEQS_NO_INDEX=1` environment variable before calling the database setup script. For most use-cases of `colabfold_search` precomputing the index is not required and might hurt search speed. The precomputed index is necessary for fast response times of the ColabFold server, where the whole database is permamently kept in memory. In any case the batch searches will require a machine with about 128GB RAM or, if the databases are to be kept permamently in RAM, with over 1TB RAM.
 
-(1) Batch searches with many sequences against the ColabFoldDB quires a machine with approx. 128GB RAM. The search should be performed on the same machine that called `setup_databases.sh` since the database index size is adjusted to the main memory size. To search on computers with less main memory delete the index by removing all `.idx` files, this will force MMseqs2 to create an index on the fly in memory. MMSeqs2 is optimized for large input sequence sets sizes. For batch searches use the `--db-load-mode 0` option.
+In some cases using precomputed database can still be useful. For the following cases, call the `setup_databases.sh` script without the `MMSEQS_NO_INDEX` environment variable:
 
-(2) single query searches require the full index (the .idx files) to be kept in memory. This can be done with e.g. by using [vmtouch](https://github.com/hoytech/vmtouch). Thus, this type of search requires a machine with at least 768GB RAM for the ColabfoldDB. If the index is in memory use to `--db-load-mode 3` parameter in `colabfold_search` to avoid index loading overhead. If they database is already in memory use `--db-load-mode 2` option.
+(0) As mentioned above, if you want to set-up a server.
+
+(1) If the precomputed index is stored on a very fast storage system (e.g., NVMe-SSDs) it might be faster to read the index from disk than computing in on the fly.  In this case, the search should be performed on the same machine that called `setup_databases.sh` since the precomputed index is created to fit within the given main memory size. Additionaly, pass the `--db-load-mode 0` option to make sure the database is read once from the storage system before use.
+
+(2) Fast single query searches require the full index (the `.idx` files) to be kept in memory. This can be done with e.g. by using [vmtouch](https://github.com/hoytech/vmtouch). Thus, this type of search requires a machine with at least 768GB to 1TB RAM for the ColabfoldDB. If the index is present in memory, use the `--db-load-mode 2` parameter in `colabfold_search` to avoid index loading overhead.
+
+If no index was created (`MMSEQS_NO_INDEX=1` was set), then `--db-load-mode` does not do anything and can be ignored.
 
 ### Tutorials & Presentations
 - ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI).

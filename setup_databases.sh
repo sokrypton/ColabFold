@@ -1,11 +1,13 @@
 #!/bin/bash -ex
 # Setup everything for using mmseqs locally
+# Set MMSEQS_NO_INDEX to skip the index creation step (not useful for colabfold_search in most cases)
 ARIA_NUM_CONN=8
 WORKDIR="${1:-$(pwd)}"
 
 PDB_SERVER="${2:-"rsync.wwpdb.org::ftp"}"
 PDB_PORT="${3:-"33444"}"
 UNIREF30DB="uniref30_2302"
+MMSEQS_NO_INDEX=${MMSEQS_NO_INDEX:-}
 
 cd "${WORKDIR}"
 
@@ -51,7 +53,9 @@ if [ ! -f UNIREF30_READY ]; then
   downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/${UNIREF30DB}.tar.gz" "${UNIREF30DB}.tar.gz"
   tar xzvf "${UNIREF30DB}.tar.gz"
   mmseqs tsv2exprofiledb "${UNIREF30DB}" "${UNIREF30DB}_db"
-  mmseqs createindex "${UNIREF30DB}_db" tmp1 --remove-tmp-files 1
+  if [ -z "$MMSEQS_NO_INDEX" ]; then
+    mmseqs createindex "${UNIREF30DB}_db" tmp1 --remove-tmp-files 1
+  fi
   if [ -e ${UNIREF30DB}_db_mapping ]; then
     ln -sf ${UNIREF30DB}_db_mapping ${UNIREF30DB}_db.idx_mapping
   fi
@@ -66,14 +70,18 @@ if [ ! -f COLABDB_READY ]; then
   tar xzvf "colabfold_envdb_202108.tar.gz"
   mmseqs tsv2exprofiledb "colabfold_envdb_202108" "colabfold_envdb_202108_db"
   # TODO: split memory value for createindex?
-  mmseqs createindex "colabfold_envdb_202108_db" tmp2 --remove-tmp-files 1
+  if [ -z "$MMSEQS_NO_INDEX" ]; then
+    mmseqs createindex "colabfold_envdb_202108_db" tmp2 --remove-tmp-files 1
+  fi
   touch COLABDB_READY
 fi
 
 if [ ! -f PDB_READY ]; then
   downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/pdb100_230517.fasta.gz" "pdb100_230517.fasta.gz"
   mmseqs createdb pdb100_230517.fasta.gz pdb100_230517
-  mmseqs createindex pdb100_230517 tmp3 --remove-tmp-files 1
+  if [ -z "$MMSEQS_NO_INDEX" ]; then
+    mmseqs createindex pdb100_230517 tmp3 --remove-tmp-files 1
+  fi
   touch PDB_READY
 fi
 
