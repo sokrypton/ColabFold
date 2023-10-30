@@ -299,7 +299,16 @@ def pad_input(
     )  # template_mask (4, 4) second value
     return input_fix
 
-def relax_me(pdb_filename=None, pdb_lines=None, pdb_obj=None, use_gpu=False):
+def relax_me(
+    pdb_filename=None,
+    pdb_lines=None,
+    pdb_obj=None,
+    use_gpu=False,
+    max_iterations=0,
+    tolerance=2.39,
+    stiffness=10.0,
+    max_outer_iterations=3
+):
     if "relax" not in dir():
         from alphafold.common import residue_constants
         from alphafold.relax import relax
@@ -310,11 +319,11 @@ def relax_me(pdb_filename=None, pdb_lines=None, pdb_obj=None, use_gpu=False):
         pdb_obj = protein.from_pdb_string(pdb_lines)
 
     amber_relaxer = relax.AmberRelaxation(
-        max_iterations=0,
-        tolerance=2.39,
-        stiffness=10.0,
+        max_iterations=max_iterations,
+        tolerance=tolerance,
+        stiffness=stiffness,
         exclude_residues=[],
-        max_outer_iterations=3,
+        max_outer_iterations=max_outer_iterations,
         use_gpu=use_gpu)
 
     relaxed_pdb_lines, _, _ = amber_relaxer.process(prot=pdb_obj)
@@ -348,6 +357,10 @@ def predict_structure(
     model_type: str,
     model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
     num_relax: int = 0,
+    relax_max_iterations: int = 0,
+    relax_tolerance: float = 2.39,
+    relax_stiffness: float = 10.0,
+    relax_max_outer_iterations: int = 3,
     rank_by: str = "auto",
     random_seed: int = 0,
     num_seeds: int = 1,
@@ -531,7 +544,13 @@ def predict_structure(
         # save relaxed pdb
         if n < num_relax:
             start = time.time()
-            pdb_lines = relax_me(pdb_lines=unrelaxed_pdb_lines[key], use_gpu=use_gpu_relax)
+            pdb_lines = relax_me(
+                pdb_lines=unrelaxed_pdb_lines[key],
+                max_iterations=relax_max_iterations,
+                tolerance=relax_tolerance,
+                stiffness=relax_stiffness,
+                max_outer_iterations=relax_max_outer_iterations,
+                use_gpu=use_gpu_relax)
             files.get("relaxed","pdb").write_text(pdb_lines)
             logger.info(f"Relaxation took {(time.time() - start):.1f}s")
 
@@ -1239,6 +1258,10 @@ def run(
     use_templates: bool = False,
     custom_template_path: str = None,
     num_relax: int = 0,
+    relax_max_iterations: int = 0,
+    relax_tolerance: float = 2.39,
+    relax_stiffness: float = 10.0,
+    relax_max_outer_iterations: int = 3,
     keep_existing_results: bool = True,
     rank_by: str = "auto",
     pair_mode: str = "unpaired_paired",
@@ -1371,6 +1394,10 @@ def run(
         "num_queries": len(queries),
         "use_templates": use_templates,
         "num_relax": num_relax,
+        "relax_max_iterations": relax_max_iterations,
+        "relax_tolerance": relax_tolerance,
+        "relax_stiffness": relax_stiffness,
+        "relax_max_outer_iterations": relax_max_outer_iterations,
         "msa_mode": msa_mode,
         "model_type": model_type,
         "num_models": num_models,
@@ -1580,6 +1607,10 @@ def run(
                     model_type=model_type,
                     model_runner_and_params=model_runner_and_params,
                     num_relax=num_relax,
+                    relax_max_iterations=relax_max_iterations,
+                    relax_tolerance=relax_tolerance,
+                    relax_stiffness=relax_stiffness,
+                    relax_max_outer_iterations=relax_max_outer_iterations,
                     rank_by=rank_by,
                     stop_at_score=stop_at_score,
                     prediction_callback=prediction_callback,
@@ -1760,6 +1791,30 @@ def main():
         type=int,
         default=0,
     )
+    parser.add_argument(
+        "--relax-max-iterations",
+        type=int,
+        default=2000,
+        help="Maximum number of iterations for the relaxation process. AlphaFold2 sets this to unlimited (0), however, we found that this can lead to very long relaxation times for some inputs."
+    )
+    parser.add_argument(
+        "--relax-tolerance",
+        type=float,
+        default=2.39,
+        help="tolerance level for the relaxation convergence"
+    )
+    parser.add_argument(
+        "--relax-stiffness",
+        type=float,
+        default=10.0,
+        help="stiffness parameter for the relaxation"
+    )
+    parser.add_argument(
+        "--relax-max-outer-iterations",
+        type=int,
+        default=3,
+        help="maximum number of outer iterations for the relaxation process"
+    )
     parser.add_argument("--templates", default=False, action="store_true", help="Use templates from pdb")
     parser.add_argument("--custom-template-path",
         type=str,
@@ -1904,6 +1959,10 @@ def main():
         use_templates=args.templates,
         custom_template_path=args.custom_template_path,
         num_relax=args.num_relax,
+        relax_max_iterations=args.relax_max_iterations,
+        relax_tolerance=args.relax_tolerance,
+        relax_stiffness=args.relax_stiffness,
+        relax_max_outer_iterations=args.relax_max_outer_iterations,
         msa_mode=args.msa_mode,
         model_type=model_type,
         num_models=args.num_models,
