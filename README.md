@@ -61,6 +61,19 @@ Check the wiki page [old retired notebooks](https://github.com/sokrypton/ColabFo
 ### Running locally
 For instructions on how to install ColabFold locally see: [localcolabfold](https://github.com/YoshitakaMo/localcolabfold)
 
+### Generating MSAs for small scale local structure/complex predictions using the MSA server
+
+When you pass a FASTA or CSV file containing your sequences to `colabfold_batch` it will automatically query the public MSA server to generate MSAs. You might want to split this into two steps for better GPU resource utilization:
+
+```
+# Query the MSA server and predict the structure on local GPU in one go:
+colabfold_batch input_sequences.fasta out_dir
+
+# Split querying MSA server and GPU predictions into two steps
+colabfold_batch input_sequences.fasta out_dir --msa-only
+colabfold_batch input_sequences.fasta out_dir
+```
+
 ### Generating MSAs for large scale structure/complex predictions
 
 First create a directory for the databases on a disk with sufficient storage (940GB (!)). Depending on where you are, this will take a couple of hours:
