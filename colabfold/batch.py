@@ -1672,8 +1672,9 @@ def run(
                     result_zip.write(file, arcname=file.name)
 
             # Delete only after the zip was successful, and also not the bibtex and config because we need those again
-            for file in result_files[:-2]:
-                file.unlink()
+            for file in result_files:
+                if file != bibtex_file and file != config_out_file:
+                    file.unlink()
         else:
             if num_models > 0:
                 is_done_marker.touch()

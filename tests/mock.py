@@ -142,7 +142,9 @@ class MMseqs2Mock:
     use_templates=False,
     filter=None,
     use_pairing=False,
+    pairing_strategy="greedy",
     host_url="https://a3m.mmseqs.com",
+    user_agent="colabfold/test",
   ):
     assert prefix
     config = {
@@ -152,9 +154,13 @@ class MMseqs2Mock:
       "use_templates": use_templates,
       "filter": filter,
       "use_pairing": use_pairing,
+      "pairing_strategy": pairing_strategy,
     }
 
     for saved_response in self.saved_responses:
+      # backwards compatibility, remove after UPDATE_SNAPSHOTS
+      if "pairing_strategy" not in saved_response["config"]:
+        saved_response["config"]["pairing_strategy"] = "greedy"
       if saved_response["config"] == config:
         return saved_response["response"]
 
@@ -168,7 +174,9 @@ class MMseqs2Mock:
         use_templates=config["use_templates"],
         filter=config["filter"],
         use_pairing=config["use_pairing"],
+        pairing_strategy=config["pairing_strategy"],
         host_url=host_url,
+        user_agent=user_agent,
       )
       # Split lines so we get a readable json file
       response = split_lines(response)
