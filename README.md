@@ -59,7 +59,7 @@ Check the wiki page [old retired notebooks](https://github.com/sokrypton/ColabFo
   - You can view the database version history on the [MSA Server Database History](https://github.com/sokrypton/ColabFold/wiki/MSA-Server-Database-History) wiki page.
 
 ### Running locally
-For instructions on how to install ColabFold locally see: [localcolabfold](https://github.com/YoshitakaMo/localcolabfold)
+For instructions on how to install ColabFold locally refer to [localcolabfold](https://github.com/YoshitakaMo/localcolabfold) or see our [wiki](https://github.com/sokrypton/ColabFold/wiki/Running-ColabFold-in-Docker) on how to run ColabFold within Docker.
 
 ### Generating MSAs for small scale local structure/complex predictions using the MSA server
 
