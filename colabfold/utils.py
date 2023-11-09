@@ -42,16 +42,18 @@ class TqdmHandler(logging.StreamHandler):
         tqdm.write(msg)
 
 
-def setup_logging(log_file: Path):
+def setup_logging(log_file: Path, mode: str = "w") -> None:
     log_file.parent.mkdir(exist_ok=True, parents=True)
     root = logging.getLogger()
     if root.handlers:
         for handler in root.handlers:
+            handler.close()
             root.removeHandler(handler)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(message)s",
-        handlers=[TqdmHandler(), logging.FileHandler(log_file)],
+        handlers=[TqdmHandler(), logging.FileHandler(log_file, mode=mode)],
+        force=True,
     )
     # otherwise jax will tell us about its search for devices
     absl_logging.set_verbosity("error")
