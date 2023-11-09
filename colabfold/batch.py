@@ -66,6 +66,7 @@ from colabfold.utils import (
     setup_logging,
     CFMMCIFIO,
 )
+from colabfold.relax import relax_me
 
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 from Bio.PDB.PDBIO import Select
@@ -298,36 +299,6 @@ def pad_input(
         num_templates=4,
     )  # template_mask (4, 4) second value
     return input_fix
-
-def relax_me(
-    pdb_filename=None,
-    pdb_lines=None,
-    pdb_obj=None,
-    use_gpu=False,
-    max_iterations=0,
-    tolerance=2.39,
-    stiffness=10.0,
-    max_outer_iterations=3
-):
-    if "relax" not in dir():
-        from alphafold.common import residue_constants
-        from alphafold.relax import relax
-
-    if pdb_obj is None:
-        if pdb_lines is None:
-            pdb_lines = Path(pdb_filename).read_text()
-        pdb_obj = protein.from_pdb_string(pdb_lines)
-
-    amber_relaxer = relax.AmberRelaxation(
-        max_iterations=max_iterations,
-        tolerance=tolerance,
-        stiffness=stiffness,
-        exclude_residues=[],
-        max_outer_iterations=max_outer_iterations,
-        use_gpu=use_gpu)
-
-    relaxed_pdb_lines, _, _ = amber_relaxer.process(prot=pdb_obj)
-    return relaxed_pdb_lines
 
 class file_manager:
     def __init__(self, prefix: str, result_dir: Path):
