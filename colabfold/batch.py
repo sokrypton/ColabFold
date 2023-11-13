@@ -1670,77 +1670,130 @@ def set_model_type(is_complex: bool, model_type: str) -> str:
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument("input",
+    parser.add_argument(
+        "input",
         default="input",
-        help="Can be one of the following: "
-        "Directory with fasta/a3m files, a csv/tsv file, a fasta file or an a3m file",
+        help="One of: 1) directory with FASTA/A3M files, 2) CSV/TSV file, 3) FASTA file or 4) A3M file.",
     )
-    parser.add_argument("results", help="Directory to write the results to")
-    parser.add_argument("--stop-at-score",
-        help="Compute models until plddt (single chain) or ptmscore (complex) > threshold is reached. "
-        "This can make colabfold much faster by only running the first model for easy queries.",
-        type=float,
-        default=100,
-    )
-    parser.add_argument("--num-recycle",
-        help="Number of prediction recycles."
-        "Increasing recycles can improve the quality but slows down the prediction.",
-        type=int,
-        default=None,
-    )
-    parser.add_argument("--recycle-early-stop-tolerance",
-        help="Specify convergence criteria."
-        "Run until the distance between recycles is within specified value.",
-        type=float,
-        default=None,
-    )
-    parser.add_argument("--num-ensemble",
-        help="Number of ensembles."
-        "The trunk of the network is run multiple times with different random choices for the MSA cluster centers.",
-        type=int,
-        default=1,
-    )
-    parser.add_argument("--num-seeds",
-        help="Number of seeds to try. Will iterate from range(random_seed, random_seed+num_seeds)."
-        ".",
-        type=int,
-        default=1,
-    )
-    parser.add_argument("--random-seed",
-        help="Changing the seed for the random number generator can result in different structure predictions.",
-        type=int,
-        default=0,
-    )
+    parser.add_argument("results", help="Results output directory.")
 
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("--num-models", type=int, default=5, choices=[1, 2, 3, 4, 5])
-    group.add_argument('--msa-only', action='store_const', const=0, dest='num_models',
-                    help='Do not run structure prediction, only make MSAs.')
-
-    parser.add_argument("--recompile-padding",
-        type=int,
-        default=10,
-        help="Whenever the input length changes, the model needs to be recompiled."
-        "We pad sequences by specified length, so we can e.g. compute sequence from length 100 to 110 without recompiling."
-        "The prediction will become marginally slower for the longer input, "
-        "but overall performance increases due to not recompiling. "
-        "Set to 0 to disable.",
+    msa_group = parser.add_argument_group("MSA arguments", "")
+    msa_group.add_argument(
+        "--msa-only",
+        action="store_const",
+        const=0,
+        dest="num_models",
+        help="Query and store MSAs from the MSA server without structure prediction",
     )
-    parser.add_argument("--model-order", default="1,2,3,4,5", type=str)
-    parser.add_argument("--host-url", default=DEFAULT_API_SERVER)
-    parser.add_argument("--data", help="Path to alphafold2 params directory.")
-    parser.add_argument("--msa-mode",
+    msa_group.add_argument(
+        "--msa-mode",
         default="mmseqs2_uniref_env",
         choices=[
             "mmseqs2_uniref_env",
             "mmseqs2_uniref",
             "single_sequence",
         ],
-        help="Using an a3m file as input overwrites this option",
+        help="Databases to use to create the MSA: UniRef30+Environmental (default), UniRef30 only or None. "
+        "Using an A3M file as input overwrites this option.",
     )
-    parser.add_argument("--model-type",
-        help="predict strucutre/complex using the following model."
-        'Auto will pick "alphafold2_ptm" for structure predictions and "alphafold2_multimer_v3" for complexes.',
+    msa_group.add_argument(
+        "--pair-mode",
+        help="Multimer MSA pairing mode for complex prediction: unpaired MSA only, paired MSA only, both (default).",
+        type=str,
+        default="unpaired_paired",
+        choices=["unpaired", "paired", "unpaired_paired"],
+    )
+    msa_group.add_argument(
+        "--pair-strategy",
+        help="How sequences are paired during MSA pairing for complex prediction. "
+        "complete: MSA sequences should only be paired if the same species exists in all MSAs. "
+        "greedy: MSA sequences should only be paired if the same species exists in at least two MSAs. "
+        "Typically, greedy produces better predictions as it results in more paired sequences. "
+        "However, in some cases complete pairing might help, especially if MSAs are already large and can be well paired. ",
+        type=str,
+        default="greedy",
+        choices=["complete", "greedy"],
+    )
+    msa_group.add_argument(
+        "--templates",
+        default=False,
+        action="store_true",
+        help="Query PDB templates from the MSA server. "
+        'If this parameter is not set, "--custom-template-path" and "--pdb-hit-file" will not be used. '
+        "Warning: This can result in the MSA server being queried with A3M input. "
+    )
+    msa_group.add_argument(
+        "--custom-template-path",
+        type=str,
+        default=None,
+        help="Directory with PDB files to provide as custom templates to the predictor. "
+        "No templates will be queried from the MSA server. "
+        "'--templates' argument is also required to enable this.",
+    )
+    msa_group.add_argument(
+        "--pdb-hit-file",
+        default=None,
+        help="Path to a BLAST-m8 formatted PDB hit file corresponding to the input A3M file (e.g. pdb70.m8). "
+        "Typically, this parameter should be used for a MSA generated by 'colabfold_search'. "
+        "'--templates' argument is also required to enable this.",
+    )
+    msa_group.add_argument(
+        "--local-pdb-path",
+        default=None,
+        help="Directory of a local mirror of the PDB mmCIF database (e.g. /path/to/pdb/divided). "
+        "If provided, PDB files from the directory are used for templates specified by '--pdb-hit-file'. ",
+    )
+
+    pred_group = parser.add_argument_group("Prediction arguments", "")
+    pred_group.add_argument(
+        "--num-recycle",
+        help="Number of prediction recycles. "
+        "Increasing recycles can improve the prediction quality but slows down the prediction.",
+        type=int,
+        default=None,
+    )
+    pred_group.add_argument(
+        "--recycle-early-stop-tolerance",
+        help="Specify convergence criteria. "
+        "Run recycles until the distance between recycles is within the given tolerance value.",
+        type=float,
+        default=None,
+    )
+    pred_group.add_argument(
+        "--num-ensemble",
+        help="Number of ensembles. "
+        "The trunk of the network is run multiple times with different random choices for the MSA cluster centers. "
+        "This can result in a better prediction at the cost of longer runtime. ",
+        type=int,
+        default=1,
+    )
+    pred_group.add_argument(
+        "--num-seeds",
+        help="Number of seeds to try. Will iterate from range(random_seed, random_seed+num_seeds). "
+        "This can result in a better/different prediction at the cost of longer runtime. ",
+        type=int,
+        default=1,
+    )
+    pred_group.add_argument(
+        "--random-seed",
+        help="Changing the seed for the random number generator can result in better/different structure predictions.",
+        type=int,
+        default=0,
+    )
+    pred_group.add_argument(
+        "--num-models",
+        help="Number of models to use for structure prediction. "
+        "Reducing the number of models speeds up the prediction but results in lower quality.",
+        type=int,
+        default=5,
+        choices=[1, 2, 3, 4, 5],
+    )
+    pred_group.add_argument(
+        "--model-type",
+        help="Predict structure/complex using the given model. "
+        'Auto will pick "alphafold2_ptm" for structure predictions and "alphafold2_multimer_v3" for complexes. '
+        "Older versions of the AF2 models are generally worse, however they can sometimes result in better predictions. "
+        "If the model is not already downloaded, it will be automatically downloaded. ",
         type=str,
         default="auto",
         choices=[
@@ -1752,142 +1805,182 @@ def main():
             "alphafold2_multimer_v3",
         ],
     )
-    parser.add_argument("--amber",
+    pred_group.add_argument("--model-order", default="1,2,3,4,5", type=str)
+    pred_group.add_argument(
+        "--use-dropout",
         default=False,
         action="store_true",
-        help="Use amber for structure refinement."
-        "To control number of top ranked structures are relaxed set --num-relax.",
+        help="Activate dropouts during inference to sample from uncertainty of the models. "
+        "This can result in different predictions and can be (carefully!) used for conformations sampling.",
     )
-    parser.add_argument("--num-relax",
-        help="specify how many of the top ranked structures to relax using amber.",
+    pred_group.add_argument(
+        "--max-seq",
+        help="Number of sequence clusters to use. "
+        "This can result in different predictions and can be (carefully!) used for conformations sampling.",
+        type=int,
+        default=None,
+    )
+    pred_group.add_argument(
+        "--max-extra-seq",
+        help="Number of extra sequences to use. "
+        "This can result in different predictions and can be (carefully!) used for conformations sampling.",
+        type=int,
+        default=None,
+    )
+    pred_group.add_argument(
+        "--max-msa",
+        help="Defines: `max-seq:max-extra-seq` number of sequences to use in one go. "
+        '"--max-seq" and "--max-extra-seq" are ignored if this parameter is set.',
+        type=str,
+        default=None,
+    )
+    pred_group.add_argument(
+        "--disable-cluster-profile",
+        default=False,
+        action="store_true",
+        help="Experimental: For multimer models, disable cluster profiles.",
+    )
+    pred_group.add_argument("--data", help="Path to AlphaFold2 weights directory.")
+
+    relax_group = parser.add_argument_group("Relaxation arguments", "")
+    relax_group.add_argument(
+        "--amber",
+        default=False,
+        action="store_true",
+        help="Enable OpenMM/Amber for structure relaxation. "
+        "Can improve the quality of side-chains at a cost of longer runtime. "
+    )
+    relax_group.add_argument(
+        "--num-relax",
+        help="Specify how many of the top ranked structures to relax using OpenMM/Amber. "
+        "Typically, relaxing the top-ranked prediction is enough and speeds up the runtime. ",
         type=int,
         default=0,
     )
-    parser.add_argument(
+    relax_group.add_argument(
         "--relax-max-iterations",
         type=int,
         default=2000,
-        help="Maximum number of iterations for the relaxation process. AlphaFold2 sets this to unlimited (0), however, we found that this can lead to very long relaxation times for some inputs."
+        help="Maximum number of iterations for the relaxation process. "
+        "AlphaFold2 sets this to unlimited (0), however, we found that this can lead to very long relaxation times for some inputs.",
     )
-    parser.add_argument(
+    relax_group.add_argument(
         "--relax-tolerance",
         type=float,
         default=2.39,
-        help="tolerance level for the relaxation convergence"
+        help="Tolerance threshold for relaxation convergence.",
     )
-    parser.add_argument(
+    relax_group.add_argument(
         "--relax-stiffness",
         type=float,
         default=10.0,
-        help="stiffness parameter for the relaxation"
+        help="Stiffness parameter for relaxation.",
     )
-    parser.add_argument(
+    relax_group.add_argument(
         "--relax-max-outer-iterations",
         type=int,
         default=3,
-        help="maximum number of outer iterations for the relaxation process"
+        help="Maximum number of outer iterations for the relaxation process.",
     )
-    parser.add_argument("--templates", default=False, action="store_true", help="Use templates from pdb")
-    parser.add_argument("--custom-template-path",
-        type=str,
-        default=None,
-        help="Directory with pdb files to be used as input",
+    relax_group.add_argument(
+        "--use-gpu-relax",
+        default=False,
+        action="store_true",
+        help="Run OpenMM/Amber on GPU instead of CPU. "
+        "This can significantly speed up the relaxation runtime, however, might lead to compatibility issues with CUDA. "
+        "Unsupported on AMD/ROCM and Apple Silicon.",
     )
-    parser.add_argument("--rank",
-        help="rank models by auto, plddt or ptmscore",
+
+    output_group = parser.add_argument_group("Output arguments", "")
+    output_group.add_argument(
+        "--rank",
+        help='Choose metric to rank the "--num-models" predicted models.',
         type=str,
         default="auto",
         choices=["auto", "plddt", "ptm", "iptm", "multimer"],
     )
-    parser.add_argument("--pair-mode",
-        help="rank models by auto, unpaired, paired, unpaired_paired",
-        type=str,
-        default="unpaired_paired",
-        choices=["unpaired", "paired", "unpaired_paired"],
+    output_group.add_argument(
+        "--stop-at-score",
+        help="Compute models until pLDDT (single chain) or pTM-score (multimer) > threshold is reached. "
+        "This speeds up prediction by running less models for easier queries.",
+        type=float,
+        default=100,
     )
-    parser.add_argument("--sort-queries-by",
-        help="sort queries by: none, length, random",
+    output_group.add_argument(
+        "--save-all",
+        default=False,
+        action="store_true",
+        help="Save all raw outputs from model to a pickle file. "
+        "Useful for downstream use in other models."
+    )
+    output_group.add_argument(
+        "--save-recycles",
+        default=False,
+        action="store_true",
+        help="Save all intermediate predictions at each recycle iteration.",
+    )
+    output_group.add_argument(
+        "--save-single-representations",
+        default=False,
+        action="store_true",
+        help="Save the single representation embeddings of all models.",
+    )
+    output_group.add_argument(
+        "--save-pair-representations",
+        default=False,
+        action="store_true",
+        help="Save the pair representation embeddings of all models.",
+    )
+    output_group.add_argument(
+        "--overwrite-existing-results",
+        default=False,
+        action="store_true",
+        help="Do not recompute results, if a query has already been predicted.",
+    )
+    output_group.add_argument(
+        "--zip",
+        default=False,
+        action="store_true",
+        help="Zip all results into one <jobname>.result.zip and delete the original files.",
+    )
+    output_group.add_argument(
+        "--sort-queries-by",
+        help="Sort input queries by: none, length, random. "
+        "Sorting by length speeds up prediction as models are recompiled less often.",
         type=str,
         default="length",
         choices=["none", "length", "random"],
     )
-    parser.add_argument("--save-single-representations",
+
+    adv_group = parser.add_argument_group(
+        "Advanced arguments", ""
+    )
+    adv_group.add_argument(
+        "--host-url",
+        default=DEFAULT_API_SERVER,
+        help="Which MSA server should be queried. By default, the free public MSA server hosted by the ColabFold team is queried. "
+    )
+    adv_group.add_argument(
+        "--disable-unified-memory",
         default=False,
         action="store_true",
-        help="saves the single representation embeddings of all models",
+        help="If you are getting TensorFlow/Jax errors, it might help to disable this.",
     )
-    parser.add_argument("--save-pair-representations",
-        default=False,
-        action="store_true",
-        help="saves the pair representation embeddings of all models",
-    )
-    parser.add_argument("--use-dropout",
-        default=False,
-        action="store_true",
-        help="activate dropouts during inference to sample from uncertainity of the models",
-    )
-    parser.add_argument("--max-seq",
-        help="number of sequence clusters to use",
+    adv_group.add_argument(
+        "--recompile-padding",
         type=int,
-        default=None,
-    )
-    parser.add_argument("--max-extra-seq",
-        help="number of extra sequences to use",
-        type=int,
-        default=None,
-    )
-    parser.add_argument("--max-msa",
-        help="defines: `max-seq:max-extra-seq` number of sequences to use",
-        type=str,
-        default=None,
-    )
-    parser.add_argument("--disable-cluster-profile",
-        default=False,
-        action="store_true",
-        help="EXPERIMENTAL: for multimer models, disable cluster profiles",
-    )
-    parser.add_argument("--zip",
-        default=False,
-        action="store_true",
-        help="zip all results into one <jobname>.result.zip and delete the original files",
-    )
-    parser.add_argument("--pdb-hit-file",
-        default=None,
-        help="Path to a BLAST-m8-formatted pdb hit file corresponding to the input a3m file. (e.g. pdb70.m8) "
-        "Typically, this arg should be used for a MSA file generated by 'colabfold_search'. "
-        "'--templates' arg is also required to enable this.",
-    )
-    parser.add_argument("--local-pdb-path",
-        default=None,
-        help="Directory of locally installed pdb mmcif database. (e.g. /path/to/pdb/divided) "
-        "If provided, pdb files are obtained from the directory.",
-    )
-    parser.add_argument("--use-gpu-relax",
-        default=False,
-        action="store_true",
-        help="run amber on GPU instead of CPU",
-    )
-    parser.add_argument("--save-all",
-        default=False,
-        action="store_true",
-        help="save ALL raw outputs from model to a pickle file",
-    )
-    parser.add_argument("--save-recycles",
-        default=False,
-        action="store_true",
-        help="save all intermediate predictions at each recycle",
-    )
-    parser.add_argument("--overwrite-existing-results", default=False, action="store_true")
-    parser.add_argument("--disable-unified-memory",
-        default=False,
-        action="store_true",
-        help="if you are getting tensorflow/jax errors it might help to disable this",
+        default=10,
+        help="Whenever the input length changes, the model needs to be recompiled. "
+        "We pad sequences by the specified length, so we can e.g., compute sequences from length 100 to 110 without recompiling. "
+        "Individual predictions will become marginally slower due to longer input, "
+        "but overall performance increases due to not recompiling. "
+        "Set to 0 to disable.",
     )
 
     args = parser.parse_args()
 
     if (args.custom_template_path is not None) and (args.pdb_hit_file is not None):
-        raise RuntimeError("arguments --pdb-hit-file and --custom-template-path cannot be used simultaneously.")
+        raise RuntimeError("Arguments --pdb-hit-file and --custom-template-path cannot be used simultaneously.")
     # disable unified memory
     if args.disable_unified_memory:
         for k in ENV.keys():
@@ -1946,6 +2039,7 @@ def main():
         keep_existing_results=not args.overwrite_existing_results,
         rank_by=args.rank,
         pair_mode=args.pair_mode,
+        pairing_strategy=args.pair_strategy,
         data_dir=data_dir,
         host_url=args.host_url,
         user_agent=user_agent,
