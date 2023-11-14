@@ -1680,9 +1680,7 @@ def main():
     msa_group = parser.add_argument_group("MSA arguments", "")
     msa_group.add_argument(
         "--msa-only",
-        action="store_const",
-        const=0,
-        dest="num_models",
+        action="store_true",
         help="Query and store MSAs from the MSA server without structure prediction",
     )
     msa_group.add_argument(
@@ -1999,6 +1997,9 @@ def main():
 
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
     model_type = set_model_type(is_complex, args.model_type)
+
+    if args.msa_only:
+        args.num_models = 0
 
     if args.num_models > 0:
         download_alphafold_params(model_type, data_dir)
