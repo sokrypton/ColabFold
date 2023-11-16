@@ -311,7 +311,7 @@ def main():
             query_seqs_cardinality,
         ) in enumerate(queries_unique):
             for seq in query_sequences:
-                raw_jobname_first = raw_jobname.split(" ")[0]
+                raw_jobname_first = raw_jobname.split()[0]
                 f.write(f"{id}\t{raw_jobname_first}\t{file_number}\n")
                 id += 1
             file_number += 1
