@@ -344,7 +344,6 @@ def predict_structure(
     save_recycles: bool = False,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
-
     mean_scores = []
     conf = []
     unrelaxed_pdb_lines = []
@@ -992,7 +991,7 @@ def generate_input_feature(
             ]
         ):
             logger.warning(
-                "alphafold2_ptm complex does not consider templates. Chose multimer model-type for template support."
+                f"{model_type} complex does not consider templates. Chose multimer model-type for template support."
             )
 
     else:
@@ -1293,14 +1292,6 @@ def run(
     result_dir.mkdir(exist_ok=True)
     model_type = set_model_type(is_complex, model_type)
 
-    # determine model extension
-    if   model_type == "alphafold2_multimer_v1": model_suffix = "_multimer"
-    elif model_type == "alphafold2_multimer_v2": model_suffix = "_multimer_v2"
-    elif model_type == "alphafold2_multimer_v3": model_suffix = "_multimer_v3"
-    elif model_type == "alphafold2_ptm":         model_suffix = "_ptm"
-    elif model_type == "alphafold2":             model_suffix = ""
-    else: raise ValueError(f"Unknown model_type {model_type}")
-
     # backward-compatibility with old options
     old_names = {"MMseqs2 (UniRef+Environmental)":"mmseqs2_uniref_env",
                  "MMseqs2 (UniRef only)":"mmseqs2_uniref",
@@ -1560,7 +1551,7 @@ def run(
                         num_recycles=num_recycles,
                         num_ensemble=num_ensemble,
                         model_order=model_order,
-                        model_suffix=model_suffix,
+                        model_type=model_type,
                         data_dir=data_dir,
                         stop_at_score=stop_at_score,
                         rank_by=rank_by,
@@ -1663,11 +1654,14 @@ def run(
 
 def set_model_type(is_complex: bool, model_type: str) -> str:
     # backward-compatibility with old options
-    old_names = {"AlphaFold2-multimer-v1":"alphafold2_multimer_v1",
-                 "AlphaFold2-multimer-v2":"alphafold2_multimer_v2",
-                 "AlphaFold2-multimer-v3":"alphafold2_multimer_v3",
-                 "AlphaFold2-ptm":        "alphafold2_ptm",
-                 "AlphaFold2":            "alphafold2"}
+    old_names = {
+        "AlphaFold2-multimer-v1":"alphafold2_multimer_v1",
+        "AlphaFold2-multimer-v2":"alphafold2_multimer_v2",
+        "AlphaFold2-multimer-v3":"alphafold2_multimer_v3",
+        "AlphaFold2-ptm":        "alphafold2_ptm",
+        "AlphaFold2":            "alphafold2",
+        "DeepFold":              "deepfold_v1",
+    }
     model_type = old_names.get(model_type, model_type)
     if model_type == "auto":
         if is_complex:
@@ -1809,6 +1803,7 @@ def main():
             "alphafold2_multimer_v1",
             "alphafold2_multimer_v2",
             "alphafold2_multimer_v3",
+            "deepfold_v1",
         ],
     )
     pred_group.add_argument("--model-order", default="1,2,3,4,5", type=str)
