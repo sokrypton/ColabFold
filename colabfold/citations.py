@@ -129,11 +129,11 @@ def write_bibtex(
     bibtex_file: str = "cite.bibtex",
 ) -> Path:
     to_cite = ["Mirdita2021"]
-    if model == "AlphaFold2-ptm":
+    if model == "alphafold2_ptm" or model == "alphafold2":
         to_cite += ["Jumper2021"]
-    if model == "DeepFold-v1":
+    if model == "deepfold_v1":
         to_cite += ["Lee2023"]
-    if model.startswith("AlphaFold2-multimer"):
+    if model.startswith("alphafold2_multimer"):
         to_cite += ["Evans2021"]
     if use_msa:
         to_cite += ["Mirdita2019"]
