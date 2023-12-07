@@ -1620,13 +1620,13 @@ def run(
                     "max_predicted_aligned_error":scores[0]["max_pae"]}))
                 result_files.append(af_pae_file)
 
-            # make pAE plots
-            paes_plot = plot_paes([np.asarray(x["pae"]) for x in scores],
-                Ls=query_sequence_len_array, dpi=dpi)
-            pae_png = result_dir.joinpath(f"{jobname}_pae.png")
-            paes_plot.savefig(str(pae_png), bbox_inches='tight')
-            paes_plot.close()
-            result_files.append(pae_png)
+                # make pAE plots
+                paes_plot = plot_paes([np.asarray(x["pae"]) for x in scores],
+                    Ls=query_sequence_len_array, dpi=dpi)
+                pae_png = result_dir.joinpath(f"{jobname}_pae.png")
+                paes_plot.savefig(str(pae_png), bbox_inches='tight')
+                paes_plot.close()
+                result_files.append(pae_png)
 
             # make pLDDT plot
             plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
