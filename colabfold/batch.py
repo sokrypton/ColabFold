@@ -649,7 +649,7 @@ def get_queries(
         random.shuffle(queries)
 
     is_complex = False
-    for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
+    for job_number, (_, query_sequence, a3m_lines) in enumerate(queries):
         if isinstance(query_sequence, list):
             is_complex = True
             break
@@ -1247,6 +1247,7 @@ def run(
     prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
+    jobname_prefix: Optional[str] = None,
     save_all: bool = False,
     save_recycles: bool = False,
     use_dropout: bool = False,
@@ -1418,8 +1419,15 @@ def run(
     pad_len = 0
     ranks, metrics = [],[]
     first_job = True
+    job_number = 0
     for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
-        jobname = safe_filename(raw_jobname)
+        if jobname_prefix is not None:
+            # pad job number based on number of queries
+            fill = len(str(len(queries)))
+            jobname = safe_filename(jobname_prefix) + "_" + str(job_number).zfill(fill)
+            job_number += 1
+        else:
+            jobname = safe_filename(raw_jobname)
 
         #######################################
         # check if job has already finished
@@ -1905,6 +1913,12 @@ def main():
         default=100,
     )
     output_group.add_argument(
+        "--jobname-prefix",
+        help="If set, the jobname will be prefixed with the given string and a running number, instead of the input headers/accession.",
+        type=str,
+        default=None,
+    )
+    output_group.add_argument(
         "--save-all",
         default=False,
         action="store_true",
@@ -2059,6 +2073,7 @@ def main():
         local_pdb_path=args.local_pdb_path,
         use_cluster_profile=not args.disable_cluster_profile,
         use_gpu_relax = args.use_gpu_relax,
+        jobname_prefix=args.jobname_prefix,
         save_all=args.save_all,
         save_recycles=args.save_recycles,
     )
