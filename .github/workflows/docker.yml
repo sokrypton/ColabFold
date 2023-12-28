@@ -7,7 +7,7 @@ on:
         description: 'ColabFold Conda version'
         required: true
         type: string
-        default: '1.5.3'
+        default: '1.5.4'
 
 env:
   REGISTRY: ghcr.io

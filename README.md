@@ -1,4 +1,4 @@
-# ColabFold - v1.5.3
+# ColabFold - v1.5.4
 
 For details of what was changed in v1.5, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.5.0)!
 

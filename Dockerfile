@@ -1,5 +1,5 @@
 ARG CUDA_VERSION=11.8.0
-ARG COLABFOLD_VERSION=1.5.3
+ARG COLABFOLD_VERSION=1.5.4
 FROM nvidia/cuda:${CUDA_VERSION}-base-ubuntu22.04
 
 RUN apt-get update && apt-get install -y wget cuda-nvcc-$(echo $CUDA_VERSION | cut -d'.' -f1,2 | tr '.' '-') --no-install-recommends --no-install-suggests && rm -rf /var/lib/apt/lists/* && \
