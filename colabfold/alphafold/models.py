@@ -24,7 +24,7 @@ def get_model_haiku_params(
         file = f"params_model_{model_number}_multimer.npz"
     elif model_type == "alphafold2_multimer_v2":
         file = f"params_model_{model_number}_multimer_v2.npz"
-    elif model_type == "alphafold2_multimer_3":
+    elif model_type == "alphafold2_multimer_v3":
         file = f"params_model_{model_number}_multimer_v3.npz"
     elif model_type == "alphafold2_ptm":
         file = f"params_model_{model_number}_ptm.npz"
