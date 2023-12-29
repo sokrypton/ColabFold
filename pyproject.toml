@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "colabfold"
-version = "1.5.4"
+version = "1.5.5"
 description = "Making protein folding accessible to all. Predict proteins structures both in google colab and on your machine"
 authors = [
     "Milot Mirdita <mmirdit@snu.ac.kr>",
