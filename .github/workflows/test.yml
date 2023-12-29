@@ -13,8 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.9 has some strange failure
-        python-version: [ '3.8', '3.10' ]
+        python-version: [ '3.8', '3.9', '3.10' ]
 
     steps:
       - uses: actions/checkout@v3
@@ -23,14 +22,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install poetry
         run: |
-          curl -sSL https://install.python-poetry.org | python3 - --version 1.2.2
+          curl -sSL https://install.python-poetry.org | python3 - --version 1.7.0
           $HOME/.local/bin/poetry config virtualenvs.in-project true
       - uses: actions/cache@v3
         with:
           path: .venv
           key: poetry-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
-          #restore-keys: |
-          #  poetry-${{ runner.os }}-${{ matrix.python-version }}-
       - name: Install depencies
         run: $HOME/.local/bin/poetry install -E alphafold
       - name: Run tests

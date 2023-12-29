@@ -3,7 +3,7 @@ name = "colabfold"
 version = "1.5.4"
 description = "Making protein folding accessible to all. Predict proteins structures both in google colab and on your machine"
 authors = [
-    "Milot Mirdita <milot.mirdita@mpibpc.mpg.de>",
+    "Milot Mirdita <mmirdit@snu.ac.kr>",
     "Sergey Ovchinnikov <so@fas.harvard.edu>",
     "Martin Steinegger <martin.steinegger@snu.ac.kr>",
     "Kostantin Schütze <schuetze@in.tum.de>",
@@ -19,14 +19,14 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.7.1"
+python = ">=3.9,<3.12"
 absl-py = "^1.0.0"
 jax = { version = "^0.4.20", optional = true }
 matplotlib = "^3.2.2"
 tensorflow-macos = { version = "<2.14.0", markers = "sys_platform == 'darwin'" }
 tensorflow-cpu = { version = "^2.12.1", markers = "sys_platform != 'darwin'" }
-biopython = "<=1.82"
-numpy = "^1.21.6"
+biopython = "<1.83"
+numpy = "^1.22.0"
 pandas = "^1.3.4"
 alphafold-colabfold = { version = "v2.3.6", optional = true }
 #alphafold-colabfold = { path = "../alphafold", develop = true, optional = true }
@@ -34,12 +34,12 @@ requests = "^2.26.0"
 tqdm = "^4.62.2"
 appdirs = "^1.4.4"
 py3Dmol = "^2.0.1"
-dm-haiku = "^0.0.11"
+dm-haiku = "=0.0.10"
 importlib-metadata = "^4.8.2"
 
 [tool.poetry.dev-dependencies]
 # The latest version conflicts with tensorflow over typing-extensions
-black = "v21.12b0"
+black = "^23.1.0"
 jupyter = "^1.0.0"
 pytest = "^6.2.5"
 

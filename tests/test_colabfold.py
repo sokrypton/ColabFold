@@ -66,7 +66,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     expected = [
       #'Running on GPU',
-      'Found 4 citations for tools or databases',
+      'Found 5 citations for tools or databases',
       'Query 1/2: 5AWL_1 (length 10)',
       'Padding length to 13',
       'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
@@ -167,7 +167,7 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     expected = [
       #'Running on GPU',
-      'Found 1 citations for tools or databases', 
+      'Found 2 citations for tools or databases',
       'Query 1/1: 5AWL_1 (length 10)', 
       'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
       "reranking models by 'plddt' metric",
@@ -216,7 +216,7 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     expected = [
       #'Running on GPU',
-      'Found 4 citations for tools or databases',
+      'Found 5 citations for tools or databases',
       'Query 1/1: 3G5O_A_3G5O_B (length 180)',
       'Setting max_seq=252, max_extra_seq=1152',
       'alphafold2_multimer_v1_model_1_seed_000 took 0.0s (3 recycles)',
@@ -255,7 +255,7 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     expected = [
       #'Running on GPU',
-      'Found 4 citations for tools or databases',
+      'Found 5 citations for tools or databases',
       'Query 1/1: 3G5O_A_3G5O_B (length 180)',
       'Setting max_seq=512, max_extra_seq=5120',
       'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
@@ -295,7 +295,7 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     expected = [
       #'Running on GPU', 
-      'Found 4 citations for tools or databases', 
+      'Found 5 citations for tools or databases',
       'Query 1/1: A_A (length 118)', 
       'Setting max_seq=512, max_extra_seq=5120', 
       'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)', 
@@ -335,7 +335,7 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
     messages = [re.sub(r"\d+\.\d+s", "0.0s", i) for i in caplog.messages]
     expected = [
       #'Running on GPU', 
-      'Found 4 citations for tools or databases', 
+      'Found 5 citations for tools or databases',
       'Query 1/1: A_A (length 118)', 
       'Setting max_seq=252, max_extra_seq=1152', 
       'alphafold2_multimer_v1_model_1_seed_000 took 0.0s (3 recycles)', 

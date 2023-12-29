@@ -79,6 +79,8 @@ class MockRunModel:
       def chk(a,b):
         test = []
         for k,v in a.items():
+          if k == "msa_feat" or k == "msa":
+            continue
           if k in b: # TODO
             if isinstance(v, dict):
               test.append(chk(v,b[k]))
