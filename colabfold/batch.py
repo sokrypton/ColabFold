@@ -20,7 +20,7 @@ import shutil
 import pickle
 import gzip
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 from io import StringIO
@@ -1671,7 +1671,7 @@ def set_model_type(is_complex: bool, model_type: str) -> str:
     return model_type
 
 def main():
-    parser = ArgumentParser()
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "input",
         default="input",

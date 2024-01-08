@@ -9,7 +9,7 @@ import math
 import os
 import shutil
 import subprocess
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from pathlib import Path
 from typing import List, Union
 
@@ -214,7 +214,7 @@ def mmseqs_search_pair(
 
 
 def main():
-    parser = ArgumentParser()
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "query",
         type=Path,
@@ -236,34 +236,40 @@ def main():
     )
     # dbs are uniref, templates and environmental
     # We normally don't use templates
-    parser.add_argument(
-        "--db1", type=Path, default=Path("uniref30_2302_db"), help="UniRef database"
-    )
-    parser.add_argument("--db2", type=Path, default=Path(""), help="Templates database")
-    parser.add_argument(
-        "--db3",
-        type=Path,
-        default=Path("colabfold_envdb_202108_db"),
-        help="Environmental database",
-    )
+    parser.add_argument("--db1", type=Path, default=Path("uniref30_2302_db"), 
+                        help="UniRef database")
+    parser.add_argument("--db2", type=Path, default=Path(""), 
+                        help="Templates database")
+    parser.add_argument("--db3", type=Path, default=Path("colabfold_envdb_202108_db"),
+                        help="Environmental database")
+
     # poor man's boolean arguments
-    parser.add_argument("--use-env", type=int, default=1, choices=[0, 1])
-    parser.add_argument("--use-templates", type=int, default=0, choices=[0, 1])
-    parser.add_argument("--filter", type=int, default=1, choices=[0, 1])
-    parser.add_argument(
-        "--mmseqs",
-        type=Path,
-        default=Path("mmseqs"),
-        help="Location of the mmseqs binary",
-    )
-    parser.add_argument("--expand-eval", type=float, default=math.inf)
-    parser.add_argument("--align-eval", type=int, default=10)
-    parser.add_argument("--diff", type=int, default=3000)
-    parser.add_argument("--qsc", type=float, default=-20.0)
-    parser.add_argument("--max-accept", type=int, default=1000000)
-    parser.add_argument("--pairing_strategy", type=int, default=0)
-    parser.add_argument("--db-load-mode", type=int, default=0)
-    parser.add_argument("--threads", type=int, default=64)
+    parser.add_argument("--use-env", type=int, default=1, choices=[0, 1],
+                        help="Use --db3")
+    parser.add_argument("--use-templates", type=int, default=0, choices=[0, 1],
+                        help="Use --db2")
+    parser.add_argument("--filter", type=int, default=1, choices=[0, 1],
+                        help="Filter the MSA by pre-defined align_eval, qsc, max_accept")
+
+    # mmseqs params
+    parser.add_argument("--mmseqs", type=Path, default=Path("mmseqs"),
+                        help="Location of the mmseqs binary.")
+    parser.add_argument("--expand-eval", type=float, default=math.inf,
+                        help="e-val threshold for 'expandaln'.")
+    parser.add_argument("--align-eval", type=int, default=10,
+                        help="e-val threshold for 'align'.")
+    parser.add_argument("--diff", type=int, default=3000,
+                        help="filterresult - Keep at least this many seqs in each MSA block.")
+    parser.add_argument("--qsc", type=float, default=-20.0,
+                        help="filterresult - reduce diversity of output MSAs using min score thresh.")
+    parser.add_argument("--max-accept", type=int, default=1000000,
+                        help="align - Maximum accepted alignments before alignment calculation for a query is stopped.")
+    parser.add_argument("--pairing_strategy", type=int, default=0,
+                        help="pairaln - Pairing strategy.")
+    parser.add_argument("--db-load-mode", type=int, default=0,
+                        help="Database preload mode 0: auto, 1: fread, 2: mmap, 3: mmap+touch")
+    parser.add_argument("--threads", type=int, default=64,
+                        help="Number of threads to use.")
     args = parser.parse_args()
 
     queries, is_complex = get_queries(args.query, None)
