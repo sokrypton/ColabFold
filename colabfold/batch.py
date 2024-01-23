@@ -75,7 +75,11 @@ from Bio.PDB.PDBIO import Select
 logger = logging.getLogger(__name__)
 import jax
 import jax.numpy as jnp
-logging.getLogger('jax._src.lib.xla_bridge').addFilter(lambda _: False)
+
+# from jax 0.4.6, jax._src.lib.xla_bridge moved to jax._src.xla_bridge
+# suppress warnings: Unable to initialize backend 'rocm' or 'tpu'
+logging.getLogger('jax._src.xla_bridge').addFilter(lambda _: False) # jax >=0.4.6
+logging.getLogger('jax._src.lib.xla_bridge').addFilter(lambda _: False) # jax < 0.4.5
 
 def mk_mock_template(
     query_sequence: Union[List[str], str], num_temp: int = 1
