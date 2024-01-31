@@ -108,7 +108,7 @@ def mmseqs_search_monomer(
     if use_templates:
         run_mmseqs(mmseqs, ["search", base.joinpath("prof_res"), dbbase.joinpath(template_db), base.joinpath("res_pdb"),
                             base.joinpath("tmp2"), "--db-load-mode", str(db_load_mode), "--threads", str(threads), "-s", "7.5", "-a", "-e", "0.1"])
-        run_mmseqs(mmseqs, ["convertalis", base.joinpath("prof_res"), dbbase.joinpath(f"{template_db}{dbSuffix1}"), base.joinpath("res_pdb"),
+        run_mmseqs(mmseqs, ["convertalis", base.joinpath("prof_res"), dbbase.joinpath(f"{template_db}"), base.joinpath("res_pdb"),
                             base.joinpath(f"{template_db}.m8"), "--format-output",
                             "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,cigar",
                             "--db-load-mode", str(db_load_mode), "--threads", str(threads)])
