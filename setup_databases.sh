@@ -93,9 +93,10 @@ if [ ! -f PDB100_READY ]; then
 fi
 
 if [ ! -f PDB_MMCIF_READY ]; then
+  pip install awscli
   mkdir -p pdb/divided
   mkdir -p pdb/obsolete
-  rsync -rlpt -v -z --delete --port=${PDB_PORT} ${PDB_SERVER}/data/structures/divided/mmCIF/ pdb/divided
-  rsync -rlpt -v -z --delete --port=${PDB_PORT} ${PDB_SERVER}/data/structures/obsolete/mmCIF/ pdb/obsolete
+  aws s3 cp --no-sign-request s3://pdbsnapshots/20240101/pub/pdb/data/structures/divided/mmCIF/ pdb/divided/ --recursive
+  aws s3 cp --no-sign-request s3://pdbsnapshots/20240101/pub/pdb/data/structures/obsolete/mmCIF/ pdb/obsolete/ --recursive
   touch PDB_MMCIF_READY
 fi
