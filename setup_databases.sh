@@ -8,7 +8,7 @@ PDB_SERVER="${2:-"rsync.wwpdb.org::ftp"}"
 PDB_PORT="${3:-"33444"}"
 UNIREF30DB="uniref30_2302"
 MMSEQS_NO_INDEX=${MMSEQS_NO_INDEX:-}
-
+AWS_MMCIF_DOWNLOAD="false"
 cd "${WORKDIR}"
 
 hasCommand () {
@@ -93,10 +93,14 @@ if [ ! -f PDB100_READY ]; then
 fi
 
 if [ ! -f PDB_MMCIF_READY ]; then
-  pip install awscli
   mkdir -p pdb/divided
   mkdir -p pdb/obsolete
-  aws s3 cp --no-sign-request s3://pdbsnapshots/20240101/pub/pdb/data/structures/divided/mmCIF/ pdb/divided/ --recursive
-  aws s3 cp --no-sign-request s3://pdbsnapshots/20240101/pub/pdb/data/structures/obsolete/mmCIF/ pdb/obsolete/ --recursive
+  if [ "$AWS_MMCIF_DOWNLOAD" = "true" ]; then
+    aws s3 cp --no-sign-request s3://pdbsnapshots/20240101/pub/pdb/data/structures/divided/mmCIF/ pdb/divided/ --recursive
+    aws s3 cp --no-sign-request s3://pdbsnapshots/20240101/pub/pdb/data/structures/obsolete/mmCIF/ pdb/obsolete/ --recursive
+  else
+    rsync -rlpt -v -z --delete --port=${PDB_PORT} ${PDB_SERVER}/data/structures/divided/mmCIF/ pdb/divided
+    rsync -rlpt -v -z --delete --port=${PDB_PORT} ${PDB_SERVER}/data/structures/obsolete/mmCIF/ pdb/obsolete
+  fi
   touch PDB_MMCIF_READY
 fi

@@ -24,7 +24,7 @@ MMSEQS_COMMIT=${1:-4589151554eb83a70ff0c4d04d21b83cabc203e4}
 BACKEND_COMMIT=${2:-14e087560f309f989a5e1feb54fd1f9c988076d5}
 
 # check if all dependencies are there
-for i in go curl git aria2c rsync pip; do
+for i in go curl git aria2c rsync aws; do
   if ! command -v "${i}" > /dev/null 2>&1; then
     echo "${i} is not installed, please install it first"
     exit 1
