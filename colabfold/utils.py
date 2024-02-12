@@ -205,8 +205,9 @@ _struct_asym.entity_id
             chain_idx = 1
             for model in self.structure:
                 for chain in model:
-                    label_asym_id = asym_id_auth_to_label[chain.get_id()]
-                    out_file.write(f"{label_asym_id} {chain_idx}\n")
+                    if chain.get_id() in asym_id_auth_to_label:
+                        label_asym_id = asym_id_auth_to_label[chain.get_id()]
+                        out_file.write(f"{label_asym_id} {chain_idx}\n")
                     chain_idx += 1
             out_file.write("#\n")
 
