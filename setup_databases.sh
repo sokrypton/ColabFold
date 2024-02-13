@@ -6,9 +6,13 @@ WORKDIR="${1:-$(pwd)}"
 
 PDB_SERVER="${2:-"rsync.wwpdb.org::ftp"}"
 PDB_PORT="${3:-"33444"}"
+# do initial download of the PDB through aws?
+# still syncs latest structures through rsync
+PDB_AWS_DOWNLOAD="${4:-}"
+PDB_AWS_SNAPSHOT="20240101"
+
 UNIREF30DB="uniref30_2302"
 MMSEQS_NO_INDEX=${MMSEQS_NO_INDEX:-}
-
 cd "${WORKDIR}"
 
 hasCommand () {
@@ -21,6 +25,12 @@ if hasCommand curl;   then STRATEGY="$STRATEGY CURL"; fi
 if hasCommand wget;   then STRATEGY="$STRATEGY WGET"; fi
 if [ "$STRATEGY" = "" ]; then
 	    fail "No download tool found in PATH. Please install aria2c, curl or wget."
+fi
+
+if [ -n "${PDB_AWS_DOWNLOAD}" ]; then
+    if ! hasCommand aws; then
+        fail "aws command not found in PATH. Please install the aws command line tool."
+    fi
 fi
 
 downloadFile() {
@@ -95,6 +105,10 @@ fi
 if [ ! -f PDB_MMCIF_READY ]; then
   mkdir -p pdb/divided
   mkdir -p pdb/obsolete
+  if [ -n "${PDB_AWS_DOWNLOAD}" ]; then
+    aws s3 cp --no-sign-request --recursive s3://pdbsnapshots/${PDB_AWS_SNAPSHOT}/pub/pdb/data/structures/divided/mmCIF/ pdb/divided/
+    aws s3 cp --no-sign-request --recursive s3://pdbsnapshots/${PDB_AWS_SNAPSHOT}/pub/pdb/data/structures/obsolete/mmCIF/ pdb/obsolete/
+  fi
   rsync -rlpt -v -z --delete --port=${PDB_PORT} ${PDB_SERVER}/data/structures/divided/mmCIF/ pdb/divided
   rsync -rlpt -v -z --delete --port=${PDB_PORT} ${PDB_SERVER}/data/structures/obsolete/mmCIF/ pdb/obsolete
   touch PDB_MMCIF_READY
