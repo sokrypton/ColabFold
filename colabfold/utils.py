@@ -1,6 +1,7 @@
 import json
 import logging
 import warnings
+import functools
 from pathlib import Path
 from typing import Optional
 
@@ -27,6 +28,21 @@ submit jobs only from a single IP address. We reserve the right to limit access 
 server case-by-case when usage exceeds fair use. If you require more MSAs: You can 
 precompute all MSAs with `colabfold_search` or host your own API and pass it to `--host-url`
 """
+
+
+def log_function_call(func):
+    """Decorator to log function calls."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Convert args and kwargs to strings to log them
+        args_str = ', '.join(repr(a) for a in args)
+        kwargs_str = ', '.join(f'{k}={v!r}' for k, v in kwargs.items())
+        logging.info(f"Calling {func.__name__}({args_str}, {kwargs_str})")
+        result = func(*args, **kwargs)
+        logging.info(f"{func.__name__} returned {result!r}")
+        return result
+    return wrapper
+
 
 class TqdmHandler(logging.StreamHandler):
     """https://stackoverflow.com/a/38895482/3549270"""

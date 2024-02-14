@@ -20,10 +20,11 @@ import shutil
 import pickle
 import gzip
 
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter, ArgumentTypeError
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 from io import StringIO
+from datetime import datetime
 
 import importlib_metadata
 import numpy as np
@@ -65,6 +66,7 @@ from colabfold.utils import (
     safe_filename,
     setup_logging,
     CFMMCIFIO,
+    log_function_call,
 )
 from colabfold.relax import relax_me
 
@@ -80,6 +82,22 @@ import jax.numpy as jnp
 # suppress warnings: Unable to initialize backend 'rocm' or 'tpu'
 logging.getLogger('jax._src.xla_bridge').addFilter(lambda _: False) # jax >=0.4.6
 logging.getLogger('jax._src.lib.xla_bridge').addFilter(lambda _: False) # jax < 0.4.5
+
+
+def split_into_batches(lst, batch_size=500):
+    # Split the list into chunks of size batch_size
+    for i in range(0, len(lst), batch_size):
+        yield lst[i:i + batch_size]
+
+
+# Define a function to validate the date format
+def valid_date(s):
+    try:
+        _ = datetime.strptime(s, "%Y-%m-%d")
+        return s # We still need it to be treated as a string
+    except ValueError:
+        raise ArgumentTypeError(f"Not a valid date: '{s}'. Required format: YYYY-MM-DD")
+
 
 def mk_mock_template(
     query_sequence: Union[List[str], str], num_temp: int = 1
@@ -118,11 +136,10 @@ def mk_mock_template(
     return template_features
 
 def mk_template(
-    a3m_lines: str, template_path: str, query_sequence: str
-) -> Dict[str, Any]:
+    a3m_lines: str, template_path: str, query_sequence: str, max_template_date: str) -> Dict[str, Any]:
     template_featurizer = templates.HhsearchHitFeaturizer(
         mmcif_dir=template_path,
-        max_template_date="2100-01-01",
+        max_template_date=max_template_date,
         max_hits=20,
         kalign_binary_path="kalign",
         release_dates_path=None,
@@ -620,6 +637,9 @@ def get_queries(
         for file in sorted(input_path.iterdir()):
             if not file.is_file():
                 continue
+            if file.suffix.lower() == ".m8":
+                # Skipping logging template hit file in directory
+                continue
             if file.suffix.lower() not in [".a3m", ".fasta", ".faa"]:
                 logger.warning(f"non-fasta/a3m file in input directory: {file}")
                 continue
@@ -726,6 +746,7 @@ def get_msa_and_templates(
     pairing_strategy: str = "greedy",
     host_url: str = DEFAULT_API_SERVER,
     user_agent: str = "",
+    max_template_date: str = ""
 ) -> Tuple[
     Optional[List[str]], Optional[List[str]], List[str], List[int], List[Dict[str, Any]]
 ]:
@@ -786,6 +807,7 @@ def get_msa_and_templates(
                         a3m_lines_mmseqs2[index],
                         template_paths[index],
                         query_seqs_unique[index],
+                        max_template_date
                     )
                     if len(template_feature["template_domain_names"]) == 0:
                         template_feature = mk_mock_template(query_seqs_unique[index])
@@ -1223,6 +1245,7 @@ def run(
     result_dir: Union[str, Path],
     num_models: int,
     is_complex: bool,
+    input_path: Union[str, Path] = None,
     num_recycles: Optional[int] = None,
     recycle_early_stop_tolerance: Optional[float] = None,
     model_order: List[int] = [1,2,3,4,5],
@@ -1255,10 +1278,12 @@ def run(
     save_recycles: bool = False,
     use_dropout: bool = False,
     use_gpu_relax: bool = False,
+    use_unpacked_pdbs: bool = False,
     stop_at_score: float = 100,
     dpi: int = 200,
     max_seq: Optional[int] = None,
     max_extra_seq: Optional[int] = None,
+    max_template_date: Optional[str] = None,
     pdb_hit_file: Optional[Path] = None,
     local_pdb_path: Optional[Path] = None,
     use_cluster_profile: bool = True,
@@ -1286,7 +1311,6 @@ def run(
             # disable GPU on tensorflow
             tf.config.set_visible_devices([], 'GPU')
 
-    from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
     from colabfold.colabfold import plot_paes, plot_plddts
     from colabfold.plot import plot_msa_v2
@@ -1376,6 +1400,7 @@ def run(
         "rank_by": rank_by,
         "max_seq": max_seq,
         "max_extra_seq": max_extra_seq,
+        "max_template_date": max_template_date,
         "pair_mode": pair_mode,
         "pairing_strategy": pairing_strategy,
         "host_url": host_url,
@@ -1389,6 +1414,7 @@ def run(
         "use_cluster_profile": use_cluster_profile,
         "use_fuse": use_fuse,
         "use_bfloat16": use_bfloat16,
+        "use_unpacked_pdbs": use_unpacked_pdbs,
         "version": importlib_metadata.version("colabfold"),
     }
     config_out_file = result_dir.joinpath("config.json")
@@ -1401,12 +1427,26 @@ def run(
         model_type if num_models > 0 else "", use_msa, use_env, use_templates, use_amber, result_dir
     )
 
-    if pdb_hit_file is not None:
-        if local_pdb_path is None:
+    if pdb_hit_file:
+        if not local_pdb_path:
             raise ValueError("local_pdb_path is not specified.")
         else:
             custom_template_path = result_dir / "templates"
             put_mmciffiles_into_resultdir(pdb_hit_file, local_pdb_path, custom_template_path)
+    elif use_unpacked_pdbs:
+        if not local_pdb_path:
+            raise ValueError("local_pdb_path is not specified.")
+        elif not input_path:
+            raise ValueError("input_path is not specified.")
+        else:
+            custom_template_path = result_dir / "templates"
+            for query in queries:
+                if len(query) > 0:
+                    m8file = next(input_path.glob(f"{query[0]}_*.m8"), None)
+                    put_mmciffiles_into_resultdir(Path(input_path/m8file), local_pdb_path,
+                                                  custom_template_path)
+                else:
+                    logger.warning(f"Skipping {query[0]} as it has no sequence")
 
     if custom_template_path is not None:
         mk_hhsearch_db(custom_template_path)
@@ -1414,7 +1454,6 @@ def run(
     pad_len = 0
     ranks, metrics = [],[]
     first_job = True
-    job_number = 0
     for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
         if jobname_prefix is not None:
             # pad job number based on number of queries
@@ -1455,7 +1494,7 @@ def run(
                 if a3m_lines is None:
                     (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
                     = get_msa_and_templates(jobname, query_sequence, a3m_lines, result_dir, msa_mode, use_templates,
-                        custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+                        custom_template_path, pair_mode, pairing_strategy, host_url, user_agent, max_template_date)
 
                 elif a3m_lines is not None:
                     (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
@@ -1463,7 +1502,7 @@ def run(
                     if use_templates:
                         (_, _, _, _, template_features) \
                             = get_msa_and_templates(jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
-                                custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+                                custom_template_path, pair_mode, pairing_strategy, host_url, user_agent, max_template_date)
 
                 if num_models == 0:
                     with open(pickled_msa_and_templates, 'wb') as f:
@@ -1674,7 +1713,9 @@ def set_model_type(is_complex: bool, model_type: str) -> str:
             model_type = "alphafold2_ptm"
     return model_type
 
-def main():
+
+# This function sets up and returns the argument parser
+def parse_arguments():
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "input",
@@ -1698,7 +1739,7 @@ def main():
             "single_sequence",
         ],
         help="Databases to use to create the MSA: UniRef30+Environmental (default), UniRef30 only or None. "
-        "Using an A3M file as input overwrites this option.",
+             "Using an A3M file as input overwrites this option.",
     )
     msa_group.add_argument(
         "--pair-mode",
@@ -1710,10 +1751,10 @@ def main():
     msa_group.add_argument(
         "--pair-strategy",
         help="How sequences are paired during MSA pairing for complex prediction. "
-        "complete: MSA sequences should only be paired if the same species exists in all MSAs. "
-        "greedy: MSA sequences should only be paired if the same species exists in at least two MSAs. "
-        "Typically, greedy produces better predictions as it results in more paired sequences. "
-        "However, in some cases complete pairing might help, especially if MSAs are already large and can be well paired. ",
+             "complete: MSA sequences should only be paired if the same species exists in all MSAs. "
+             "greedy: MSA sequences should only be paired if the same species exists in at least two MSAs. "
+             "Typically, greedy produces better predictions as it results in more paired sequences. "
+             "However, in some cases complete pairing might help, especially if MSAs are already large and can be well paired. ",
         type=str,
         default="greedy",
         choices=["complete", "greedy"],
@@ -1723,58 +1764,64 @@ def main():
         default=False,
         action="store_true",
         help="Query PDB templates from the MSA server. "
-        'If this parameter is not set, "--custom-template-path" and "--pdb-hit-file" will not be used. '
-        "Warning: This can result in the MSA server being queried with A3M input. "
+             'If this parameter is not set, "--custom-template-path" and "--pdb-hit-file" will not be used. '
+             "Warning: This can result in the MSA server being queried with A3M input. "
     )
     msa_group.add_argument(
         "--custom-template-path",
         type=str,
         default=None,
         help="Directory with PDB files to provide as custom templates to the predictor. "
-        "No templates will be queried from the MSA server. "
-        "'--templates' argument is also required to enable this.",
+             "No templates will be queried from the MSA server. "
+             "'--templates' argument is also required to enable this.",
     )
     msa_group.add_argument(
         "--pdb-hit-file",
         default=None,
         help="Path to a BLAST-m8 formatted PDB hit file corresponding to the input A3M file (e.g. pdb70.m8). "
-        "Typically, this parameter should be used for a MSA generated by 'colabfold_search'. "
-        "'--templates' argument is also required to enable this.",
+             "Typically, this parameter should be used for a MSA generated by 'colabfold_search'. "
+             "'--templates' argument is also required to enable this.",
     )
     msa_group.add_argument(
         "--local-pdb-path",
         default=None,
         help="Directory of a local mirror of the PDB mmCIF database (e.g. /path/to/pdb/divided). "
-        "If provided, PDB files from the directory are used for templates specified by '--pdb-hit-file'. ",
+             "If provided, PDB files from the directory are used for templates specified by '--pdb-hit-file'. ",
+    )
+    msa_group.add_argument(
+        "--max-template-date",
+        default="2031-01-01",
+        type=valid_date,
+        help="Max template date to be used for AlphaFold structure prediction.",
     )
 
     pred_group = parser.add_argument_group("Prediction arguments", "")
     pred_group.add_argument(
         "--num-recycle",
         help="Number of prediction recycles. "
-        "Increasing recycles can improve the prediction quality but slows down the prediction.",
+             "Increasing recycles can improve the prediction quality but slows down the prediction.",
         type=int,
         default=None,
     )
     pred_group.add_argument(
         "--recycle-early-stop-tolerance",
         help="Specify convergence criteria. "
-        "Run recycles until the distance between recycles is within the given tolerance value.",
+             "Run recycles until the distance between recycles is within the given tolerance value.",
         type=float,
         default=None,
     )
     pred_group.add_argument(
         "--num-ensemble",
         help="Number of ensembles. "
-        "The trunk of the network is run multiple times with different random choices for the MSA cluster centers. "
-        "This can result in a better prediction at the cost of longer runtime. ",
+             "The trunk of the network is run multiple times with different random choices for the MSA cluster centers. "
+             "This can result in a better prediction at the cost of longer runtime. ",
         type=int,
         default=1,
     )
     pred_group.add_argument(
         "--num-seeds",
         help="Number of seeds to try. Will iterate from range(random_seed, random_seed+num_seeds). "
-        "This can result in a better/different prediction at the cost of longer runtime. ",
+             "This can result in a better/different prediction at the cost of longer runtime. ",
         type=int,
         default=1,
     )
@@ -1787,7 +1834,7 @@ def main():
     pred_group.add_argument(
         "--num-models",
         help="Number of models to use for structure prediction. "
-        "Reducing the number of models speeds up the prediction but results in lower quality.",
+             "Reducing the number of models speeds up the prediction but results in lower quality.",
         type=int,
         default=5,
         choices=[1, 2, 3, 4, 5],
@@ -1795,9 +1842,9 @@ def main():
     pred_group.add_argument(
         "--model-type",
         help="Predict structure/complex using the given model. "
-        'Auto will pick "alphafold2_ptm" for structure predictions and "alphafold2_multimer_v3" for complexes. '
-        "Older versions of the AF2 models are generally worse, however they can sometimes result in better predictions. "
-        "If the model is not already downloaded, it will be automatically downloaded. ",
+             'Auto will pick "alphafold2_ptm" for structure predictions and "alphafold2_multimer_v3" for complexes. '
+             "Older versions of the AF2 models are generally worse, however they can sometimes result in better predictions. "
+             "If the model is not already downloaded, it will be automatically downloaded. ",
         type=str,
         default="auto",
         choices=[
@@ -1816,26 +1863,26 @@ def main():
         default=False,
         action="store_true",
         help="Activate dropouts during inference to sample from uncertainty of the models. "
-        "This can result in different predictions and can be (carefully!) used for conformations sampling.",
+             "This can result in different predictions and can be (carefully!) used for conformations sampling.",
     )
     pred_group.add_argument(
         "--max-seq",
         help="Number of sequence clusters to use. "
-        "This can result in different predictions and can be (carefully!) used for conformations sampling.",
+             "This can result in different predictions and can be (carefully!) used for conformations sampling.",
         type=int,
         default=None,
     )
     pred_group.add_argument(
         "--max-extra-seq",
         help="Number of extra sequences to use. "
-        "This can result in different predictions and can be (carefully!) used for conformations sampling.",
+             "This can result in different predictions and can be (carefully!) used for conformations sampling.",
         type=int,
         default=None,
     )
     pred_group.add_argument(
         "--max-msa",
         help="Defines: `max-seq:max-extra-seq` number of sequences to use in one go. "
-        '"--max-seq" and "--max-extra-seq" are ignored if this parameter is set.',
+             '"--max-seq" and "--max-extra-seq" are ignored if this parameter is set.',
         type=str,
         default=None,
     )
@@ -1846,6 +1893,7 @@ def main():
         help="Experimental: For multimer models, disable cluster profiles.",
     )
     pred_group.add_argument("--data", help="Path to AlphaFold2 weights directory.")
+    pred_group.add_argument("--custom-weights", help="Path to AlphaFold2 predownloaded weights.")
 
     relax_group = parser.add_argument_group("Relaxation arguments", "")
     relax_group.add_argument(
@@ -1853,12 +1901,12 @@ def main():
         default=False,
         action="store_true",
         help="Enable OpenMM/Amber for structure relaxation. "
-        "Can improve the quality of side-chains at a cost of longer runtime. "
+             "Can improve the quality of side-chains at a cost of longer runtime. "
     )
     relax_group.add_argument(
         "--num-relax",
         help="Specify how many of the top ranked structures to relax using OpenMM/Amber. "
-        "Typically, relaxing the top-ranked prediction is enough and speeds up the runtime. ",
+             "Typically, relaxing the top-ranked prediction is enough and speeds up the runtime. ",
         type=int,
         default=0,
     )
@@ -1867,7 +1915,7 @@ def main():
         type=int,
         default=2000,
         help="Maximum number of iterations for the relaxation process. "
-        "AlphaFold2 sets this to unlimited (0), however, we found that this can lead to very long relaxation times for some inputs.",
+             "AlphaFold2 sets this to unlimited (0), however, we found that this can lead to very long relaxation times for some inputs.",
     )
     relax_group.add_argument(
         "--relax-tolerance",
@@ -1892,8 +1940,8 @@ def main():
         default=False,
         action="store_true",
         help="Run OpenMM/Amber on GPU instead of CPU. "
-        "This can significantly speed up the relaxation runtime, however, might lead to compatibility issues with CUDA. "
-        "Unsupported on AMD/ROCM and Apple Silicon.",
+             "This can significantly speed up the relaxation runtime, however, might lead to compatibility issues with CUDA. "
+             "Unsupported on AMD/ROCM and Apple Silicon.",
     )
 
     output_group = parser.add_argument_group("Output arguments", "")
@@ -1907,7 +1955,7 @@ def main():
     output_group.add_argument(
         "--stop-at-score",
         help="Compute models until pLDDT (single chain) or pTM-score (multimer) > threshold is reached. "
-        "This speeds up prediction by running less models for easier queries.",
+             "This speeds up prediction by running less models for easier queries.",
         type=float,
         default=100,
     )
@@ -1922,7 +1970,7 @@ def main():
         default=False,
         action="store_true",
         help="Save all raw outputs from model to a pickle file. "
-        "Useful for downstream use in other models."
+             "Useful for downstream use in other models."
     )
     output_group.add_argument(
         "--save-recycles",
@@ -1957,7 +2005,7 @@ def main():
     output_group.add_argument(
         "--sort-queries-by",
         help="Sort input queries by: none, length, random. "
-        "Sorting by length speeds up prediction as models are recompiled less often.",
+             "Sorting by length speeds up prediction as models are recompiled less often.",
         type=str,
         default="length",
         choices=["none", "length", "random"],
@@ -1982,22 +2030,73 @@ def main():
         type=int,
         default=10,
         help="Whenever the input length changes, the model needs to be recompiled. "
-        "We pad sequences by the specified length, so we can e.g., compute sequences from length 100 to 110 without recompiling. "
-        "Individual predictions will become marginally slower due to longer input, "
-        "but overall performance increases due to not recompiling. "
-        "Set to 0 to disable.",
+             "We pad sequences by the specified length, so we can e.g., compute sequences from length 100 to 110 without recompiling. "
+             "Individual predictions will become marginally slower due to longer input, "
+             "but overall performance increases due to not recompiling. "
+             "Set to 0 to disable.",
     )
 
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    if (args.custom_template_path is not None) and (args.pdb_hit_file is not None):
+@log_function_call
+def compute_pdbs(
+    input_path,
+    results,
+    msa_only=False,
+    msa_mode="mmseqs2_uniref_env",
+    pair_mode="unpaired_paired",
+    pair_strategy="greedy",
+    templates=False,
+    custom_template_path=None,
+    pdb_hit_file=None,
+    local_pdb_path=None,
+    max_template_date="2031-01-01",
+    num_recycle=None,
+    recycle_early_stop_tolerance=None,
+    num_ensemble=1,
+    num_seeds=1,
+    random_seed=0,
+    num_models=5,
+    model_type="auto",
+    model_order="1,2,3,4,5",
+    use_dropout=False,
+    max_seq=None,
+    max_extra_seq=None,
+    max_msa=None,
+    disable_cluster_profile=False,
+    data=None,
+    custom_weights=None,
+    amber=False,
+    num_relax=0,
+    relax_max_iterations=2000,
+    relax_tolerance=2.39,
+    relax_stiffness=10.0,
+    relax_max_outer_iterations=3,
+    use_gpu_relax=False,
+    use_unpacked_pdbs=False,
+    rank="auto",
+    stop_at_score=100,
+    jobname_prefix=None,
+    save_all=False,
+    save_recycles=False,
+    save_single_representations=False,
+    save_pair_representations=False,
+    overwrite_existing_results=False,
+    zip_results=False,
+    sort_queries_by="length",
+    host_url=DEFAULT_API_SERVER,
+    disable_unified_memory=False,
+    recompile_padding=10,
+    log_file=None
+):
+    if (custom_template_path is not None) and (pdb_hit_file is not None):
         raise RuntimeError("Arguments --pdb-hit-file and --custom-template-path cannot be used simultaneously.")
-    # disable unified memory
-    if args.disable_unified_memory:
+        # disable unified memory
+    if disable_unified_memory:
         for k in ENV.keys():
             if k in os.environ: del os.environ[k]
 
-    setup_logging(Path(args.results).joinpath("log.txt"))
+    setup_logging(Path(log_file) if log_file else Path(results).joinpath("log.txt"))
 
     version = importlib_metadata.version("colabfold")
     commit = get_commit()
@@ -2006,76 +2105,138 @@ def main():
 
     logger.info(f"Running colabfold {version}")
 
-    data_dir = Path(args.data or default_data_dir)
+    data_dir = Path(data or default_data_dir)
 
-    queries, is_complex = get_queries(args.input, args.sort_queries_by)
-    model_type = set_model_type(is_complex, args.model_type)
+    queries, is_complex = get_queries(input_path, sort_queries_by)
+    model_type = set_model_type(is_complex, model_type)
 
-    if args.msa_only:
-        args.num_models = 0
+    if msa_only:
+        num_models = 0
 
-    if args.num_models > 0:
-        download_alphafold_params(model_type, data_dir)
+    if num_models > 0:
+        if not custom_weights:
+            download_alphafold_params(model_type, data_dir)
+        else:
+            data_dir = custom_weights
 
-    if args.msa_mode != "single_sequence" and not args.templates:
+    if msa_mode != "single_sequence" and not templates:
         uses_api = any((query[2] is None for query in queries))
-        if uses_api and args.host_url == DEFAULT_API_SERVER:
+        if uses_api and host_url == DEFAULT_API_SERVER:
             print(ACCEPT_DEFAULT_TERMS, file=sys.stderr)
 
-    model_order = [int(i) for i in args.model_order.split(",")]
+    model_order = [int(i) for i in model_order.split(",")]
 
-    assert args.recompile_padding >= 0, "Can't apply negative padding"
+    assert recompile_padding >= 0, "Can't apply negative padding"
 
     # backward compatibility
-    if args.amber and args.num_relax == 0:
-        args.num_relax = args.num_models * args.num_seeds
+    if amber and num_relax == 0:
+        num_relax = num_models * num_seeds
 
     user_agent = f"colabfold/{version}"
 
-    run(
-        queries=queries,
-        result_dir=args.results,
-        use_templates=args.templates,
+    # Initialization time and memory requirements seem to be excessive for fasta files with more than 500 sequences
+    for batch_queries in split_into_batches(queries, batch_size=500):
+        run(
+            input_path=input_path,
+            queries=batch_queries,
+            result_dir=results,
+            use_templates=templates,
+            custom_template_path=custom_template_path,
+            num_relax=num_relax,
+            relax_max_iterations=relax_max_iterations,
+            relax_tolerance=relax_tolerance,
+            relax_stiffness=relax_stiffness,
+            relax_max_outer_iterations=relax_max_outer_iterations,
+            msa_mode=msa_mode,
+            model_type=model_type,
+            num_models=num_models,
+            num_recycles=num_recycle,
+            recycle_early_stop_tolerance=recycle_early_stop_tolerance,
+            num_ensemble=num_ensemble,
+            model_order=model_order,
+            is_complex=is_complex,
+            keep_existing_results=not overwrite_existing_results,
+            rank_by=rank,
+            pair_mode=pair_mode,
+            pairing_strategy=pair_strategy,
+            data_dir=data_dir,
+            host_url=host_url,
+            user_agent=user_agent,
+            random_seed=random_seed,
+            num_seeds=num_seeds,
+            stop_at_score=stop_at_score,
+            recompile_padding=recompile_padding,
+            zip_results=zip_results,
+            save_single_representations=save_single_representations,
+            save_pair_representations=save_pair_representations,
+            use_dropout=use_dropout,
+            max_seq=max_seq,
+            max_extra_seq=max_extra_seq,
+            max_msa=max_msa,
+            max_template_date=max_template_date,
+            pdb_hit_file=pdb_hit_file,
+            local_pdb_path=local_pdb_path,
+            use_cluster_profile=not disable_cluster_profile,
+            use_gpu_relax=use_gpu_relax,
+            use_unpacked_pdbs=use_unpacked_pdbs,
+            jobname_prefix=jobname_prefix,
+            save_all=save_all,
+            save_recycles=save_recycles,
+        )
+
+
+# This is the main function that now only handles argument parsing
+def main():
+    args = parse_arguments()
+    compute_pdbs(
+        input_path=args.input,
+        results=args.results,
+        msa_only=args.msa_only,
+        msa_mode=args.msa_mode,
+        pair_mode=args.pair_mode,
+        pair_strategy=args.pair_strategy,
+        templates=args.templates,
         custom_template_path=args.custom_template_path,
+        pdb_hit_file=args.pdb_hit_file,
+        local_pdb_path=args.local_pdb_path,
+        max_template_date=args.max_template_date,
+        num_recycle=args.num_recycle,
+        recycle_early_stop_tolerance=args.recycle_early_stop_tolerance,
+        num_ensemble=args.num_ensemble,
+        num_seeds=args.num_seeds,
+        random_seed=args.random_seed,
+        num_models=args.num_models,
+        model_type=args.model_type,
+        model_order=args.model_order,
+        use_dropout=args.use_dropout,
+        max_seq=args.max_seq,
+        max_extra_seq=args.max_extra_seq,
+        max_msa=args.max_msa,
+        disable_cluster_profile=args.disable_cluster_profile,
+        data=args.data,
+        custom_weights=args.custom_weights,
+        amber=args.amber,
         num_relax=args.num_relax,
         relax_max_iterations=args.relax_max_iterations,
         relax_tolerance=args.relax_tolerance,
         relax_stiffness=args.relax_stiffness,
         relax_max_outer_iterations=args.relax_max_outer_iterations,
-        msa_mode=args.msa_mode,
-        model_type=model_type,
-        num_models=args.num_models,
-        num_recycles=args.num_recycle,
-        recycle_early_stop_tolerance=args.recycle_early_stop_tolerance,
-        num_ensemble=args.num_ensemble,
-        model_order=model_order,
-        is_complex=is_complex,
-        keep_existing_results=not args.overwrite_existing_results,
-        rank_by=args.rank,
-        pair_mode=args.pair_mode,
-        pairing_strategy=args.pair_strategy,
-        data_dir=data_dir,
-        host_url=args.host_url,
-        user_agent=user_agent,
-        random_seed=args.random_seed,
-        num_seeds=args.num_seeds,
+        use_gpu_relax=args.use_gpu_relax,
+        rank=args.rank,
         stop_at_score=args.stop_at_score,
-        recompile_padding=args.recompile_padding,
-        zip_results=args.zip,
-        save_single_representations=args.save_single_representations,
-        save_pair_representations=args.save_pair_representations,
-        use_dropout=args.use_dropout,
-        max_seq=args.max_seq,
-        max_extra_seq=args.max_extra_seq,
-        max_msa=args.max_msa,
-        pdb_hit_file=args.pdb_hit_file,
-        local_pdb_path=args.local_pdb_path,
-        use_cluster_profile=not args.disable_cluster_profile,
-        use_gpu_relax = args.use_gpu_relax,
         jobname_prefix=args.jobname_prefix,
         save_all=args.save_all,
         save_recycles=args.save_recycles,
+        save_single_representations=args.save_single_representations,
+        save_pair_representations=args.save_pair_representations,
+        overwrite_existing_results=args.overwrite_existing_results,
+        zip_results=args.zip_results,
+        sort_queries_by=args.sort_queries_by,
+        host_url=args.host_url,
+        disable_unified_memory=args.disable_unified_memory,
+        recompile_padding=args.recompile_padding,
     )
+
 
 if __name__ == "__main__":
     main()
