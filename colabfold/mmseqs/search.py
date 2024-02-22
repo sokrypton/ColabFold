@@ -419,12 +419,15 @@ def main():
                 unpaired_msa, paired_msa, query_sequences, query_seqs_cardinality
             )
             args.base.joinpath(f"{job_number}.a3m").write_text(msa)
-            # add raw_jobname to the output file
-            os.rename(
-                args.base.joinpath(f"{job_number}.a3m"),
-                args.base.joinpath(f"{safe_filename(raw_jobname)}.a3m"),
-            )
 
+    # rename a3m files
+    for job_number, (raw_jobname, query_sequences, query_seqs_cardinality) in enumerate(queries_unique):
+        os.rename(
+            args.base.joinpath(f"{job_number}.a3m"),
+            args.base.joinpath(f"{safe_filename(raw_jobname)}.a3m"),
+        )
+
+    # rename m8 files
     if args.use_templates:
         id = 0
         for raw_jobname, query_sequences, query_seqs_cardinality in queries_unique:
