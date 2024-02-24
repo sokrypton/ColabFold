@@ -1117,11 +1117,11 @@ def unserialize_msa(
                 curr_seq_len += 1
             seqs_line.append(paired_seq)
 
-        # is sequence is paired add them to output
+        # if sequence is paired add them to output
         if (
             not is_single_protein
             and not is_homooligomer
-            and sum(has_amino_acid) == len(query_seq_len)
+            and sum(has_amino_acid) > 1 # at least 2 sequences are paired
         ):
             header_no_faster = header.replace(">", "")
             header_no_faster_split = header_no_faster.split("\t")
