@@ -67,8 +67,11 @@ def mmseqs_search_monomer(
         if not dbbase.joinpath(f"{db}.dbtype").is_file():
             raise FileNotFoundError(f"Database {db} does not exist")
         if (
-            not dbbase.joinpath(f"{db}.idx").is_file()
-            and not dbbase.joinpath(f"{db}.idx.index").is_file()
+            (
+                not dbbase.joinpath(f"{db}.idx").is_file()
+                and not dbbase.joinpath(f"{db}.idx.index").is_file()
+            )
+            or os.environ.get("MMSEQS_IGNORE_INDEX", False)
         ):
             logger.info("Search does not use index")
             db_load_mode = 0
@@ -177,8 +180,11 @@ def mmseqs_search_pair(
     if not dbbase.joinpath(f"{uniref_db}.dbtype").is_file():
         raise FileNotFoundError(f"Database {uniref_db} does not exist")
     if (
-        not dbbase.joinpath(f"{uniref_db}.idx").is_file()
-        and not dbbase.joinpath(f"{uniref_db}.idx.index").is_file()
+        (
+            not dbbase.joinpath(f"{uniref_db}.idx").is_file()
+            and not dbbase.joinpath(f"{uniref_db}.idx.index").is_file()
+        )
+        or os.environ.get("MMSEQS_IGNORE_INDEX", False)
     ):
         logger.info("Search does not use index")
         db_load_mode = 0
