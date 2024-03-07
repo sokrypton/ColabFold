@@ -34,7 +34,7 @@ requests = "^2.26.0"
 tqdm = "^4.62.2"
 appdirs = "^1.4.4"
 py3Dmol = "^2.0.1"
-dm-haiku = "=0.0.10"
+dm-haiku = "^0.0.12"
 importlib-metadata = "^4.8.2"
 
 [tool.poetry.dev-dependencies]
