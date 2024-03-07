@@ -321,6 +321,8 @@ def main():
     )
     args = parser.parse_args()
 
+    logging.basicConfig(level = logging.INFO)
+
     queries, is_complex = get_queries(args.query, None)
 
     queries_unique = []
