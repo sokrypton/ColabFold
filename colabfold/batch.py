@@ -329,6 +329,7 @@ def predict_structure(
     use_templates: bool,
     sequences_lengths: List[int],
     pad_len: int,
+    initial_guess: Union[str, None],
     model_type: str,
     model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
     num_relax: int = 0,
@@ -424,6 +425,7 @@ def predict_structure(
             model_runner.predict(input_features,
                 random_seed=seed,
                 return_representations=return_representations,
+                initial_guess=initial_guess,
                 callback=callback)
 
             prediction_times.append(time.time() - start)
@@ -1226,6 +1228,7 @@ def run(
     num_recycles: Optional[int] = None,
     recycle_early_stop_tolerance: Optional[float] = None,
     model_order: List[int] = [1,2,3,4,5],
+    initial_guess: str = None,
     num_ensemble: int = 1,
     model_type: str = "auto",
     msa_mode: str = "mmseqs2_uniref_env",
@@ -1356,6 +1359,10 @@ def run(
     # sort model order
     model_order.sort()
 
+    # initial guess
+    if initial_guess is not None:
+        logger.info(f'Using initial guess: {initial_guess}')
+
     # Record the parameters of this run
     config = {
         "num_queries": len(queries),
@@ -1372,6 +1379,7 @@ def run(
         "recycle_early_stop_tolerance": recycle_early_stop_tolerance,
         "num_ensemble": num_ensemble,
         "model_order": model_order,
+        "initial_guess": initial_guess,
         "keep_existing_results": keep_existing_results,
         "rank_by": rank_by,
         "max_seq": max_seq,
@@ -1578,6 +1586,7 @@ def run(
                     use_templates=use_templates,
                     sequences_lengths=query_sequence_len_array,
                     pad_len=pad_len,
+                    initial_guess=initial_guess,
                     model_type=model_type,
                     model_runner_and_params=model_runner_and_params,
                     num_relax=num_relax,
@@ -1811,6 +1820,12 @@ def main():
         ],
     )
     pred_group.add_argument("--model-order", default="1,2,3,4,5", type=str)
+    pred_group.add_argument(
+        "--initial-guess",
+        default=False,
+        type=str,
+        help="Provide a starting model for the prediction. ",
+    )
     pred_group.add_argument(
         "--use-dropout",
         default=False,
@@ -2049,6 +2064,7 @@ def main():
         recycle_early_stop_tolerance=args.recycle_early_stop_tolerance,
         num_ensemble=args.num_ensemble,
         model_order=model_order,
+        initial_guess=args.initial_guess,
         is_complex=is_complex,
         keep_existing_results=not args.overwrite_existing_results,
         rank_by=args.rank,
