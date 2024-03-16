@@ -329,9 +329,9 @@ def predict_structure(
     use_templates: bool,
     sequences_lengths: List[int],
     pad_len: int,
-    initial_guess: Union[str, None],
     model_type: str,
     model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
+    initial_guess: str = None,
     num_relax: int = 0,
     relax_max_iterations: int = 0,
     relax_tolerance: float = 2.39,
@@ -389,6 +389,11 @@ def predict_structure(
             model_names.append(tag)
             files.set_tag(tag)
 
+            # initial guess
+            if initial_guess:
+                input_features["all_atom_positions"] = np.array(
+                    np.random.uniform(-1, 1, size=(seq_len, 37, 3)), dtype=np.float32)
+
             ########################
             # predict
             ########################
@@ -425,7 +430,6 @@ def predict_structure(
             model_runner.predict(input_features,
                 random_seed=seed,
                 return_representations=return_representations,
-                initial_guess=initial_guess,
                 callback=callback)
 
             prediction_times.append(time.time() - start)
