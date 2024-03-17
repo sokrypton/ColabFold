@@ -457,8 +457,7 @@ def predict_structure(
             if initial_guess:
                 pdb_string = pdb_to_string(initial_guess)
                 input_features["all_atom_positions"] = protein.from_pdb_string(pdb_string).atom_positions
-                # input_features["all_atom_positions"] = np.array(
-                #     np.random.uniform(-1, 1, size=(seq_len, 37, 3)), dtype=np.float32)
+                
 
             ########################
             # predict
