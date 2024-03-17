@@ -319,7 +319,11 @@ MODRES = {'MSE':'MET','MLY':'LYS','FME':'MET','HYP':'PRO',
           'TYS':'TYR','IAS':'ASP','GPL':'LYS','KYN':'TRP',
           'CSD':'CYS','SEC':'CYS'}
 
-def pdb_to_string(pdb_file, chains=None, models=None):
+def pdb_to_string(
+        pdb_file: str, 
+        chains: Optional[str] = None, 
+        models: Optional[list] = None
+    ) -> str:
   '''read pdb file and return as string'''
 
   if chains is not None:
