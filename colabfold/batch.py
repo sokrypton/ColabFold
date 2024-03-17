@@ -647,7 +647,7 @@ def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
     return sequences, descriptions
 
 def parse_pdb(pdb_string: str) -> List[str]:
-    """Parses a PDB string and returns the sequence and a list of sequence descriptions.
+    """Parses a PDB string and returns a list of sequences.
 
     Arguments:
       pdb_string: The string contents of a PDB file.
