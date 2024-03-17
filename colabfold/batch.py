@@ -643,6 +643,40 @@ def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
 
     return sequences, descriptions
 
+def parse_pdb(pdb_string: str) -> List[str]:
+    """Parses a PDB string and returns the sequence and a list of sequence descriptions.
+
+    Arguments:
+      pdb_string: The string contents of a PDB file.
+
+    Returns:
+      * List of chain sequences.
+    """
+    import io
+    pdb_fh = io.StringIO(pdb_string)
+    parser = PDBParser(QUIET=True)
+    structure = parser.get_structure('none', pdb_fh)
+    models = list(structure.get_models())
+    
+    if len(models) != 1:
+        raise ValueError(
+            f'Only single model PDBs are supported. Found {len(models)} models.')
+    
+    sequences = []
+    for chain in models[0]:
+        amino_acid_res = []
+        for res in chain:
+            if res.id[2] != " ":
+                raise ValueError(
+                    f"PDB contains an insertion code at chain {chain.id} and residue index {res.id[1]}. These are not supported."
+                )
+            amino_acid_res.append(
+                residue_constants.restype_3to1.get(res.resname, "X")
+            )
+        sequences.append("".join(amino_acid_res))
+    
+    return sequences
+
 def get_queries(
     input_path: Union[str, Path], sort_queries_by: str = "length"
 ) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
@@ -684,6 +718,17 @@ def get_queries(
                 else:
                     # Complex mode
                     queries.append((header, sequence.upper().split(":"), None))
+        elif input_path.suffix == ".pdb": #TODO:
+            # get header from pdb basename
+            header = input_path.stem.split("/")[-1]
+            pdb_string = pdb_to_string(input_path.read_text())
+            sequences = parse_pdb(pdb_string)
+            
+            if len(sequences) == 0:
+                raise ValueError(f"{input_path} is empty")
+
+            queries = [(header, sequences, None)]
+
         else:
             raise ValueError(f"Unknown file format {input_path.suffix}")
     else:
@@ -1892,9 +1937,11 @@ def main():
     pred_group.add_argument("--model-order", default="1,2,3,4,5", type=str)
     pred_group.add_argument(
         "--initial-guess",
-        default=False,
-        type=str,
-        help="Provide a starting model for the prediction. ",
+        nargs="?",
+        const=True,
+        help="Specify a starting model for the prediction. If the main input file is a PDB format, "
+        "it will be used as the initial guess. Otherwise, you can provide an input file with this flag, "
+        "which will override the main input."
     )
     pred_group.add_argument(
         "--use-dropout",
@@ -2096,6 +2143,17 @@ def main():
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
     model_type = set_model_type(is_complex, args.model_type)
 
+    # use pdb input as initial guess
+    if args.initial_guess is not None:
+        if isinstance(args.initial_guess,str) and Path(args.initial_guess).suffix == ".pdb":
+            initial_guess = args.initial_guess
+        elif Path(args.input).suffix == ".pdb":
+            initial_guess = args.input
+        else:
+            raise ValueError("Provide PDB file for initial guess.")
+    else:
+        initial_guess = None
+
     if args.msa_only:
         args.num_models = 0
 
@@ -2134,7 +2192,7 @@ def main():
         recycle_early_stop_tolerance=args.recycle_early_stop_tolerance,
         num_ensemble=args.num_ensemble,
         model_order=model_order,
-        initial_guess=args.initial_guess,
+        initial_guess=initial_guess,
         is_complex=is_complex,
         keep_existing_results=not args.overwrite_existing_results,
         rank_by=args.rank,
