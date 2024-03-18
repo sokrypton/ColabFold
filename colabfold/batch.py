@@ -304,6 +304,74 @@ def pad_input(
     )  # template_mask (4, 4) second value
     return input_fix
 
+MODRES = {'MSE':'MET','MLY':'LYS','FME':'MET','HYP':'PRO',
+          'TPO':'THR','CSO':'CYS','SEP':'SER','M3L':'LYS',
+          'HSK':'HIS','SAC':'SER','PCA':'GLU','DAL':'ALA',
+          'CME':'CYS','CSD':'CYS','OCS':'CYS','DPR':'PRO',
+          'B3K':'LYS','ALY':'LYS','YCM':'CYS','MLZ':'LYS',
+          '4BF':'TYR','KCX':'LYS','B3E':'GLU','B3D':'ASP',
+          'HZP':'PRO','CSX':'CYS','BAL':'ALA','HIC':'HIS',
+          'DBZ':'ALA','DCY':'CYS','DVA':'VAL','NLE':'LEU',
+          'SMC':'CYS','AGM':'ARG','B3A':'ALA','DAS':'ASP',
+          'DLY':'LYS','DSN':'SER','DTH':'THR','GL3':'GLY',
+          'HY3':'PRO','LLP':'LYS','MGN':'GLN','MHS':'HIS',
+          'TRQ':'TRP','B3Y':'TYR','PHI':'PHE','PTR':'TYR',
+          'TYS':'TYR','IAS':'ASP','GPL':'LYS','KYN':'TRP',
+          'CSD':'CYS','SEC':'CYS'}
+
+def pdb_to_string(
+        pdb_file: str, 
+        chains: Optional[str] = None, 
+        models: Optional[list] = None
+    ) -> str:
+  '''read pdb file and return as string'''
+
+  if chains is not None:
+    if "," in chains: chains = chains.split(",")
+    if not isinstance(chains,list): chains = [chains]
+  if models is not None:
+    if not isinstance(models,list): models = [models]
+
+  modres = {**MODRES}
+  lines = []
+  seen = []
+  model = 1
+  
+  if "\n" in pdb_file:
+    old_lines = pdb_file.split("\n")
+  else:
+    with open(pdb_file,"rb") as f:
+      old_lines = [line.decode("utf-8","ignore").rstrip() for line in f]  
+  for line in old_lines:
+    if line[:5] == "MODEL":
+      model = int(line[5:])
+    if models is None or model in models:
+      if line[:6] == "MODRES":
+        k = line[12:15]
+        v = line[24:27]
+        if k not in modres and v in residue_constants.restype_3to1:
+          modres[k] = v
+      if line[:6] == "HETATM":
+        k = line[17:20]
+        if k in modres:
+          line = "ATOM  "+line[6:17]+modres[k]+line[20:]
+      if line[:4] == "ATOM":
+        chain = line[21:22]
+        if chains is None or chain in chains:
+          atom = line[12:12+4].strip()
+          resi = line[17:17+3]
+          resn = line[22:22+5].strip()
+          if resn[-1].isalpha(): # alternative atom
+            resn = resn[:-1]
+            line = line[:26]+" "+line[27:]
+          key = f"{model}_{chain}_{resn}_{resi}_{atom}"
+          if key not in seen: # skip alternative placements
+            lines.append(line)
+            seen.append(key)
+      if line[:5] == "MODEL" or line[:3] == "TER" or line[:6] == "ENDMDL":
+        lines.append(line)
+  return "\n".join(lines)
+
 class file_manager:
     def __init__(self, prefix: str, result_dir: Path):
         self.prefix = prefix
@@ -329,9 +397,9 @@ def predict_structure(
     use_templates: bool,
     sequences_lengths: List[int],
     pad_len: int,
-    initial_guess: Union[str, None],
     model_type: str,
     model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
+    initial_guess: str = None,
     num_relax: int = 0,
     relax_max_iterations: int = 0,
     relax_tolerance: float = 2.39,
@@ -389,6 +457,12 @@ def predict_structure(
             model_names.append(tag)
             files.set_tag(tag)
 
+            # initial guess
+            if initial_guess:
+                pdb_string = pdb_to_string(initial_guess)
+                input_features["all_atom_positions"] = protein.from_pdb_string(pdb_string).atom_positions
+                
+
             ########################
             # predict
             ########################
@@ -425,7 +499,6 @@ def predict_structure(
             model_runner.predict(input_features,
                 random_seed=seed,
                 return_representations=return_representations,
-                initial_guess=initial_guess,
                 callback=callback)
 
             prediction_times.append(time.time() - start)
@@ -573,6 +646,40 @@ def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
 
     return sequences, descriptions
 
+def parse_pdb(pdb_string: str) -> List[str]:
+    """Parses a PDB string and returns a list of sequences.
+
+    Arguments:
+      pdb_string: The string contents of a PDB file.
+
+    Returns:
+      * List of chain sequences.
+    """
+    import io
+    pdb_fh = io.StringIO(pdb_string)
+    parser = PDBParser(QUIET=True)
+    structure = parser.get_structure('none', pdb_fh)
+    models = list(structure.get_models())
+    
+    if len(models) != 1:
+        raise ValueError(
+            f'Only single model PDBs are supported. Found {len(models)} models.')
+    
+    sequences = []
+    for chain in models[0]:
+        amino_acid_res = []
+        for res in chain:
+            if res.id[2] != " ":
+                raise ValueError(
+                    f"PDB contains an insertion code at chain {chain.id} and residue index {res.id[1]}. These are not supported."
+                )
+            amino_acid_res.append(
+                residue_constants.restype_3to1.get(res.resname, "X")
+            )
+        sequences.append("".join(amino_acid_res))
+    
+    return sequences
+
 def get_queries(
     input_path: Union[str, Path], sort_queries_by: str = "length"
 ) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
@@ -614,6 +721,17 @@ def get_queries(
                 else:
                     # Complex mode
                     queries.append((header, sequence.upper().split(":"), None))
+        elif input_path.suffix == ".pdb": #TODO:
+            # get header from pdb basename
+            header = input_path.stem.split("/")[-1]
+            pdb_string = pdb_to_string(input_path.read_text())
+            sequences = parse_pdb(pdb_string)
+            
+            if len(sequences) == 0:
+                raise ValueError(f"{input_path} is empty")
+
+            queries = [(header, sequences, None)]
+
         else:
             raise ValueError(f"Unknown file format {input_path.suffix}")
     else:
@@ -1822,9 +1940,11 @@ def main():
     pred_group.add_argument("--model-order", default="1,2,3,4,5", type=str)
     pred_group.add_argument(
         "--initial-guess",
-        default=False,
-        type=str,
-        help="Provide a starting model for the prediction. ",
+        nargs="?",
+        const=True,
+        help="Specify a starting model for the prediction. If the main input file is a PDB format, "
+        "it will be used as the initial guess. Otherwise, you can provide an input file with this flag, "
+        "which will override the main input."
     )
     pred_group.add_argument(
         "--use-dropout",
@@ -2026,6 +2146,17 @@ def main():
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
     model_type = set_model_type(is_complex, args.model_type)
 
+    # use pdb input as initial guess
+    if args.initial_guess is not None:
+        if isinstance(args.initial_guess,str) and Path(args.initial_guess).suffix == ".pdb":
+            initial_guess = args.initial_guess
+        elif Path(args.input).suffix == ".pdb":
+            initial_guess = args.input
+        else:
+            raise ValueError("Provide PDB file for initial guess.")
+    else:
+        initial_guess = None
+
     if args.msa_only:
         args.num_models = 0
 
@@ -2064,7 +2195,7 @@ def main():
         recycle_early_stop_tolerance=args.recycle_early_stop_tolerance,
         num_ensemble=args.num_ensemble,
         model_order=model_order,
-        initial_guess=args.initial_guess,
+        initial_guess=initial_guess,
         is_complex=is_complex,
         keep_existing_results=not args.overwrite_existing_results,
         rank_by=args.rank,
