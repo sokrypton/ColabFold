@@ -179,6 +179,8 @@ modified_mapping = {
   "CSD" : "CYS", "SEC" : "CYS"
 }
 
+order_to_restype = {v: k for k, v in residue_constants.restype_order_with_x.items()}
+
 class ReplaceOrRemoveHetatmSelect(Select):
   def accept_residue(self, residue):
     hetfield, _, _ = residue.get_id()
@@ -459,8 +461,14 @@ def predict_structure(
 
             # initial guess
             if initial_guess:
-                pdb_string = pdb_to_string(initial_guess)
-                input_features["all_atom_positions"] = protein.from_pdb_string(pdb_string).atom_positions
+                input_guess = Path(initial_guess)
+                if input_guess.suffix == ".pdb":
+                    pdb_string = pdb_to_string(initial_guess)
+                    input_features["all_atom_positions"] = protein.from_pdb_string(pdb_string).atom_positions
+                elif input_guess.suffix == ".cif":
+                    input_features["all_atom_positions"] = protein.from_mmcif_string(input_guess.read_text()).atom_positions
+                else:
+                    raise ValueError(f"Unsupported initial guess file format: {initial_guess}")
                 
 
             ########################
@@ -646,39 +654,26 @@ def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
 
     return sequences, descriptions
 
-def parse_pdb(pdb_string: str) -> List[str]:
-    """Parses a PDB string and returns a list of sequences.
+def decode_structure_sequences(
+    aatype_array: List[int], 
+    chain_index_array: List[int], 
+    order_dict: Dict[int, str] = order_to_restype
+) -> List[str]:
+    decoded_sequences = []
+    current_sequence = []
 
-    Arguments:
-      pdb_string: The string contents of a PDB file.
+    for i in range(len(aatype_array)):
+        amino_acid = order_dict[aatype_array[i]]
+        if i == 0 or chain_index_array[i] == chain_index_array[i - 1]:
+            current_sequence.append(amino_acid)
+        else:
+            decoded_sequences.append("".join(current_sequence))
+            current_sequence = [amino_acid]
 
-    Returns:
-      * List of chain sequences.
-    """
-    import io
-    pdb_fh = io.StringIO(pdb_string)
-    parser = PDBParser(QUIET=True)
-    structure = parser.get_structure('none', pdb_fh)
-    models = list(structure.get_models())
-    
-    if len(models) != 1:
-        raise ValueError(
-            f'Only single model PDBs are supported. Found {len(models)} models.')
-    
-    sequences = []
-    for chain in models[0]:
-        amino_acid_res = []
-        for res in chain:
-            if res.id[2] != " ":
-                raise ValueError(
-                    f"PDB contains an insertion code at chain {chain.id} and residue index {res.id[1]}. These are not supported."
-                )
-            amino_acid_res.append(
-                residue_constants.restype_3to1.get(res.resname, "X")
-            )
-        sequences.append("".join(amino_acid_res))
-    
-    return sequences
+    # Append the last sequence
+    decoded_sequences.append("".join(current_sequence))
+
+    return decoded_sequences
 
 def get_queries(
     input_path: Union[str, Path], sort_queries_by: str = "length"
@@ -721,15 +716,18 @@ def get_queries(
                 else:
                     # Complex mode
                     queries.append((header, sequence.upper().split(":"), None))
-        elif input_path.suffix == ".pdb": #TODO:
-            # get header from pdb basename
-            header = input_path.stem.split("/")[-1]
-            pdb_string = pdb_to_string(input_path.read_text())
-            sequences = parse_pdb(pdb_string)
-            
+        elif input_path.suffix in [".pdb", ".cif"]:
+            if input_path.suffix == ".pdb":
+                pdb_string = pdb_to_string(input_path.read_text())
+                prot = protein.from_pdb_string(pdb_string)
+            elif input_path.suffix == ".cif":
+                prot = protein.from_mmcif_string(input_path.read_text())
+            header = input_path.stem
+            sequences = decode_structure_sequences(prot.aatype, prot.chain_index)
+
             if len(sequences) == 0:
                 raise ValueError(f"{input_path} is empty")
-
+                
             queries = [(header, sequences, None)]
 
         else:
@@ -740,29 +738,44 @@ def get_queries(
         for file in sorted(input_path.iterdir()):
             if not file.is_file():
                 continue
-            if file.suffix.lower() not in [".a3m", ".fasta", ".faa"]:
-                logger.warning(f"non-fasta/a3m file in input directory: {file}")
+            if file.suffix.lower() not in [".a3m", ".fasta", ".faa", ".pdb", ".cif"]:
+                logger.warning(f"non-fasta/a3m/pdb/cif file in input directory: {file}")
                 continue
-            (seqs, header) = parse_fasta(file.read_text())
-            if len(seqs) == 0:
-                logger.error(f"{file} is empty")
-                continue
-            query_sequence = seqs[0]
-            if len(seqs) > 1 and file.suffix in [".fasta", ".faa", ".fa"]:
-                logger.warning(
-                    f"More than one sequence in {file}, ignoring all but the first sequence"
-                )
+            if file.suffix.lower() in [".pdb", ".cif"]:
+                header = file.stem
+                if file.suffix.lower() == ".pdb":
+                    pdb_string = pdb_to_string(file.read_text())
+                    prot = protein.from_pdb_string(pdb_string)
+                else:  # file.suffix.lower() == ".cif"
+                    prot = protein.from_mmcif_string(file.read_text())
+                sequences = decode_structure_sequences(prot.aatype, prot.chain_index)
 
-            if file.suffix.lower() == ".a3m":
-                a3m_lines = [file.read_text()]
-                queries.append((file.stem, query_sequence.upper(), a3m_lines))
-            else:
-                if query_sequence.count(":") == 0:
-                    # Single sequence
-                    queries.append((file.stem, query_sequence, None))
+                if len(sequences) == 0:
+                    logger.error(f"{file} is empty")
+                    continue
+
+                queries.append((header, sequences, None))
+            else:  # file.suffix.lower() in [".a3m", ".fasta", ".faa"]
+                (seqs, header) = parse_fasta(file.read_text())
+                if len(seqs) == 0:
+                    logger.error(f"{file} is empty")
+                    continue
+                query_sequence = seqs[0]
+                if len(seqs) > 1 and file.suffix in [".fasta", ".faa", ".fa"]:
+                    logger.warning(
+                        f"More than one sequence in {file}, ignoring all but the first sequence"
+                    )
+
+                if file.suffix.lower() == ".a3m":
+                    a3m_lines = [file.read_text()]
+                    queries.append((file.stem, query_sequence.upper(), a3m_lines))
                 else:
-                    # Complex mode
-                    queries.append((file.stem, query_sequence.upper().split(":"), None))
+                    if query_sequence.count(":") == 0:
+                        # Single sequence
+                        queries.append((file.stem, query_sequence, None))
+                    else:
+                        # Complex mode
+                        queries.append((file.stem, query_sequence.upper().split(":"), None))
 
     # sort by seq. len
     if sort_queries_by == "length":
@@ -2146,14 +2159,14 @@ def main():
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
     model_type = set_model_type(is_complex, args.model_type)
 
-    # use pdb input as initial guess
+    # use pdb or cif input as initial guess
     if args.initial_guess is not None:
-        if isinstance(args.initial_guess,str) and Path(args.initial_guess).suffix == ".pdb":
+        if isinstance(args.initial_guess, str) and Path(args.initial_guess).suffix in (".pdb", ".cif"):
             initial_guess = args.initial_guess
-        elif Path(args.input).suffix == ".pdb":
+        elif Path(args.input).suffix in (".pdb", ".cif"):
             initial_guess = args.input
         else:
-            raise ValueError("Provide PDB file for initial guess.")
+            raise ValueError("Provide PDB or CIF file for initial guess.")
     else:
         initial_guess = None
 
