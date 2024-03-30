@@ -40,6 +40,7 @@ def mmseqs_search_monomer(
     diff: int = 3000,
     qsc: float = -20.0,
     max_accept: int = 1000000,
+    prefilter_mode: int = 0,
     s: float = 8,
     db_load_mode: int = 2,
     threads: int = 32,
@@ -86,10 +87,12 @@ def mmseqs_search_monomer(
     # fmt: off
     # @formatter:off
     search_param = ["--num-iterations", "3", "--db-load-mode", str(db_load_mode), "-a", "-e", "0.1", "--max-seqs", "10000"]
+    search_param += ["--prefilter-mode", str(prefilter_mode)]
     if s is not None:
         search_param += ["-s", "{:.1f}".format(s)]
     else:
         search_param += ["--k-score", "'seq:96,prof:80'"]
+
     filter_param = ["--filter-msa", str(filter), "--filter-min-enable", "1000", "--diff", str(diff), "--qid", "0.0,0.2,0.4,0.6,0.8,1.0", "--qsc", "0", "--max-seq-id", "0.95",]
     expand_param = ["--expansion-mode", "0", "-e", str(expand_eval), "--expand-filter-clusters", str(filter), "--max-seq-id", "0.95",]
 
@@ -141,7 +144,7 @@ def mmseqs_search_monomer(
 
     if use_templates:
         run_mmseqs(mmseqs, ["search", base.joinpath("prof_res"), dbbase.joinpath(template_db), base.joinpath("res_pdb"),
-                            base.joinpath("tmp2"), "--db-load-mode", str(db_load_mode), "--threads", str(threads), "-s", "7.5", "-a", "-e", "0.1"])
+                            base.joinpath("tmp2"), "--db-load-mode", str(db_load_mode), "--threads", str(threads), "-s", "7.5", "-a", "-e", "0.1", "--prefilter-mode", str(prefilter_mode)])
         run_mmseqs(mmseqs, ["convertalis", base.joinpath("prof_res"), dbbase.joinpath(f"{template_db}{dbSuffix3}"), base.joinpath("res_pdb"),
                             base.joinpath(f"{template_db}"), "--format-output",
                             "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,cigar",
@@ -172,6 +175,7 @@ def mmseqs_search_pair(
     base: Path,
     uniref_db: Path = Path("uniref30_2302_db"),
     mmseqs: Path = Path("mmseqs"),
+    prefilter_mode: int = 0,
     s: float = 8,
     threads: int = 64,
     db_load_mode: int = 2,
@@ -197,6 +201,7 @@ def mmseqs_search_pair(
     # fmt: off
     # @formatter:off
     search_param = ["--num-iterations", "3", "--db-load-mode", str(db_load_mode), "-a", "-e", "0.1", "--max-seqs", "10000",]
+    search_param += ["--prefilter-mode", str(prefilter_mode)]
     if s is not None:
         search_param += ["-s", "{:.1f}".format(s)]
     else:
@@ -238,6 +243,13 @@ def main():
     )
     parser.add_argument(
         "base", type=Path, help="Directory for the results (and intermediate files)"
+    )
+    parser.add_argument(
+        "--prefilter-mode",
+        type=int,
+        default=0,
+        choices=[0, 1, 2],
+        help="Prefiltering algorithm to use: 0: k-mer (high-mem), 1: ungapped (high-cpu), 2: exhaustive (no prefilter, very slow). See wiki for more details: https://github.com/sokrypton/ColabFold/wiki#colabfold_search",
     )
     parser.add_argument(
         "-s",
@@ -388,6 +400,7 @@ def main():
         diff=args.diff,
         qsc=args.qsc,
         max_accept=args.max_accept,
+        prefilter_mode=args.prefilter_mode,
         s=args.s,
         db_load_mode=args.db_load_mode,
         threads=args.threads,
@@ -398,6 +411,7 @@ def main():
             dbbase=args.dbbase,
             base=args.base,
             uniref_db=args.db1,
+            prefilter_mode=args.prefilter_mode,
             s=args.s,
             db_load_mode=args.db_load_mode,
             threads=args.threads,
