@@ -751,6 +751,12 @@ def get_msa_and_templates(
     if use_templates:
         # Skip template search when custom_template_path is provided
         if custom_template_path is not None:
+            if msa_mode == "single_sequence":
+                a3m_lines = []
+                num = 101
+                for i, seq in enumerate(query_seqs_unique):
+                    a3m_lines.append(f">{num + i}\n{seq}")
+
             if a3m_lines is None:
                 a3m_lines_mmseqs2 = run_mmseqs2(
                     query_seqs_unique,
