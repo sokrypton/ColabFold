@@ -176,12 +176,14 @@ def mmseqs_search_pair(
     dbbase: Path,
     base: Path,
     uniref_db: Path = Path("uniref30_2302_db"),
+    spire_db: Path = Path("spire_ctg10_2401_db"),
     mmseqs: Path = Path("mmseqs"),
     prefilter_mode: int = 0,
     s: float = 8,
     threads: int = 64,
     db_load_mode: int = 2,
     pairing_strategy: int = 0,
+    pair_uniref: bool = True,
 ):
     if not dbbase.joinpath(f"{uniref_db}.dbtype").is_file():
         raise FileNotFoundError(f"Database {uniref_db} does not exist")
@@ -199,6 +201,13 @@ def mmseqs_search_pair(
     else:
         dbSuffix1 = ".idx"
         dbSuffix2 = ".idx"
+
+    if pair_uniref:
+        db = uniref_db
+        output = ".paired.uniref.a3m"
+    else:
+        db = spire_db
+        output = ".paired.spire.a3m"
 
     # fmt: off
     # @formatter:off
@@ -230,6 +239,26 @@ def mmseqs_search_pair(
     # @formatter:on
     # fmt: on
 
+def merge_a3ms(
+    a3m_uniref: Path,
+    a3m_spire: Path,
+    a3m_merged: Path,
+):
+    # copy uniref a3m to merged a3m
+    shutil.copy(a3m_uniref, a3m_merged)
+    # append spire a3m to merged a3m, skipping the first FASTA entry
+    with open(a3m_merged, "a") as f:
+        first = True
+        flag = False
+        with open(a3m_spire, "r") as g:
+            while buf := g.readline():
+                if buf.startswith(">") and first:
+                    first = False
+                    continue
+                elif buf.startswith(">") and not first:
+                    flag = True
+                if flag:
+                    f.write(buf)
 
 def main():
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
@@ -271,6 +300,7 @@ def main():
         default=Path("colabfold_envdb_202108_db"),
         help="Environmental database",
     )
+    parser.add_argument("--db4", type=Path, default=Path("spire_ctg10_2401_db"), help="Environmental pairing database")
 
     # poor man's boolean arguments
     parser.add_argument(
@@ -278,6 +308,9 @@ def main():
     )
     parser.add_argument(
         "--use-templates", type=int, default=0, choices=[0, 1], help="Use --db2"
+    )
+    parser.add_argument(
+        "--use-env-pairing", type=int, default=0, choices=[0, 1], help="Use --db4"
     )
     parser.add_argument(
         "--filter",
@@ -418,7 +451,22 @@ def main():
             db_load_mode=args.db_load_mode,
             threads=args.threads,
             pairing_strategy=args.pairing_strategy,
+            pair_uniref=True,
         )
+        if args.use_env_pairing:
+            mmseqs_search_pair(
+                mmseqs=args.mmseqs,
+                dbbase=args.dbbase,
+                base=args.base,
+                uniref_db=args.db1,
+                spire_db=args.db4,
+                prefilter_mode=args.prefilter_mode,
+                s=args.s,
+                db_load_mode=args.db_load_mode,
+                threads=args.threads,
+                pairing_strategy=args.pairing_strategy,
+                pair_uniref=False,
+            )
 
         id = 0
         for job_number, (
@@ -434,6 +482,14 @@ def main():
                 with args.base.joinpath(f"{id}.a3m").open("r") as f:
                     unpaired_msa.append(f.read())
                 args.base.joinpath(f"{id}.a3m").unlink()
+
+                if args.use_env_pairing:
+                    merge_a3ms(args.base.joinpath(f"{id}.paired.uniref.a3m"), args.base.joinpath(f"{id}.paired.spire.a3m"), args.base.joinpath(f"{id}.paired.a3m"))
+                    args.base.joinpath(f"{id}.paired.spire.a3m").unlink()
+                else:
+                    shutil.copy(args.base.joinpath(f"{id}.paired.uniref.a3m"), args.base.joinpath(f"{id}.paired.a3m"))
+                args.base.joinpath(f"{id}.paired.uniref.a3m").unlink()
+
                 if len(query_seqs_cardinality) > 1:
                     with args.base.joinpath(f"{id}.paired.a3m").open("r") as f:
                         paired_msa.append(f.read())
