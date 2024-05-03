@@ -168,13 +168,14 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
 
   if use_pairing:
     use_templates = False
-    use_env = False
     mode = ""
     # greedy is default, complete was the previous behavior
     if pairing_strategy == "greedy":
       mode = "pairgreedy"
     elif pairing_strategy == "complete":
       mode = "paircomplete"
+    if use_env:
+      mode = mode + "-env"
 
   # define path
   path = f"{prefix}_{mode}"

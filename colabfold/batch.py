@@ -731,7 +731,8 @@ def get_msa_and_templates(
 ]:
     from colabfold.colabfold import run_mmseqs2
 
-    use_env = msa_mode == "mmseqs2_uniref_env"
+    use_env = msa_mode == "mmseqs2_uniref_env" or msa_mode == "mmseqs2_uniref_env_envpair"
+    use_envpair = msa_mode == "mmseqs2_uniref_env_envpair"
     if isinstance(query_sequences, str): query_sequences = [query_sequences]
 
     # remove duplicates before searching
@@ -840,7 +841,7 @@ def get_msa_and_templates(
             paired_a3m_lines = run_mmseqs2(
                 query_seqs_unique,
                 str(result_dir.joinpath(jobname)),
-                use_env,
+                use_envpair,
                 use_pairing=True,
                 pairing_strategy=pairing_strategy,
                 host_url=host_url,
@@ -1304,6 +1305,7 @@ def run(
 
     # backward-compatibility with old options
     old_names = {"MMseqs2 (UniRef+Environmental)":"mmseqs2_uniref_env",
+                 "MMseqs2 (UniRef+Environmental+Env. Pairing)":"mmseqs2_uniref_env_envpair",
                  "MMseqs2 (UniRef only)":"mmseqs2_uniref",
                  "unpaired+paired":"unpaired_paired"}
     msa_mode   = old_names.get(msa_mode,msa_mode)
@@ -1700,6 +1702,7 @@ def main():
         default="mmseqs2_uniref_env",
         choices=[
             "mmseqs2_uniref_env",
+            "mmseqs2_uniref_env_envpair",
             "mmseqs2_uniref",
             "single_sequence",
         ],
