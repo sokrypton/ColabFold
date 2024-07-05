@@ -490,6 +490,10 @@ def predict_structure(
                   del pae
                 del plddt
                 json.dump(scores, handle)
+                
+                if "chain_iptm" in result:
+                    scores.update({"chain_iptm": np.around(result["chain_iptm"].astype(float), 4).tolist()})
+                    scores.update({"ptm_matrix": np.around(result["ptm_matrix"].astype(float), 4).tolist()})
 
             del result, unrelaxed_protein
 
