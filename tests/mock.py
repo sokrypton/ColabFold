@@ -159,6 +159,11 @@ class MMseqs2Mock:
       "pairing_strategy": pairing_strategy,
     }
 
+    # make pre env-pair test work again, this was always true previously
+    # however didn't do anything
+    if len(query) > 1:
+      config["use_env"] = True
+
     for saved_response in self.saved_responses:
       # backwards compatibility, remove after UPDATE_SNAPSHOTS
       if "pairing_strategy" not in saved_response["config"]:
