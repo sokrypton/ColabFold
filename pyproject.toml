@@ -24,7 +24,7 @@ absl-py = "^1.0.0"
 jax = { version = "^0.4.20", optional = true }
 matplotlib = "^3.2.2"
 tensorflow-macos = { version = "<2.14.0", markers = "sys_platform == 'darwin'" }
-tensorflow-cpu = { version = "^2.12.1", markers = "sys_platform != 'darwin'" }
+tensorflow = { version = "^2.12.1", markers = "sys_platform != 'darwin'" }
 biopython = "<1.83"
 numpy = "^1.22.0"
 pandas = "^1.3.4"
