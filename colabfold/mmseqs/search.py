@@ -168,7 +168,6 @@ def mmseqs_search_monomer(
                             "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,cigar",
                             "--db-output", "1",
                             "--db-load-mode", str(db_load_mode), "--threads", str(threads)])
-        run_mmseqs(mmseqs, ["rmdb", base.joinpath("res_pdb")])
     elif use_templates:
         logger.info(f"Skipping {template_db} search because res_pdb.m8 already exists")
 
@@ -185,8 +184,9 @@ def mmseqs_search_monomer(
         run_mmseqs(mmseqs, ["rmdb", base.joinpath("final.a3m")])
 
         if use_templates:
-            run_mmseqs(mmseqs, ["unpackdb", base.joinpath("res_pdb.m8"), base.joinpath("."), "--unpack-name-mode", "0", "--unpack-suffix", ".m8"])
-            run_mmseqs(mmseqs, ["rmdb", base.joinpath("res_pdb.m8")])
+            run_mmseqs(mmseqs, ["unpackdb", base.joinpath("res_pdb"), base.joinpath("."), "--unpack-name-mode", "0", "--unpack-suffix", ".m8"])
+            if base.joinpath("res_pdb").exists():
+                run_mmseqs(mmseqs, ["rmdb", base.joinpath("res_pdb")])
 
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("prof_res")])
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("prof_res_h")])
