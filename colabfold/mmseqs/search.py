@@ -160,16 +160,17 @@ def mmseqs_search_monomer(
     elif use_env:
         logger.info(f"Skipping {metagenomic_db} search because bfd.mgnify30.metaeuk30.smag30.a3m already exists")
 
-    if use_templates and not base.joinpath("res_pdb.m8").with_suffix('.m8.dbtype').exists():
+    if use_templates and not base.joinpath(f"{template_db}.m8").with_suffix('.m8.dbtype').exists():
         run_mmseqs(mmseqs, ["search", base.joinpath("prof_res"), dbbase.joinpath(template_db), base.joinpath("res_pdb"),
                             base.joinpath("tmp2"), "--db-load-mode", str(db_load_mode), "--threads", str(threads), "-s", "7.5", "-a", "-e", "0.1", "--prefilter-mode", str(prefilter_mode)])
         run_mmseqs(mmseqs, ["convertalis", base.joinpath("prof_res"), dbbase.joinpath(f"{template_db}{dbSuffix3}"), base.joinpath("res_pdb"),
-                            base.joinpath("res_pdb.m8"), "--format-output",
+                            base.joinpath(f"{template_db}"), "--format-output",
                             "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,cigar",
                             "--db-output", "1",
                             "--db-load-mode", str(db_load_mode), "--threads", str(threads)])
+        run_mmseqs(mmseqs, ["rmdb", base.joinpath("res_pdb")])
     elif use_templates:
-        logger.info(f"Skipping {template_db} search because res_pdb.m8 already exists")
+        logger.info(f"Skipping {template_db} search because {template_db}.m8 already exists")
 
     if use_env:
         run_mmseqs(mmseqs, ["mergedbs", base.joinpath("qdb"), base.joinpath("final.a3m"), base.joinpath("uniref.a3m"), base.joinpath("bfd.mgnify30.metaeuk30.smag30.a3m")])
@@ -184,9 +185,9 @@ def mmseqs_search_monomer(
         run_mmseqs(mmseqs, ["rmdb", base.joinpath("final.a3m")])
 
         if use_templates:
-            run_mmseqs(mmseqs, ["unpackdb", base.joinpath("res_pdb"), base.joinpath("."), "--unpack-name-mode", "0", "--unpack-suffix", ".m8"])
-            if base.joinpath("res_pdb").exists():
-                run_mmseqs(mmseqs, ["rmdb", base.joinpath("res_pdb")])
+            run_mmseqs(mmseqs, ["unpackdb", base.joinpath(f"{template_db}"), base.joinpath("."), "--unpack-name-mode", "0", "--unpack-suffix", ".m8"])
+            if base.joinpath(f"{template_db}").exists():
+                run_mmseqs(mmseqs, ["rmdb", base.joinpath(f"{template_db}")])
 
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("prof_res")])
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("prof_res_h")])
