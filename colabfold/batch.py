@@ -584,7 +584,7 @@ def get_queries(
     if input_path.is_file():
         if input_path.suffix == ".csv" or input_path.suffix == ".tsv":
             sep = "\t" if input_path.suffix == ".tsv" else ","
-            df = pandas.read_csv(input_path, sep=sep)
+            df = pandas.read_csv(input_path, sep=sep, dtype=str)
             assert "id" in df.columns and "sequence" in df.columns
             queries = [
                 (seq_id, sequence.upper().split(":"), None)
