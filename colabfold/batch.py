@@ -345,7 +345,7 @@ def predict_structure(
     save_all: bool = False,
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
-    save_recycles: bool = False,
+    save_recycles: bool = False
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     mean_scores = []
@@ -425,6 +425,14 @@ def predict_structure(
                 random_seed=seed,
                 return_representations=return_representations,
                 callback=callback)
+
+            import pickle
+
+            with open('result.pkl', 'wb') as file:
+                pickle.dump(result, file)
+
+            with open('input.pkl', 'wb') as file:
+                pickle.dump(input_features, file)
 
             prediction_times.append(time.time() - start)
 
@@ -1270,6 +1278,8 @@ def run(
     local_pdb_path: Optional[Path] = None,
     use_cluster_profile: bool = True,
     feature_dict_callback: Callable[[Any], Any] = None,
+    extended_metrics: bool = False,
+    use_probs_extended: bool = True,
     **kwargs
 ):
     # check what device is available
@@ -1574,7 +1584,7 @@ def run(
                         recycle_early_stop_tolerance=recycle_early_stop_tolerance,
                         use_fuse=use_fuse,
                         use_bfloat16=use_bfloat16,
-                        save_all=save_all,
+                        save_all=save_all
                     )
                     first_job = False
 
@@ -1602,7 +1612,7 @@ def run(
                     save_all=save_all,
                     save_single_representations=save_single_representations,
                     save_pair_representations=save_pair_representations,
-                    save_recycles=save_recycles,
+                    save_recycles=save_recycles
                 )
                 result_files += results["result_files"]
                 ranks.append(results["rank"])

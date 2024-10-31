@@ -76,7 +76,8 @@ def load_models_and_params(
     use_bfloat16: bool = True,
     use_dropout: bool = False,
     save_all: bool = False,
-
+    extended_metrics: bool = True,
+    use_probs_extended: bool = True,
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -138,8 +139,9 @@ def load_models_and_params(
             # disable some outputs if not being saved
             if not save_all:
                 model_config.model.heads.distogram.weight = 0.0
-                model_config.model.heads.masked_msa.weight = 0.0
                 model_config.model.heads.experimentally_resolved.weight = 0.0
+                if not extended_metrics:
+                    model_config.model.heads.masked_msa.weight = 0.0
 
             # set number of recycles and ensembles            
             if "multimer" in config_name:
@@ -162,11 +164,13 @@ def load_models_and_params(
                 model_type=model_type,
                 model_number=model_number,
                 data_dir=str(data_dir),
-                use_fuse=use_fuse,
+                use_fuse=use_fuse
             )
             model_runner = model.RunModel(
                 model_config,
                 params,
+                extended_metrics=extended_metrics,
+                use_probs_extended=use_probs_extended
             )
         
         params = get_model_haiku_params(
