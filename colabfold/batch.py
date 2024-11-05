@@ -1875,6 +1875,18 @@ def main():
         action="store_true",
         help="Experimental: For multimer models, disable cluster profiles.",
     )
+    pred_group.add_argument(
+        "--calc-extended-metrics",
+        default=False,
+        action="store_true",
+        help="Experimental: calculate pairwise metrics (ipTM and actifpTM), and also chain-wise pTM",
+    )
+    pred_group.add_argument(
+        "--use-probs-extended",
+        default=True,
+        action="store_true",
+        help="Experimental: use contact probabilities for actifpTM calculation, not hard cutoff",
+    )
     pred_group.add_argument("--data", help="Path to AlphaFold2 weights directory.")
 
     relax_group = parser.add_argument_group("Relaxation arguments", "")
@@ -2105,6 +2117,8 @@ def main():
         jobname_prefix=args.jobname_prefix,
         save_all=args.save_all,
         save_recycles=args.save_recycles,
+        calc_extended_metrics=args.calc_extended_metrics,
+        use_probs_extended=args.use_probs_extended,
     )
 
 if __name__ == "__main__":
