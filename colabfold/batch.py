@@ -67,6 +67,7 @@ from colabfold.utils import (
     CFMMCIFIO,
 )
 from colabfold.relax import relax_me
+from colabfold.alphafold.extended_metrics import *
 
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 from Bio.PDB.PDBIO import Select
@@ -345,7 +346,9 @@ def predict_structure(
     save_all: bool = False,
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
-    save_recycles: bool = False
+    save_recycles: bool = False,
+    calc_extended_metrics: bool = False,
+    use_probs_extended: bool = True,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     mean_scores = []
@@ -426,14 +429,11 @@ def predict_structure(
                 return_representations=return_representations,
                 callback=callback)
 
-            import pickle
-
-            with open('result.pkl', 'wb') as file:
-                pickle.dump(result, file)
-
-            with open('input.pkl', 'wb') as file:
-                pickle.dump(input_features, file)
-
+            if calc_extended_metrics:
+                extended_metrics = get_chain_and_interface_metrics(result, input_features['asym_id'],
+                                                              use_probs_extended=use_probs_extended,
+                                                              use_jnp=False)
+                result.pop('pae_matrix_with_logits', None)
             prediction_times.append(time.time() - start)
 
             ########################
@@ -493,6 +493,8 @@ def predict_structure(
                   pae   = result["predicted_aligned_error"][:seq_len,:seq_len]
                   scores.update({"max_pae": pae.max().astype(float).item(),
                                  "pae": np.around(pae.astype(float), 2).tolist()})
+                  if calc_extended_metrics:
+                    scores.update(extended_metrics)
                   for k in ["ptm","iptm"]:
                     if k in conf[-1]: scores[k] = np.around(conf[-1][k], 2).item()
                   del pae
@@ -1278,7 +1280,7 @@ def run(
     local_pdb_path: Optional[Path] = None,
     use_cluster_profile: bool = True,
     feature_dict_callback: Callable[[Any], Any] = None,
-    extended_metrics: bool = False,
+    calc_extended_metrics: bool = False,
     use_probs_extended: bool = True,
     **kwargs
 ):
@@ -1584,7 +1586,8 @@ def run(
                         recycle_early_stop_tolerance=recycle_early_stop_tolerance,
                         use_fuse=use_fuse,
                         use_bfloat16=use_bfloat16,
-                        save_all=save_all
+                        save_all=save_all,
+                        calc_extended_metrics=calc_extended_metrics
                     )
                     first_job = False
 
@@ -1612,8 +1615,11 @@ def run(
                     save_all=save_all,
                     save_single_representations=save_single_representations,
                     save_pair_representations=save_pair_representations,
-                    save_recycles=save_recycles
+                    save_recycles=save_recycles,
+                    calc_extended_metrics=calc_extended_metrics,
+                    use_probs_extended=use_probs_extended,
                 )
+                
                 result_files += results["result_files"]
                 ranks.append(results["rank"])
                 metrics.append(results["metric"])
@@ -1649,6 +1655,11 @@ def run(
                 paes_plot.savefig(str(pae_png), bbox_inches='tight')
                 paes_plot.close()
                 result_files.append(pae_png)
+
+                # make pairwise interface metric plots and chainwise ptm plot
+                if calc_extended_metrics:
+                    ext_metric_png = result_dir.joinpath(f"{jobname}_ext_metrics.png")
+                    plot_chain_pairwise_analysis(scores, fig_path=ext_metric_png)
 
             # make pLDDT plot
             plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
