@@ -369,10 +369,10 @@ def plot_matrix(actifptm_dict, iptm_dict, cptm_dict, prefix='rank', ax_in=None, 
                 ax_in.text(j, i, f"{value:.2f}", ha='center', va='center', color=text_color, fontsize=dyn_size*1.5)
 
     # Custom colored legend (ifpTM, cpTM, ipTM)
-    x_start = 0.3
+    x_start = 0.35
     x_offset = 0.125
     ax_in.text(0.1, 1.05, prefix, fontsize=dyn_size*1.2, fontweight='bold', color='black', ha='center', transform=ax_in.transAxes)
-    ax_in.text(x_start + x_offset - 0.05, 1.05, 'actifpTM', fontsize=dyn_size*1.2, fontweight='bold', color='darkblue', ha='center', transform=ax_in.transAxes)
+    ax_in.text(x_start + x_offset - 0.06, 1.05, 'actifpTM', fontsize=dyn_size*1.2, fontweight='bold', color='darkblue', ha='center', transform=ax_in.transAxes)
     ax_in.text(x_start + 2 * x_offset, 1.05, ' - ', fontsize=dyn_size*1.2, fontweight='bold', color='black', ha='center', transform=ax_in.transAxes)
     ax_in.text(x_start + 3 * x_offset, 1.05, 'cpTM', fontsize=dyn_size*1.2, fontweight='bold', color='dimgrey', ha='center', transform=ax_in.transAxes)
     ax_in.text(x_start + 4 * x_offset, 1.05, ' - ', fontsize=dyn_size*1.2, fontweight='bold', color='black', ha='center', transform=ax_in.transAxes)
