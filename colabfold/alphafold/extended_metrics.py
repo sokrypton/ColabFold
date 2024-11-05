@@ -4,9 +4,14 @@ from copy import deepcopy
 import jax.numpy as jnp
 import jax
 import scipy
-from alphafold.common import confidence
 import pandas as pd
 import matplotlib.pyplot as plt
+
+import os
+if os.path.exists('colabdesign') and os.path.isdir('colabdesign'):
+  from colabdesign.af.alphafold.common import confidence
+else:
+  from alphafold.common import confidence
 
 """ Functions to calculate interface metrics on actual interfaces"""
 def get_dgram_bins(result):
