@@ -490,7 +490,7 @@ def predict_structure(
                 plddt = result["plddt"][:seq_len]
                 scores = {"plddt": np.around(plddt.astype(float), 2).tolist()}
                 if "predicted_aligned_error" in result:
-                  pae   = result["predicted_aligned_error"][:seq_len,:seq_len]
+                  pae = result["predicted_aligned_error"][:seq_len,:seq_len]
                   scores.update({"max_pae": pae.max().astype(float).item(),
                                  "pae": np.around(pae.astype(float), 2).tolist()})
                   if calc_extended_metrics:
@@ -1410,6 +1410,8 @@ def run(
         "use_fuse": use_fuse,
         "use_bfloat16": use_bfloat16,
         "version": importlib_metadata.version("colabfold"),
+        "calc_extended_metrics": calc_extended_metrics,
+        "use_probs_extended": use_probs_extended,
     }
     config_out_file = result_dir.joinpath("config.json")
     config_out_file.write_text(json.dumps(config, indent=4))
@@ -1882,10 +1884,10 @@ def main():
         help="Experimental: calculate pairwise metrics (ipTM and actifpTM), and also chain-wise pTM",
     )
     pred_group.add_argument(
-        "--use-probs-extended",
-        default=True,
+        "--no-use-probs-extended",
+        default=False,
         action="store_true",
-        help="Experimental: use contact probabilities for actifpTM calculation, not hard cutoff",
+        help="Experimental: instead of contact probabilities form use binary contacts for extended metrics calculation",
     )
     pred_group.add_argument("--data", help="Path to AlphaFold2 weights directory.")
 
@@ -2074,6 +2076,8 @@ def main():
 
     user_agent = f"colabfold/{version}"
 
+    use_probs_extended = False if args.no_use_probs_extended else True
+
     run(
         queries=queries,
         result_dir=args.results,
@@ -2118,7 +2122,7 @@ def main():
         save_all=args.save_all,
         save_recycles=args.save_recycles,
         calc_extended_metrics=args.calc_extended_metrics,
-        use_probs_extended=args.use_probs_extended,
+        use_probs_extended=use_probs_extended,
     )
 
 if __name__ == "__main__":

@@ -104,8 +104,9 @@ def predicted_tm_score_modified(logits, breaks, residue_weights=None,
     normed_residue_mask = pair_residue_weights / (1e-8 + pair_residue_weights.sum(-1, keepdims=True))
 
     per_alignment = (predicted_tm_term * normed_residue_mask).sum(-1)
+    residuewise_iptm = per_alignment * residue_weights
 
-    return (per_alignment * residue_weights).max()
+    return residuewise_iptm
 
 
 def get_ptm_modified(inputs, outputs, interface=False):
@@ -143,7 +144,7 @@ def get_actifptm_probs(result, asym_id, cmap, start_i, end_i, start_j, end_j):
 
     # Create a new matrix, which contains only the contacts between the two chains
     cmap_copy = np.zeros((total_length, total_length))
-    #cmap_copy[start_i:end_i + 1, start_j:end_j + 1] = cmap[start_i:end_i + 1, start_j:end_j + 1] # this might need to be commented out, TODO: test
+    cmap_copy[start_i:end_i + 1, start_j:end_j + 1] = cmap[start_i:end_i + 1, start_j:end_j + 1]
     cmap_copy[start_j:end_j + 1, start_i:end_i + 1] = cmap[start_j:end_j + 1, start_i:end_i + 1]
 
     # Initialize new input dictionary
@@ -157,10 +158,10 @@ def get_actifptm_probs(result, asym_id, cmap, start_i, end_i, start_j, end_j):
     pae = {"residue_weights": inputs_actifptm["seq_mask"],
            **outputs["predicted_aligned_error"],
            "asym_id": inputs_actifptm["asym_id"]}
-    actifptm_probs = round(float(predicted_tm_score_modified(**pae, use_jnp=True,
-                                                          pair_residue_weights=cmap_copy)), 3)
+    residuewise_actifptm = predicted_tm_score_modified(**pae, use_jnp=True,
+                                                          pair_residue_weights=cmap_copy)
 
-    return actifptm_probs
+    return residuewise_actifptm
 
 
 def get_actifptm_contacts(result, asym_id, cmap, start_i, end_i, start_j, end_j):
@@ -198,11 +199,11 @@ def get_actifptm_contacts(result, asym_id, cmap, start_i, end_i, start_j, end_j)
         # Update seq_mask for these positions to True within inputs
         inputs_actifptm['seq_mask'][global_positions] = 1
         # Call get_ptm with updated inputs and outputs
-        actifptm = round(float(get_ptm_modified(inputs_actifptm, outputs, interface=True)), 3)
+        residuewise_actifptm = get_ptm_modified(inputs_actifptm, outputs, interface=True)
     else:
-        actifptm = 0
+        residuewise_actifptm = []
 
-    return actifptm
+    return residuewise_actifptm
 
 
 def get_pairwise_iptm(result, asym_id, start_i, end_i, start_j, end_j):
@@ -217,7 +218,7 @@ def get_pairwise_iptm(result, asym_id, start_i, end_i, start_j, end_j):
     input_pairwise_iptm['seq_mask'][np.concatenate((np.arange(start_i, end_i + 1),
                                                     np.arange(start_j, end_j + 1)))] = 1
 
-    return round(float(get_ptm_modified(input_pairwise_iptm, outputs, interface=True)), 3)
+    return get_ptm_modified(input_pairwise_iptm, outputs, interface=True)
 
 
 def get_per_chain_ptm(result, cmap, start, end):
@@ -245,9 +246,9 @@ def get_per_chain_ptm(result, cmap, start, end):
     pae_copy.pop('asym_id', None)
 
     # Calculate and return chain PTM score
-    cptm_probs = round(float(predicted_tm_score_modified(**pae_copy, use_jnp=True)), 3)
+    cptm = round(float(predicted_tm_score_modified(**pae_copy, use_jnp=True).max()), 3)
 
-    return cptm_probs
+    return cptm
 
 
 def get_chain_and_interface_metrics(result, asym_id, use_probs_extended=False, use_jnp=True):
@@ -265,9 +266,8 @@ def get_chain_and_interface_metrics(result, asym_id, use_probs_extended=False, u
     """
 
     # Prepare dictionaries to collect results
-    pairwise_actifptm = {}
-    pairwise_iptm = {}
-    per_chain_ptm = {}
+    output = {'pairwise_actifptm': {}, 'pairwise_iptm': {}, 'per_chain_ptm': {}}
+    #residuewise_output = {'residuewise_actifptm': {}, 'residuewise_iptm': {}}
     chain_starts_ends = get_chain_indices(asym_id, use_jnp=use_jnp)
 
     # Generate chain labels (A, B, C, ...)
@@ -295,17 +295,25 @@ def get_chain_and_interface_metrics(result, asym_id, use_probs_extended=False, u
                 key = f"{chain_label_i}-{chain_label_j}"
 
                 if not use_probs_extended:
-                    pairwise_actifptm[key] = get_actifptm_contacts(results, asym_id, cmap, start_i, end_i, start_j, end_j)
+                    residuewise_actifptm = get_actifptm_contacts(results, asym_id, cmap, start_i, end_i, start_j, end_j)
+                    output['pairwise_actifptm'][key] = round(float(residuewise_actifptm.max()), 3)
+                    #residuewise_output['residuewise_actifptm'][key] = residuewise_actifptm
                 else:
-                    pairwise_actifptm[key] = get_actifptm_probs(results, asym_id, cmap, start_i, end_i, start_j, end_j)
+                    residuewise_actifptm = get_actifptm_probs(results, asym_id, cmap, start_i, end_i, start_j, end_j)
+                    output['pairwise_actifptm'][key] = round(float(residuewise_actifptm.max()), 3)
+                    #residuewise_output['residuewise_actifptm'][key] = residuewise_actifptm
 
                 # Also add regular i_ptm (interchain), pairwise
-                pairwise_iptm[key] = get_pairwise_iptm(results, asym_id, start_i, end_i, start_j, end_j)
+                residuewise_iptm = get_pairwise_iptm(results, asym_id, start_i, end_i, start_j, end_j)
+                output['pairwise_iptm'][key] = round(float(residuewise_iptm.max()), 3)
+                #residuewise_output['residuewise_iptm'][key] = output['pairwise_iptm'][key]
 
         # Also calculate pTM score for single chain
-        per_chain_ptm[chain_label_i] = get_per_chain_ptm(results, cmap, start_i, end_i)
+        output['per_chain_ptm'][chain_label_i] = get_per_chain_ptm(results, cmap, start_i, end_i)
 
-    return {"pairwise_actifptm": pairwise_actifptm, "pairwise_iptm": pairwise_iptm, "per_chain_ptm": per_chain_ptm}
+    # save
+
+    return output
 
 
 def plot_matrix(actifptm_dict, iptm_dict, cptm_dict, prefix='rank', ax_in=None, fig_path=None):
