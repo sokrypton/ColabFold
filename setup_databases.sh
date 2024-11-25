@@ -36,6 +36,11 @@ fi
 downloadFile() {
     URL="$1"
     OUTPUT="$2"
+    # Check if the file already exists and is greater than 0 bytes (to avoid using partially downloaded files)
+    if [ -s "$OUTPUT" ]; then
+        echo "$OUTPUT exists and is not empty. Skipping download."
+        return 0
+    fi
     set +e
     for i in $STRATEGY; do
         case "$i" in
@@ -55,6 +60,7 @@ downloadFile() {
     set -e
     fail "Could not download $URL to $OUTPUT"
 }
+
 
 # Make MMseqs2 merge the databases to avoid spamming the folder with files
 export MMSEQS_FORCE_MERGE=1
