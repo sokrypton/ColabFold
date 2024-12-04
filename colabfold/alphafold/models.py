@@ -76,7 +76,7 @@ def load_models_and_params(
     use_bfloat16: bool = True,
     use_dropout: bool = False,
     save_all: bool = False,
-    calc_extended_metrics: bool = False,
+    calc_extended_ptm: bool = False,
     use_probs_extended: bool = True
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
@@ -138,7 +138,7 @@ def load_models_and_params(
 
             # disable some outputs if not being saved
             if not save_all:
-                model_config.model.heads.distogram.weight = 0.0 if not calc_extended_metrics else model_config.model.heads.distogram.weight
+                model_config.model.heads.distogram.weight = 0.0 if not calc_extended_ptm else model_config.model.heads.distogram.weight
                 model_config.model.heads.masked_msa.weight = 0.0
                 model_config.model.heads.experimentally_resolved.weight = 0.0
 
@@ -169,7 +169,7 @@ def load_models_and_params(
             model_runner = model.RunModel(
                 model_config,
                 params,
-                extended_metrics_config={'calc_extended_metrics': calc_extended_metrics, 'use_probs_extended': use_probs_extended}
+                extended_ptm_config={'calc_extended_ptm': calc_extended_ptm, 'use_probs_extended': use_probs_extended}
             )
         
         params = get_model_haiku_params(

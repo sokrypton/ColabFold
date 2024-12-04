@@ -67,7 +67,7 @@ from colabfold.utils import (
     CFMMCIFIO,
 )
 from colabfold.relax import relax_me
-from colabfold.alphafold.extended_metrics import *
+from colabfold.alphafold.extended_ptm import *
 
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 from Bio.PDB.PDBIO import Select
@@ -347,7 +347,7 @@ def predict_structure(
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
     save_recycles: bool = False,
-    calc_extended_metrics: bool = False,
+    calc_extended_ptm: bool = False,
     use_probs_extended: bool = True,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
@@ -429,11 +429,13 @@ def predict_structure(
                 return_representations=return_representations,
                 callback=callback)
 
-            if calc_extended_metrics:
-                extended_metrics = get_chain_and_interface_metrics(result, input_features['asym_id'],
+            if calc_extended_ptm:
+                extended_ptm = get_chain_and_interface_metrics(result, input_features['asym_id'],
                                                               use_probs_extended=use_probs_extended,
                                                               use_jnp=False)
                 result.pop('pae_matrix_with_logits', None)
+                print(extended_ptm.keys())
+                result['actifptm'] = extended_ptm['actifptm']
             prediction_times.append(time.time() - start)
 
             ########################
@@ -446,7 +448,7 @@ def predict_structure(
             if not is_complex: result.pop("iptm",None)
             print_line = ""
             conf.append({})
-            for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"]]:
+            for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"], ['actifptm', 'actifpTM']]:
               if x in result:
                 print_line += f" {y}={result[x]:.3g}"
                 conf[-1][x] = float(result[x])
@@ -493,8 +495,8 @@ def predict_structure(
                   pae = result["predicted_aligned_error"][:seq_len,:seq_len]
                   scores.update({"max_pae": pae.max().astype(float).item(),
                                  "pae": np.around(pae.astype(float), 2).tolist()})
-                  if calc_extended_metrics:
-                    scores.update(extended_metrics)
+                  if calc_extended_ptm:
+                    scores.update(extended_ptm)
                   for k in ["ptm","iptm"]:
                     if k in conf[-1]: scores[k] = np.around(conf[-1][k], 2).item()
                   del pae
@@ -1280,7 +1282,7 @@ def run(
     local_pdb_path: Optional[Path] = None,
     use_cluster_profile: bool = True,
     feature_dict_callback: Callable[[Any], Any] = None,
-    calc_extended_metrics: bool = False,
+    calc_extended_ptm: bool = False,
     use_probs_extended: bool = True,
     **kwargs
 ):
@@ -1410,7 +1412,7 @@ def run(
         "use_fuse": use_fuse,
         "use_bfloat16": use_bfloat16,
         "version": importlib_metadata.version("colabfold"),
-        "calc_extended_metrics": calc_extended_metrics,
+        "calc_extended_ptm": calc_extended_ptm,
         "use_probs_extended": use_probs_extended,
     }
     config_out_file = result_dir.joinpath("config.json")
@@ -1589,7 +1591,7 @@ def run(
                         use_fuse=use_fuse,
                         use_bfloat16=use_bfloat16,
                         save_all=save_all,
-                        calc_extended_metrics=calc_extended_metrics
+                        calc_extended_ptm=calc_extended_ptm
                     )
                     first_job = False
 
@@ -1618,7 +1620,7 @@ def run(
                     save_single_representations=save_single_representations,
                     save_pair_representations=save_pair_representations,
                     save_recycles=save_recycles,
-                    calc_extended_metrics=calc_extended_metrics,
+                    calc_extended_ptm=calc_extended_ptm,
                     use_probs_extended=use_probs_extended,
                 )
                 
@@ -1659,7 +1661,7 @@ def run(
                 result_files.append(pae_png)
 
                 # make pairwise interface metric plots and chainwise ptm plot
-                if calc_extended_metrics:
+                if calc_extended_ptm:
                     ext_metric_png = result_dir.joinpath(f"{jobname}_ext_metrics.png")
                     plot_chain_pairwise_analysis(scores, fig_path=ext_metric_png)
 
@@ -1878,7 +1880,7 @@ def main():
         help="Experimental: For multimer models, disable cluster profiles.",
     )
     pred_group.add_argument(
-        "--calc-extended-metrics",
+        "--calc-extended-ptm",
         default=False,
         action="store_true",
         help="Experimental: calculate pairwise metrics (ipTM and actifpTM), and also chain-wise pTM",
@@ -2076,7 +2078,11 @@ def main():
 
     user_agent = f"colabfold/{version}"
 
+    # added for actifptm calculation
     use_probs_extended = False if args.no_use_probs_extended else True
+    if not is_complex and args.calc_extended_ptm:
+        logger.info("Calculating extended pTM is not supported for single chain prediction, skipping it.")
+        args.calc_extended_ptm=False
 
     run(
         queries=queries,
@@ -2121,7 +2127,7 @@ def main():
         jobname_prefix=args.jobname_prefix,
         save_all=args.save_all,
         save_recycles=args.save_recycles,
-        calc_extended_metrics=args.calc_extended_metrics,
+        calc_extended_ptm=args.calc_extended_ptm,
         use_probs_extended=use_probs_extended,
     )
 

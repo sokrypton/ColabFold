@@ -103,23 +103,6 @@ def predicted_tm_score_modified(logits, breaks, residue_weights=None,
         pair_residue_weights = pair_mask * (residue_weights[None, :] * residue_weights[:, None])
     normed_residue_mask = pair_residue_weights / (1e-8 + pair_residue_weights.sum(-1, keepdims=True))
 
-    fig = plt.gcf()
-    if plt.get_fignums():
-        axs = fig.axes
-        # Ensure that there are at least 3 axes to prevent index errors
-        if len(axs) >= 3:
-            axs[0].imshow(predicted_tm_term * normed_residue_mask)
-            axs[0].set_title('predicted_tm_term * normed_residue_mask')
-            fig.colorbar(axs[0].images[-1], ax=axs[0])  # Add colorbar for the first image
-
-            axs[1].imshow(normed_residue_mask)
-            axs[1].set_title('normed_residue_mask')
-            fig.colorbar(axs[1].images[-1], ax=axs[1])  # Add colorbar for the second image
-
-            axs[2].imshow(predicted_tm_term)
-            axs[2].set_title('predicted_tm_term')
-            fig.colorbar(axs[2].images[-1], ax=axs[2])
-
     per_alignment = (predicted_tm_term * normed_residue_mask).sum(-1)
     residuewise_iptm = per_alignment * residue_weights
 
@@ -317,19 +300,13 @@ def get_chain_and_interface_metrics(result, asym_id, use_probs_extended=False, u
             chain_label_j = chain_labels[j % len(chain_labels)]  # Wrap around if more than 26 chains
             if i < j:  # Avoid self-comparison and duplicate comparisons
                 key = f"{chain_label_i}-{chain_label_j}"
-                fig, ax = plt.subplots(1, 3, figsize=(15, 5))
                 if not use_probs_extended:
                     residuewise_actifptm, seq_mask = get_actifptm_contacts(results, asym_id, cmap, start_i, end_i, start_j, end_j)
                     pair_residue_weights_no_probs += seq_mask[None, :] * seq_mask[:, None]
-                    plt.savefig('debug_pairwise.png')
-                    plt.close()
-
-                    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
                     output['pairwise_actifptm'][key] = round(float(residuewise_actifptm.max()), 3)
                     #residuewise_output['residuewise_actifptm'][key] = residuewise_actifptm
                 else:
                     residuewise_actifptm = get_actifptm_probs(results, asym_id, cmap, start_i, end_i, start_j, end_j)
-                    print(residuewise_actifptm)
                     output['pairwise_actifptm'][key] = round(float(residuewise_actifptm.max()), 3)
                     #residuewise_output['residuewise_actifptm'][key] = residuewise_actifptm
 
@@ -343,38 +320,16 @@ def get_chain_and_interface_metrics(result, asym_id, use_probs_extended=False, u
         output['per_chain_ptm'][chain_label_i] = get_per_chain_ptm(results, cmap, start_i, end_i)
 
     if not use_probs_extended:
+        # we need to recreate the full matrix from the previously calculated contacts
         pair_mask = asym_id[:, None] != asym_id[None, :]
         pair_residue_weights_no_probs *= pair_mask
         pae = {"residue_weights": np.full(full_length, 1, dtype=float),
                **results["predicted_aligned_error"],
                "asym_id": asym_id}
 
-        fig, axs = plt.subplots(1, 3, figsize=(10, 5))
-
-
-        axs[0].imshow(pair_residue_weights_no_probs.reshape(full_length, full_length))
-        axs[0].set_title(f'pair_residue_weights_no_probs {pair_residue_weights_no_probs.shape}')
-        fig.colorbar(axs[0].images[-1], ax=axs[0])  # Add colorbar for the first image
-
-        axs[1].imshow(pair_mask)
-        axs[1].set_title('pair_mask')
-        fig.colorbar(axs[1].images[-1], ax=axs[1])  # Add colorbar for the second image
-
-        axs[1].imshow(pair_residue_weights_no_probs)
-        axs[1].set_title('pair_residue_weights_no_probs')
-        fig.colorbar(axs[1].images[-1], ax=axs[1])  # Add colorbar for the second image
-
-        plt.savefig('debug_full_beforefunc.png')
-        plt.close()
-
-        fig, ax = plt.subplots(1, 3, figsize=(15, 5))
         output['actifptm'] = round(float(predicted_tm_score_modified(**pae, pair_residue_weights=pair_residue_weights_no_probs).max()), 3)
     else:
-        print(get_actifptm_contacts(results, asym_id, cmap, 0, full_length - 1, 0, full_length - 1))
         output['actifptm'] = round(float(get_actifptm_probs(results, asym_id, cmap, 0, full_length - 1, 0, full_length - 1).max()), 3)
-
-    plt.savefig('debug_full.png')
-    plt.close()
 
     return output
 
