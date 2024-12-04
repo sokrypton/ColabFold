@@ -67,7 +67,7 @@ from colabfold.utils import (
     CFMMCIFIO,
 )
 from colabfold.relax import relax_me
-from colabfold.alphafold.extended_ptm import *
+from colabfold.alphafold import extended_ptm
 
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 from Bio.PDB.PDBIO import Select
@@ -430,9 +430,9 @@ def predict_structure(
                 callback=callback)
 
             if calc_extended_ptm:
-                extended_ptm = get_chain_and_interface_metrics(result, input_features['asym_id'],
-                                                              use_probs_extended=use_probs_extended,
-                                                              use_jnp=False)
+                extended_ptm = extended_ptm.get_chain_and_interface_metrics(result, input_features['asym_id'],
+                    use_probs_extended=use_probs_extended,
+                    use_jnp=False)
                 result.pop('pae_matrix_with_logits', None)
                 result['actifptm'] = extended_ptm['actifptm']
             prediction_times.append(time.time() - start)
@@ -1662,7 +1662,7 @@ def run(
                 # make pairwise interface metric plots and chainwise ptm plot
                 if calc_extended_ptm:
                     ext_metric_png = result_dir.joinpath(f"{jobname}_ext_metrics.png")
-                    plot_chain_pairwise_analysis(scores, fig_path=ext_metric_png)
+                    extended_ptm.plot_chain_pairwise_analysis(scores, fig_path=ext_metric_png)
 
             # make pLDDT plot
             plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
