@@ -140,7 +140,6 @@ def get_actifptm_probs(result, asym_id, cmap, start_i, end_i, start_j, end_j):
 
     total_length = len(asym_id)
     outputs = deepcopy(result)
-    inputs_actifptm = {}
 
     # Create a new matrix, which contains only the contacts between the two chains
     cmap_copy = np.zeros((total_length, total_length))
@@ -196,15 +195,15 @@ def get_actifptm_contacts(result, asym_id, cmap, start_i, end_i, start_j, end_j)
         global_positions.sort()
 
         # Initialize new input dictionary
-        inputs_actifptm['seq_mask'] = np.full(total_length, 0, dtype=float)
         inputs_actifptm['asym_id'] = asym_id
-        # Update seq_mask for these positions to True within inputs
+        inputs_actifptm['seq_mask'] = np.full(total_length, 0, dtype=float)
         inputs_actifptm['seq_mask'][global_positions] = 1
-        print(inputs_actifptm['seq_mask'])
+
         # Call get_ptm with updated inputs and outputs
         residuewise_actifptm = get_ptm_modified(inputs_actifptm, outputs, interface=True)
     else:
         residuewise_actifptm = []
+        inputs_actifptm['seq_mask'] = np.full(total_length, 0, dtype=float)
 
     return residuewise_actifptm, inputs_actifptm['seq_mask']
 
