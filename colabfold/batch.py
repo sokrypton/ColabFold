@@ -434,7 +434,6 @@ def predict_structure(
                                                               use_probs_extended=use_probs_extended,
                                                               use_jnp=False)
                 result.pop('pae_matrix_with_logits', None)
-                print(extended_ptm.keys())
                 result['actifptm'] = extended_ptm['actifptm']
             prediction_times.append(time.time() - start)
 

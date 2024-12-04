@@ -327,7 +327,6 @@ def get_chain_and_interface_metrics(result, asym_id, use_probs_extended=False, u
         pae = {"residue_weights": np.full(full_length, 1, dtype=float),
                **results["predicted_aligned_error"],
                "asym_id": asym_id}
-
         output['actifptm'] = round(float(predicted_tm_score_modified(**pae, pair_residue_weights=pair_residue_weights_no_probs).max()), 3)
     else:
         output['actifptm'] = round(float(get_actifptm_probs(results, asym_id, cmap, 0, full_length - 1, 0, full_length - 1).max()), 3)
