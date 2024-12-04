@@ -202,7 +202,7 @@ def get_actifptm_contacts(result, asym_id, cmap, start_i, end_i, start_j, end_j)
         # Call get_ptm with updated inputs and outputs
         residuewise_actifptm = get_ptm_modified(inputs_actifptm, outputs, interface=True)
     else:
-        residuewise_actifptm = []
+        residuewise_actifptm = np.array([0.0])
         inputs_actifptm['seq_mask'] = np.full(total_length, 0, dtype=float)
 
     return residuewise_actifptm, inputs_actifptm['seq_mask']
@@ -302,6 +302,8 @@ def get_chain_and_interface_metrics(result, asym_id, use_probs_extended=False, u
                 if not use_probs_extended:
                     residuewise_actifptm, seq_mask = get_actifptm_contacts(results, asym_id, cmap, start_i, end_i, start_j, end_j)
                     pair_residue_weights_no_probs += seq_mask[None, :] * seq_mask[:, None]
+                    print(residuewise_actifptm)
+                    print(seq_mask)
                     output['pairwise_actifptm'][key] = round(float(residuewise_actifptm.max()), 3)
                     #residuewise_output['residuewise_actifptm'][key] = residuewise_actifptm
                 else:
