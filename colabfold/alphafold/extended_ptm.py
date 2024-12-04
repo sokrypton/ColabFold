@@ -264,9 +264,11 @@ def get_chain_and_interface_metrics(result, asym_id, use_probs_extended=False, u
         returns None for each, if there was an error finding the logits for the pae matrix
     """
 
-    # for the whole complex
-    full_length = len(asym_id)
+    # this is to deal with the ptm models (af2 monomer)
+    if len(asym_id.shape) > 1:
+      asym_id = asym_id[0]
 
+    full_length = len(asym_id)
     # Prepare dictionaries to collect results
     output = {'pairwise_actifptm': {}, 'pairwise_iptm': {}, 'per_chain_ptm': {}}
     #residuewise_output = {'residuewise_actifptm': {}, 'residuewise_iptm': {}}
@@ -299,8 +301,6 @@ def get_chain_and_interface_metrics(result, asym_id, use_probs_extended=False, u
                 if not use_probs_extended:
                     residuewise_actifptm, seq_mask = get_actifptm_contacts(results, asym_id, cmap, start_i, end_i, start_j, end_j)
                     pair_residue_weights_no_probs += seq_mask[None, :] * seq_mask[:, None]
-                    print(residuewise_actifptm)
-                    print(seq_mask)
                     output['pairwise_actifptm'][key] = round(float(residuewise_actifptm.max()), 3)
                     #residuewise_output['residuewise_actifptm'][key] = residuewise_actifptm
                 else:
@@ -433,3 +433,4 @@ def plot_chain_pairwise_analysis(info, prefix='rank_', fig_path="chain_pairwise_
 
     plt.tight_layout()
     plt.savefig(fig_path, dpi=200, bbox_inches='tight')
+    plt.close(fig)
