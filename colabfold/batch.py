@@ -430,11 +430,11 @@ def predict_structure(
                 callback=callback)
 
             if calc_extended_ptm:
-                extended_ptm = extended_ptm.get_chain_and_interface_metrics(result, input_features['asym_id'],
+                extended_ptm_output = extended_ptm.get_chain_and_interface_metrics(result, input_features['asym_id'],
                     use_probs_extended=use_probs_extended,
                     use_jnp=False)
                 result.pop('pae_matrix_with_logits', None)
-                result['actifptm'] = extended_ptm['actifptm']
+                result['actifptm'] = extended_ptm_output['actifptm']
             prediction_times.append(time.time() - start)
 
             ########################
@@ -495,7 +495,7 @@ def predict_structure(
                   scores.update({"max_pae": pae.max().astype(float).item(),
                                  "pae": np.around(pae.astype(float), 2).tolist()})
                   if calc_extended_ptm:
-                    scores.update(extended_ptm)
+                    scores.update(extended_ptm_output)
                   for k in ["ptm","iptm"]:
                     if k in conf[-1]: scores[k] = np.around(conf[-1][k], 2).item()
                   del pae
@@ -1343,6 +1343,11 @@ def run(
     if "ptm" not in model_type and "multimer" not in model_type:
         rank_by = "plddt"
 
+    # added for actifptm calculation
+    if not is_complex and calc_extended_ptm:
+        logger.info("Calculating extended pTM is not supported for single chain prediction, skipping it.")
+        calc_extended_ptm = False
+
     # get max length
     max_len = 0
     max_num = 0
@@ -2075,14 +2080,10 @@ def main():
     if args.amber and args.num_relax == 0:
         args.num_relax = args.num_models * args.num_seeds
 
-    user_agent = f"colabfold/{version}"
-
     # added for actifptm calculation
     use_probs_extended = False if args.no_use_probs_extended else True
-    if not is_complex and args.calc_extended_ptm:
-        logger.info("Calculating extended pTM is not supported for single chain prediction, skipping it.")
-        args.calc_extended_ptm=False
 
+    user_agent = f"colabfold/{version}"
     run(
         queries=queries,
         result_dir=args.results,
