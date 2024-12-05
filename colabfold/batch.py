@@ -429,12 +429,14 @@ def predict_structure(
                 return_representations=return_representations,
                 callback=callback)
 
-            if calc_extended_ptm:
+            if calc_extended_ptm and 'predicted_aligned_error' in result.keys():
                 extended_ptm_output = extended_ptm.get_chain_and_interface_metrics(result, input_features['asym_id'],
                     use_probs_extended=use_probs_extended,
                     use_jnp=False)
                 result.pop('pae_matrix_with_logits', None)
                 result['actifptm'] = extended_ptm_output['actifptm']
+            else:
+                calc_extended_ptm = False
             prediction_times.append(time.time() - start)
 
             ########################
