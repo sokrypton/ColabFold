@@ -359,8 +359,7 @@ def plot_matrix(actifptm_dict, iptm_dict, cptm_dict, prefix='rank', ax_in=None, 
     mask_lower = np.tril(np.ones(data.shape), k=-1)
     mask_diagonal = np.eye(data.shape[0])
 
-    dyn_size = 11 + (max(5, len(letters)) / 2)  # resize the font with differently sized figures
-
+    dyn_size_ch = max(- 1.5 * len(letters) + 18, 3)   # resize the font with differently sized figures
     # Plot lower triangle (actifpTM)
     ax_in.imshow(np.ma.masked_where(mask_upper + mask_diagonal, data), cmap='Blues', vmax=1, vmin=0)
 
@@ -373,7 +372,7 @@ def plot_matrix(actifptm_dict, iptm_dict, cptm_dict, prefix='rank', ax_in=None, 
 
     # Add colorbar for cpTM (diagonal)
     cbar = plt.colorbar(im, ax=ax_in, fraction=0.046, pad=0.04)
-    cbar.ax.tick_params(labelsize=dyn_size)  # Set fontsize for colorbar labels
+    cbar.ax.tick_params(labelsize=dyn_size_ch)  # Set fontsize for colorbar labels
     cbar.outline.set_edgecolor('grey')
     cbar.outline.set_linewidth(0.5)
 
@@ -383,29 +382,30 @@ def plot_matrix(actifptm_dict, iptm_dict, cptm_dict, prefix='rank', ax_in=None, 
             value = data.iloc[i, j]
             if not mask_upper[i, j] and not mask_diagonal[i, j]:
                 text_color = 'white' if value > 0.8 else 'black'
-                ax_in.text(j, i, f"{value:.2f}", ha='center', va='center', color=text_color, fontsize=dyn_size*1.5)
+                ax_in.text(j, i, f"{value:.2f}", ha='center', va='center', color=text_color, fontsize=dyn_size_ch*1.2)
             elif not mask_lower[i, j] and not mask_diagonal[i, j]:
                 text_color = 'white' if value > 0.8 else 'black'
-                ax_in.text(j, i, f"{value:.2f}", ha='center', va='center', color=text_color, fontsize=dyn_size*1.5)
+                ax_in.text(j, i, f"{value:.2f}", ha='center', va='center', color=text_color, fontsize=dyn_size_ch*1.2)
             elif mask_diagonal[i, j]:
                 text_color = 'white' if value > 0.5 else 'black'
-                ax_in.text(j, i, f"{value:.2f}", ha='center', va='center', color=text_color, fontsize=dyn_size*1.5)
+                ax_in.text(j, i, f"{value:.2f}", ha='center', va='center', color=text_color, fontsize=dyn_size_ch*1.2)
 
     # Custom colored legend (ifpTM, cpTM, ipTM)
     x_start = 0.35
     x_offset = 0.125
-    ax_in.text(0.1, 1.05, prefix, fontsize=dyn_size*1.2, fontweight='bold', color='black', ha='center', transform=ax_in.transAxes)
-    ax_in.text(x_start + x_offset - 0.06, 1.05, 'actifpTM', fontsize=dyn_size*1.2, fontweight='bold', color='darkblue', ha='center', transform=ax_in.transAxes)
-    ax_in.text(x_start + 2 * x_offset, 1.05, ' - ', fontsize=dyn_size*1.2, fontweight='bold', color='black', ha='center', transform=ax_in.transAxes)
-    ax_in.text(x_start + 3 * x_offset, 1.05, 'cpTM', fontsize=dyn_size*1.2, fontweight='bold', color='dimgrey', ha='center', transform=ax_in.transAxes)
-    ax_in.text(x_start + 4 * x_offset, 1.05, ' - ', fontsize=dyn_size*1.2, fontweight='bold', color='black', ha='center', transform=ax_in.transAxes)
-    ax_in.text(x_start + 5 * x_offset, 1.05, 'ipTM', fontsize=dyn_size*1.2, fontweight='bold', color='firebrick', ha='center', transform=ax_in.transAxes)
+    dyn_size = 16
+    ax_in.text(0.1, 1.05, prefix, fontsize=dyn_size, fontweight='bold', color='black', ha='center', transform=ax_in.transAxes)
+    ax_in.text(x_start + x_offset - 0.06, 1.05, 'actifpTM', fontsize=dyn_size, fontweight='bold', color='darkblue', ha='center', transform=ax_in.transAxes)
+    ax_in.text(x_start + 2 * x_offset, 1.05, ' - ', fontsize=dyn_size, fontweight='bold', color='black', ha='center', transform=ax_in.transAxes)
+    ax_in.text(x_start + 3 * x_offset, 1.05, 'cpTM', fontsize=dyn_size, fontweight='bold', color='dimgrey', ha='center', transform=ax_in.transAxes)
+    ax_in.text(x_start + 4 * x_offset, 1.05, ' - ', fontsize=dyn_size, fontweight='bold', color='black', ha='center', transform=ax_in.transAxes)
+    ax_in.text(x_start + 5 * x_offset, 1.05, 'ipTM', fontsize=dyn_size, fontweight='bold', color='firebrick', ha='center', transform=ax_in.transAxes)
 
     # Format labels
     ax_in.set_yticks(np.arange(len(letters)))
-    ax_in.set_yticklabels(letters, rotation=0, fontsize=dyn_size*1.5)
+    ax_in.set_yticklabels(letters, rotation=0, fontsize=dyn_size_ch*1.5)
     ax_in.set_xticks(np.arange(len(letters)))
-    ax_in.set_xticklabels(letters, fontsize=dyn_size*1.5)
+    ax_in.set_xticklabels(letters, fontsize=dyn_size_ch*1.5)
 
     # If this was only one plot, display and save it.
     # If multiple plots have been appended, this needs to be done from the calling function
