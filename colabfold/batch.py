@@ -67,7 +67,7 @@ from colabfold.utils import (
     CFMMCIFIO,
 )
 from colabfold.relax import relax_me
-from colabfold.alphafold import extended_ptm
+from colabfold.alphafold import extra_ptm
 
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 from Bio.PDB.PDBIO import Select
@@ -347,8 +347,8 @@ def predict_structure(
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
     save_recycles: bool = False,
-    calc_extended_ptm: bool = False,
-    use_probs_extended: bool = True,
+    calc_extra_ptm: bool = False,
+    use_probs_extra: bool = True,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     mean_scores = []
@@ -429,14 +429,14 @@ def predict_structure(
                 return_representations=return_representations,
                 callback=callback)
 
-            if calc_extended_ptm and 'predicted_aligned_error' in result.keys():
-                extended_ptm_output = extended_ptm.get_chain_and_interface_metrics(result, input_features['asym_id'],
-                    use_probs_extended=use_probs_extended,
+            if calc_extra_ptm and 'predicted_aligned_error' in result.keys():
+                extra_ptm_output = extra_ptm.get_chain_and_interface_metrics(result, input_features['asym_id'],
+                    use_probs_extra=use_probs_extra,
                     use_jnp=False)
                 result.pop('pae_matrix_with_logits', None)
-                result['actifptm'] = extended_ptm_output['actifptm']
+                result['actifptm'] = extra_ptm_output['actifptm']
             else:
-                calc_extended_ptm = False
+                calc_extra_ptm = False
             prediction_times.append(time.time() - start)
 
             ########################
@@ -496,8 +496,8 @@ def predict_structure(
                   pae = result["predicted_aligned_error"][:seq_len,:seq_len]
                   scores.update({"max_pae": pae.max().astype(float).item(),
                                  "pae": np.around(pae.astype(float), 2).tolist()})
-                  if calc_extended_ptm:
-                    scores.update(extended_ptm_output)
+                  if calc_extra_ptm:
+                    scores.update(extra_ptm_output)
                   for k in ["ptm","iptm"]:
                     if k in conf[-1]: scores[k] = np.around(conf[-1][k], 2).item()
                   del pae
@@ -1283,8 +1283,8 @@ def run(
     local_pdb_path: Optional[Path] = None,
     use_cluster_profile: bool = True,
     feature_dict_callback: Callable[[Any], Any] = None,
-    calc_extended_ptm: bool = False,
-    use_probs_extended: bool = True,
+    calc_extra_ptm: bool = False,
+    use_probs_extra: bool = True,
     **kwargs
 ):
     # check what device is available
@@ -1346,9 +1346,9 @@ def run(
         rank_by = "plddt"
 
     # added for actifptm calculation
-    if not is_complex and calc_extended_ptm:
-        logger.info("Calculating extended pTM is not supported for single chain prediction, skipping it.")
-        calc_extended_ptm = False
+    if not is_complex and calc_extra_ptm:
+        logger.info("Calculating extra pTM is not supported for single chain prediction, skipping it.")
+        calc_extra_ptm = False
 
     # get max length
     max_len = 0
@@ -1418,8 +1418,8 @@ def run(
         "use_fuse": use_fuse,
         "use_bfloat16": use_bfloat16,
         "version": importlib_metadata.version("colabfold"),
-        "calc_extended_ptm": calc_extended_ptm,
-        "use_probs_extended": use_probs_extended,
+        "calc_extra_ptm": calc_extra_ptm,
+        "use_probs_extra": use_probs_extra,
     }
     config_out_file = result_dir.joinpath("config.json")
     config_out_file.write_text(json.dumps(config, indent=4))
@@ -1597,7 +1597,7 @@ def run(
                         use_fuse=use_fuse,
                         use_bfloat16=use_bfloat16,
                         save_all=save_all,
-                        calc_extended_ptm=calc_extended_ptm
+                        calc_extra_ptm=calc_extra_ptm
                     )
                     first_job = False
 
@@ -1626,8 +1626,8 @@ def run(
                     save_single_representations=save_single_representations,
                     save_pair_representations=save_pair_representations,
                     save_recycles=save_recycles,
-                    calc_extended_ptm=calc_extended_ptm,
-                    use_probs_extended=use_probs_extended,
+                    calc_extra_ptm=calc_extra_ptm,
+                    use_probs_extra=use_probs_extra,
                 )
                 
                 result_files += results["result_files"]
@@ -1667,9 +1667,9 @@ def run(
                 result_files.append(pae_png)
 
                 # make pairwise interface metric plots and chainwise ptm plot
-                if calc_extended_ptm:
+                if calc_extra_ptm:
                     ext_metric_png = result_dir.joinpath(f"{jobname}_ext_metrics.png")
-                    extended_ptm.plot_chain_pairwise_analysis(scores, fig_path=ext_metric_png)
+                    extra_ptm.plot_chain_pairwise_analysis(scores, fig_path=ext_metric_png)
 
             # make pLDDT plot
             plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
@@ -1886,16 +1886,16 @@ def main():
         help="Experimental: For multimer models, disable cluster profiles.",
     )
     pred_group.add_argument(
-        "--calc-extended-ptm",
+        "--calc-extra-ptm",
         default=False,
         action="store_true",
         help="Experimental: calculate pairwise metrics (ipTM and actifpTM), and also chain-wise pTM",
     )
     pred_group.add_argument(
-        "--no-use-probs-extended",
+        "--no-use-probs-extra",
         default=False,
         action="store_true",
-        help="Experimental: instead of contact probabilities form use binary contacts for extended metrics calculation",
+        help="Experimental: instead of contact probabilities form use binary contacts for extra metrics calculation",
     )
     pred_group.add_argument("--data", help="Path to AlphaFold2 weights directory.")
 
@@ -2083,7 +2083,7 @@ def main():
         args.num_relax = args.num_models * args.num_seeds
 
     # added for actifptm calculation
-    use_probs_extended = False if args.no_use_probs_extended else True
+    use_probs_extra = False if args.no_use_probs_extra else True
 
     user_agent = f"colabfold/{version}"
     run(
@@ -2129,8 +2129,8 @@ def main():
         jobname_prefix=args.jobname_prefix,
         save_all=args.save_all,
         save_recycles=args.save_recycles,
-        calc_extended_ptm=args.calc_extended_ptm,
-        use_probs_extended=use_probs_extended,
+        calc_extra_ptm=args.calc_extra_ptm,
+        use_probs_extra=use_probs_extra,
     )
 
 if __name__ == "__main__":

@@ -250,20 +250,19 @@ def get_per_chain_ptm(result, cmap, start, end):
     return cptm
 
 
-def get_chain_and_interface_metrics(result, asym_id, use_probs_extended=False, use_jnp=True):
+def get_chain_and_interface_metrics(result, asym_id, use_probs_extra=False, use_jnp=True):
     """
     This function iterates over all pairs of chains and calculates the interface and interchain PTM score for each pair.
 
     Args:
         result: The result from AlphaFold.
         asym_id: Array indicating chain boundaries.
-        use_probs_extended: If True, calculate interface pTM score based on contact probabilities. Default is False.
+        use_probs_extra: If True, calculate interface pTM score based on contact probabilities. Default is False.
         use_jnp: If True, use JAX numpy. Default is True.
     Returns:
         a dictionary with the pairwise interface pTM-s, and the chain-wise pTM.
         returns None for each, if there was an error finding the logits for the pae matrix
     """
-
     # this is to deal with the ptm models (af2 monomer)
     if len(asym_id.shape) > 1:
       asym_id = asym_id[0]
@@ -298,7 +297,7 @@ def get_chain_and_interface_metrics(result, asym_id, use_probs_extended=False, u
             chain_label_j = chain_labels[j % len(chain_labels)]  # Wrap around if more than 26 chains
             if i < j:  # Avoid self-comparison and duplicate comparisons
                 key = f"{chain_label_i}-{chain_label_j}"
-                if not use_probs_extended:
+                if not use_probs_extra:
                     residuewise_actifptm, seq_mask = get_actifptm_contacts(results, asym_id, cmap, start_i, end_i, start_j, end_j)
                     pair_residue_weights_no_probs += seq_mask[None, :] * seq_mask[:, None]
                     output['pairwise_actifptm'][key] = round(float(residuewise_actifptm.max()), 3)
@@ -317,7 +316,7 @@ def get_chain_and_interface_metrics(result, asym_id, use_probs_extended=False, u
         # Also calculate pTM score for single chain
         output['per_chain_ptm'][chain_label_i] = get_per_chain_ptm(results, cmap, start_i, end_i)
 
-    if not use_probs_extended:
+    if not use_probs_extra:
         # we need to recreate the full matrix from the previously calculated contacts
         pair_mask = asym_id[:, None] != asym_id[None, :]
         pair_residue_weights_no_probs *= pair_mask
