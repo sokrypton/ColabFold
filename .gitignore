@@ -1,3 +1,4 @@
+.gitignore
 .pytest_cache
 /dist
 /input
@@ -8,3 +9,10 @@
 /pytestemp
 __pycache__
 .DS_Store
+*.json
+*.pdb
+*.a3m
+*.log
+*.out
+example/cf_example
+example/output/*
