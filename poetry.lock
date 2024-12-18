@@ -13,13 +13,13 @@ files = [
 
 [[package]]
 name = "alphafold-colabfold"
-version = "2.3.6"
+version = "2.3.7"
 description = "An implementation of the inference pipeline of AlphaFold v2.3.1. This is a completely new model that was entered as AlphaFold2 in CASP14 and published in Nature. This package contains patches for colabfold."
 optional = true
 python-versions = "*"
 files = [
-    {file = "alphafold-colabfold-2.3.6.tar.gz", hash = "sha256:ec52b8da4b9bd8734799b4dd93e07b2761014c0ffc2daf262540da0283e02baa"},
-    {file = "alphafold_colabfold-2.3.6-py3-none-any.whl", hash = "sha256:7d4a6cfae3057280c65e21788d659ea6508171f6cb5d0b89076449443513f2e6"},
+    {file = "alphafold-colabfold-2.3.7.tar.gz", hash = "sha256:f37fa57e4ee297e8a0870627b0c3377af9aca17827479727686b500e26ce29b9"},
+    {file = "alphafold_colabfold-2.3.7-py3-none-any.whl", hash = "sha256:1bb741e8e5816384c9255950158dd778d6035e307a7384366ae0cde2f5c05c82"},
 ]
 
 [package.dependencies]

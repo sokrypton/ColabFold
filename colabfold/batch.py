@@ -67,6 +67,7 @@ from colabfold.utils import (
     CFMMCIFIO,
 )
 from colabfold.relax import relax_me
+from colabfold.alphafold import extra_ptm
 
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 from Bio.PDB.PDBIO import Select
@@ -346,6 +347,8 @@ def predict_structure(
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
     save_recycles: bool = False,
+    calc_extra_ptm: bool = False,
+    use_probs_extra: bool = True,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     mean_scores = []
@@ -426,6 +429,14 @@ def predict_structure(
                 return_representations=return_representations,
                 callback=callback)
 
+            if calc_extra_ptm and 'predicted_aligned_error' in result.keys():
+                extra_ptm_output = extra_ptm.get_chain_and_interface_metrics(result, input_features['asym_id'],
+                    use_probs_extra=use_probs_extra,
+                    use_jnp=False)
+                result.pop('pae_matrix_with_logits', None)
+                result['actifptm'] = extra_ptm_output['actifptm']
+            else:
+                calc_extra_ptm = False
             prediction_times.append(time.time() - start)
 
             ########################
@@ -438,7 +449,7 @@ def predict_structure(
             if not is_complex: result.pop("iptm",None)
             print_line = ""
             conf.append({})
-            for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"]]:
+            for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"], ['actifptm', 'actifpTM']]:
               if x in result:
                 print_line += f" {y}={result[x]:.3g}"
                 conf[-1][x] = float(result[x])
@@ -482,9 +493,11 @@ def predict_structure(
                 plddt = result["plddt"][:seq_len]
                 scores = {"plddt": np.around(plddt.astype(float), 2).tolist()}
                 if "predicted_aligned_error" in result:
-                  pae   = result["predicted_aligned_error"][:seq_len,:seq_len]
+                  pae = result["predicted_aligned_error"][:seq_len,:seq_len]
                   scores.update({"max_pae": pae.max().astype(float).item(),
                                  "pae": np.around(pae.astype(float), 2).tolist()})
+                  if calc_extra_ptm:
+                    scores.update(extra_ptm_output)
                   for k in ["ptm","iptm"]:
                     if k in conf[-1]: scores[k] = np.around(conf[-1][k], 2).item()
                   del pae
@@ -1270,6 +1283,8 @@ def run(
     local_pdb_path: Optional[Path] = None,
     use_cluster_profile: bool = True,
     feature_dict_callback: Callable[[Any], Any] = None,
+    calc_extra_ptm: bool = False,
+    use_probs_extra: bool = True,
     **kwargs
 ):
     # check what device is available
@@ -1329,6 +1344,11 @@ def run(
         rank_by = "multimer" if is_complex else "plddt"
     if "ptm" not in model_type and "multimer" not in model_type:
         rank_by = "plddt"
+
+    # added for actifptm calculation
+    if not is_complex and calc_extra_ptm:
+        logger.info("Calculating extra pTM is not supported for single chain prediction, skipping it.")
+        calc_extra_ptm = False
 
     # get max length
     max_len = 0
@@ -1398,6 +1418,8 @@ def run(
         "use_fuse": use_fuse,
         "use_bfloat16": use_bfloat16,
         "version": importlib_metadata.version("colabfold"),
+        "calc_extra_ptm": calc_extra_ptm,
+        "use_probs_extra": use_probs_extra,
     }
     config_out_file = result_dir.joinpath("config.json")
     config_out_file.write_text(json.dumps(config, indent=4))
@@ -1575,6 +1597,7 @@ def run(
                         use_fuse=use_fuse,
                         use_bfloat16=use_bfloat16,
                         save_all=save_all,
+                        calc_extra_ptm=calc_extra_ptm
                     )
                     first_job = False
 
@@ -1603,7 +1626,10 @@ def run(
                     save_single_representations=save_single_representations,
                     save_pair_representations=save_pair_representations,
                     save_recycles=save_recycles,
+                    calc_extra_ptm=calc_extra_ptm,
+                    use_probs_extra=use_probs_extra,
                 )
+                
                 result_files += results["result_files"]
                 ranks.append(results["rank"])
                 metrics.append(results["metric"])
@@ -1639,6 +1665,11 @@ def run(
                 paes_plot.savefig(str(pae_png), bbox_inches='tight')
                 paes_plot.close()
                 result_files.append(pae_png)
+
+                # make pairwise interface metric plots and chainwise ptm plot
+                if calc_extra_ptm:
+                    ext_metric_png = result_dir.joinpath(f"{jobname}_ext_metrics.png")
+                    extra_ptm.plot_chain_pairwise_analysis(scores, fig_path=ext_metric_png)
 
             # make pLDDT plot
             plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
@@ -1854,6 +1885,18 @@ def main():
         action="store_true",
         help="Experimental: For multimer models, disable cluster profiles.",
     )
+    pred_group.add_argument(
+        "--calc-extra-ptm",
+        default=False,
+        action="store_true",
+        help="Experimental: calculate pairwise metrics (ipTM and actifpTM), and also chain-wise pTM",
+    )
+    pred_group.add_argument(
+        "--no-use-probs-extra",
+        default=False,
+        action="store_true",
+        help="Experimental: instead of contact probabilities form use binary contacts for extra metrics calculation",
+    )
     pred_group.add_argument("--data", help="Path to AlphaFold2 weights directory.")
 
     relax_group = parser.add_argument_group("Relaxation arguments", "")
@@ -2039,8 +2082,10 @@ def main():
     if args.amber and args.num_relax == 0:
         args.num_relax = args.num_models * args.num_seeds
 
-    user_agent = f"colabfold/{version}"
+    # added for actifptm calculation
+    use_probs_extra = False if args.no_use_probs_extra else True
 
+    user_agent = f"colabfold/{version}"
     run(
         queries=queries,
         result_dir=args.results,
@@ -2084,6 +2129,8 @@ def main():
         jobname_prefix=args.jobname_prefix,
         save_all=args.save_all,
         save_recycles=args.save_recycles,
+        calc_extra_ptm=args.calc_extra_ptm,
+        use_probs_extra=use_probs_extra,
     )
 
 if __name__ == "__main__":
