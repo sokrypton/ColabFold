@@ -64,6 +64,8 @@ def mmseqs_search_monomer(
     s: float = 8,
     db_load_mode: int = 2,
     threads: int = 32,
+    gpu: int = 0,
+    gpu_server: int = 0,
     unpack: bool = True,
 ):
     """Run mmseqs with a local colabfold database set
@@ -106,11 +108,16 @@ def mmseqs_search_monomer(
             dbSuffix3 = ".idx"
 
     search_param = ["--num-iterations", "3", "--db-load-mode", str(db_load_mode), "-a", "-e", "0.1", "--max-seqs", "10000"]
-    search_param += ["--prefilter-mode", str(prefilter_mode)]
-    if s is not None:
-        search_param += ["-s", "{:.1f}".format(s)]
+    if gpu:
+        search_param += ["--gpu", str(gpu), "--prefilter-mode", "1"] # gpu version only supports ungapped prefilter currently
     else:
-        search_param += ["--k-score", "'seq:96,prof:80'"]
+        search_param += ["--prefilter-mode", str(prefilter_mode)]
+        if s is not None: # sensitivy can only be set for non-gpu version, gpu version runs at max sensitivity
+            search_param += ["-s", "{:.1f}".format(s)]
+        else:
+            search_param += ["--k-score", "'seq:96,prof:80'"]
+    if gpu_server:
+        search_param += ["--gpu-server", str(gpu_server)]
 
     filter_param = ["--filter-msa", str(filter), "--filter-min-enable", "1000", "--diff", str(diff), "--qid", "0.0,0.2,0.4,0.6,0.8,1.0", "--qsc", "0", "--max-seq-id", "0.95",]
     expand_param = ["--expansion-mode", "0", "-e", str(expand_eval), "--expand-filter-clusters", str(filter), "--max-seq-id", "0.95",]
@@ -207,6 +214,8 @@ def mmseqs_search_pair(
     prefilter_mode: int = 0,
     s: float = 8,
     threads: int = 64,
+    gpu: bool = False,
+    gpu_server: bool = False,
     db_load_mode: int = 2,
     pairing_strategy: int = 0,
     unpack: bool = True,
@@ -238,11 +247,16 @@ def mmseqs_search_pair(
     # fmt: off
     # @formatter:off
     search_param = ["--num-iterations", "3", "--db-load-mode", str(db_load_mode), "-a", "-e", "0.1", "--max-seqs", "10000",]
-    search_param += ["--prefilter-mode", str(prefilter_mode)]
-    if s is not None:
-        search_param += ["-s", "{:.1f}".format(s)]
+    if gpu:
+        search_param += ["--gpu", str(gpu), "--prefilter-mode", "1"] # gpu version only supports ungapped prefilter currently
     else:
-        search_param += ["--k-score", "'seq:96,prof:80'"]
+        search_param += ["--prefilter-mode", str(prefilter_mode)]
+        if s is not None: # sensitivy can only be set for non-gpu version, gpu version runs at max sensitivity
+            search_param += ["-s", "{:.1f}".format(s)]
+        else:
+            search_param += ["--k-score", "'seq:96,prof:80'"]
+    if gpu_server:
+        search_param += ["--gpu-server", str(gpu_server)]
     expand_param = ["--expansion-mode", "0", "-e", "inf", "--expand-filter-clusters", "0", "--max-seq-id", "0.95",]
     run_mmseqs(mmseqs, ["search", base.joinpath("qdb"), dbbase.joinpath(db), base.joinpath("res"), base.joinpath("tmp"), "--threads", str(threads),] + search_param,)
     run_mmseqs(mmseqs, ["expandaln", base.joinpath("qdb"), dbbase.joinpath(f"{db}{dbSuffix1}"), base.joinpath("res"), dbbase.joinpath(f"{db}{dbSuffix2}"), base.joinpath("res_exp"), "--db-load-mode", str(db_load_mode), "--threads", str(threads),] + expand_param,)
@@ -373,6 +387,12 @@ def main():
     parser.add_argument(
         "--threads", type=int, default=64, help="Number of threads to use."
     )
+    parser.add_argument(
+        "--gpu", type=int, default=0, choices=[0, 1], help="Whether to use GPU (1) or not (0). Control number of GPUs with CUDA_VISIBLE_DEVICES env var."
+    )
+    parser.add_argument(
+        "--gpu-server", type=int, default=0, choices=[0, 1], help="Whether to use GPU server (1) or not (0)"
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level = logging.INFO)
@@ -446,6 +466,8 @@ def main():
         s=args.s,
         db_load_mode=args.db_load_mode,
         threads=args.threads,
+        gpu=args.gpu,
+        gpu_server=args.gpu_server,
         unpack=args.unpack,
     )
     if is_complex is True:
@@ -458,6 +480,8 @@ def main():
             s=args.s,
             db_load_mode=args.db_load_mode,
             threads=args.threads,
+            gpu=args.gpu,
+            gpu_server=args.gpu_server,
             pairing_strategy=args.pairing_strategy,
             pair_env=False,
             unpack=args.unpack,
@@ -473,6 +497,8 @@ def main():
                 s=args.s,
                 db_load_mode=args.db_load_mode,
                 threads=args.threads,
+                gpu=args.gpu,
+                gpu_server=args.gpu_server,
                 pairing_strategy=args.pairing_strategy,
                 pair_env=True,
                 unpack=args.unpack,

@@ -108,6 +108,41 @@ In some cases using precomputed database can still be useful. For the following 
 
 If no index was created (`MMSEQS_NO_INDEX=1` was set), then `--db-load-mode` does not do anything and can be ignored.
 
+### Generating MSAs on the GPU
+
+Recently [GPU-accelerated search for MMSeqs](https://www.biorxiv.org/content/10.1101/2024.11.13.623350v1) was introduced and is now supported in ColabFold. To leverage it, you will need to ajdust the database setup and how you run ⁠`colabfold_search`⁠.
+
+#### GPU database setup
+
+To setup the GPU databases, you will need to run the ⁠`setup_databases.sh`⁠ command with ⁠`GPU=1`⁠:
+
+```shell
+GPU=1 ./setup_databases.sh /path/to/db_folder
+```
+
+This will download and setup the GPU databases in the specified folder. Note that here we do not pass ⁠`MMSEQS_NO_INDEX=1`⁠ as an argument since the indices are useful in the GPU search since we will keep them in the GPU memory.
+
+#### GPU search with ⁠ colabfold_search ⁠
+
+To run the MSA search on the GPU, it is recommended (although not required) to start a GPU server before running the search; this server will keep the indices in the GPU memory and will be used to accelerate the search. To start a GPU server, run:
+
+```shell
+mmseqs gpuserver /path/to/db_folder/colabfold_envdb_202108_db --max-seqs 10000 --db-load-mode 0 --prefilter-mode 1 &
+PID1=$!
+mmseqs gpuserver /path/to/db_folder/uniref30_2302 --max-seqs 10000 --db-load-mode 0 --prefilter-mode 1 &
+PID2=$!
+```
+
+By default, this server will use all available GPUs and split the database up evenly across them. If you want to restrict the numbers of GPU used, you can set the environment variable ⁠`CUDA_VISIBLE_DEVICES`⁠ to a specific GPU or set of GPUs, e.g., ⁠`CUDA_VISIBLE_DEVICES=0,1`⁠. You can control how many sequences are loaded onto the GPU with the ⁠`--max-seqs`⁠ option. If your database is larger than the available GPU memory, the GPU server will efficiently swap the required data in and out of the GPU memory, overlapping data transfer and computation. The GPU server will be started in the background and will continue to run until you stop it explicitly via killing the process via ⁠`kill $PID1`⁠ and ⁠`kill $PID2`⁠.
+
+You can then run ⁠ colabfold_search ⁠ with the ⁠`--gpu`⁠ and ⁠`--gpu-server`⁠ option enabled:
+
+```shell
+colabfold_search --mmseqs /path/to/bin/mmseqs --gpu 1 --gpu-server 1 input_sequences.fasta /path/to/db_folder msas
+```
+
+You can also run the search only with the ⁠`--gpu`⁠ option enabled if you do not want to start a GPU server, but the GPU server option is generally faster. Similarly to the GPU server, you can control with GPUs are used for the search via the ⁠`CUDA_VISIBLE_DEVICES` environment variable.
+
 ### Tutorials & Presentations
 - ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI).
 
