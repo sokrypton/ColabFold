@@ -13,6 +13,9 @@ PDB_AWS_SNAPSHOT="20240101"
 
 UNIREF30DB="uniref30_2302"
 MMSEQS_NO_INDEX=${MMSEQS_NO_INDEX:-}
+DOWNLOADS_ONLY=${DOWNLOADS_ONLY:-}
+GPU=${GPU:-}
+mkdir -p -- "${WORKDIR}"
 cd "${WORKDIR}"
 
 hasCommand () {
@@ -56,50 +59,12 @@ downloadFile() {
     fail "Could not download $URL to $OUTPUT"
 }
 
-# Make MMseqs2 merge the databases to avoid spamming the folder with files
-export MMSEQS_FORCE_MERGE=1
-
-if [ ! -f UNIREF30_READY ]; then
+if [ ! DOWNLOADS_READY ]; then
   downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/${UNIREF30DB}.tar.gz" "${UNIREF30DB}.tar.gz"
-  tar xzvf "${UNIREF30DB}.tar.gz"
-  mmseqs tsv2exprofiledb "${UNIREF30DB}" "${UNIREF30DB}_db"
-  if [ -z "$MMSEQS_NO_INDEX" ]; then
-    mmseqs createindex "${UNIREF30DB}_db" tmp1 --remove-tmp-files 1
-  fi
-  if [ -e ${UNIREF30DB}_db_mapping ]; then
-    ln -sf ${UNIREF30DB}_db_mapping ${UNIREF30DB}_db.idx_mapping
-  fi
-  if [ -e ${UNIREF30DB}_db_taxonomy ]; then
-    ln -sf ${UNIREF30DB}_db_taxonomy ${UNIREF30DB}_db.idx_taxonomy
-  fi
-  touch UNIREF30_READY
-fi
-
-if [ ! -f COLABDB_READY ]; then
   downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/colabfold_envdb_202108.tar.gz" "colabfold_envdb_202108.tar.gz"
-  tar xzvf "colabfold_envdb_202108.tar.gz"
-  mmseqs tsv2exprofiledb "colabfold_envdb_202108" "colabfold_envdb_202108_db"
-  # TODO: split memory value for createindex?
-  if [ -z "$MMSEQS_NO_INDEX" ]; then
-    mmseqs createindex "colabfold_envdb_202108_db" tmp2 --remove-tmp-files 1
-  fi
-  touch COLABDB_READY
-fi
-
-if [ ! -f PDB_READY ]; then
   downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/pdb100_230517.fasta.gz" "pdb100_230517.fasta.gz"
-  mmseqs createdb pdb100_230517.fasta.gz pdb100_230517
-  if [ -z "$MMSEQS_NO_INDEX" ]; then
-    mmseqs createindex pdb100_230517 tmp3 --remove-tmp-files 1
-  fi
-  touch PDB_READY
-fi
-
-
-if [ ! -f PDB100_READY ]; then
   downloadFile "https://wwwuser.gwdg.de/~compbiol/data/hhsuite/databases/hhsuite_dbs/pdb100_foldseek_230517.tar.gz" "pdb100_foldseek_230517.tar.gz"
-  tar xzvf pdb100_foldseek_230517.tar.gz pdb100_a3m.ffdata pdb100_a3m.ffindex
-  touch PDB100_READY
+  touch DOWNLOADS_READY
 fi
 
 if [ ! -f PDB_MMCIF_READY ]; then
@@ -112,4 +77,68 @@ if [ ! -f PDB_MMCIF_READY ]; then
   rsync -rlpt -v -z --delete --port=${PDB_PORT} ${PDB_SERVER}/data/structures/divided/mmCIF/ pdb/divided
   rsync -rlpt -v -z --delete --port=${PDB_PORT} ${PDB_SERVER}/data/structures/obsolete/mmCIF/ pdb/obsolete
   touch PDB_MMCIF_READY
+fi
+
+if [ -n "$DOWNLOADS_ONLY" ]; then
+  exit 0
+fi
+
+
+# Make MMseqs2 merge the databases to avoid spamming the folder with files
+export MMSEQS_FORCE_MERGE=1
+
+GPU_PAR=""
+GPU_INDEX_PAR=""
+if [ -n "${GPU}" ]; then
+  GPU_PAR="--gpu 1"
+  GPU_INDEX_PAR=" --split 1 --index-subset 2"
+
+  if ! mmseqs --help | grep -q 'gpuserver'; then
+    echo "The installed MMseqs2 has no GPU support, update to at least release 16"
+    exit 1
+  fi
+fi
+
+if [ ! -f UNIREF30_READY ]; then
+  tar xzvf "${UNIREF30DB}.tar.gz"
+  mmseqs tsv2exprofiledb "${UNIREF30DB}" "${UNIREF30DB}_db" ${GPU_PAR}
+  if [ -z "$MMSEQS_NO_INDEX" ]; then
+    mmseqs createindex "${UNIREF30DB}_db" tmp1 --remove-tmp-files 1 ${GPU_INDEX_PAR}
+  fi
+  if [ -e ${UNIREF30DB}_db_mapping ]; then
+    ln -sf ${UNIREF30DB}_db_mapping ${UNIREF30DB}_db.idx_mapping
+  fi
+  if [ -e ${UNIREF30DB}_db_taxonomy ]; then
+    ln -sf ${UNIREF30DB}_db_taxonomy ${UNIREF30DB}_db.idx_taxonomy
+  fi
+  touch UNIREF30_READY
+fi
+
+if [ ! -f COLABDB_READY ]; then
+  tar xzvf "colabfold_envdb_202108.tar.gz"
+  mmseqs tsv2exprofiledb "colabfold_envdb_202108" "colabfold_envdb_202108_db" ${GPU_PAR}
+  # TODO: split memory value for createindex?
+  if [ -z "$MMSEQS_NO_INDEX" ]; then
+    mmseqs createindex "colabfold_envdb_202108_db" tmp2 --remove-tmp-files 1 ${GPU_INDEX_PAR}
+  fi
+  touch COLABDB_READY
+fi
+
+if [ ! -f PDB_READY ]; then
+  if [ -n "${GPU}" ]; then
+    mmseqs createdb pdb100_230517.fasta.gz pdb100_230517_tmp
+    mmseqs makepaddedseqdb pdb100_230517_tmp pdb100_230517
+    mmseqs rmdb pdb100_230517_tmp
+  else
+    mmseqs createdb pdb100_230517.fasta.gz pdb100_230517
+  fi
+  if [ -z "$MMSEQS_NO_INDEX" ]; then
+    mmseqs createindex pdb100_230517 tmp3 --remove-tmp-files 1 ${GPU_INDEX_PAR}
+  fi
+  touch PDB_READY
+fi
+
+if [ ! -f PDB100_READY ]; then
+  tar xzvf pdb100_foldseek_230517.tar.gz pdb100_a3m.ffdata pdb100_a3m.ffindex
+  touch PDB100_READY
 fi
