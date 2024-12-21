@@ -59,7 +59,7 @@ downloadFile() {
     fail "Could not download $URL to $OUTPUT"
 }
 
-if [ ! DOWNLOADS_READY ]; then
+if [ ! -f DOWNLOADS_READY ]; then
   downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/${UNIREF30DB}.tar.gz" "${UNIREF30DB}.tar.gz"
   downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/colabfold_envdb_202108.tar.gz" "colabfold_envdb_202108.tar.gz"
   downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/pdb100_230517.fasta.gz" "pdb100_230517.fasta.gz"
