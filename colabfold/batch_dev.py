@@ -29,12 +29,17 @@ import importlib_metadata
 import numpy as np
 import pandas
 
-try:
-    import alphafold
-except ModuleNotFoundError:
-    raise RuntimeError(
-        "\n\nalphafold is not installed. Please run `pip install colabfold[alphafold]`\n"
-    )
+# TODO: recover
+# try:
+#     import alphafold
+# except ModuleNotFoundError:
+#     raise RuntimeError(
+#         "\n\nalphafold is not installed. Please run `pip install colabfold[alphafold]`\n"
+#     )
+
+# HACK call alphafold in different path
+sys.path.append('/home/seamustard52/repository/alphafold-rachel')
+sys.path[0] = '/home/seamustard52/repository/colabfold-rachelse'
 
 from alphafold.common import protein, residue_constants
 
@@ -68,7 +73,7 @@ from colabfold.utils import (
     AF3Utils,
 )
 from colabfold.relax import relax_me
-from colabfold.alphafold import extra_ptm
+from colabfold.alphafold_bk import extra_ptm #TODO: recover
 
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 from Bio.PDB.PDBIO import Select
@@ -279,7 +284,7 @@ def pad_input(
     pad_len: int,
     use_templates: bool,
 ) -> model.features.FeatureDict:
-    from colabfold.alphafold.msa import make_fixed_size
+    from colabfold.alphafold_bk.msa import make_fixed_size # TODO: recover
 
     model_config = model_runner.config
     eval_cfg = model_config.data.eval
@@ -1310,7 +1315,7 @@ def run(
             tf.config.set_visible_devices([], 'GPU')
 
     from alphafold.notebooks.notebook_utils import get_pae_json
-    from colabfold.alphafold.models import load_models_and_params
+    from colabfold.alphafold_bk.models import load_models_and_params # TODO: recover
     from colabfold.colabfold import plot_paes, plot_plddts
     from colabfold.plot import plot_msa_v2
 

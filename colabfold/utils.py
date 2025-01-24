@@ -281,3 +281,51 @@ _struct_asym.entity_id
             out_file.write("#\n")
             ### end section copied from Bio.PDB
             out_file.write(CIF_REVISION_DATE)
+
+class AF3Utils:
+    def _int_id_to_str_id(self, i: int) -> str:
+        if i <= 0:
+            raise ValueError(f"int_id_to_str_id: Only positive integers allowed, got {i}")
+        i = i - 1 # 1-based indexing
+        output = []
+        while i >= 0:
+            output.append(chr(i % 26 + ord("A")))
+            i = i // 26 - 1
+        return "".join(output)
+
+    def generate_af3_input(self, 
+        name: str, query_seqs_unique: list[str], query_seqs_cardinality: list[int],
+        unpairedmsas: list[str], pairedmsas: list[str],
+    ) -> dict:
+        sequences: list[dict] = []
+        chain_id_count = 0
+        null = None
+        for i in range(len(query_seqs_unique)):
+            query_seq = query_seqs_unique[i]
+            chain_ids = [
+                self._int_id_to_str_id(chain_id_count + j + 1) for j in range(query_seqs_cardinality[i])
+            ]
+            chain_id_count += query_seqs_cardinality[i]
+            sequences.append(
+                {
+                    "protein": {
+                        "id": chain_ids,
+                        "sequence": query_seq,
+                        "modifications": [],
+                        "unpairedMsa": unpairedmsas[i],
+                        "pairedMsa": pairedmsas[i],
+                        "templates": [],
+                    }
+                }
+            )
+        content = {
+                "dialect": "alphafold3",
+                "version": 2,
+                "name": f"{name}",
+                "sequences": sequences,
+                "modelSeeds": [1],
+                "bondedAtomPairs": null,
+                "userCCD": null,
+            }
+        return content
+    

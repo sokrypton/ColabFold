@@ -14,5 +14,8 @@ __pycache__
 *.a3m
 *.log
 *.out
+*.error
 example/cf_example
 example/output/*
+colabfold/alphafold_bk
+colabfold/alphafold/

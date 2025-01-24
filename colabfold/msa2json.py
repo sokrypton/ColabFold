@@ -222,7 +222,7 @@ def generate_input_json_content(
     content = json.dumps(
         {
             "dialect": "alphafold3",
-            "version": 1,
+            "version": 2,
             "name": f"{name}",
             "sequences": sequences,
             "modelSeeds": [1],
