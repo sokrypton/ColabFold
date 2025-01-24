@@ -17,5 +17,6 @@ __pycache__
 *.error
 example/cf_example
 example/output/*
+example/input_json/*
 colabfold/alphafold_bk
 colabfold/alphafold/
