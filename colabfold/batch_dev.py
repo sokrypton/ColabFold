@@ -29,17 +29,12 @@ import importlib_metadata
 import numpy as np
 import pandas
 
-# TODO: recover
-# try:
-#     import alphafold
-# except ModuleNotFoundError:
-#     raise RuntimeError(
-#         "\n\nalphafold is not installed. Please run `pip install colabfold[alphafold]`\n"
-#     )
-
-# HACK call alphafold in different path
-sys.path.append('/home/seamustard52/repository/alphafold-rachel')
-sys.path[0] = '/home/seamustard52/repository/colabfold-rachelse'
+try:
+    import alphafold
+except ModuleNotFoundError:
+    raise RuntimeError(
+        "\n\nalphafold is not installed. Please run `pip install colabfold[alphafold]`\n"
+    )
 
 from alphafold.common import protein, residue_constants
 
@@ -73,7 +68,7 @@ from colabfold.utils import (
     AF3Utils,
 )
 from colabfold.relax import relax_me
-from colabfold.alphafold_bk import extra_ptm #TODO: recover
+from colabfold.alphafold import extra_ptm
 
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 from Bio.PDB.PDBIO import Select
@@ -284,7 +279,7 @@ def pad_input(
     pad_len: int,
     use_templates: bool,
 ) -> model.features.FeatureDict:
-    from colabfold.alphafold_bk.msa import make_fixed_size # TODO: recover
+    from colabfold.alphafold.msa import make_fixed_size
 
     model_config = model_runner.config
     eval_cfg = model_config.data.eval
@@ -1315,7 +1310,7 @@ def run(
             tf.config.set_visible_devices([], 'GPU')
 
     from alphafold.notebooks.notebook_utils import get_pae_json
-    from colabfold.alphafold_bk.models import load_models_and_params # TODO: recover
+    from colabfold.alphafold.models import load_models_and_params
     from colabfold.colabfold import plot_paes, plot_plddts
     from colabfold.plot import plot_msa_v2
 
@@ -1771,8 +1766,8 @@ def generate_af3_input(
             with open(result_dir.joinpath(f"{jobname}.json"), "w") as f:
                 f.write(json.dumps(content, indent=4))
             # save a3m
-            # msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
-            # result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
+            msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
+            result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
 
         except Exception as e:
             logger.exception(f"Failed to generate AF3 input json for {jobname}: Could not get MSA/templates. {e}")
@@ -2080,12 +2075,6 @@ def main():
         default="length",
         choices=["none", "length", "random"],
     )
-    output_group.add_argument(
-        "--af3-json",
-        help="tmp arg for testing AF3 input generation",
-        type=bool,
-        default=False,
-    )
 
     adv_group = parser.add_argument_group(
         "Advanced arguments", ""
@@ -2110,6 +2099,23 @@ def main():
         "Individual predictions will become marginally slower due to longer input, "
         "but overall performance increases due to not recompiling. "
         "Set to 0 to disable.",
+    )
+
+    af3_group = parser.add_argument_group(
+        "AlphaFold3 arguments", ""
+    )
+    af3_group.add_argument(
+        "--af3-json",
+        help="tmp arg for testing AF3 input generation",
+        action="store_true",
+    )
+    af3_group.add_argument(
+        "--fasta-type",
+        help="Type of fasta file: "
+        "(0) Batch (fasta file only with proteins. identify multimer with :colon), "
+        "(1) Single (1 file per complex. handling of non-protein molecules).",
+        type=int,
+        default=0,
     )
 
     args = parser.parse_args()

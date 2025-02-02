@@ -1766,8 +1766,8 @@ def generate_af3_input(
             with open(result_dir.joinpath(f"{jobname}.json"), "w") as f:
                 f.write(json.dumps(content, indent=4))
             # save a3m
-            # msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
-            # result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
+            msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
+            result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
 
         except Exception as e:
             logger.exception(f"Failed to generate AF3 input json for {jobname}: Could not get MSA/templates. {e}")
@@ -2075,12 +2075,6 @@ def main():
         default="length",
         choices=["none", "length", "random"],
     )
-    output_group.add_argument(
-        "--af3-json",
-        help="tmp arg for testing AF3 input generation",
-        type=bool,
-        default=False,
-    )
 
     adv_group = parser.add_argument_group(
         "Advanced arguments", ""
@@ -2105,6 +2099,23 @@ def main():
         "Individual predictions will become marginally slower due to longer input, "
         "but overall performance increases due to not recompiling. "
         "Set to 0 to disable.",
+    )
+
+    af3_group = parser.add_argument_group(
+        "AlphaFold3 arguments", ""
+    )
+    af3_group.add_argument(
+        "--af3-json",
+        help="tmp arg for testing AF3 input generation",
+        action="store_true",
+    )
+    af3_group.add_argument(
+        "--fasta-type",
+        help="Type of fasta file: "
+        "(0) Batch (fasta file only with proteins. identify multimer with :colon), "
+        "(1) Single (1 file per complex. handling of non-protein molecules).",
+        type=int,
+        default=0,
     )
 
     args = parser.parse_args()

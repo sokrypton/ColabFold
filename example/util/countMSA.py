@@ -19,8 +19,8 @@ with open(args.input) as f:
 
         paired = prot['pairedMsa']
         paired_lines = len([x for x in paired.split('\n') if x.startswith('>')])
-        paired_lengths = [len(x) for x in paired.split('\n') if not x.startswith('>')]
-        print(f'{id}: {length} residues,{unpaired_lines} unpaired, {paired_lines} paired')
-        print(f'Unpaired lengths: {unpaired_lengths}')
-        print(f'Paired lengths: {paired_lengths}')
+        # paired_lengths = [len(x) for x in paired.split('\n') if not x.startswith('>')]
+        print(f'{id}: {length} residues, {unpaired_lines} unpaired, {paired_lines} paired')
+        # print(f'Unpaired lengths: {unpaired_lengths}')
+        # print(f'Paired lengths: {paired_lengths}')
         
