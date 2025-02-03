@@ -9,12 +9,4 @@
 /pytestemp
 __pycache__
 .DS_Store
-*.json
-*.pdb
-*.a3m
-*.log
-*.out
-*.error
 example/*
-colabfold/alphafold_bk
-colabfold/alphafold/
