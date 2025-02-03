@@ -1882,7 +1882,7 @@ def generate_af3_input(
             # pad job number based on number of queries
             fill = len(str(len(queries)))
             jobname = safe_filename(jobname_prefix) + "_" + str(job_number).zfill(fill)
-            job_number += 1
+            # job_number += 1 # Why add?
         else:
             jobname = safe_filename(raw_jobname)
 
@@ -1908,7 +1908,6 @@ def generate_af3_input(
             content = af3utils.generate_af3_input(jobname, query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa)
 
             if extra_molecules[job_number] is not None:
-                # DOING
                 content = af3utils.add_extra_molecules(content, extra_molecules[job_number])
 
             with open(result_dir.joinpath(f"{jobname}.json"), "w") as f:

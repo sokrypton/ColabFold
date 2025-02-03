@@ -350,8 +350,8 @@ class AF3Utils:
                 moldict = { "ligand": {"id": chain_ids,}}
                 if category != "ccd": 
                     moldict["ligand"]["smiles"] = sequence
-                # else: # TODO: support ccdCodes
-                #     moldict["ligand"]["ccdCodes"] = sequence.split(":")
+                else: # TODO: support ccdCodes
+                    moldict["ligand"]["ccdCodes"] = sequence.split(":")
             elif category in ["dna", "rna"]:
                 moldict = { category: {
                     "id": chain_ids, "sequence": sequence,
