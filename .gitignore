@@ -1,4 +1,3 @@
-.gitignore
 .pytest_cache
 /dist
 /input
