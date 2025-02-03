@@ -2,7 +2,7 @@ import json
 import logging
 import warnings
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 from absl import logging as absl_logging
 from importlib_metadata import distribution
@@ -281,3 +281,88 @@ _struct_asym.entity_id
             out_file.write("#\n")
             ### end section copied from Bio.PDB
             out_file.write(CIF_REVISION_DATE)
+
+class AF3Utils:
+    def _int_id_to_str_id(self, i: int) -> str:
+        if i <= 0:
+            raise ValueError(f"int_id_to_str_id: Only positive integers allowed, got {i}")
+        i = i - 1 # 1-based indexing
+        output = []
+        while i >= 0:
+            output.append(chr(i % 26 + ord("A")))
+            i = i // 26 - 1
+        return "".join(output)
+
+    def generate_af3_input(self, 
+        name: str, query_seqs_unique: list[str], query_seqs_cardinality: list[int],
+        unpairedmsas: list[str], pairedmsas: list[str],
+    ) -> dict:
+        sequences: list[dict] = []
+        chain_id_count = 0
+        null = None
+        for i in range(len(query_seqs_unique)):
+            query_seq = query_seqs_unique[i]
+            chain_ids = [
+                self._int_id_to_str_id(chain_id_count + j + 1) for j in range(query_seqs_cardinality[i])
+            ]
+            chain_id_count += query_seqs_cardinality[i]
+            moldict = { "protein": {
+                "id": chain_ids,
+                "sequence": query_seq,
+                "modifications": [],
+                "templates": [],
+                }}
+            if unpairedmsas and unpairedmsas[i]:
+                moldict["protein"]["unpairedMsa"] = unpairedmsas[i]
+            else:
+                moldict["protein"]["unpairedMsa"] = "" # if "" unpairedMsa-free elif "null" AF3 generates MSA
+            if pairedmsas and pairedmsas[i]:
+                moldict["protein"]["pairedMsa"] = pairedmsas[i]
+            else:
+                moldict["protein"]["pairedMsa"] = "" # if "" pairedMsa-free elif "null" AF3 generates MSA
+            sequences.append(moldict)
+        content = {
+                "dialect": "alphafold3",
+                "version": 2, # 1: initial AF3 input format, 2: external MSA & Template
+                "name": f"{name}",
+                "sequences": sequences,
+                "modelSeeds": [1],
+                "bondedAtomPairs": null,
+                "userCCD": null,
+            }
+        return content
+    
+    def add_extra_molecules(self, content: dict, molecules: list[Tuple[str,str]]) -> dict:
+        chain_id_count = 0
+        for sequence in content["sequences"]:
+            chain_id_count += len(sequence["protein"]["id"])
+
+        for (sequence, description) in molecules:
+            header = description.split("|")
+            category = header[1].strip().lower()
+            num_copies = int(header[2].strip()) if len(header) > 2 else 1
+            chain_ids = [
+                self._int_id_to_str_id(chain_id_count + j + 1) for j in range(num_copies)
+            ]
+            chain_id_count += num_copies
+            
+            if category in ["ccd", "smiles", "ligand"]:
+                moldict = { "ligand": {"id": chain_ids,}}
+                if category != "ccd": 
+                    moldict["ligand"]["smiles"] = sequence
+                else: # TODO: support ccdCodes
+                    moldict["ligand"]["ccdCodes"] = sequence.split(":")
+            elif category in ["dna", "rna"]:
+                moldict = { category: {
+                    "id": chain_ids, "sequence": sequence,
+                    "modifications": [],
+                    }}
+                # if category == "rna": # TODO: support rna msa
+                #     moldict[category]["unpairedMsa"] = ""
+            else:
+                raise ValueError(f"Unknown molecule category: {category}")
+            content["sequences"].append(
+                moldict
+            )
+        return content
+    

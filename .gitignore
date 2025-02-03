@@ -8,3 +8,4 @@
 /pytestemp
 __pycache__
 .DS_Store
+example/*
