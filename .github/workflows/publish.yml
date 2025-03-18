@@ -20,6 +20,6 @@ jobs:
       - name: Build
         run: python -m build --sdist --wheel --outdir dist/
       - name: Publish distribution 📦 to PyPI
-        uses: pypa/gh-action-pypi-publish@master
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc
         with:
           password: ${{ secrets.PYPI_TOKEN }}
