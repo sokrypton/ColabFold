@@ -1714,63 +1714,6 @@ def set_model_type(is_complex: bool, model_type: str) -> str:
             model_type = "alphafold2_ptm"
     return model_type
 
-def parse_fasta_af3(fasta_string: str) -> Tuple[List[str], List[str], List[List[Tuple[str, str]]]]:
-    """Parses FASTA string and returns list of strings with amino-acid sequences.
-
-    Arguments:
-      fasta_string: The string contents of a FASTA file.
-
-    Returns:
-      A tuple of two lists:
-      * A list of sequences.
-      * A list of sequence descriptions taken from the comment lines. In the
-        same order as the sequences.
-    """
-    sequences = []
-    descriptions = []
-    categories = []
-    index = -1
-    for line in fasta_string.splitlines():
-        line = line.strip()
-        if line.startswith("#"):
-            continue
-        if line.startswith(">"):
-            index += 1
-            descriptions.append(line[1:])  # Remove the '>' at the beginning.
-            sequences.append("")
-
-            # parse header information: id | category | num_copies | etc #TODO: extend to assign chain names / path to MSA / etc.
-            header = line[1:].split("|")
-            assert len(header) >= 2, f"Header must have at least 2 fields: {line}"
-            category = header[1].strip().lower()
-            assert category in ["protein", "dna", "rna", "ligand", "smiles", "ccd"], f"Invalid molecule type: {category}"
-            num_copies = int(header[2].strip()) if len(header) > 2 else 1
-            categories.append(category)
-            continue
-        elif not line:
-            continue  # Skip blank lines.
-
-        sequences[index] += line
-        if (num_copies > 1) & (category == "protein"): # TODO: apply this to other categories?
-            for i in range(num_copies - 1):
-                sequences[index] += ":" + line
-
-    protein_sequence = ""
-    protein_description = ""
-    extra_molecules = [] # list of (sequence, description, category)
-    for i in range(len(categories)):
-        if categories[i] == "protein":
-            if len(protein_sequence) > 0:
-                protein_sequence += ":" + sequences[i]
-                protein_description += ":" + descriptions[i] # TODO: change into other symbol than : (tab may produce problems)
-            else:
-                protein_sequence = sequences[i]
-                protein_description = descriptions[i]
-        else:
-            extra_molecules.append((sequences[i], descriptions[i]))
-
-    return [protein_sequence], [protein_description], [extra_molecules]
-
 def get_queries_af3(
     input_path: Union[str, Path], sort_queries_by: str = "length"
 ) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool, Optional[List[List[Tuple[str, str]]]]]:
@@ -2257,15 +2200,7 @@ def main():
         help="tmp arg for testing AF3 input generation",
         action="store_true",
     )
-    af3_group.add_argument(
-        "--fasta-type",
-        help="Type of fasta file: "
-        "(0) Batch (fasta file only with proteins. identify multimer with :colon), "
-        "(1) Single (1 file per complex. handling of non-protein molecules).",
-        type=int,
-        default=0,
-    )
-
+    
     args = parser.parse_args()
 
     if (args.custom_template_path is not None) and (args.pdb_hit_file is not None):
