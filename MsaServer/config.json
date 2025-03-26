@@ -16,9 +16,9 @@
             // this will ~2-3x speedup the execution, while requiring more cores
             "parallelstages": true,
             "uniref"        : "~/databases/uniref30_2202_db",
-            "pdb"           : "~/databases/pdb70_220313",
+            "pdb"           : "~/databases/pdb100_230517",
             "environmental" : "~/databases/colabfold_envdb_202108_db",
-            "pdb70"         : "~/databases/pdb70",
+            "pdb70"         : "~/databases/pdb100",
             "pdbdivided"    : "~/databases/pdb/divided",
             "pdbobsolete"   : "~/databases/pdb/obsolete"
         },

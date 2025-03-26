@@ -12,7 +12,6 @@ warnings.simplefilter(action='ignore', category=BiopythonDeprecationWarning)
 import json
 import logging
 import math
-import random
 import sys
 import time
 import zipfile
@@ -27,7 +26,6 @@ from io import StringIO
 
 import importlib_metadata
 import numpy as np
-import pandas
 
 try:
     import alphafold
@@ -62,11 +60,17 @@ from colabfold.utils import (
     NO_GPU_FOUND,
     CIF_REVISION_DATE,
     get_commit,
-    safe_filename,
     setup_logging,
     CFMMCIFIO,
 )
+from colabfold.input import (
+    pair_msa,
+    msa_to_str,
+    get_queries,
+    safe_filename
+)
 from colabfold.relax import relax_me
+from colabfold.alphafold import extra_ptm
 
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 from Bio.PDB.PDBIO import Select
@@ -417,6 +421,8 @@ def predict_structure(
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
     save_recycles: bool = False,
+    calc_extra_ptm: bool = False,
+    use_probs_extra: bool = True,
 ):
     """Predicts structure using AlphaFold for the given sequence."""
     mean_scores = []
@@ -509,6 +515,14 @@ def predict_structure(
                 return_representations=return_representations,
                 callback=callback)
 
+            if calc_extra_ptm and 'predicted_aligned_error' in result.keys():
+                extra_ptm_output = extra_ptm.get_chain_and_interface_metrics(result, input_features['asym_id'],
+                    use_probs_extra=use_probs_extra,
+                    use_jnp=False)
+                result.pop('pae_matrix_with_logits', None)
+                result['actifptm'] = extra_ptm_output['actifptm']
+            else:
+                calc_extra_ptm = False
             prediction_times.append(time.time() - start)
 
             ########################
@@ -521,7 +535,7 @@ def predict_structure(
             if not is_complex: result.pop("iptm",None)
             print_line = ""
             conf.append({})
-            for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"]]:
+            for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"], ['actifptm', 'actifpTM']]:
               if x in result:
                 print_line += f" {y}={result[x]:.3g}"
                 conf[-1][x] = float(result[x])
@@ -565,9 +579,11 @@ def predict_structure(
                 plddt = result["plddt"][:seq_len]
                 scores = {"plddt": np.around(plddt.astype(float), 2).tolist()}
                 if "predicted_aligned_error" in result:
-                  pae   = result["predicted_aligned_error"][:seq_len,:seq_len]
+                  pae = result["predicted_aligned_error"][:seq_len,:seq_len]
                   scores.update({"max_pae": pae.max().astype(float).item(),
                                  "pae": np.around(pae.astype(float), 2).tolist()})
+                  if calc_extra_ptm:
+                    scores.update(extra_ptm_output)
                   for k in ["ptm","iptm"]:
                     if k in conf[-1]: scores[k] = np.around(conf[-1][k], 2).item()
                   del pae
@@ -864,7 +880,8 @@ def get_msa_and_templates(
 ]:
     from colabfold.colabfold import run_mmseqs2
 
-    use_env = msa_mode == "mmseqs2_uniref_env"
+    use_env = msa_mode == "mmseqs2_uniref_env" or msa_mode == "mmseqs2_uniref_env_envpair"
+    use_envpair = msa_mode == "mmseqs2_uniref_env_envpair"
     if isinstance(query_sequences, str): query_sequences = [query_sequences]
 
     # remove duplicates before searching
@@ -884,6 +901,12 @@ def get_msa_and_templates(
     if use_templates:
         # Skip template search when custom_template_path is provided
         if custom_template_path is not None:
+            if msa_mode == "single_sequence":
+                a3m_lines = []
+                num = 101
+                for i, seq in enumerate(query_seqs_unique):
+                    a3m_lines.append(f">{num + i}\n{seq}")
+
             if a3m_lines is None:
                 a3m_lines_mmseqs2 = run_mmseqs2(
                     query_seqs_unique,
@@ -967,7 +990,7 @@ def get_msa_and_templates(
             paired_a3m_lines = run_mmseqs2(
                 query_seqs_unique,
                 str(result_dir.joinpath(jobname)),
-                use_env,
+                use_envpair,
                 use_pairing=True,
                 pairing_strategy=pairing_strategy,
                 host_url=host_url,
@@ -1066,30 +1089,6 @@ def process_multimer_features(
     # Pad MSA to avoid zero-sized extra_msa.
     np_example = pipeline_multimer.pad_msa(np_example, min_num_seq=min_num_seq)
     return np_example
-
-def pair_msa(
-    query_seqs_unique: List[str],
-    query_seqs_cardinality: List[int],
-    paired_msa: Optional[List[str]],
-    unpaired_msa: Optional[List[str]],
-) -> str:
-    if paired_msa is None and unpaired_msa is not None:
-        a3m_lines = pad_sequences(
-            unpaired_msa, query_seqs_unique, query_seqs_cardinality
-        )
-    elif paired_msa is not None and unpaired_msa is not None:
-        a3m_lines = (
-            pair_sequences(paired_msa, query_seqs_unique, query_seqs_cardinality)
-            + "\n"
-            + pad_sequences(unpaired_msa, query_seqs_unique, query_seqs_cardinality)
-        )
-    elif paired_msa is not None and unpaired_msa is None:
-        a3m_lines = pair_sequences(
-            paired_msa, query_seqs_unique, query_seqs_cardinality
-        )
-    else:
-        raise ValueError(f"Invalid pairing")
-    return a3m_lines
 
 def generate_input_feature(
     query_seqs_unique: List[str],
@@ -1287,20 +1286,6 @@ def unserialize_msa(
         template_features,
     )
 
-def msa_to_str(
-    unpaired_msa: List[str],
-    paired_msa: List[str],
-    query_seqs_unique: List[str],
-    query_seqs_cardinality: List[int],
-) -> str:
-    msa = "#" + ",".join(map(str, map(len, query_seqs_unique))) + "\t"
-    msa += ",".join(map(str, query_seqs_cardinality)) + "\n"
-    # build msa with cardinality of 1, it makes it easier to parse and manipulate
-    query_seqs_cardinality = [1 for _ in query_seqs_cardinality]
-    msa += pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa)
-    return msa
-
-
 def put_mmciffiles_into_resultdir(
     pdb_hit_file: Path,
     local_pdb_path: Path,
@@ -1397,6 +1382,8 @@ def run(
     local_pdb_path: Optional[Path] = None,
     use_cluster_profile: bool = True,
     feature_dict_callback: Callable[[Any], Any] = None,
+    calc_extra_ptm: bool = False,
+    use_probs_extra: bool = True,
     **kwargs
 ):
     # check what device is available
@@ -1432,6 +1419,7 @@ def run(
 
     # backward-compatibility with old options
     old_names = {"MMseqs2 (UniRef+Environmental)":"mmseqs2_uniref_env",
+                 "MMseqs2 (UniRef+Environmental+Env. Pairing)":"mmseqs2_uniref_env_envpair",
                  "MMseqs2 (UniRef only)":"mmseqs2_uniref",
                  "unpaired+paired":"unpaired_paired"}
     msa_mode   = old_names.get(msa_mode,msa_mode)
@@ -1455,6 +1443,11 @@ def run(
         rank_by = "multimer" if is_complex else "plddt"
     if "ptm" not in model_type and "multimer" not in model_type:
         rank_by = "plddt"
+
+    # added for actifptm calculation
+    if not is_complex and calc_extra_ptm:
+        logger.info("Calculating extra pTM is not supported for single chain prediction, skipping it.")
+        calc_extra_ptm = False
 
     # get max length
     max_len = 0
@@ -1529,6 +1522,8 @@ def run(
         "use_fuse": use_fuse,
         "use_bfloat16": use_bfloat16,
         "version": importlib_metadata.version("colabfold"),
+        "calc_extra_ptm": calc_extra_ptm,
+        "use_probs_extra": use_probs_extra,
     }
     config_out_file = result_dir.joinpath("config.json")
     config_out_file.write_text(json.dumps(config, indent=4))
@@ -1706,6 +1701,7 @@ def run(
                         use_fuse=use_fuse,
                         use_bfloat16=use_bfloat16,
                         save_all=save_all,
+                        calc_extra_ptm=calc_extra_ptm
                     )
                     first_job = False
 
@@ -1735,7 +1731,10 @@ def run(
                     save_single_representations=save_single_representations,
                     save_pair_representations=save_pair_representations,
                     save_recycles=save_recycles,
+                    calc_extra_ptm=calc_extra_ptm,
+                    use_probs_extra=use_probs_extra,
                 )
+                
                 result_files += results["result_files"]
                 ranks.append(results["rank"])
                 metrics.append(results["metric"])
@@ -1771,6 +1770,11 @@ def run(
                 paes_plot.savefig(str(pae_png), bbox_inches='tight')
                 paes_plot.close()
                 result_files.append(pae_png)
+
+                # make pairwise interface metric plots and chainwise ptm plot
+                if calc_extra_ptm:
+                    ext_metric_png = result_dir.joinpath(f"{jobname}_ext_metrics.png")
+                    extra_ptm.plot_chain_pairwise_analysis(scores, fig_path=ext_metric_png)
 
             # make pLDDT plot
             plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
@@ -1834,6 +1838,7 @@ def main():
         default="mmseqs2_uniref_env",
         choices=[
             "mmseqs2_uniref_env",
+            "mmseqs2_uniref_env_envpair",
             "mmseqs2_uniref",
             "single_sequence",
         ],
@@ -1992,6 +1997,18 @@ def main():
         default=False,
         action="store_true",
         help="Experimental: For multimer models, disable cluster profiles.",
+    )
+    pred_group.add_argument(
+        "--calc-extra-ptm",
+        default=False,
+        action="store_true",
+        help="Experimental: calculate pairwise metrics (ipTM and actifpTM), and also chain-wise pTM",
+    )
+    pred_group.add_argument(
+        "--no-use-probs-extra",
+        default=False,
+        action="store_true",
+        help="Experimental: instead of contact probabilities form use binary contacts for extra metrics calculation",
     )
     pred_group.add_argument("--data", help="Path to AlphaFold2 weights directory.")
 
@@ -2189,8 +2206,10 @@ def main():
     if args.amber and args.num_relax == 0:
         args.num_relax = args.num_models * args.num_seeds
 
-    user_agent = f"colabfold/{version}"
+    # added for actifptm calculation
+    use_probs_extra = False if args.no_use_probs_extra else True
 
+    user_agent = f"colabfold/{version}"
     run(
         queries=queries,
         result_dir=args.results,
@@ -2235,6 +2254,8 @@ def main():
         jobname_prefix=args.jobname_prefix,
         save_all=args.save_all,
         save_recycles=args.save_recycles,
+        calc_extra_ptm=args.calc_extra_ptm,
+        use_probs_extra=use_probs_extra,
     )
 
 if __name__ == "__main__":

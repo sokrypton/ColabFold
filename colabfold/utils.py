@@ -59,11 +59,6 @@ def setup_logging(log_file: Path, mode: str = "w") -> None:
     absl_logging.set_verbosity("error")
     warnings.simplefilter(action="ignore", category=TqdmExperimentalWarning)
 
-
-def safe_filename(file: str) -> str:
-    return "".join([c if c.isalnum() or c in ["_", ".", "-"] else "_" for c in file])
-
-
 def get_commit() -> Optional[str]:
     text = distribution("colabfold").read_text("direct_url.json")
     if not text:
