@@ -293,7 +293,7 @@ class AF3Utils:
             i = i // 26 - 1
         return "".join(output)
 
-    def generate_af3_input(self, 
+    def make_af3_input(self, 
         name: str, query_seqs_unique: list[str], query_seqs_cardinality: list[int],
         unpairedmsas: list[str], pairedmsas: list[str],
     ) -> dict:

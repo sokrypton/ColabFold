@@ -585,11 +585,31 @@ def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
 
     return sequences, descriptions
 
+def classify_molecules(query_sequence: str) -> Tuple[List[str], Optional[List[Tuple[str, str]]]]:
+    """Classifies the sequences in the query sequence string into protein and non-protein sequences.
+
+    Returns a tuple of two lists:
+    * A list of protein sequences.
+    * A list of tuples, each containing a molecule type and a sequence.
+    """
+    sequences = query_sequence.upper().split(":")
+    protein_queries = []
+    other_queries = []
+    for seq in sequences:
+        if seq.count("|") == 0:
+            protein_queries.append(seq)
+        else:
+            nonprotein = seq.split("|")
+            other_queries.append((nonprotein[0], nonprotein[1]))  # (molecule type, sequence)
+    if len(other_queries) == 0:
+        other_queries = None
+    return protein_queries, other_queries
+
 def get_queries(
     input_path: Union[str, Path], sort_queries_by: str = "length"
-) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
+) -> Tuple[List[Tuple[str, str, Optional[List[str]], Optional[List[Tuple[str, str]]]]], bool]:
     """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
-    of job name, sequence and the optional a3m lines"""
+    of job name, sequence, optional a3m lines, and the optional non-protein sequences."""
 
     input_path = Path(input_path)
     if not input_path.exists():
@@ -601,12 +621,12 @@ def get_queries(
             df = pandas.read_csv(input_path, sep=sep, dtype=str)
             assert "id" in df.columns and "sequence" in df.columns
             queries = [
-                (seq_id, sequence.upper().split(":"), None)
+                (seq_id, sequence.upper().split(":"), None, None)
                 for seq_id, sequence in df[["id", "sequence"]].itertuples(index=False)
             ]
             for i in range(len(queries)):
                 if len(queries[i][1]) == 1:
-                    queries[i] = (queries[i][0], queries[i][1][0], None)
+                    queries[i] = (queries[i][0], queries[i][1][0], None, None)
         elif input_path.suffix == ".a3m":
             (seqs, header) = parse_fasta(input_path.read_text())
             if len(seqs) == 0:
@@ -614,7 +634,7 @@ def get_queries(
             query_sequence = seqs[0]
             # Use a list so we can easily extend this to multiple msas later
             a3m_lines = [input_path.read_text()]
-            queries = [(input_path.stem, query_sequence, a3m_lines)]
+            queries = [(input_path.stem, query_sequence, a3m_lines, None)]
         elif input_path.suffix in [".fasta", ".faa", ".fa"]:
             (sequences, headers) = parse_fasta(input_path.read_text())
             queries = []
@@ -622,10 +642,11 @@ def get_queries(
                 sequence = sequence.upper()
                 if sequence.count(":") == 0:
                     # Single sequence
-                    queries.append((header, sequence, None))
+                    queries.append((header, sequence, None, None))
                 else:
                     # Complex mode
-                    queries.append((header, sequence.upper().split(":"), None))
+                    proteins_queries, other_queries = classify_molecules(sequence)
+                    queries.append((header, proteins_queries, None, other_queries))
         else:
             raise ValueError(f"Unknown file format {input_path.suffix}")
     else:
@@ -649,14 +670,15 @@ def get_queries(
 
             if file.suffix.lower() == ".a3m":
                 a3m_lines = [file.read_text()]
-                queries.append((file.stem, query_sequence.upper(), a3m_lines))
+                queries.append((file.stem, query_sequence.upper(), a3m_lines, None))
             else:
                 if query_sequence.count(":") == 0:
                     # Single sequence
-                    queries.append((file.stem, query_sequence, None))
+                    queries.append((file.stem, query_sequence, None, None))
                 else:
                     # Complex mode
-                    queries.append((file.stem, query_sequence.upper().split(":"), None))
+                    proteins_queries, other_queries = classify_molecules(query_sequence)
+                    queries.append((file.stem, proteins_queries, None, other_queries))
 
     # sort by seq. len
     if sort_queries_by == "length":
@@ -666,7 +688,7 @@ def get_queries(
         random.shuffle(queries)
 
     is_complex = False
-    for job_number, (_, query_sequence, a3m_lines) in enumerate(queries):
+    for job_number, (_, query_sequence, a3m_lines, other_queries) in enumerate(queries):
         if isinstance(query_sequence, list):
             is_complex = True
             break
@@ -1354,7 +1376,7 @@ def run(
     # get max length
     max_len = 0
     max_num = 0
-    for _, query_sequence, _ in queries:
+    for _, query_sequence, _, _ in queries:
         N = 1 if isinstance(query_sequence,str) else len(query_sequence)
         L = len("".join(query_sequence))
         if L > max_len: max_len = L
@@ -1446,7 +1468,7 @@ def run(
     ranks, metrics = [],[]
     first_job = True
     job_number = 0
-    for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
+    for job_number, (raw_jobname, query_sequence, a3m_lines, _) in enumerate(queries):
         if jobname_prefix is not None:
             # pad job number based on number of queries
             fill = len(str(len(queries)))
@@ -1727,7 +1749,7 @@ def generate_af3_input(
     user_agent: str = "", #NOTE: what is this ?
     # is_complex: bool,
     # model_type: str = "auto",
-    # extra_molecules: Optional[List[List[Tuple[str, str]]]] = None, # list of (sequence, description) # TODO: handle again with new fasta parser
+    # extra_molecules: Optional[List[List[Tuple[str, str]]]] = None, # list of (sequence, description) # RACHEL: handle again with new fasta parser
 ):
     result_dir = Path(result_dir) 
     result_dir.mkdir(exist_ok=True)
@@ -1762,13 +1784,13 @@ def generate_af3_input(
 
             # save json
             af3utils = AF3Utils()
-            content = af3utils.generate_af3_input(jobname, query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa)
+            content = af3utils.make_af3_input(jobname, query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa)
 
             # if extra_molecules[job_number] is not None:
             #     content = af3utils.add_extra_molecules(content, extra_molecules[job_number])
 
             with open(result_dir.joinpath(f"{jobname}.json"), "w") as f:
-                # TODO: need different name + This code will not work if there's no given proteins
+                # RACHEL: need different name + This code will not work if there's no given proteins
                 f.write(json.dumps(content, indent = 4))
             # save a3m
             msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
@@ -1777,7 +1799,7 @@ def generate_af3_input(
         except Exception as e:
             logger.exception(f"Failed to generate AF3 input json for {jobname}: Could not get MSA/templates. {e}")
             continue
-    # TODO: differentiate between msa_mode, pair_mode, model_type
+    # RACHEL: differentiate between msa_mode, pair_mode, model_type
 
 def main():
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
@@ -2135,7 +2157,6 @@ def main():
 
     data_dir = Path(args.data or default_data_dir)
 
-
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
 
     model_type = set_model_type(is_complex, args.model_type)
@@ -2165,7 +2186,6 @@ def main():
     user_agent = f"colabfold/{version}"
 
     if args.af3_json:
-        # TODO: parse fasta properly (queries, is_complex = get_queries(args.input, args.sort_queries_by))
         generate_af3_input(
             queries=queries,
             result_dir=args.results,
