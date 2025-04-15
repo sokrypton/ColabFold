@@ -337,8 +337,6 @@ class AF3Utils:
             category = category.lower()
             if category in ["smiles", "ligand", "ccd"]:
                 higher_class = "ligand"
-                if category != "ccd":
-                    category = "ccdCodes"
             elif category in ["dna", "rna"]:
                 higher_class = category
             if higher_class not in unique_molecules:
@@ -356,7 +354,7 @@ class AF3Utils:
                 chain_ids = [self._int_id_to_str_id(chain_id_count + j + 1) for j in range(copies)]
                 moldict= {higher_class: {"id": chain_ids}}
                 if higher_class == "ligand":
-                    if category == "ccdCodes":
+                    if category == "ccd":
                         moldict[higher_class]["ccdCodes"] = [sequence]
                     else:
                         moldict[higher_class]["smiles"] = sequence 
