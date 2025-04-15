@@ -12,7 +12,6 @@ warnings.simplefilter(action='ignore', category=BiopythonDeprecationWarning)
 import json
 import logging
 import math
-import random
 import sys
 import time
 import zipfile
@@ -27,7 +26,6 @@ from io import StringIO
 
 import importlib_metadata
 import numpy as np
-import pandas
 
 try:
     import alphafold
@@ -62,10 +60,15 @@ from colabfold.utils import (
     NO_GPU_FOUND,
     CIF_REVISION_DATE,
     get_commit,
-    safe_filename,
     setup_logging,
     CFMMCIFIO,
     AF3Utils,
+)
+from colabfold.input import (
+    pair_msa,
+    msa_to_str,
+    get_queries,
+    safe_filename
 )
 from colabfold.relax import relax_me
 from colabfold.alphafold import extra_ptm
@@ -782,30 +785,6 @@ def process_multimer_features(
     np_example = pipeline_multimer.pad_msa(np_example, min_num_seq=min_num_seq)
     return np_example
 
-def pair_msa(
-    query_seqs_unique: List[str],
-    query_seqs_cardinality: List[int],
-    paired_msa: Optional[List[str]],
-    unpaired_msa: Optional[List[str]],
-) -> str:
-    if paired_msa is None and unpaired_msa is not None:
-        a3m_lines = pad_sequences(
-            unpaired_msa, query_seqs_unique, query_seqs_cardinality
-        )
-    elif paired_msa is not None and unpaired_msa is not None:
-        a3m_lines = (
-            pair_sequences(paired_msa, query_seqs_unique, query_seqs_cardinality)
-            + "\n"
-            + pad_sequences(unpaired_msa, query_seqs_unique, query_seqs_cardinality)
-        )
-    elif paired_msa is not None and unpaired_msa is None:
-        a3m_lines = pair_sequences(
-            paired_msa, query_seqs_unique, query_seqs_cardinality
-        )
-    else:
-        raise ValueError(f"Invalid pairing")
-    return a3m_lines
-
 def generate_input_feature(
     query_seqs_unique: List[str],
     query_seqs_cardinality: List[int],
@@ -1001,20 +980,6 @@ def unserialize_msa(
         query_seqs_cardinality,
         template_features,
     )
-
-def msa_to_str(
-    unpaired_msa: List[str],
-    paired_msa: List[str],
-    query_seqs_unique: List[str],
-    query_seqs_cardinality: List[int],
-) -> str:
-    msa = "#" + ",".join(map(str, map(len, query_seqs_unique))) + "\t"
-    msa += ",".join(map(str, query_seqs_cardinality)) + "\n"
-    # build msa with cardinality of 1, it makes it easier to parse and manipulate
-    query_seqs_cardinality = [1 for _ in query_seqs_cardinality]
-    msa += pair_msa(query_seqs_unique, query_seqs_cardinality, paired_msa, unpaired_msa)
-    return msa
-
 
 def put_mmciffiles_into_resultdir(
     pdb_hit_file: Path,
