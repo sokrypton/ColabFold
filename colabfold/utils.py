@@ -2,7 +2,7 @@ import json
 import logging
 import warnings
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 from absl import logging as absl_logging
 from importlib_metadata import distribution
@@ -294,8 +294,8 @@ class AF3Utils:
         return "".join(output)
 
     def make_af3_input(self, 
-        name: str, query_seqs_unique: list[str], query_seqs_cardinality: list[int],
-        unpairedmsas: list[str], pairedmsas: list[str],
+        name: str, query_seqs_unique: List[str], query_seqs_cardinality: List[int],
+        unpairedmsas: List[str], pairedmsas: List[str],
     ) -> dict:
         sequences: list[dict] = []
         chain_id_count = 0
@@ -332,29 +332,23 @@ class AF3Utils:
             }
         return content
     
-    def add_extra_molecules(self, content: dict, molecules: list[Tuple[str,str]]) -> dict:
+    def add_extra_molecules(self, content: dict, molecules: List[Tuple[str,str]]) -> dict:
         chain_id_count = 0
         for sequence in content["sequences"]:
             chain_id_count += len(sequence["protein"]["id"])
 
-        for (sequence, description) in molecules:
-            header = description.split("|")
-            category = header[1].strip().lower()
-            num_copies = int(header[2].strip()) if len(header) > 2 else 1
-            chain_ids = [
-                self._int_id_to_str_id(chain_id_count + j + 1) for j in range(num_copies)
-            ]
-            chain_id_count += num_copies
+        for (category, sequence) in molecules:
+            chain_id = [self._int_id_to_str_id(chain_id_count + 1)] # RACHEL: input copies and set chain_ids as list
             
-            if category in ["ccd", "smiles", "ligand"]:
-                moldict = { "ligand": {"id": chain_ids,}}
-                if category != "ccd": 
+            if category in ["CCD", "SMILES", "LIGAND"]:
+                moldict = { "ligand": {"id": chain_id}}
+                if category != "CCD": 
                     moldict["ligand"]["smiles"] = sequence
                 else: # TODO: support ccdCodes
                     moldict["ligand"]["ccdCodes"] = sequence.split(":")
-            elif category in ["dna", "rna"]:
+            elif category in ["DNA", "RNA"]:
                 moldict = { category: {
-                    "id": chain_ids, "sequence": sequence,
+                    "id": chain_id, "sequence": sequence,
                     "modifications": [],
                     }}
                 # if category == "rna": # TODO: support rna msa
@@ -364,5 +358,6 @@ class AF3Utils:
             content["sequences"].append(
                 moldict
             )
+            chain_id_count += 1
         return content
     

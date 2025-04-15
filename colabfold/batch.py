@@ -1262,7 +1262,7 @@ def put_mmciffiles_into_resultdir(
 
 
 def run(
-    queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]]]],
+    queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]], Optional[List[Tuple[str, str]]]]],
     result_dir: Union[str, Path],
     num_models: int,
     is_complex: bool,
@@ -1737,7 +1737,7 @@ def set_model_type(is_complex: bool, model_type: str) -> str:
     return model_type
 
 def generate_af3_input(
-    queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]]]],
+    queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]], Optional[List[Tuple[str, str]]]]],
     result_dir: Union[str, Path],
     msa_mode: str = "mmseqs2_uniref_env",
     pair_mode: str = "unpaired_paired",
@@ -1749,14 +1749,13 @@ def generate_af3_input(
     user_agent: str = "", #NOTE: what is this ?
     # is_complex: bool,
     # model_type: str = "auto",
-    # extra_molecules: Optional[List[List[Tuple[str, str]]]] = None, # list of (sequence, description) # RACHEL: handle again with new fasta parser
 ):
     result_dir = Path(result_dir) 
     result_dir.mkdir(exist_ok=True)
 
     job_number = 0
 
-    for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
+    for job_number, (raw_jobname, protein_query, a3m_lines, other_query) in enumerate(queries):
         if jobname_prefix is not None:
             # pad job number based on number of queries
             fill = len(str(len(queries)))
@@ -1771,12 +1770,12 @@ def generate_af3_input(
         try:
             if a3m_lines is None:
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
-                = get_msa_and_templates(jobname, query_sequence, a3m_lines, result_dir, msa_mode, use_templates,
+                = get_msa_and_templates(jobname, protein_query, a3m_lines, result_dir, msa_mode, use_templates,
                     custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
 
             elif a3m_lines is not None:
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
-                = unserialize_msa(a3m_lines, query_sequence)
+                = unserialize_msa(a3m_lines, protein_query)
                 # if use_templates:
                 #     (_, _, _, _, template_features) \
                 #         = get_msa_and_templates(jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
@@ -1786,8 +1785,8 @@ def generate_af3_input(
             af3utils = AF3Utils()
             content = af3utils.make_af3_input(jobname, query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa)
 
-            # if extra_molecules[job_number] is not None:
-            #     content = af3utils.add_extra_molecules(content, extra_molecules[job_number])
+            if other_query is not None:
+                content = af3utils.add_extra_molecules(content, other_query)
 
             with open(result_dir.joinpath(f"{jobname}.json"), "w") as f:
                 # RACHEL: need different name + This code will not work if there's no given proteins
