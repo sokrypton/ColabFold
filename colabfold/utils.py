@@ -332,32 +332,46 @@ class AF3Utils:
             }
         return content
     
-    def add_extra_molecules(self, content: dict, molecules: List[Tuple[str,str]]) -> dict:
+    def add_extra_molecules(self, content: dict, molecules: List[Tuple[str,str,int]]) -> dict:
         chain_id_count = 0
         for sequence in content["sequences"]:
             chain_id_count += len(sequence["protein"]["id"])
 
-        for (category, sequence) in molecules:
-            chain_id = [self._int_id_to_str_id(chain_id_count + 1)] # RACHEL: input copies and set chain_ids as list
-            
-            if category in ["CCD", "SMILES", "LIGAND"]:
-                moldict = { "ligand": {"id": chain_id}}
-                if category != "CCD": 
-                    moldict["ligand"]["smiles"] = sequence
-                else: # TODO: support ccdCodes
-                    moldict["ligand"]["ccdCodes"] = sequence.split(":")
-            elif category in ["DNA", "RNA"]:
-                moldict = { category: {
-                    "id": chain_id, "sequence": sequence,
-                    "modifications": [],
-                    }}
-                # if category == "rna": # TODO: support rna msa
-                #     moldict[category]["unpairedMsa"] = ""
+        unique_molecules = dict() # {category: {sequence: copies}}
+        for (category, sequence, copies) in molecules:
+            category = category.lower()
+            if category in ["smiles", "ligand", "ccd"]:
+                higher_class = "ligand"
+                if category != "ccd":
+                    category = "ccdCodes"
+            elif category in ["dna", "rna"]:
+                higher_class = category
+            if higher_class not in unique_molecules:
+                unique_molecules[higher_class] = dict()
+            if (category, sequence) not in unique_molecules[higher_class]:
+                unique_molecules[higher_class][(category, sequence)] = copies
             else:
-                raise ValueError(f"Unknown molecule category: {category}")
-            content["sequences"].append(
-                moldict
-            )
-            chain_id_count += 1
+                unique_molecules[higher_class][(category, sequence)] += copies
+
+        if not unique_molecules:
+            return content
+        
+        for higher_class, entities in unique_molecules.items():
+            for (category, sequence), copies in entities.items():
+                chain_ids = [self._int_id_to_str_id(chain_id_count + j + 1) for j in range(copies)]
+                moldict= {higher_class: {"id": chain_ids}}
+                if higher_class == "ligand":
+                    if category == "ccdCodes":
+                        moldict[higher_class]["ccdCodes"] = [sequence]
+                    else:
+                        moldict[higher_class]["smiles"] = sequence 
+                else:
+                    moldict[higher_class]["sequence"] = sequence
+                    moldict[higher_class]["modifications"] = []
+                    if higher_class == "rna":
+                        # Set null
+                        moldict[higher_class]["unpairedMsa"] = None
+                content["sequences"].append(moldict)
+                chain_id_count += copies
         return content
     
