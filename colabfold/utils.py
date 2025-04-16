@@ -307,7 +307,7 @@ class AF3Utils:
     ) -> dict:
         sequences: list[dict] = []
         chain_id_count = 0
-        for i in range(len(query_seqs_unique)): # TODO: This will not work if there's no protein sequences
+        for i in range(len(query_seqs_unique)): # NOTE: This will not work if there's no protein sequences
             query_seq = query_seqs_unique[i]
             chain_ids = [
                 self._int_id_to_str_id(chain_id_count + j + 1) for j in range(query_seqs_cardinality[i])
