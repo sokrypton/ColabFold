@@ -278,6 +278,19 @@ _struct_asym.entity_id
             out_file.write(CIF_REVISION_DATE)
 
 class AF3Utils:
+    def __init__(self, name: str, 
+                 query_seqs_unique: List[str], query_seqs_cardinality: List[int],
+                 unpairedmsa: List[str], pairedmsa: List[str],
+                 extra_molecules: List[Tuple[str,str,int]] = None,
+                 ) -> None:
+        content = self.make_af3_input(
+            name, query_seqs_unique, query_seqs_cardinality,
+            unpairedmsa, pairedmsa
+        )
+        if extra_molecules:
+            content = self.add_extra_molecules(content, extra_molecules)
+        self.content = content
+
     def _int_id_to_str_id(self, i: int) -> str:
         if i <= 0:
             raise ValueError(f"int_id_to_str_id: Only positive integers allowed, got {i}")
@@ -290,12 +303,11 @@ class AF3Utils:
 
     def make_af3_input(self, 
         name: str, query_seqs_unique: List[str], query_seqs_cardinality: List[int],
-        unpairedmsas: List[str], pairedmsas: List[str],
+        unpairedmsa: List[str], pairedmsa: List[str],
     ) -> dict:
         sequences: list[dict] = []
         chain_id_count = 0
-        null = None
-        for i in range(len(query_seqs_unique)):
+        for i in range(len(query_seqs_unique)): # TODO: This will not work if there's no protein sequences
             query_seq = query_seqs_unique[i]
             chain_ids = [
                 self._int_id_to_str_id(chain_id_count + j + 1) for j in range(query_seqs_cardinality[i])
@@ -307,12 +319,12 @@ class AF3Utils:
                 "modifications": [],
                 "templates": [],
                 }}
-            if unpairedmsas and unpairedmsas[i]:
-                moldict["protein"]["unpairedMsa"] = unpairedmsas[i]
+            if unpairedmsa and unpairedmsa[i]:
+                moldict["protein"]["unpairedMsa"] = unpairedmsa[i]
             else:
                 moldict["protein"]["unpairedMsa"] = "" # if "" unpairedMsa-free elif "null" AF3 generates MSA
-            if pairedmsas and pairedmsas[i]:
-                moldict["protein"]["pairedMsa"] = pairedmsas[i]
+            if pairedmsa and pairedmsa[i]:
+                moldict["protein"]["pairedMsa"] = pairedmsa[i]
             else:
                 moldict["protein"]["pairedMsa"] = "" # if "" pairedMsa-free elif "null" AF3 generates MSA
             sequences.append(moldict)
@@ -322,8 +334,8 @@ class AF3Utils:
                 "name": f"{name}",
                 "sequences": sequences,
                 "modelSeeds": [1],
-                "bondedAtomPairs": null,
-                "userCCD": null,
+                "bondedAtomPairs": None,
+                "userCCD": None,
             }
         return content
     
@@ -362,7 +374,6 @@ class AF3Utils:
                     moldict[higher_class]["sequence"] = sequence
                     moldict[higher_class]["modifications"] = []
                     if higher_class == "rna":
-                        # Set null
                         moldict[higher_class]["unpairedMsa"] = None
                 content["sequences"].append(moldict)
                 chain_id_count += copies

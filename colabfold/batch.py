@@ -1525,7 +1525,7 @@ def generate_af3_input(
 
     job_number = 0
 
-    for job_number, (raw_jobname, protein_query, a3m_lines, other_query) in enumerate(queries):
+    for job_number, (raw_jobname, query_sequences, a3m_lines, other_molecules) in enumerate(queries):
         if jobname_prefix is not None:
             # pad job number based on number of queries
             fill = len(str(len(queries)))
@@ -1540,27 +1540,22 @@ def generate_af3_input(
         try:
             if a3m_lines is None:
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
-                = get_msa_and_templates(jobname, protein_query, a3m_lines, result_dir, msa_mode, use_templates,
+                = get_msa_and_templates(jobname, query_sequences, a3m_lines, result_dir, msa_mode, use_templates,
                     custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
 
             elif a3m_lines is not None:
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
-                = unserialize_msa(a3m_lines, protein_query)
+                = unserialize_msa(a3m_lines, query_sequences)
                 # if use_templates:
                 #     (_, _, _, _, template_features) \
                 #         = get_msa_and_templates(jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
                 #             custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
 
             # save json
-            af3utils = AF3Utils()
-            content = af3utils.make_af3_input(jobname, query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa)
-
-            if other_query is not None:
-                content = af3utils.add_extra_molecules(content, other_query)
-
+            af3 = AF3Utils(jobname, query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa, other_molecules)
             with open(result_dir.joinpath(f"{jobname}.json"), "w") as f:
-                # RACHEL: need different name + This code will not work if there's no given proteins
-                f.write(json.dumps(content, indent = 4))
+                f.write(json.dumps(af3.content, indent = 4))
+                
             # save a3m
             msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
             result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
@@ -1568,7 +1563,6 @@ def generate_af3_input(
         except Exception as e:
             logger.exception(f"Failed to generate AF3 input json for {jobname}: Could not get MSA/templates. {e}")
             continue
-    # RACHEL: differentiate between msa_mode, pair_mode, model_type
 
 def main():
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
@@ -1902,7 +1896,7 @@ def main():
     )
     af3_group.add_argument(
         "--af3-json",
-        help="tmp arg for testing AF3 input generation",
+        help="Generate input JSON for AlphaFold3 from the provided FASTA/A3M file.",
         action="store_true",
     )
     
