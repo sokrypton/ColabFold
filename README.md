@@ -123,14 +123,14 @@ GPU=1 ./setup_databases.sh /path/to/db_folder
 
 This will download and setup the GPU databases in the specified folder. Note that here we do not pass ⁠`MMSEQS_NO_INDEX=1`⁠ as an argument since the indices are useful in the GPU search since we will keep them in the GPU memory.
 
-#### GPU search with ⁠ colabfold_search ⁠
+#### GPU search with ⁠colabfold_search ⁠
 
 To run the MSA search on the GPU, it is recommended (although not required) to start a GPU server before running the search; this server will keep the indices in the GPU memory and will be used to accelerate the search. To start a GPU server, run:
 
 ```shell
 mmseqs gpuserver /path/to/db_folder/colabfold_envdb_202108_db --max-seqs 10000 --db-load-mode 0 --prefilter-mode 1 &
 PID1=$!
-mmseqs gpuserver /path/to/db_folder/uniref30_2302 --max-seqs 10000 --db-load-mode 0 --prefilter-mode 1 &
+mmseqs gpuserver /path/to/db_folder/uniref30_2302_db --max-seqs 10000 --db-load-mode 0 --prefilter-mode 1 &
 PID2=$!
 ```
 
