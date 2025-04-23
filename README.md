@@ -109,6 +109,47 @@ In some cases using precomputed database can still be useful. For the following 
 
 If no index was created (`MMSEQS_NO_INDEX=1` was set), then `--db-load-mode` does not do anything and can be ignored.
 
+### Saving MSAs in AlphaFold3-compatible JSON format
+You can export MSAs into a json format compatible with AlphaFold3 input using the `--af3-json` option. 
+
+**With colabfold_search:**
+
+If you are using the local database setup with colabfold_search, you can add the `--af3-json` option to save the MSAs as AlphaFold3 input json:
+```shell
+colabfold_search --mmseqs /path/to/bin/mmseqs input_sequences.fasta /path/to/db_folder msas --af3-json
+```
+This will create a json file in the `msas` folder, using the same name as the a3m file.
+
+**With colabfold_batch:**
+
+If you are using the MSA server via colabfold_batch, you can also use the `--af3-json` option. However, structure prediction will be skipped, and only the json file will be generated. 
+```shell
+colabfold_batch input_sequences.fasta out_dir --af3-json
+```
+Note: When --af3-json is used, you do not need to specify --msa-only. Structure prediction is disabled automatically.
+
+#### Including non-protein molecules in FASTA
+AlphaFold3 supports non-protein components such as ligands and nucleic acids in input complexes. To include these in the generated json file, you can specify them directly in your FASTA input using the following format, `molecule type|sequence|(copies)`. 
+
+- Examples
+  - For DNA: `DNA|ATCG`
+  - For RNA: `RNA|AUGC`
+  - For ligands: 
+    - SMILES string: `ligand|C1=NC(=C2C(=N1)N(C=N2)[C@H]3[C@@H]([C@@H]([C@H](O3)COP(=O)(O)OP(=O)(O)OP(=O)(O)O)O)O)N`
+    - CCD code: `ccd|ATP`
+  - To specify multiple copies of a molecule, you can add a number after the sequence, e.g. `ccd|ATP|2` or `dna|ATCG|2`.
+
+Here is an example of biological complex with 2 proteins and 2 ATP ligands:
+```
+>Complex1|Prot1:Prot2:Lig
+FIRSTPROTEIN:SECONDPROTEIN:ccd|ATP|2
+>Complex2|Prot1:Prot2:Lig
+FIRSTPROTEIN:SECONDPROTEIN:ccd|ATP:ccd|ATP
+```
+As the `copies` is optional, the `Complex1` and `Complex2` will result in identical json input.
+
+Note: MMseqs2-based MSAs are only generated for the protein sequences. RNA entries will not have unpaired MSAs in the json file. However, the field is marked as null so that AlphaFold3 can generate MSAs for them. 
+
 ### Generating MSAs on the GPU
 
 Recently [GPU-accelerated search for MMSeqs](https://www.biorxiv.org/content/10.1101/2024.11.13.623350v1) was introduced and is now supported in ColabFold. To leverage it, you will need to ajdust the database setup and how you run ⁠`colabfold_search`⁠.
