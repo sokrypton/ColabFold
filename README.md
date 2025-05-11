@@ -111,7 +111,7 @@ If no index was created (`MMSEQS_NO_INDEX=1` was set), then `--db-load-mode` doe
 
 
 ### GPU-accelerated search with ⁠`colabfold_search` ⁠
-ColabFold supports GPU-accelerated MSA searches on GPU through [MMseqs2-GPU](https://www.biorxiv.org/content/10.1101/2024.11.13.623350v1).
+ColabFold supports GPU-accelerated MSA searches through [MMseqs2-GPU](https://www.biorxiv.org/content/10.1101/2024.11.13.623350v1).
 
 #### GPU database setup
 To setup the GPU databases, you will need to run the ⁠`setup_databases.sh`⁠ command with ⁠`GPU=1`⁠ as an environment variable:
