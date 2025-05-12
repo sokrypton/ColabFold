@@ -150,40 +150,54 @@ As the `copies` is optional, the `Complex1` and `Complex2` will result in identi
 
 Note: MMseqs2-based MSAs are only generated for the protein sequences. RNA entries will not have unpaired MSAs in the json file. However, the field is marked as null so that AlphaFold3 can generate MSAs for them. 
 
-### Generating MSAs on the GPU
-
-Recently [GPU-accelerated search for MMSeqs](https://www.biorxiv.org/content/10.1101/2024.11.13.623350v1) was introduced and is now supported in ColabFold. To leverage it, you will need to ajdust the database setup and how you run ⁠`colabfold_search`⁠.
+### GPU-accelerated search with ⁠`colabfold_search` ⁠
+ColabFold supports GPU-accelerated MSA searches through [MMseqs2-GPU](https://www.biorxiv.org/content/10.1101/2024.11.13.623350v1).
 
 #### GPU database setup
+To setup the GPU databases, you will need to run the ⁠`setup_databases.sh`⁠ command with ⁠`GPU=1`⁠ as an environment variable:
 
-To setup the GPU databases, you will need to run the ⁠`setup_databases.sh`⁠ command with ⁠`GPU=1`⁠:
-
-```shell
+```
 GPU=1 ./setup_databases.sh /path/to/db_folder
 ```
 
 This will download and setup the GPU databases in the specified folder. Note that here we do not pass ⁠`MMSEQS_NO_INDEX=1`⁠ as an argument since the indices are useful in the GPU search since we will keep them in the GPU memory.
 
-#### GPU search with ⁠ colabfold_search ⁠
+#### GPU search
+By default, running `colabfold_search` with the `--gpu 1` option uses all available GPUs for its search.
 
-To run the MSA search on the GPU, it is recommended (although not required) to start a GPU server before running the search; this server will keep the indices in the GPU memory and will be used to accelerate the search. To start a GPU server, run:
+```
+colabfold_search /path/to/bin/mmseqs input_sequences.fasta /path/to/db_folder msas --gpu 1 
+```
 
-```shell
+To select specific GPUs, set the `CUDA_VISIBLE_DEVICES` environment variable:
+```
+CUDA_VISIBLE_DEVICES=0,1 colabfold_search --mmseqs /path/to/bin/mmseqs input_sequences.fasta /path/to/db_folder msas --gpu 1
+```
+
+#### Optional GPU server for enhanced performance:
+For frequent searches or to achieve minimal latency, you can run a dedicated GPU server. This server holds databases permanently in GPU memory, largely eliminating search overhead:
+
+Start the GPU server(s):
+```
 mmseqs gpuserver /path/to/db_folder/colabfold_envdb_202108_db --max-seqs 10000 --db-load-mode 0 --prefilter-mode 1 &
 PID1=$!
-mmseqs gpuserver /path/to/db_folder/uniref30_2302 --max-seqs 10000 --db-load-mode 0 --prefilter-mode 1 &
+mmseqs gpuserver /path/to/db_folder/uniref30_2302_db --max-seqs 10000 --db-load-mode 0 --prefilter-mode 1 &
 PID2=$!
 ```
 
-By default, this server will use all available GPUs and split the database up evenly across them. If you want to restrict the numbers of GPU used, you can set the environment variable ⁠`CUDA_VISIBLE_DEVICES`⁠ to a specific GPU or set of GPUs, e.g., ⁠`CUDA_VISIBLE_DEVICES=0,1`⁠. You can control how many sequences are loaded onto the GPU with the ⁠`--max-seqs`⁠ option. If your database is larger than the available GPU memory, the GPU server will efficiently swap the required data in and out of the GPU memory, overlapping data transfer and computation. The GPU server will be started in the background and will continue to run until you stop it explicitly via killing the process via ⁠`kill $PID1`⁠ and ⁠`kill $PID2`⁠.
+By default, the GPU server distributes the database evenly across all visible GPUs. You can limit GPU usage by setting the CUDA_VISIBLE_DEVICES environment variable (e.g., `CUDA_VISIBLE_DEVICES=0,1`). 
+Important: Ensure that the `CUDA_VISIBLE_DEVICES` environment variable is set consistently for both `gpuserver` and `colabfold_search`, otherwise `colabfold_search` will try wait for the `gpuserver` to appear until a set timeout (by default 5 minutes). If your database exceeds GPU memory capacity, the GPU server efficiently streams data between host and GPU memory using asynchronous CUDA streams.
 
-You can then run ⁠ colabfold_search ⁠ with the ⁠`--gpu`⁠ and ⁠`--gpu-server`⁠ option enabled:
-
-```shell
-colabfold_search --mmseqs /path/to/bin/mmseqs --gpu 1 --gpu-server 1 input_sequences.fasta /path/to/db_folder msas
+Run searches using the GPU server:
 ```
-
-You can also run the search only with the ⁠`--gpu`⁠ option enabled if you do not want to start a GPU server, but the GPU server option is generally faster. Similarly to the GPU server, you can control with GPUs are used for the search via the ⁠`CUDA_VISIBLE_DEVICES` environment variable.
+colabfold_search /path/to/bin/mmseqs input_sequences.fasta /path/to/db_folder msas --gpu 1 --gpu-server 1
+```
+To stop the server(s) when done:
+```
+kill $PID1
+kill $PID2
+```
+For more details, see [GPU-accelerated search](https://github.com/soedinglab/MMseqs2/wiki#gpu-accelerated-search).
 
 ### Tutorials & Presentations
 - ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI).
