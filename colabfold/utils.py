@@ -3,6 +3,7 @@ import logging
 import warnings
 from pathlib import Path
 from typing import Optional, Tuple, List
+from enum import Enum
 
 from absl import logging as absl_logging
 from importlib_metadata import distribution
@@ -277,6 +278,29 @@ _struct_asym.entity_id
             ### end section copied from Bio.PDB
             out_file.write(CIF_REVISION_DATE)
 
+class MolType(Enum):
+    RNA = ("sequence", "rna")
+    DNA = ("sequence", "dna")
+    CCD = ("ccdCodes", "ligand")
+    SMILES = ("smiles", "ligand")
+
+    def __init__(self, af3code, upperclass):
+        self.af3code = af3code
+        self.upperclass = upperclass
+
+    @classmethod
+    def get_moltype(cls, moltype: str):
+        if moltype == "RNA":
+            return cls.RNA
+        elif moltype == "DNA":
+            return cls.DNA
+        elif moltype == "SMILES":
+            return cls.SMILES
+        elif moltype == "CCD":
+            return cls.CCD
+        else:
+            raise ValueError(f"Only dna, rna, ccd, smiles are allowed as molecule types.")
+
 class AF3Utils:
     def __init__(self, name: str, 
                  query_seqs_unique: List[str], query_seqs_cardinality: List[int],
@@ -339,43 +363,39 @@ class AF3Utils:
             }
         return content
     
-    def add_extra_molecules(self, content: dict, molecules: List[Tuple[str,str,int]]) -> dict:
+    def add_extra_molecules(self, content: dict, molecules: List[Tuple[MolType,str,int]]) -> dict:
         chain_id_count = 0
         for sequence in content["sequences"]:
             chain_id_count += len(sequence["protein"]["id"])
 
-        unique_molecules = dict() # {category: {sequence: copies}}
-        for (category, sequence, copies) in molecules:
-            category = category.lower()
-            if category in ["smiles", "ligand", "ccd"]:
-                higher_class = "ligand"
-            elif category in ["dna", "rna"]:
-                higher_class = category
-            if higher_class not in unique_molecules:
-                unique_molecules[higher_class] = dict()
-            if (category, sequence) not in unique_molecules[higher_class]:
-                unique_molecules[higher_class][(category, sequence)] = copies
+        unique_molecules = dict() # {moltype: {sequence: copies}}
+
+        for (moltype, sequence, copies) in molecules:
+            upperclass = moltype.upperclass
+            if upperclass not in unique_molecules:
+                unique_molecules[upperclass] = dict()
+            entity = (moltype, sequence)
+            if entity not in unique_molecules[upperclass]:
+                unique_molecules[upperclass][entity] = copies
             else:
-                unique_molecules[higher_class][(category, sequence)] += copies
+                unique_molecules[upperclass][entity] += copies
 
         if not unique_molecules:
             return content
         
-        for higher_class, entities in unique_molecules.items():
-            for (category, sequence), copies in entities.items():
+        for upperclass, entities in unique_molecules.items():
+            for (moltype, sequence), copies in entities.items():
                 chain_ids = [self._int_id_to_str_id(chain_id_count + j + 1) for j in range(copies)]
-                moldict= {higher_class: {"id": chain_ids}}
-                if higher_class == "ligand":
-                    if category == "ccd":
-                        moldict[higher_class]["ccdCodes"] = [sequence]
-                    else:
-                        moldict[higher_class]["smiles"] = sequence 
+                moldict= {upperclass: {"id": chain_ids}}
+                af3code = moltype.af3code
+
+                if moltype == MolType.CCD:
+                   moldict[upperclass][af3code] = [sequence]
                 else:
-                    moldict[higher_class]["sequence"] = sequence
-                    moldict[higher_class]["modifications"] = []
-                    if higher_class == "rna":
-                        moldict[higher_class]["unpairedMsa"] = None
+                    moldict[upperclass][af3code] = sequence
+                    if moltype == MolType.RNA:
+                        moldict[upperclass]["unpairedMsa"] = None
+
                 content["sequences"].append(moldict)
                 chain_id_count += copies
         return content
-    

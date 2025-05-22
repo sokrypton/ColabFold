@@ -126,16 +126,18 @@ If you are using the MSA server via colabfold_batch, you can also use the `--af3
 ```shell
 colabfold_batch input_sequences.fasta out_dir --af3-json
 ```
-Note: When --af3-json is used, you do not need to specify --msa-only. Structure prediction is disabled automatically.
 
 #### Including non-protein molecules in FASTA
-AlphaFold3 supports non-protein components such as ligands and nucleic acids in input complexes. To include these in the generated json file, you can specify them directly in your FASTA input using the following format, `molecule type|sequence|(copies)`. 
+AlphaFold3 supports non-protein components such as ligands and nucleic acids in input complexes. To include these in the generated json file, you can specify them directly in your FASTA input using the following format, `molecule type|sequence|(copies)`. As molecue types, dna, rna, ccd, smiles are allowed.
+
+ > :exclamation: **Substitute aromatic bonds in SMILES**
+ > If your SMILES string contains aromatic bonds (`:`), please replace them with semicolons (`;`) to avoid internal parsing issues.
 
 - Examples
-  - For DNA: `DNA|ATCG`
-  - For RNA: `RNA|AUGC`
+  - For DNA: `dna|ATCG`
+  - For RNA: `rna|AUGC`
   - For ligands: 
-    - SMILES string: `ligand|C1=NC(=C2C(=N1)N(C=N2)[C@H]3[C@@H]([C@@H]([C@H](O3)COP(=O)(O)OP(=O)(O)OP(=O)(O)O)O)O)N`
+    - SMILES string: `smiles|C1=NC(=C2C(=N1)N(C=N2)[C@H]3[C@@H]([C@@H]([C@H](O3)COP(=O)(O)OP(=O)(O)OP(=O)(O)O)O)O)N`
     - CCD code: `ccd|ATP`
   - To specify multiple copies of a molecule, you can add a number after the sequence, e.g. `ccd|ATP|2` or `dna|ATCG|2`.
 
@@ -148,7 +150,7 @@ FIRSTPROTEIN:SECONDPROTEIN:ccd|ATP:ccd|ATP
 ```
 As the `copies` is optional, the `Complex1` and `Complex2` will result in identical json input.
 
-Note: MMseqs2-based MSAs are only generated for the protein sequences. RNA entries will not have unpaired MSAs in the json file. However, the field is marked as null so that AlphaFold3 can generate MSAs for them. 
+ Note that MMseqs2-based MSAs are only generated for the protein sequences. RNA entries will not have unpaired MSAs in the json file. However, the field is marked as null so that AlphaFold3 can generate MSAs for them. 
 
 ### Generating MSAs on the GPU
 

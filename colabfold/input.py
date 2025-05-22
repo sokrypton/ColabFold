@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple, Union
 from pathlib import Path
 import random
 import logging
+from colabfold.utils import MolType
 logger = logging.getLogger(__name__)
 
 def safe_filename(file: str) -> str:
@@ -114,7 +115,7 @@ def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
 
     return sequences, descriptions
 
-def classify_molecules(query_sequence: str) -> Tuple[List[str], Optional[List[Tuple[str, str, int]]]]:
+def classify_molecules(query_sequence: str) -> Tuple[List[str], Optional[List[Tuple[MolType, str, int]]]]:
     """Classifies the sequences in the query sequence string into protein and non-protein sequences.
 
     Returns a tuple of two lists:
@@ -128,16 +129,22 @@ def classify_molecules(query_sequence: str) -> Tuple[List[str], Optional[List[Tu
         if seq.count("|") == 0:
             protein_queries.append(seq)
         else:
-            nonprotein = seq.split("|")
-            copies = int(nonprotein[2]) if len(nonprotein) > 2 else 1
-            other_queries.append((nonprotein[0], nonprotein[1], copies))  # (molecule type, sequence, copies)
+            parts = seq.split("|")
+            moltype, sequence, *rest = parts
+            moltype = MolType.get_moltype(moltype)
+            if moltype == MolType.SMILES:
+                sequence = sequence.replace(";", ":")
+            copies = int(rest[0]) if rest else 1
+            other_queries.append((moltype, sequence, copies))  # (molecule type, sequence, copies)
+
     if len(other_queries) == 0:
         other_queries = None
+
     return protein_queries, other_queries
 
 def get_queries(
     input_path: Union[str, Path], sort_queries_by: str = "length"
-) -> Tuple[List[Tuple[str, str, Optional[List[str]], Optional[List[Tuple[str, str, int]]]]], bool]:
+) -> Tuple[List[Tuple[str, str, Optional[List[str]], Optional[List[Tuple[MolType, str, int]]]]], bool]:
     """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
     of job name, sequence, optional a3m lines, and the optional non-protein sequences."""
 
