@@ -2,7 +2,8 @@ import json
 import logging
 import warnings
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple, List
+from enum import Enum
 
 from absl import logging as absl_logging
 from importlib_metadata import distribution
@@ -276,3 +277,125 @@ _struct_asym.entity_id
             out_file.write("#\n")
             ### end section copied from Bio.PDB
             out_file.write(CIF_REVISION_DATE)
+
+class MolType(Enum):
+    RNA = ("sequence", "rna")
+    DNA = ("sequence", "dna")
+    CCD = ("ccdCodes", "ligand")
+    SMILES = ("smiles", "ligand")
+
+    def __init__(self, af3code, upperclass):
+        self.af3code = af3code
+        self.upperclass = upperclass
+
+    @classmethod
+    def get_moltype(cls, moltype: str):
+        if moltype == "RNA":
+            return cls.RNA
+        elif moltype == "DNA":
+            return cls.DNA
+        elif moltype == "SMILES":
+            return cls.SMILES
+        elif moltype == "CCD":
+            return cls.CCD
+        else:
+            raise ValueError(f"Only dna, rna, ccd, smiles are allowed as molecule types.")
+
+class AF3Utils:
+    def __init__(self, name: str, 
+                 query_seqs_unique: List[str], query_seqs_cardinality: List[int],
+                 unpairedmsa: List[str], pairedmsa: List[str],
+                 extra_molecules: List[Tuple[str,str,int]] = None,
+                 ) -> None:
+        content = self.make_af3_input(
+            name, query_seqs_unique, query_seqs_cardinality,
+            unpairedmsa, pairedmsa
+        )
+        if extra_molecules:
+            content = self.add_extra_molecules(content, extra_molecules)
+        self.content = content
+
+    def _int_id_to_str_id(self, i: int) -> str:
+        if i <= 0:
+            raise ValueError(f"int_id_to_str_id: Only positive integers allowed, got {i}")
+        i = i - 1 # 1-based indexing
+        output = []
+        while i >= 0:
+            output.append(chr(i % 26 + ord("A")))
+            i = i // 26 - 1
+        return "".join(output)
+
+    def make_af3_input(self, 
+        name: str, query_seqs_unique: List[str], query_seqs_cardinality: List[int],
+        unpairedmsa: List[str], pairedmsa: List[str],
+    ) -> dict:
+        sequences: list[dict] = []
+        chain_id_count = 0
+        for i in range(len(query_seqs_unique)): # NOTE: This will not work if there's no protein sequences
+            query_seq = query_seqs_unique[i]
+            chain_ids = [
+                self._int_id_to_str_id(chain_id_count + j + 1) for j in range(query_seqs_cardinality[i])
+            ]
+            chain_id_count += query_seqs_cardinality[i]
+            moldict = { "protein": {
+                "id": chain_ids,
+                "sequence": query_seq,
+                "modifications": [],
+                "templates": [],
+                }}
+            if unpairedmsa and unpairedmsa[i]:
+                moldict["protein"]["unpairedMsa"] = unpairedmsa[i]
+            else:
+                moldict["protein"]["unpairedMsa"] = "" # if "" unpairedMsa-free elif "null" AF3 generates MSA
+            if pairedmsa and pairedmsa[i]:
+                moldict["protein"]["pairedMsa"] = pairedmsa[i]
+            else:
+                moldict["protein"]["pairedMsa"] = "" # if "" pairedMsa-free elif "null" AF3 generates MSA
+            sequences.append(moldict)
+        content = {
+                "dialect": "alphafold3",
+                "version": 2, # 1: initial AF3 input format, 2: external MSA & Template
+                "name": f"{name}",
+                "sequences": sequences,
+                "modelSeeds": [1],
+                "bondedAtomPairs": None,
+                "userCCD": None,
+            }
+        return content
+    
+    def add_extra_molecules(self, content: dict, molecules: List[Tuple[MolType,str,int]]) -> dict:
+        chain_id_count = 0
+        for sequence in content["sequences"]:
+            chain_id_count += len(sequence["protein"]["id"])
+
+        unique_molecules = dict() # {moltype: {sequence: copies}}
+
+        for (moltype, sequence, copies) in molecules:
+            upperclass = moltype.upperclass
+            if upperclass not in unique_molecules:
+                unique_molecules[upperclass] = dict()
+            entity = (moltype, sequence)
+            if entity not in unique_molecules[upperclass]:
+                unique_molecules[upperclass][entity] = copies
+            else:
+                unique_molecules[upperclass][entity] += copies
+
+        if not unique_molecules:
+            return content
+        
+        for upperclass, entities in unique_molecules.items():
+            for (moltype, sequence), copies in entities.items():
+                chain_ids = [self._int_id_to_str_id(chain_id_count + j + 1) for j in range(copies)]
+                moldict= {upperclass: {"id": chain_ids}}
+                af3code = moltype.af3code
+
+                if moltype == MolType.CCD:
+                   moldict[upperclass][af3code] = [sequence]
+                else:
+                    moldict[upperclass][af3code] = sequence
+                    if moltype == MolType.RNA:
+                        moldict[upperclass]["unpairedMsa"] = None
+
+                content["sequences"].append(moldict)
+                chain_id_count += copies
+        return content

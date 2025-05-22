@@ -7,11 +7,13 @@ import math
 import os
 import shutil
 import subprocess
+import json
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from pathlib import Path
 from typing import List, Union
 
 from colabfold.input import get_queries, msa_to_str, safe_filename
+from colabfold.utils import AF3Utils
 
 logger = logging.getLogger(__name__)
 
@@ -392,6 +394,14 @@ def main():
     parser.add_argument(
         "--gpu-server", type=int, default=0, choices=[0, 1], help="Whether to use GPU server (1) or not (0)"
     )
+
+    # AlphaFold3 relevant params
+    parser.add_argument(
+        "--af3-json", action="store_true", help="Generate input JSON for AlphaFold3 from the provided FASTA/A3M file."
+    )
+    parser.add_argument(
+        "--af3-msa-as-path", action="store_true", help="Save MSA as a file path instead of a string in the JSON."
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level = logging.INFO)
@@ -399,7 +409,7 @@ def main():
     queries, is_complex = get_queries(args.query, None)
 
     queries_unique = []
-    for job_number, (raw_jobname, query_sequences, a3m_lines) in enumerate(queries):
+    for job_number, (raw_jobname, query_sequences, a3m_lines, other_molecules) in enumerate(queries):
         # remove duplicates before searching
         query_sequences = (
             [query_sequences] if isinstance(query_sequences, str) else query_sequences
@@ -413,7 +423,7 @@ def main():
             seq_idx = query_seqs_unique.index(seq)
             query_seqs_cardinality[seq_idx] += 1
 
-        queries_unique.append([raw_jobname, query_seqs_unique, query_seqs_cardinality])
+        queries_unique.append([raw_jobname, query_seqs_unique, query_seqs_cardinality, other_molecules])
 
     args.base.mkdir(exist_ok=True, parents=True)
     query_file = args.base.joinpath("query.fas")
@@ -422,6 +432,7 @@ def main():
             raw_jobname,
             query_sequences,
             query_seqs_cardinality,
+            _
         ) in enumerate(queries_unique):
             for j, seq in enumerate(query_sequences):
                 # The header of first sequence set as 101
@@ -439,6 +450,7 @@ def main():
             raw_jobname,
             query_sequences,
             query_seqs_cardinality,
+            _
         ) in enumerate(queries_unique):
             for seq in query_sequences:
                 raw_jobname_first = raw_jobname.split()[0]
@@ -503,12 +515,13 @@ def main():
                 unpack=args.unpack,
             )
 
-        if args.unpack:
+        if args.unpack | args.af3_json:
             id = 0
             for job_number, (
                 raw_jobname,
                 query_sequences,
                 query_seqs_cardinality,
+                other_molecules,
             ) in enumerate(queries_unique):
                 unpaired_msa = []
                 paired_msa = None
@@ -517,28 +530,44 @@ def main():
                 for seq in query_sequences:
                     with args.base.joinpath(f"{id}.a3m").open("r") as f:
                         unpaired_msa.append(f.read())
-                    args.base.joinpath(f"{id}.a3m").unlink()
+                    if args.af3_json:
+                        args.base.joinpath(f"{id}.a3m").unlink()
 
                     if args.use_env_pairing:
                         with open(args.base.joinpath(f"{id}.paired.a3m"), 'a') as file_pair:
                             with open(args.base.joinpath(f"{id}.env.paired.a3m"), 'r') as file_pair_env:
                                 while chunk := file_pair_env.read(10 * 1024 * 1024):
                                     file_pair.write(chunk)
-                        args.base.joinpath(f"{id}.env.paired.a3m").unlink()
+                        if args.unpack:
+                            args.base.joinpath(f"{id}.env.paired.a3m").unlink()
 
                     if len(query_seqs_cardinality) > 1:
                         with args.base.joinpath(f"{id}.paired.a3m").open("r") as f:
                             paired_msa.append(f.read())
-                    args.base.joinpath(f"{id}.paired.a3m").unlink()
+                    if args.unpack:
+                        args.base.joinpath(f"{id}.paired.a3m").unlink()
                     id += 1
-                msa = msa_to_str(
-                    unpaired_msa, paired_msa, query_sequences, query_seqs_cardinality
-                )
-                args.base.joinpath(f"{job_number}.a3m").write_text(msa)
+
+                if args.af3_json:
+                    af3 = AF3Utils(raw_jobname, query_sequences, query_seqs_cardinality, unpaired_msa, paired_msa, other_molecules)
+                    with open(args.base.joinpath(f"{job_number}.json"), 'w') as f:
+                        f.write(json.dumps(af3.content, indent=4))
+
+                if args.unpack:   
+                    msa = msa_to_str(
+                        unpaired_msa, paired_msa, query_sequences, query_seqs_cardinality
+                    )
+                    args.base.joinpath(f"{job_number}.a3m").write_text(msa)
+    else:
+        if args.af3_json:
+            af3 = AF3Utils(raw_jobname, query_sequences, query_seqs_cardinality, unpaired_msa, None, other_molecules)
+            with open(args.base.joinpath(f"{job_number}.json"), 'w') as f:
+                f.write(json.dumps(af3.content, indent=4))
+            
 
     if args.unpack:
         # rename a3m files
-        for job_number, (raw_jobname, query_sequences, query_seqs_cardinality) in enumerate(queries_unique):
+        for job_number, (raw_jobname, query_sequences, query_seqs_cardinality, other_molecules) in enumerate(queries_unique):
             os.rename(
                 args.base.joinpath(f"{job_number}.a3m"),
                 args.base.joinpath(f"{safe_filename(raw_jobname)}.a3m"),
@@ -558,6 +587,14 @@ def main():
                         id += 1
         run_mmseqs(args.mmseqs, ["rmdb", args.base.joinpath("qdb")])
         run_mmseqs(args.mmseqs, ["rmdb", args.base.joinpath("qdb_h")])
+
+    if args.af3_json:
+        # rename json files
+        for job_number, (raw_jobname, query_sequences, query_seqs_cardinality, other_molecules) in enumerate(queries_unique):
+            os.rename(
+                args.base.joinpath(f"{job_number}.json"),
+                args.base.joinpath(f"{safe_filename(raw_jobname)}.json"),
+            )
 
     query_file.unlink()
 
