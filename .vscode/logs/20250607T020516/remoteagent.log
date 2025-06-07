@@ -1,0 +1,29 @@
+2025-06-07 02:05:17.030 [info] 
+
+
+
+
+2025-06-07 02:05:17.030 [info] Extension host agent started.
+2025-06-07 02:05:18.607 [info] [127.0.0.1][ad12d035][ManagementConnection] New connection established.
+2025-06-07 02:05:19.634 [info] [127.0.0.1][b30ba6ae][ExtensionHostConnection] New connection established.
+2025-06-07 02:05:19.947 [info] [127.0.0.1][b30ba6ae][ExtensionHostConnection] <243> Launched Extension Host Process.
+2025-06-07 02:05:24.315 [info] Getting Manifest... ms-toolsai.jupyter-renderers
+2025-06-07 02:05:25.116 [info] Installing extension: ms-toolsai.jupyter-renderers
+2025-06-07 02:05:28.013 [info] Extension signature verification is not done: ms-toolsai.jupyter-renderers
+2025-06-07 02:05:28.545 [info] Extracted extension to file:///home/ubuntu/.local/share/code-server/extensions/ms-toolsai.jupyter-renderers-1.0.19-universal: ms-toolsai.jupyter-renderers
+2025-06-07 02:05:28.549 [info] Renamed to /home/ubuntu/.local/share/code-server/extensions/ms-toolsai.jupyter-renderers-1.0.19-universal
+2025-06-07 02:05:28.551 [info] Extracting extension completed. ms-toolsai.jupyter-renderers
+2025-06-07 02:05:28.554 [info] Extension installed successfully: ms-toolsai.jupyter-renderers
+2025-06-07 02:05:28.557 [info] Marked extension as uninstalled ms-toolsai.jupyter-renderers-1.0.17-universal
+2025-06-07 02:06:45.397 [info] [127.0.0.1][b30ba6ae][ExtensionHostConnection] <243> Kernel: starting (5e0d7f11-dc7e-4cbe-9b9a-a40d11e6d600)
+
+2025-06-07 02:20:56.424 [info] [127.0.0.1][b30ba6ae][ExtensionHostConnection] The client has reconnected.
+2025-06-07 02:20:56.787 [info] [127.0.0.1][ad12d035][ManagementConnection] The client has reconnected.
+2025-06-07 02:27:49.824 [info] [127.0.0.1][b30ba6ae][ExtensionHostConnection] <243> Kernel: starting (e4f4e54c-92da-4e6c-b670-b9127c5e1f37)
+
+2025-06-07 02:30:39.004 [info] [127.0.0.1][b30ba6ae][ExtensionHostConnection] <243> Kernel: starting (ea28a522-8faf-4fec-b1a5-7a46fd6c151f)
+
+2025-06-07 02:32:25.273 [info] [127.0.0.1][b30ba6ae][ExtensionHostConnection] <243> Kernel: starting (6937171a-ca46-4109-8987-c655d9f6663f)
+
+2025-06-07 02:34:18.415 [info] [127.0.0.1][b30ba6ae][ExtensionHostConnection] <243> Kernel: starting (033f64ae-5cea-42a2-8c9d-c07c929199e7)
+

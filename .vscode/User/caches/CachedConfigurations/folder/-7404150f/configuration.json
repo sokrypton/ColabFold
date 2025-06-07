@@ -1,0 +1,1 @@
+{"content":{"settings":"{\n\t\"extensions.autoUpdate\":false,\n\t\"extensions.autoCheckUpdates\": false,\n\t\"python.pythonPath\": \"/opt/conda/bin/python\",\n\t\"workbench.startupEditor\": \"none\",\n\t\"workbench.colorTheme\": \"Default Dark+\",\n\t\"python.defaultInterpreterPath\": \"/opt/conda/bin/python\"\n}\n","tasks":"{}","launch":"{}"}}
