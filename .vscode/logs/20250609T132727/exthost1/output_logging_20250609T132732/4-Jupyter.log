@@ -1,0 +1,589 @@
+code-server (1.85.1, domino-glue01.pg.wwtatc.ai, server-distro)
+Jupyter Extension Version: 2023.9.100.
+Python Extension Version: 2023.4.1.
+Platform: linux (x64).
+Workspace folder /mnt/code, Home = /home/ubuntu
+13:27:44.768 [info] User belongs to experiment group 'NewJupyterSession'
+13:27:45.562 [info] Start refreshing Kernel Picker (1749475665562)
+13:27:45.618 [info] Using Pylance
+13:27:46.693 [info] Process Execution: /opt/conda/bin/python -m pip list
+13:27:46.750 [info] End refreshing Kernel Picker (1749475665562)
+13:27:53.386 [info] Starting Kernel startUsingPythonInterpreter, .jvsc74a57bd05d11fc04813316d0ab1a556df5cbaf233de9c8b4a5b02f362e2bb4f0cfd073a0./mnt/code/.conda/python./mnt/code/.conda/python.-m#ipykernel_launcher  (Python Path: /mnt/code/.conda/bin/python, Conda, 3.10.18) for '/mnt/code/AlphaFold2.ipynb' (disableUI=true)
+13:27:54.824 [info] Process Execution: /mnt/code/.conda/bin/python -m pip list
+13:27:54.931 [info] Handle Execution of Cells 2,3,4,5,6,7,8,9,10,11,12 for /mnt/code/AlphaFold2.ipynb
+13:27:54.979 [info] Process Execution: /mnt/code/.conda/bin/python -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:27:55.036 [info] Process Execution: /mnt/code/.conda/bin/python -m ipykernel_launcher --ip=127.0.0.1 --stdin=9004 --control=9002 --hb=9001 --Session.signature_scheme="hmac-sha256" --Session.key=b"07a3c746-0745-43e7-b280-cd00fff01b4c" --shell=9003 --transport="tcp" --iopub=9005 --f=~/.local/share/jupyter/runtime/kernel-v2-241ml3R9KzcgG0l.json
+    > cwd: /mnt/code
+13:27:55.679 [info] ipykernel version & path 6.29.5, /mnt/code/.conda/lib/python3.10/site-packages/ipykernel/__init__.py for /mnt/code/.conda/bin/python
+13:27:57.073 [info] Started Kernel .conda (Python 3.10.18) (pid: 428)
+13:27:57.073 [info] Started new session 7d6b947e-a457-4f8f-9f33-835aca16d196
+13:27:57.134 [info] Process Execution: /mnt/code/.conda/bin/python ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/pythonFiles/printJupyterDataDir.py
+13:27:57.146 [info] Kernel acknowledged execution of cell 2 @ 1749475677145
+13:27:57.151 [info] End cell 2 execution @ 1749475677150, started @ 1749475677145, elapsed time = 0.005s
+13:27:57.158 [info] Kernel acknowledged execution of cell 3 @ 1749475677158
+13:27:57.161 [info] End cell 3 execution @ 1749475677160, started @ 1749475677158, elapsed time = 0.002s
+13:27:57.167 [info] Kernel acknowledged execution of cell 4 @ 1749475677167
+13:27:57.170 [info] End cell 4 execution @ 1749475677170, started @ 1749475677167, elapsed time = 0.003s
+13:27:57.173 [info] Kernel acknowledged execution of cell 5 @ 1749475677173
+13:27:57.178 [info] End cell 5 execution @ 1749475677178, started @ 1749475677173, elapsed time = 0.005s
+13:27:57.182 [info] Kernel acknowledged execution of cell 6 @ 1749475677182
+13:27:57.217 [info] End cell 6 execution @ 1749475677217, started @ 1749475677182, elapsed time = 0.035s
+13:27:57.221 [info] Kernel acknowledged execution of cell 7 @ 1749475677221
+13:27:58.510 [info] End cell 7 execution @ 1749475678510, started @ 1749475677221, elapsed time = 1.289s
+13:27:58.514 [info] Kernel acknowledged execution of cell 8 @ 1749475678514
+13:27:58.517 [info] End cell 8 execution @ 1749475678516, started @ 1749475678514, elapsed time = 0.002s
+13:27:58.519 [info] Kernel acknowledged execution of cell 9 @ 1749475678519
+13:28:05.015 [warn] StdErr from Kernel Process /bin/sh: 1: nvidia-smi: not found
+13:28:36.166 [error] Disposing session as kernel process died ExitCode: undefined, Reason: /bin/sh: 1: nvidia-smi: not found
+
+13:28:36.167 [info] Dispose Kernel process 428.
+13:28:36.168 [error] Raw kernel process exited code: undefined
+13:28:36.215 [error] Error in waiting for cell to complete [Error: Canceled future for execute_request message before replies were done
+	at t.KernelShellFutureHandler.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:32375)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51383
+	at Map.forEach (<anonymous>)
+	at v._clearKernelState (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51368)
+	at v.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:44850)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109965
+	at ce (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:2156310)
+	at vy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109941)
+	at wy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:113311)
+	at process.processTicksAndRejections (node:internal/process/task_queues:95:5)]
+13:28:36.216 [warn] Cell completed with errors {
+  message: 'Canceled future for execute_request message before replies were done'
+}
+13:28:36.218 [info] End cell 9 execution @ 1749475716218, started @ 1749475678519, elapsed time = 37.699s
+13:28:36.218 [warn] Cancel all remaining cells due to cancellation or failure in execution
+13:28:36.218 [info] End cell 10 execution @ undefined, started @ undefined, elapsed time = 0s
+13:28:36.219 [info] End cell 11 execution @ undefined, started @ undefined, elapsed time = 0s
+13:28:36.219 [info] End cell 12 execution @ undefined, started @ undefined, elapsed time = 0s
+13:28:36.381 [info] End cell 9 execution @ undefined, started @ undefined, elapsed time = 0s
+13:30:01.687 [info] Restart requested /mnt/code/AlphaFold2.ipynb
+13:30:01.712 [info] Process Execution: /mnt/code/.conda/bin/python -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:30:01.741 [info] Process Execution: /mnt/code/.conda/bin/python -m ipykernel_launcher --ip=127.0.0.1 --stdin=9004 --control=9002 --hb=9001 --Session.signature_scheme="hmac-sha256" --Session.key=b"679208e2-3cf0-49e5-b494-be5ee2bc6a3c" --shell=9003 --transport="tcp" --iopub=9005 --f=~/.local/share/jupyter/runtime/kernel-v2-241mn8MjvXCMtgP.json
+    > cwd: /mnt/code
+13:30:02.441 [info] ipykernel version & path 6.29.5, /mnt/code/.conda/lib/python3.10/site-packages/ipykernel/__init__.py for /mnt/code/.conda/bin/python
+13:30:03.841 [info] Started Kernel .conda (Python 3.10.18) (pid: 1122)
+13:30:03.841 [info] Started new session 5e8a8daf-1acc-4a20-8a68-f1f9c6d17d6c
+13:30:03.842 [info] Shutdown old session undefined
+13:30:06.697 [info] Handle Execution of Cells 2,3,4,5,6,7,8,9,10,11,12 for /mnt/code/AlphaFold2.ipynb
+13:30:06.714 [info] Kernel acknowledged execution of cell 2 @ 1749475806713
+13:30:06.717 [info] End cell 2 execution @ 1749475806717, started @ 1749475806713, elapsed time = 0.004s
+13:30:06.725 [info] Kernel acknowledged execution of cell 3 @ 1749475806724
+13:30:06.726 [info] End cell 3 execution @ 1749475806726, started @ 1749475806724, elapsed time = 0.002s
+13:30:06.733 [info] Kernel acknowledged execution of cell 4 @ 1749475806733
+13:30:06.735 [info] End cell 4 execution @ 1749475806735, started @ 1749475806733, elapsed time = 0.002s
+13:30:06.742 [info] Kernel acknowledged execution of cell 5 @ 1749475806742
+13:30:06.744 [info] End cell 5 execution @ 1749475806743, started @ 1749475806742, elapsed time = 0.001s
+13:30:06.747 [info] Kernel acknowledged execution of cell 6 @ 1749475806746
+13:30:06.749 [info] End cell 6 execution @ 1749475806749, started @ 1749475806746, elapsed time = 0.003s
+13:30:06.752 [info] Kernel acknowledged execution of cell 7 @ 1749475806752
+13:30:06.754 [info] End cell 7 execution @ 1749475806753, started @ 1749475806752, elapsed time = 0.001s
+13:30:06.757 [info] Kernel acknowledged execution of cell 8 @ 1749475806757
+13:30:06.759 [info] End cell 8 execution @ 1749475806759, started @ 1749475806757, elapsed time = 0.002s
+13:30:06.768 [info] Kernel acknowledged execution of cell 9 @ 1749475806767
+13:30:12.249 [warn] StdErr from Kernel Process /bin/sh: 1: nvidia-smi: not found
+13:30:38.732 [error] Disposing session as kernel process died ExitCode: undefined, Reason: /bin/sh: 1: nvidia-smi: not found
+
+13:30:38.733 [info] Dispose Kernel process 1122.
+13:30:38.733 [error] Raw kernel process exited code: undefined
+13:30:38.738 [error] Error in waiting for cell to complete [Error: Canceled future for execute_request message before replies were done
+	at t.KernelShellFutureHandler.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:32375)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51383
+	at Map.forEach (<anonymous>)
+	at v._clearKernelState (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51368)
+	at v.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:44850)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109965
+	at ce (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:2156310)
+	at vy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109941)
+	at wy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:113311)
+	at process.processTicksAndRejections (node:internal/process/task_queues:95:5)]
+13:30:38.739 [warn] Cell completed with errors {
+  message: 'Canceled future for execute_request message before replies were done'
+}
+13:30:38.739 [info] End cell 9 execution @ 1749475838739, started @ 1749475806767, elapsed time = 31.972s
+13:30:38.740 [warn] Cancel all remaining cells due to cancellation or failure in execution
+13:30:38.740 [info] End cell 10 execution @ undefined, started @ undefined, elapsed time = 0s
+13:30:38.740 [info] End cell 11 execution @ undefined, started @ undefined, elapsed time = 0s
+13:30:38.740 [info] End cell 12 execution @ undefined, started @ undefined, elapsed time = 0s
+13:30:38.957 [info] End cell 9 execution @ undefined, started @ undefined, elapsed time = 0s
+13:31:03.763 [warn] No interpreter with path /mnt/code/.conda found in Python API, will convert Uri path to string as Id /mnt/code/.conda
+13:31:03.764 [info] Check & install missing Kernel dependencies for /mnt/code/.conda/bin/python, ui.disabled=false for resource '/mnt/code/AlphaFold2.ipynb'
+13:31:03.784 [info] Process Execution: /mnt/code/.conda/bin/python -c "import ipykernel;print('6af208d0-cb9c-427f-b937-ff563e17efdf')"
+13:31:07.394 [info] Handle Execution of Cells 2,3,4,5,6,7,8,9,10,11,12 for /mnt/code/AlphaFold2.ipynb
+13:31:12.839 [info] Restart requested /mnt/code/AlphaFold2.ipynb
+13:31:13.699 [info] Process Execution: /mnt/code/.conda/bin/python -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:31:13.725 [info] Process Execution: /mnt/code/.conda/bin/python -m ipykernel_launcher --ip=127.0.0.1 --stdin=9004 --control=9002 --hb=9001 --Session.signature_scheme="hmac-sha256" --Session.key=b"f914bc42-8a24-4356-964d-a861121f63d3" --shell=9003 --transport="tcp" --iopub=9005 --f=~/.local/share/jupyter/runtime/kernel-v2-241wYsAbLZu7TqL.json
+    > cwd: /mnt/code
+13:31:14.014 [info] ipykernel version & path 6.29.5, /mnt/code/.conda/lib/python3.10/site-packages/ipykernel/__init__.py for /mnt/code/.conda/bin/python
+13:31:15.189 [info] Started Kernel .conda (Python 3.10.18) (pid: 1687)
+13:31:15.189 [info] Started new session 0d6b5eb4-2453-4c3a-93fb-cba5f7d02b14
+13:31:15.190 [info] Shutdown old session undefined
+13:31:15.237 [info] Kernel acknowledged execution of cell 2 @ 1749475875236
+13:31:15.241 [info] End cell 2 execution @ 1749475875241, started @ 1749475875236, elapsed time = 0.005s
+13:31:15.247 [info] Kernel acknowledged execution of cell 3 @ 1749475875247
+13:31:15.249 [info] End cell 3 execution @ 1749475875249, started @ 1749475875247, elapsed time = 0.002s
+13:31:15.255 [info] Kernel acknowledged execution of cell 4 @ 1749475875255
+13:31:15.256 [info] End cell 4 execution @ 1749475875256, started @ 1749475875255, elapsed time = 0.001s
+13:31:15.262 [info] Kernel acknowledged execution of cell 5 @ 1749475875262
+13:31:15.264 [info] End cell 5 execution @ 1749475875264, started @ 1749475875262, elapsed time = 0.002s
+13:31:15.266 [info] Kernel acknowledged execution of cell 6 @ 1749475875266
+13:31:15.269 [info] End cell 6 execution @ 1749475875269, started @ 1749475875266, elapsed time = 0.003s
+13:31:15.273 [info] Kernel acknowledged execution of cell 7 @ 1749475875273
+13:31:15.274 [info] End cell 7 execution @ 1749475875274, started @ 1749475875273, elapsed time = 0.001s
+13:31:15.277 [info] Kernel acknowledged execution of cell 8 @ 1749475875277
+13:31:15.279 [info] End cell 8 execution @ 1749475875279, started @ 1749475875277, elapsed time = 0.002s
+13:31:15.318 [info] Kernel acknowledged execution of cell 9 @ 1749475875318
+13:31:20.452 [warn] StdErr from Kernel Process /bin/sh: 1: nvidia-smi: not found
+13:31:45.359 [error] Disposing session as kernel process died ExitCode: undefined, Reason: /bin/sh: 1: nvidia-smi: not found
+
+13:31:45.360 [info] Dispose Kernel process 1687.
+13:31:45.360 [error] Raw kernel process exited code: undefined
+13:31:45.364 [error] Error in waiting for cell to complete [Error: Canceled future for execute_request message before replies were done
+	at t.KernelShellFutureHandler.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:32375)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51383
+	at Map.forEach (<anonymous>)
+	at v._clearKernelState (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51368)
+	at v.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:44850)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109965
+	at ce (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:2156310)
+	at vy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109941)
+	at wy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:113311)
+	at process.processTicksAndRejections (node:internal/process/task_queues:95:5)]
+13:31:45.364 [warn] Cell completed with errors {
+  message: 'Canceled future for execute_request message before replies were done'
+}
+13:31:45.414 [info] End cell 9 execution @ 1749475905414, started @ 1749475875318, elapsed time = 30.096s
+13:31:45.414 [warn] Cancel all remaining cells due to cancellation or failure in execution
+13:31:45.414 [info] End cell 10 execution @ undefined, started @ undefined, elapsed time = 0s
+13:31:45.414 [info] End cell 11 execution @ undefined, started @ undefined, elapsed time = 0s
+13:31:45.414 [info] End cell 12 execution @ undefined, started @ undefined, elapsed time = 0s
+13:31:45.636 [info] End cell 9 execution @ undefined, started @ undefined, elapsed time = 0s
+13:31:59.809 [info] Check & install missing Kernel dependencies for /mnt/code/.conda/bin/python, ui.disabled=false for resource '/mnt/code/AlphaFold2.ipynb'
+13:31:59.825 [info] Process Execution: /mnt/code/.conda/bin/python -c "import ipykernel;print('6af208d0-cb9c-427f-b937-ff563e17efdf')"
+13:32:19.723 [info] Disposing kernel .jvsc74a57bd05d11fc04813316d0ab1a556df5cbaf233de9c8b4a5b02f362e2bb4f0cfd073a0./mnt/code/.conda/python./mnt/code/.conda/python.-m#ipykernel_launcher for notebook /mnt/code/AlphaFold2.ipynb due to selection of another kernel or closing of the notebook
+13:32:19.723 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+13:32:19.789 [info] Starting Kernel startUsingPythonInterpreter, .jvsc74a57bd0d4d1e4263499bec80672ea0156c357c1ee493ec2b1c70f0acce89fc37c4a6abe./opt/conda/python./opt/conda/python.-m#ipykernel_launcher  (Python Path: /opt/conda/bin/python, Conda, base, 3.9.18) for '/mnt/code/AlphaFold2.ipynb' (disableUI=true)
+13:32:20.545 [info] Process Execution: /opt/conda/bin/python -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:32:20.566 [info] Process Execution: /opt/conda/bin/python -m ipykernel_launcher --ip=127.0.0.1 --stdin=9004 --control=9002 --hb=9001 --Session.signature_scheme="hmac-sha256" --Session.key=b"b53a2a58-fc22-4ad1-9fc8-9c7adb167ba8" --shell=9003 --transport="tcp" --iopub=9005 --f=~/.local/share/jupyter/runtime/kernel-v2-241hb3o15vYzUfM.json
+    > cwd: /mnt/code
+13:32:20.835 [info] ipykernel version & path 6.19.4, /opt/conda/lib/python3.9/site-packages/ipykernel/__init__.py for /opt/conda/bin/python
+13:32:21.395 [info] Started Kernel base (Python 3.9.18) (pid: 2230)
+13:32:21.395 [info] Started new session 8d10a63a-c7a8-447f-aa9a-fabb44c4a9b1
+13:32:21.481 [info] Process Execution: /opt/conda/bin/python ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/pythonFiles/printJupyterDataDir.py
+13:32:22.286 [error] Widget Error: Failed to access CDN https://unpkg.com/ after 0 attempt(s), TypeError: Failed to fetch
+13:32:22.670 [info] Handle Execution of Cells 2,3,4,5,6,7,8,9,10,11,12 for /mnt/code/AlphaFold2.ipynb
+13:32:22.688 [info] Kernel acknowledged execution of cell 2 @ 1749475942687
+13:32:22.690 [info] End cell 2 execution @ 1749475942690, started @ 1749475942687, elapsed time = 0.003s
+13:32:22.698 [info] Kernel acknowledged execution of cell 3 @ 1749475942698
+13:32:22.700 [info] End cell 3 execution @ 1749475942700, started @ 1749475942698, elapsed time = 0.002s
+13:32:22.702 [info] Kernel acknowledged execution of cell 4 @ 1749475942702
+13:32:22.708 [info] End cell 4 execution @ 1749475942708, started @ 1749475942702, elapsed time = 0.006s
+13:32:22.714 [info] Kernel acknowledged execution of cell 5 @ 1749475942714
+13:32:22.717 [info] End cell 5 execution @ 1749475942717, started @ 1749475942714, elapsed time = 0.003s
+13:32:22.720 [info] Kernel acknowledged execution of cell 6 @ 1749475942720
+13:32:22.722 [info] End cell 6 execution @ 1749475942722, started @ 1749475942720, elapsed time = 0.002s
+13:32:22.726 [info] Kernel acknowledged execution of cell 7 @ 1749475942726
+13:32:22.728 [info] End cell 7 execution @ 1749475942728, started @ 1749475942726, elapsed time = 0.002s
+13:32:22.730 [info] Kernel acknowledged execution of cell 8 @ 1749475942730
+13:32:22.734 [info] End cell 8 execution @ 1749475942734, started @ 1749475942730, elapsed time = 0.004s
+13:32:22.744 [info] Kernel acknowledged execution of cell 9 @ 1749475942744
+13:32:22.952 [info] End cell 9 execution @ 1749475942952, started @ 1749475942744, elapsed time = 0.208s
+13:32:22.953 [warn] Cancel all remaining cells due to cancellation or failure in execution
+13:32:22.953 [info] End cell 10 execution @ undefined, started @ undefined, elapsed time = 0s
+13:32:22.953 [info] End cell 11 execution @ undefined, started @ undefined, elapsed time = 0s
+13:32:22.953 [info] End cell 12 execution @ undefined, started @ undefined, elapsed time = 0s
+13:32:33.124 [info] Disposing kernel .jvsc74a57bd0d4d1e4263499bec80672ea0156c357c1ee493ec2b1c70f0acce89fc37c4a6abe./opt/conda/python./opt/conda/python.-m#ipykernel_launcher for notebook /mnt/code/AlphaFold2.ipynb due to selection of another kernel or closing of the notebook
+13:32:33.124 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+13:32:33.125 [info] Dispose Kernel process 2230.
+13:32:33.200 [info] Starting Kernel startUsingPythonInterpreter, .jvsc74a57bd05d11fc04813316d0ab1a556df5cbaf233de9c8b4a5b02f362e2bb4f0cfd073a0./mnt/code/.conda/python./mnt/code/.conda/python.-m#ipykernel_launcher  (Python Path: /mnt/code/.conda/bin/python, Conda, 3.10.18) for '/mnt/code/AlphaFold2.ipynb' (disableUI=true)
+13:32:33.212 [info] Process Execution: /mnt/code/.conda/bin/python -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:32:33.236 [info] Process Execution: /mnt/code/.conda/bin/python -m ipykernel_launcher --ip=127.0.0.1 --stdin=9004 --control=9002 --hb=9001 --Session.signature_scheme="hmac-sha256" --Session.key=b"811ed445-091c-4248-a0d0-81732c44d442" --shell=9003 --transport="tcp" --iopub=9005 --f=~/.local/share/jupyter/runtime/kernel-v2-24100FawybrxvPH.json
+    > cwd: /mnt/code
+13:32:33.448 [info] ipykernel version & path 6.29.5, /mnt/code/.conda/lib/python3.10/site-packages/ipykernel/__init__.py for /mnt/code/.conda/bin/python
+13:32:34.735 [info] Started Kernel .conda (Python 3.10.18) (pid: 2306)
+13:32:34.735 [info] Started new session 711c8510-035e-4b8e-aeb5-31a78ec6b8b2
+13:33:13.454 [info] Handle Execution of Cells 6 for /mnt/code/AlphaFold2.ipynb
+13:33:13.461 [info] Kernel acknowledged execution of cell 6 @ 1749475993461
+13:33:22.069 [info] Handle Execution of Cells 8 for /mnt/code/AlphaFold2.ipynb
+13:33:25.526 [info] End cell 6 execution @ 1749476005526, started @ 1749475993461, elapsed time = 12.065s
+13:33:25.532 [info] Kernel acknowledged execution of cell 8 @ 1749476005532
+13:33:34.871 [info] End cell 8 execution @ 1749476014871, started @ 1749476005532, elapsed time = 9.339s
+13:33:45.407 [info] Handle Execution of Cells 9 for /mnt/code/AlphaFold2.ipynb
+13:33:45.421 [info] Kernel acknowledged execution of cell 9 @ 1749476025420
+13:33:49.545 [warn] StdErr from Kernel Process /bin/sh: 1: nvidia-smi: not found
+13:33:49.786 [info] End cell 9 execution @ 1749476029786, started @ 1749476025420, elapsed time = 4.366s
+13:33:49.786 [warn] Cancel all remaining cells due to cancellation or failure in execution
+13:36:05.654 [info] Handle Execution of Cells 2,3,4,5,6,7,8,9,10,11,12 for /mnt/code/AlphaFold2.ipynb
+13:36:05.671 [info] Kernel acknowledged execution of cell 2 @ 1749476165671
+13:36:05.675 [info] End cell 2 execution @ 1749476165674, started @ 1749476165671, elapsed time = 0.003s
+13:36:05.682 [info] Kernel acknowledged execution of cell 3 @ 1749476165682
+13:36:05.685 [info] End cell 3 execution @ 1749476165685, started @ 1749476165682, elapsed time = 0.003s
+13:36:05.691 [info] Kernel acknowledged execution of cell 4 @ 1749476165691
+13:36:05.692 [info] End cell 4 execution @ 1749476165692, started @ 1749476165691, elapsed time = 0.001s
+13:36:05.699 [info] Kernel acknowledged execution of cell 5 @ 1749476165699
+13:36:05.700 [info] End cell 5 execution @ 1749476165700, started @ 1749476165699, elapsed time = 0.001s
+13:36:05.715 [info] Kernel acknowledged execution of cell 6 @ 1749476165714
+13:36:16.250 [info] End cell 6 execution @ 1749476176250, started @ 1749476165714, elapsed time = 10.536s
+13:36:16.255 [info] Kernel acknowledged execution of cell 7 @ 1749476176255
+13:36:16.257 [info] End cell 7 execution @ 1749476176257, started @ 1749476176255, elapsed time = 0.002s
+13:36:16.261 [info] Kernel acknowledged execution of cell 8 @ 1749476176261
+13:36:20.634 [info] End cell 8 execution @ 1749476180633, started @ 1749476176261, elapsed time = 4.372s
+13:36:20.655 [warn] StdErr from Kernel Process /bin/sh: 1: nvidia-smi: not found
+13:36:20.656 [info] Kernel acknowledged execution of cell 9 @ 1749476180656
+13:36:49.216 [error] Disposing session as kernel process died ExitCode: undefined, Reason: /bin/sh: 1: nvidia-smi: not found
+/bin/sh: 1: nvidia-smi: not found
+
+13:36:49.217 [info] Dispose Kernel process 2306.
+13:36:49.217 [error] Raw kernel process exited code: undefined
+13:36:49.226 [error] Error in waiting for cell to complete [Error: Canceled future for execute_request message before replies were done
+	at t.KernelShellFutureHandler.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:32375)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51383
+	at Map.forEach (<anonymous>)
+	at v._clearKernelState (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51368)
+	at v.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:44850)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109965
+	at ce (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:2156310)
+	at vy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109941)
+	at wy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:113311)
+	at process.processTicksAndRejections (node:internal/process/task_queues:95:5)]
+13:36:49.227 [warn] Cell completed with errors {
+  message: 'Canceled future for execute_request message before replies were done'
+}
+13:36:49.229 [info] End cell 9 execution @ 1749476209229, started @ 1749476180656, elapsed time = 28.573s
+13:36:49.229 [warn] Cancel all remaining cells due to cancellation or failure in execution
+13:36:49.229 [info] End cell 10 execution @ undefined, started @ undefined, elapsed time = 0s
+13:36:49.229 [info] End cell 11 execution @ undefined, started @ undefined, elapsed time = 0s
+13:36:49.230 [info] End cell 12 execution @ undefined, started @ undefined, elapsed time = 0s
+13:36:49.982 [info] End cell 9 execution @ undefined, started @ undefined, elapsed time = 0s
+13:37:11.559 [info] Disposing kernel .jvsc74a57bd05d11fc04813316d0ab1a556df5cbaf233de9c8b4a5b02f362e2bb4f0cfd073a0./mnt/code/.conda/python./mnt/code/.conda/python.-m#ipykernel_launcher for notebook /mnt/code/AlphaFold2.ipynb due to selection of another kernel or closing of the notebook
+13:37:11.559 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+13:37:11.630 [info] Starting Kernel startUsingPythonInterpreter, .jvsc74a57bd0916dbcbb3f70747c44a77c7bcd40155683ae19c65e1c03b4aa3499c5328201f1./bin/python3./bin/python3.-m#ipykernel_launcher  (Python Path: /bin/python3, Unknown, 3.8.10) for '/mnt/code/AlphaFold2.ipynb' (disableUI=true)
+13:37:11.638 [warn] Failed to get activated env vars for /bin/python3 in 146ms
+13:37:11.844 [info] Process Execution: /bin/python3 -c "import site;print("USER_BASE_VALUE");print(site.USER_BASE);print("USER_BASE_VALUE");"
+13:37:11.915 [warn] Failed to get activated env vars for /bin/python3 in 283ms
+13:37:12.027 [error] Unable to determine site packages path for python /bin/python3 (Unknown)
+13:37:12.027 [error] Unable to determine site packages path for python /bin/python3 (Unknown)
+13:37:12.039 [info] Process Execution: /bin/python3 -m pip list
+13:37:12.049 [info] Process Execution: /bin/python3 -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:37:12.131 [info] Process Execution: /bin/python3 -m ipykernel_launcher --ip=127.0.0.1 --stdin=9004 --control=9002 --hb=9001 --Session.signature_scheme="hmac-sha256" --Session.key=b"c0a06f74-1e26-4238-9d4f-e1e04b5a1b1b" --shell=9003 --transport="tcp" --iopub=9005 --f=~/.local/share/jupyter/runtime/kernel-v2-2419KktQq9RY2NJ.json
+    > cwd: /mnt/code
+13:37:12.136 [warn] Stderr output when getting ipykernel version & path Traceback (most recent call last):
+    File "<string>", line 1, in <module>
+    ModuleNotFoundError: No module named 'ipykernel' for /bin/python3
+13:37:12.148 [warn] StdErr from Kernel Process /bin/python3: No module named ipykernel_launcher
+13:37:12.215 [error] Disposing kernel process due to an error Error: The kernel died. Error: /bin/python3: No module named ipykernel_launcher... View Jupyter [log](command:jupyter.viewOutput) for further details.
+    > Kernel Id = .jvsc74a57bd0916dbcbb3f70747c44a77c7bcd40155683ae19c65e1c03b4aa3499c5328201f1./bin/python3./bin/python3.-m#ipykernel_launcher
+    > Interpreter Id = /bin/python3
+    > at ChildProcess.<anonymous> (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:86356)
+    > stdErr = /bin/python3: No module named ipykernel_launcher
+13:37:12.215 [info] Dispose Kernel process 3924.
+13:37:12.217 [error] Kernel Launcher. launch, Class name = ey, completed in 586ms, has a falsy return value, Arg 1: ".jvsc74a57bd0916dbcbb3f70747c44a77c7bcd40155683ae19c65e1c03b4aa3499c5328201f1./bin/python3./bin/python3.-m#ipykernel_launcher", Arg 2: 60000, Arg 3: "/mnt/code/AlphaFold2.ipynb", Arg 4: "/mnt/code", Arg 5: "" Error: The kernel died. Error: /bin/python3: No module named ipykernel_launcher... View Jupyter [log](command:jupyter.viewOutput) for further details.
+    > Kernel Id = .jvsc74a57bd0916dbcbb3f70747c44a77c7bcd40155683ae19c65e1c03b4aa3499c5328201f1./bin/python3./bin/python3.-m#ipykernel_launcher
+    > Interpreter Id = /bin/python3
+    > at ChildProcess.<anonymous> (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:86356)
+    > stdErr = /bin/python3: No module named ipykernel_launcher
+13:37:12.217 [error] Failed to connect raw kernel session: Error: The kernel died. Error: /bin/python3: No module named ipykernel_launcher... View Jupyter [log](command:jupyter.viewOutput) for further details.
+13:37:12.219 [warn] Error occurred while trying to start the kernel, options.disableUI=true Error: The kernel died. Error: /bin/python3: No module named ipykernel_launcher... View Jupyter [log](command:jupyter.viewOutput) for further details.
+    > Kernel Id = .jvsc74a57bd0916dbcbb3f70747c44a77c7bcd40155683ae19c65e1c03b4aa3499c5328201f1./bin/python3./bin/python3.-m#ipykernel_launcher
+    > Interpreter Id = /bin/python3
+    > at ChildProcess.<anonymous> (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:86356)
+    > stdErr = /bin/python3: No module named ipykernel_launcher
+13:37:14.456 [info] Handle Execution of Cells 2,3,4,5,6,7,8,9,10,11,12 for /mnt/code/AlphaFold2.ipynb
+13:37:14.457 [info] Starting Kernel startUsingPythonInterpreter, .jvsc74a57bd0916dbcbb3f70747c44a77c7bcd40155683ae19c65e1c03b4aa3499c5328201f1./bin/python3./bin/python3.-m#ipykernel_launcher  (Python Path: /bin/python3, Unknown, 3.8.10) for '/mnt/code/AlphaFold2.ipynb' (disableUI=false)
+13:37:14.470 [info] Process Execution: /bin/python3 -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:37:14.495 [info] Process Execution: /bin/python3 -m ipykernel_launcher --ip=127.0.0.1 --stdin=9012 --control=9010 --hb=9009 --Session.signature_scheme="hmac-sha256" --Session.key=b"64551813-de2f-4294-ba6f-780e79ac108a" --shell=9011 --transport="tcp" --iopub=9013 --f=~/.local/share/jupyter/runtime/kernel-v2-241JU2T7u47jozW.json
+    > cwd: /mnt/code
+13:37:14.499 [warn] Stderr output when getting ipykernel version & path Traceback (most recent call last):
+    File "<string>", line 1, in <module>
+    ModuleNotFoundError: No module named 'ipykernel' for /bin/python3
+13:37:14.512 [warn] StdErr from Kernel Process /bin/python3: No module named ipykernel_launcher
+13:37:14.515 [error] Disposing kernel process due to an error Error: The kernel died. Error: /bin/python3: No module named ipykernel_launcher... View Jupyter [log](command:jupyter.viewOutput) for further details.
+    > Kernel Id = .jvsc74a57bd0916dbcbb3f70747c44a77c7bcd40155683ae19c65e1c03b4aa3499c5328201f1./bin/python3./bin/python3.-m#ipykernel_launcher
+    > Interpreter Id = /bin/python3
+    > at ChildProcess.<anonymous> (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:86356)
+    > stdErr = /bin/python3: No module named ipykernel_launcher
+13:37:14.515 [info] Dispose Kernel process 3939.
+13:37:14.516 [error] Kernel Launcher. launch, Class name = ey, completed in 58ms, has a falsy return value, Arg 1: ".jvsc74a57bd0916dbcbb3f70747c44a77c7bcd40155683ae19c65e1c03b4aa3499c5328201f1./bin/python3./bin/python3.-m#ipykernel_launcher", Arg 2: 60000, Arg 3: "/mnt/code/AlphaFold2.ipynb", Arg 4: "/mnt/code", Arg 5: "" Error: The kernel died. Error: /bin/python3: No module named ipykernel_launcher... View Jupyter [log](command:jupyter.viewOutput) for further details.
+    > Kernel Id = .jvsc74a57bd0916dbcbb3f70747c44a77c7bcd40155683ae19c65e1c03b4aa3499c5328201f1./bin/python3./bin/python3.-m#ipykernel_launcher
+    > Interpreter Id = /bin/python3
+    > at ChildProcess.<anonymous> (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:86356)
+    > stdErr = /bin/python3: No module named ipykernel_launcher
+13:37:14.516 [error] Failed to connect raw kernel session: Error: The kernel died. Error: /bin/python3: No module named ipykernel_launcher... View Jupyter [log](command:jupyter.viewOutput) for further details.
+13:37:14.516 [warn] Error occurred while trying to start the kernel, options.disableUI=false Error: The kernel died. Error: /bin/python3: No module named ipykernel_launcher... View Jupyter [log](command:jupyter.viewOutput) for further details.
+    > Kernel Id = .jvsc74a57bd0916dbcbb3f70747c44a77c7bcd40155683ae19c65e1c03b4aa3499c5328201f1./bin/python3./bin/python3.-m#ipykernel_launcher
+    > Interpreter Id = /bin/python3
+    > at ChildProcess.<anonymous> (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:86356)
+    > stdErr = /bin/python3: No module named ipykernel_launcher
+13:37:14.517 [warn] Kernel Error, context = start Error: The kernel died. Error: /bin/python3: No module named ipykernel_launcher... View Jupyter [log](command:jupyter.viewOutput) for further details.
+    > Kernel Id = .jvsc74a57bd0916dbcbb3f70747c44a77c7bcd40155683ae19c65e1c03b4aa3499c5328201f1./bin/python3./bin/python3.-m#ipykernel_launcher
+    > Interpreter Id = /bin/python3
+    > at ChildProcess.<anonymous> (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:86356)
+    > stdErr = /bin/python3: No module named ipykernel_launcher
+13:37:14.529 [info] Process Execution: /bin/python3 -c "import ipykernel;print('6af208d0-cb9c-427f-b937-ff563e17efdf')"
+13:37:14.549 [info] Check & install missing Kernel dependencies for /bin/python3, ui.disabled=false for resource '/mnt/code/AlphaFold2.ipynb'
+13:37:14.561 [info] Process Execution: /bin/python3 -c "import ipykernel;print('6af208d0-cb9c-427f-b937-ff563e17efdf')"
+13:37:14.590 [info] Process Execution: /bin/python3 -c "import pip;print('6af208d0-cb9c-427f-b937-ff563e17efdf')"
+13:37:14.640 [info] Process Execution: /bin/python3 -c "import pip;print('6af208d0-cb9c-427f-b937-ff563e17efdf')"
+13:37:14.676 [info] Process Execution: /bin/python3 -m pip install -U --user ipykernel
+13:37:22.657 [info] Process Execution: /bin/python3 -c "import ipykernel;print('6af208d0-cb9c-427f-b937-ff563e17efdf')"
+13:37:22.800 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+13:37:22.823 [info] Process Execution: /bin/python3 -m pip list
+13:37:22.823 [info] Starting Kernel startUsingPythonInterpreter, .jvsc74a57bd0916dbcbb3f70747c44a77c7bcd40155683ae19c65e1c03b4aa3499c5328201f1./bin/python3./bin/python3.-m#ipykernel_launcher  (Python Path: /bin/python3, Unknown, 3.8.10) for '/mnt/code/AlphaFold2.ipynb' (disableUI=false)
+13:37:22.839 [info] Process Execution: /bin/python3 -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:37:22.918 [info] Process Execution: /bin/python3 -m ipykernel_launcher --ip=127.0.0.1 --stdin=9020 --control=9018 --hb=9017 --Session.signature_scheme="hmac-sha256" --Session.key=b"3def1fcc-2b06-4931-a9d3-67abbd5bb3ae" --shell=9019 --transport="tcp" --iopub=9021 --f=~/.local/share/jupyter/runtime/kernel-v2-241HXb2dzrzI6ei.json
+    > cwd: /mnt/code
+13:37:23.522 [info] ipykernel version & path 6.29.5, ~/.local/lib/python3.8/site-packages/ipykernel/__init__.py for /bin/python3
+13:37:24.455 [info] Started Kernel Python 3.8.10 (pid: 4005)
+13:37:24.455 [info] Started new session dd7e2ad6-5397-4ac6-b8d1-f72494b5a8d9
+13:37:24.507 [info] Kernel acknowledged execution of cell 2 @ 1749476244507
+13:37:24.511 [info] End cell 2 execution @ 1749476244510, started @ 1749476244507, elapsed time = 0.003s
+13:37:24.513 [info] Kernel acknowledged execution of cell 3 @ 1749476244513
+13:37:24.523 [info] End cell 3 execution @ 1749476244522, started @ 1749476244513, elapsed time = 0.009s
+13:37:24.529 [info] Kernel acknowledged execution of cell 4 @ 1749476244529
+13:37:24.531 [info] End cell 4 execution @ 1749476244531, started @ 1749476244529, elapsed time = 0.002s
+13:37:24.536 [info] Kernel acknowledged execution of cell 5 @ 1749476244536
+13:37:24.539 [info] End cell 5 execution @ 1749476244539, started @ 1749476244536, elapsed time = 0.003s
+13:37:24.544 [info] Kernel acknowledged execution of cell 6 @ 1749476244544
+13:38:15.383 [info] End cell 6 execution @ 1749476295383, started @ 1749476244544, elapsed time = 50.839s
+13:38:15.391 [info] Kernel acknowledged execution of cell 7 @ 1749476295390
+13:38:15.393 [info] End cell 7 execution @ 1749476295393, started @ 1749476295390, elapsed time = 0.003s
+13:38:15.398 [info] Kernel acknowledged execution of cell 8 @ 1749476295397
+13:38:29.453 [info] End cell 8 execution @ 1749476309453, started @ 1749476295397, elapsed time = 14.056s
+13:38:29.464 [info] Kernel acknowledged execution of cell 9 @ 1749476309463
+13:38:29.675 [info] End cell 9 execution @ 1749476309674, started @ 1749476309463, elapsed time = 0.211s
+13:38:29.675 [warn] Cancel all remaining cells due to cancellation or failure in execution
+13:38:29.675 [info] End cell 10 execution @ undefined, started @ undefined, elapsed time = 0s
+13:38:29.675 [info] End cell 11 execution @ undefined, started @ undefined, elapsed time = 0s
+13:38:29.675 [info] End cell 12 execution @ undefined, started @ undefined, elapsed time = 0s
+13:44:18.455 [info] Handle Execution of Cells 6 for /mnt/code/AlphaFold2.ipynb
+13:44:18.465 [info] Kernel acknowledged execution of cell 6 @ 1749476658464
+13:44:32.709 [info] Handle Execution of Cells 8 for /mnt/code/AlphaFold2.ipynb
+13:44:43.891 [info] End cell 6 execution @ 1749476683890, started @ 1749476658464, elapsed time = 25.426s
+13:44:43.895 [info] Kernel acknowledged execution of cell 8 @ 1749476683895
+13:44:50.737 [info] End cell 8 execution @ 1749476690736, started @ 1749476683895, elapsed time = 6.841s
+13:44:58.444 [info] Restart requested /mnt/code/AlphaFold2.ipynb
+13:44:58.574 [warn] Failed to get activated env vars for /bin/python3 in 127ms
+13:44:58.628 [error] Unable to determine site packages path for python /bin/python3 (Unknown)
+13:44:58.639 [info] Process Execution: /bin/python3 -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:44:58.657 [info] Process Execution: /bin/python3 -m ipykernel_launcher --ip=127.0.0.1 --stdin=9025 --control=9023 --hb=9022 --Session.signature_scheme="hmac-sha256" --Session.key=b"d1e23af5-0552-4b9b-8a1a-a63deaae7f2d" --shell=9024 --transport="tcp" --iopub=9026 --f=~/.local/share/jupyter/runtime/kernel-v2-241QnYWmYrKGMyB.json
+    > cwd: /mnt/code
+13:44:59.330 [info] ipykernel version & path 6.29.5, ~/.local/lib/python3.8/site-packages/ipykernel/__init__.py for /bin/python3
+13:45:00.131 [info] Started Kernel Python 3.8.10 (pid: 6159)
+13:45:00.131 [info] Started new session 31700b3a-dbac-4b94-a658-979d8ff43541
+13:45:00.131 [info] Shutdown old session dd7e2ad6-5397-4ac6-b8d1-f72494b5a8d9
+13:45:00.132 [info] Dispose Kernel process 4005.
+13:45:05.499 [info] Handle Execution of Cells 2,3,4,5,6,7,8,9,10,11,12 for /mnt/code/AlphaFold2.ipynb
+13:45:05.508 [info] Kernel acknowledged execution of cell 2 @ 1749476705508
+13:45:05.520 [info] End cell 2 execution @ 1749476705520, started @ 1749476705508, elapsed time = 0.012s
+13:45:05.528 [info] Kernel acknowledged execution of cell 3 @ 1749476705527
+13:45:05.530 [info] End cell 3 execution @ 1749476705530, started @ 1749476705527, elapsed time = 0.003s
+13:45:05.538 [info] Kernel acknowledged execution of cell 4 @ 1749476705538
+13:45:05.541 [info] End cell 4 execution @ 1749476705540, started @ 1749476705538, elapsed time = 0.002s
+13:45:05.546 [info] Kernel acknowledged execution of cell 5 @ 1749476705546
+13:45:05.548 [info] End cell 5 execution @ 1749476705548, started @ 1749476705546, elapsed time = 0.002s
+13:45:05.551 [info] Kernel acknowledged execution of cell 6 @ 1749476705551
+13:45:05.553 [info] End cell 6 execution @ 1749476705553, started @ 1749476705551, elapsed time = 0.002s
+13:45:05.556 [info] Kernel acknowledged execution of cell 7 @ 1749476705556
+13:45:05.558 [info] End cell 7 execution @ 1749476705558, started @ 1749476705556, elapsed time = 0.002s
+13:45:05.560 [info] Kernel acknowledged execution of cell 8 @ 1749476705560
+13:45:05.563 [info] End cell 8 execution @ 1749476705563, started @ 1749476705560, elapsed time = 0.003s
+13:45:05.565 [info] Kernel acknowledged execution of cell 9 @ 1749476705565
+13:45:05.770 [info] End cell 9 execution @ 1749476705770, started @ 1749476705565, elapsed time = 0.205s
+13:45:05.770 [warn] Cancel all remaining cells due to cancellation or failure in execution
+13:45:05.770 [info] End cell 10 execution @ undefined, started @ undefined, elapsed time = 0s
+13:45:05.770 [info] End cell 11 execution @ undefined, started @ undefined, elapsed time = 0s
+13:45:05.770 [info] End cell 12 execution @ undefined, started @ undefined, elapsed time = 0s
+13:45:35.788 [info] Handle Execution of Cells 6 for /mnt/code/AlphaFold2.ipynb
+13:45:35.796 [info] Kernel acknowledged execution of cell 6 @ 1749476735795
+13:45:39.739 [info] End cell 6 execution @ 1749476739739, started @ 1749476735795, elapsed time = 3.944s
+13:45:47.669 [info] Handle Execution of Cells 9 for /mnt/code/AlphaFold2.ipynb
+13:45:47.680 [info] Kernel acknowledged execution of cell 9 @ 1749476747679
+13:45:47.710 [info] End cell 9 execution @ 1749476747709, started @ 1749476747679, elapsed time = 0.03s
+13:45:47.710 [warn] Cancel all remaining cells due to cancellation or failure in execution
+13:46:02.434 [info] Disposing kernel .jvsc74a57bd0916dbcbb3f70747c44a77c7bcd40155683ae19c65e1c03b4aa3499c5328201f1./bin/python3./bin/python3.-m#ipykernel_launcher for notebook /mnt/code/AlphaFold2.ipynb due to selection of another kernel or closing of the notebook
+13:46:02.434 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+13:46:02.435 [info] Dispose Kernel process 6159.
+13:46:02.517 [info] Starting Kernel startUsingPythonInterpreter, .jvsc74a57bd0d4d1e4263499bec80672ea0156c357c1ee493ec2b1c70f0acce89fc37c4a6abe./opt/conda/python./opt/conda/python.-m#ipykernel_launcher  (Python Path: /opt/conda/bin/python, Conda, base, 3.9.18) for '/mnt/code/AlphaFold2.ipynb' (disableUI=true)
+13:46:04.149 [info] Process Execution: /opt/conda/bin/python -m pip list
+13:46:04.226 [info] Process Execution: /opt/conda/bin/python -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:46:04.248 [info] Process Execution: /opt/conda/bin/python -m ipykernel_launcher --ip=127.0.0.1 --stdin=9020 --control=9018 --hb=9017 --Session.signature_scheme="hmac-sha256" --Session.key=b"c2ec8e2f-a01d-46e2-869c-98034624cd94" --shell=9019 --transport="tcp" --iopub=9021 --f=~/.local/share/jupyter/runtime/kernel-v2-241pwuTMHut8PXA.json
+    > cwd: /mnt/code
+13:46:04.718 [info] ipykernel version & path 6.19.4, /opt/conda/lib/python3.9/site-packages/ipykernel/__init__.py for /opt/conda/bin/python
+13:46:06.120 [info] Started Kernel base (Python 3.9.18) (pid: 6518)
+13:46:06.120 [info] Started new session 8ba5010a-1a42-446c-9e27-ee263fd07dd9
+13:46:14.563 [info] Handle Execution of Cells 2,3,4,5,6,7,8,9,10,11,12 for /mnt/code/AlphaFold2.ipynb
+13:46:14.581 [info] Kernel acknowledged execution of cell 2 @ 1749476774580
+13:46:14.583 [info] End cell 2 execution @ 1749476774583, started @ 1749476774580, elapsed time = 0.003s
+13:46:14.591 [info] Kernel acknowledged execution of cell 3 @ 1749476774591
+13:46:14.593 [info] End cell 3 execution @ 1749476774593, started @ 1749476774591, elapsed time = 0.002s
+13:46:14.601 [info] Kernel acknowledged execution of cell 4 @ 1749476774600
+13:46:14.603 [info] End cell 4 execution @ 1749476774603, started @ 1749476774600, elapsed time = 0.003s
+13:46:14.609 [info] Kernel acknowledged execution of cell 5 @ 1749476774609
+13:46:14.611 [info] End cell 5 execution @ 1749476774611, started @ 1749476774609, elapsed time = 0.002s
+13:46:14.615 [info] Kernel acknowledged execution of cell 6 @ 1749476774615
+13:46:18.427 [info] End cell 6 execution @ 1749476778426, started @ 1749476774615, elapsed time = 3.811s
+13:46:18.431 [info] Kernel acknowledged execution of cell 7 @ 1749476778431
+13:46:18.433 [info] End cell 7 execution @ 1749476778433, started @ 1749476778431, elapsed time = 0.002s
+13:46:18.438 [info] Kernel acknowledged execution of cell 8 @ 1749476778437
+13:46:18.440 [info] End cell 8 execution @ 1749476778439, started @ 1749476778437, elapsed time = 0.002s
+13:46:18.451 [info] Kernel acknowledged execution of cell 9 @ 1749476778451
+13:46:20.732 [warn] StdErr from Kernel Process /bin/sh: 1: nvidia-smi: not found
+13:46:25.396 [error] Disposing session as kernel process died ExitCode: undefined, Reason: /bin/sh: 1: nvidia-smi: not found
+
+13:46:25.396 [info] Dispose Kernel process 6518.
+13:46:25.397 [error] Raw kernel process exited code: undefined
+13:46:25.401 [error] Error in waiting for cell to complete [Error: Canceled future for execute_request message before replies were done
+	at t.KernelShellFutureHandler.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:32375)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51383
+	at Map.forEach (<anonymous>)
+	at v._clearKernelState (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51368)
+	at v.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:44850)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109965
+	at ce (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:2156310)
+	at vy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109941)
+	at wy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:113311)
+	at process.processTicksAndRejections (node:internal/process/task_queues:95:5)]
+13:46:25.402 [warn] Cell completed with errors {
+  message: 'Canceled future for execute_request message before replies were done'
+}
+13:46:25.404 [info] End cell 9 execution @ 1749476785404, started @ 1749476778451, elapsed time = 6.953s
+13:46:25.404 [warn] Cancel all remaining cells due to cancellation or failure in execution
+13:46:25.404 [info] End cell 10 execution @ undefined, started @ undefined, elapsed time = 0s
+13:46:25.404 [info] End cell 11 execution @ undefined, started @ undefined, elapsed time = 0s
+13:46:25.405 [info] End cell 12 execution @ undefined, started @ undefined, elapsed time = 0s
+13:46:25.540 [info] End cell 9 execution @ undefined, started @ undefined, elapsed time = 0s
+13:46:43.222 [info] Handle Execution of Cells 7 for /mnt/code/AlphaFold2.ipynb
+13:46:45.967 [info] Restart requested /mnt/code/AlphaFold2.ipynb
+13:46:45.982 [info] Process Execution: /opt/conda/bin/python -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:46:46.006 [info] Process Execution: /opt/conda/bin/python -m ipykernel_launcher --ip=127.0.0.1 --stdin=9020 --control=9018 --hb=9017 --Session.signature_scheme="hmac-sha256" --Session.key=b"d4394607-50cd-4ba4-8146-4e24be08d213" --shell=9019 --transport="tcp" --iopub=9021 --f=~/.local/share/jupyter/runtime/kernel-v2-241OLuZPsspU7Oj.json
+    > cwd: /mnt/code
+13:46:46.258 [info] ipykernel version & path 6.19.4, /opt/conda/lib/python3.9/site-packages/ipykernel/__init__.py for /opt/conda/bin/python
+13:46:46.655 [info] Started Kernel base (Python 3.9.18) (pid: 6929)
+13:46:46.656 [info] Started new session bc242bce-a11c-49e4-9863-8b30a418bcbc
+13:46:46.656 [info] Shutdown old session undefined
+13:46:46.741 [info] Kernel acknowledged execution of cell 7 @ 1749476806740
+13:46:48.319 [info] End cell 7 execution @ 1749476808319, started @ 1749476806740, elapsed time = 1.579s
+13:46:55.187 [info] Restart requested /mnt/code/AlphaFold2.ipynb
+13:46:55.197 [info] Process Execution: /opt/conda/bin/python -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:46:55.224 [info] Process Execution: /opt/conda/bin/python -m ipykernel_launcher --ip=127.0.0.1 --stdin=9025 --control=9023 --hb=9022 --Session.signature_scheme="hmac-sha256" --Session.key=b"095bebbf-b0c0-466f-9ce9-63b44bb445b9" --shell=9024 --transport="tcp" --iopub=9026 --f=~/.local/share/jupyter/runtime/kernel-v2-2411YXq8YGV5mQ1.json
+    > cwd: /mnt/code
+13:46:55.529 [info] ipykernel version & path 6.19.4, /opt/conda/lib/python3.9/site-packages/ipykernel/__init__.py for /opt/conda/bin/python
+13:46:56.249 [info] Started Kernel base (Python 3.9.18) (pid: 6989)
+13:46:56.249 [info] Started new session ca810fa7-6161-41fb-b57e-60a851abee1b
+13:46:56.250 [info] Shutdown old session bc242bce-a11c-49e4-9863-8b30a418bcbc
+13:46:56.250 [info] Dispose Kernel process 6929.
+13:47:03.690 [info] Handle Execution of Cells 2,3,4,5,6,7,8,9,10,11,12 for /mnt/code/AlphaFold2.ipynb
+13:47:03.704 [info] Kernel acknowledged execution of cell 2 @ 1749476823704
+13:47:03.711 [info] End cell 2 execution @ 1749476823711, started @ 1749476823704, elapsed time = 0.007s
+13:47:03.720 [info] Kernel acknowledged execution of cell 3 @ 1749476823719
+13:47:03.721 [info] End cell 3 execution @ 1749476823721, started @ 1749476823719, elapsed time = 0.002s
+13:47:03.729 [info] Kernel acknowledged execution of cell 4 @ 1749476823729
+13:47:03.732 [info] End cell 4 execution @ 1749476823732, started @ 1749476823729, elapsed time = 0.003s
+13:47:03.740 [info] Kernel acknowledged execution of cell 5 @ 1749476823739
+13:47:03.742 [info] End cell 5 execution @ 1749476823742, started @ 1749476823739, elapsed time = 0.003s
+13:47:03.745 [info] Kernel acknowledged execution of cell 6 @ 1749476823745
+13:47:03.748 [info] End cell 6 execution @ 1749476823748, started @ 1749476823745, elapsed time = 0.003s
+13:47:03.752 [info] Kernel acknowledged execution of cell 7 @ 1749476823752
+13:47:03.755 [info] End cell 7 execution @ 1749476823755, started @ 1749476823752, elapsed time = 0.003s
+13:47:03.758 [info] Kernel acknowledged execution of cell 8 @ 1749476823758
+13:47:03.761 [info] End cell 8 execution @ 1749476823761, started @ 1749476823758, elapsed time = 0.003s
+13:47:03.775 [info] Kernel acknowledged execution of cell 9 @ 1749476823775
+13:47:05.826 [warn] StdErr from Kernel Process /bin/sh: 1: nvidia-smi: not found
+13:47:09.349 [error] Disposing session as kernel process died ExitCode: undefined, Reason: /bin/sh: 1: nvidia-smi: not found
+
+13:47:09.350 [info] Dispose Kernel process 6989.
+13:47:09.350 [error] Raw kernel process exited code: undefined
+13:47:09.353 [error] Error in waiting for cell to complete [Error: Canceled future for execute_request message before replies were done
+	at t.KernelShellFutureHandler.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:32375)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51383
+	at Map.forEach (<anonymous>)
+	at v._clearKernelState (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51368)
+	at v.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:44850)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109965
+	at ce (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:2156310)
+	at vy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109941)
+	at wy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:113311)
+	at process.processTicksAndRejections (node:internal/process/task_queues:95:5)]
+13:47:09.353 [warn] Cell completed with errors {
+  message: 'Canceled future for execute_request message before replies were done'
+}
+13:47:09.354 [info] End cell 9 execution @ 1749476829354, started @ 1749476823775, elapsed time = 5.579s
+13:47:09.354 [warn] Cancel all remaining cells due to cancellation or failure in execution
+13:47:09.354 [info] End cell 10 execution @ undefined, started @ undefined, elapsed time = 0s
+13:47:09.354 [info] End cell 11 execution @ undefined, started @ undefined, elapsed time = 0s
+13:47:09.354 [info] End cell 12 execution @ undefined, started @ undefined, elapsed time = 0s
+13:47:09.569 [info] End cell 9 execution @ undefined, started @ undefined, elapsed time = 0s
+13:48:40.486 [info] Disposing kernel .jvsc74a57bd0d4d1e4263499bec80672ea0156c357c1ee493ec2b1c70f0acce89fc37c4a6abe./opt/conda/python./opt/conda/python.-m#ipykernel_launcher for notebook /mnt/code/AlphaFold2.ipynb due to selection of another kernel or closing of the notebook
+13:48:40.486 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+13:48:40.551 [info] Starting Kernel startUsingPythonInterpreter, .jvsc74a57bd05d11fc04813316d0ab1a556df5cbaf233de9c8b4a5b02f362e2bb4f0cfd073a0./mnt/code/.conda/python./mnt/code/.conda/python.-m#ipykernel_launcher  (Python Path: /mnt/code/.conda/bin/python, Conda, 3.10.18) for '/mnt/code/AlphaFold2.ipynb' (disableUI=true)
+13:48:42.219 [info] Process Execution: /mnt/code/.conda/bin/python -m pip list
+13:48:42.237 [info] Process Execution: /mnt/code/.conda/bin/python -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:48:42.261 [info] Process Execution: /mnt/code/.conda/bin/python -m ipykernel_launcher --ip=127.0.0.1 --stdin=9020 --control=9018 --hb=9017 --Session.signature_scheme="hmac-sha256" --Session.key=b"ea02a5c1-ff4c-4296-a986-2f526efae931" --shell=9019 --transport="tcp" --iopub=9021 --f=~/.local/share/jupyter/runtime/kernel-v2-241vrKUGkh1qGw7.json
+    > cwd: /mnt/code
+13:48:42.925 [info] ipykernel version & path 6.29.5, /mnt/code/.conda/lib/python3.10/site-packages/ipykernel/__init__.py for /mnt/code/.conda/bin/python
+13:48:44.042 [info] Started Kernel .conda (Python 3.10.18) (pid: 7691)
+13:48:44.042 [info] Started new session 1d9ae397-571f-4422-a948-922d074b4019
+13:59:20.629 [info] Handle Execution of Cells 6 for /mnt/code/AlphaFold2.ipynb
+13:59:20.635 [info] Kernel acknowledged execution of cell 6 @ 1749477560634
+13:59:22.248 [info] End cell 6 execution @ 1749477562248, started @ 1749477560634, elapsed time = 1.614s
+13:59:33.691 [info] Restart requested /mnt/code/AlphaFold2.ipynb
+13:59:34.546 [info] Process Execution: /mnt/code/.conda/bin/python -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+13:59:34.569 [info] Process Execution: /mnt/code/.conda/bin/python -m ipykernel_launcher --ip=127.0.0.1 --stdin=9025 --control=9023 --hb=9022 --Session.signature_scheme="hmac-sha256" --Session.key=b"a2eff700-c5c0-449b-8ce9-2d8733dbbfc9" --shell=9024 --transport="tcp" --iopub=9026 --f=~/.local/share/jupyter/runtime/kernel-v2-241d7oMjCLLq4Hz.json
+    > cwd: /mnt/code
+13:59:34.844 [info] ipykernel version & path 6.29.5, /mnt/code/.conda/lib/python3.10/site-packages/ipykernel/__init__.py for /mnt/code/.conda/bin/python
+13:59:35.255 [info] Started Kernel .conda (Python 3.10.18) (pid: 10355)
+13:59:35.255 [info] Started new session 3bc74a60-a716-4736-8e28-8e431c2c6160
+13:59:35.256 [info] Shutdown old session 1d9ae397-571f-4422-a948-922d074b4019
+13:59:35.256 [info] Dispose Kernel process 7691.
+13:59:38.113 [info] Handle Execution of Cells 2,3,4,5,6,7,8,9,10,11,12 for /mnt/code/AlphaFold2.ipynb
+13:59:38.137 [info] Kernel acknowledged execution of cell 2 @ 1749477578137
+13:59:38.138 [info] End cell 2 execution @ 1749477578138, started @ 1749477578137, elapsed time = 0.001s
+13:59:38.155 [info] Kernel acknowledged execution of cell 3 @ 1749477578155
+13:59:38.156 [info] End cell 3 execution @ 1749477578156, started @ 1749477578155, elapsed time = 0.001s
+13:59:38.163 [info] Kernel acknowledged execution of cell 4 @ 1749477578163
+13:59:38.165 [info] End cell 4 execution @ 1749477578165, started @ 1749477578163, elapsed time = 0.002s
+13:59:38.167 [info] Kernel acknowledged execution of cell 5 @ 1749477578167
+13:59:38.218 [info] End cell 5 execution @ 1749477578217, started @ 1749477578167, elapsed time = 0.05s
+13:59:38.221 [info] Kernel acknowledged execution of cell 6 @ 1749477578221
+13:59:38.223 [info] End cell 6 execution @ 1749477578223, started @ 1749477578221, elapsed time = 0.002s
+13:59:38.227 [info] Kernel acknowledged execution of cell 7 @ 1749477578226
+13:59:38.228 [info] End cell 7 execution @ 1749477578228, started @ 1749477578226, elapsed time = 0.002s
+13:59:38.232 [info] Kernel acknowledged execution of cell 8 @ 1749477578232
+13:59:38.234 [info] End cell 8 execution @ 1749477578234, started @ 1749477578232, elapsed time = 0.002s
+13:59:38.242 [info] Kernel acknowledged execution of cell 9 @ 1749477578242
+13:59:43.674 [warn] StdErr from Kernel Process /bin/sh: 1: nvidia-smi: not found
+14:00:12.763 [error] Disposing session as kernel process died ExitCode: undefined, Reason: /bin/sh: 1: nvidia-smi: not found
+
+14:00:12.764 [info] Dispose Kernel process 10355.
+14:00:12.764 [error] Raw kernel process exited code: undefined
+14:00:12.769 [error] Error in waiting for cell to complete [Error: Canceled future for execute_request message before replies were done
+	at t.KernelShellFutureHandler.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:32375)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51383
+	at Map.forEach (<anonymous>)
+	at v._clearKernelState (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:51368)
+	at v.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:44850)
+	at ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109965
+	at ce (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:2:2156310)
+	at vy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:109941)
+	at wy.dispose (~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/out/extension.node.js:24:113311)
+	at process.processTicksAndRejections (node:internal/process/task_queues:95:5)]
+14:00:12.770 [warn] Cell completed with errors {
+  message: 'Canceled future for execute_request message before replies were done'
+}
+14:00:12.815 [info] End cell 9 execution @ 1749477612815, started @ 1749477578242, elapsed time = 34.573s
+14:00:12.815 [warn] Cancel all remaining cells due to cancellation or failure in execution
+14:00:12.815 [info] End cell 10 execution @ undefined, started @ undefined, elapsed time = 0s
+14:00:12.815 [info] End cell 11 execution @ undefined, started @ undefined, elapsed time = 0s
+14:00:12.815 [info] End cell 12 execution @ undefined, started @ undefined, elapsed time = 0s
+14:00:13.086 [info] End cell 9 execution @ undefined, started @ undefined, elapsed time = 0s
+14:55:25.528 [info] Disposing HostJupyterExecution
+14:55:25.528 [info] Shutting down notebooks for fbf78aba-b333-4d54-baef-ab8af0f99b78
+14:55:25.528 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+14:55:25.528 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+14:55:25.528 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+14:55:25.528 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+14:55:25.529 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+14:55:25.529 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+14:55:25.529 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+14:55:25.531 [info] Disposing HostJupyterExecution

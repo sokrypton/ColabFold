@@ -1,0 +1,59 @@
+Experiment 'pythonTerminalEnvVarActivation' is active
+LSP Notebooks experiment is disabled -- not using Pylance
+LSP Notebooks interactive window support is disabled -- not in LSP Notebooks experiment
+> poetry env list --full-path
+cwd: .
+[ERROR 2025-5-9 13:27:34.815]: [Error: Command failed: poetry env list --full-path
+/bin/sh: 1: poetry: not found
+
+	at ChildProcess.exithandler (node:child_process:419:12)
+	at ChildProcess.emit (node:events:513:28)
+	at maybeClose (node:internal/child_process:1091:16)
+	at Socket.<anonymous> (node:internal/child_process:449:11)
+	at Socket.emit (node:events:513:28)
+	at Pipe.<anonymous> (node:net:322:12)] {
+  code: 127,
+  killed: false,
+  signal: null,
+  cmd: 'poetry env list --full-path'
+}
+> conda info --json
+> ./.conda/bin/python -I ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/interpreterInfo.py
+Python interpreter path: ./.conda/bin/python
+Python interpreter path: /opt/conda/bin/python
+Starting Jedi language server for code.
+> conda run -n base --no-capture-output python ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/printEnvVariables.py
+> /opt/conda/bin/python -I ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/interpreterInfo.py
+> /bin/python3 -I ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/interpreterInfo.py
+> /usr/bin/python3 -I ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/interpreterInfo.py
+> conda run -p ./.conda --no-capture-output python ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/printEnvVariables.py
+> conda run -p ./.conda --no-capture-output python ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/printEnvVariables.py
+> conda info --json
+Running Conda Env creation script:  [
+  '/opt/conda/bin/python',
+  '/home/ubuntu/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/create_conda.py',
+  '--git-ignore',
+  '--install',
+  '--python',
+  '3.11'
+]
+EXISTING_CONDA_ENV:/mnt/code/.conda
+Python interpreter path: ./.conda/bin/python
+Starting Jedi language server for code.
+> conda run -p ./.conda --no-capture-output python ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/printEnvVariables.py
+> conda info --json
+Running Conda Env creation script:  [
+  '/opt/conda/bin/python',
+  '/home/ubuntu/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/create_conda.py',
+  '--git-ignore',
+  '--install',
+  '--python',
+  '3.11'
+]
+EXISTING_CONDA_ENV:/mnt/code/.conda
+> conda run -n base --no-capture-output python ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/printEnvVariables.py
+> conda run -n base --no-capture-output python ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/printEnvVariables.py
+> conda run -n base --no-capture-output python ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/printEnvVariables.py
+> conda run -p ./.conda --no-capture-output python ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/printEnvVariables.py
+> conda run -p ./.conda --no-capture-output python ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/printEnvVariables.py
+> conda run -p ./.conda --no-capture-output python ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/printEnvVariables.py

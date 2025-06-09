@@ -168,10 +168,9 @@ def load_models_and_params(
 
             model_runner = model.RunModel(
                 model_config,
-                params,
-                extended_ptm_config={'calc_extended_ptm': calc_extra_ptm,
-                                     'use_probs_extended': use_probs_extra}
+                params
             )
+            #,extended_ptm_config={'calc_extended_ptm': calc_extra_ptm,'use_probs_extended': use_probs_extra}
         
         params = get_model_haiku_params(
             model_type=model_type,

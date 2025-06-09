@@ -1,0 +1,203 @@
+Experiment 'pythonTerminalEnvVarActivation' is active
+LSP Notebooks experiment is disabled -- not using Pylance
+LSP Notebooks interactive window support is disabled -- not in LSP Notebooks experiment
+> poetry env list --full-path
+cwd: .
+Python interpreter path: /opt/conda/bin/python
+[ERROR 2025-5-7 2:5:22.986]: [Error: Command failed: poetry env list --full-path
+/bin/sh: 1: poetry: not found
+
+	at ChildProcess.exithandler (node:child_process:419:12)
+	at ChildProcess.emit (node:events:513:28)
+	at maybeClose (node:internal/child_process:1091:16)
+	at Socket.<anonymous> (node:internal/child_process:449:11)
+	at Socket.emit (node:events:513:28)
+	at Pipe.<anonymous> (node:net:322:12)] {
+  code: 127,
+  killed: false,
+  signal: null,
+  cmd: 'poetry env list --full-path'
+}
+Starting Jedi language server for code.
+> conda info --json
+> conda run -n base --no-capture-output python ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/printEnvVariables.py
+> /opt/conda/bin/python -I ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/interpreterInfo.py
+> /bin/python3 -I ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/interpreterInfo.py
+> /usr/bin/python3 -I ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/interpreterInfo.py
+Running Conda Env creation script:  [
+  '/opt/conda/bin/python',
+  '/home/ubuntu/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/create_conda.py',
+  '--git-ignore',
+  '--install',
+  '--python',
+  '3.10'
+]
+Running: /opt/conda/bin/python -m conda create --yes --prefix .conda python=3.10
+Collecting package metadata (current_repodata.json): ...working...
+done
+Solving environment: ...working...
+done
+## Package Plan ##
+environment location: /mnt/code/.conda
+added / updated specs:
+- python=3.10
+The following packages will be downloaded:
+package                    |            build
+---------------------------|-----------------
+_libgcc_mutex-0.1          |             main           3 KB
+_openmp_mutex-5.1          |            1_gnu          21 KB
+bzip2-1.0.8                |       h5eee18b_6         262 KB
+ca-certificates-2025.2.25  |       h06a4308_0         129 KB
+expat-2.7.1                |       h6a678d5_0         182 KB
+ld_impl_linux-64-2.40      |       h12ee557_0         710 KB
+libffi-3.4.4               |       h6a678d5_1         141 KB
+libgcc-ng-11.2.0           |       h1234567_1         5.3 MB
+libgomp-11.2.0             |       h1234567_1         474 KB
+libstdcxx-ng-11.2.0        |       h1234567_1         4.7 MB
+libuuid-1.41.5             |       h5eee18b_0          27 KB
+libxcb-1.17.0              |       h9b100fa_0         430 KB
+ncurses-6.4                |       h6a678d5_0         914 KB
+openssl-3.0.16             |       h5eee18b_0         5.2 MB
+pip-25.1                   |     pyhc872135_2         1.3 MB
+pthread-stubs-0.3          |       h0ce48e5_1           5 KB
+python-3.10.18             |       h1a3bd86_0        26.5 MB
+readline-8.2               |       h5eee18b_0         357 KB
+setuptools-78.1.1          |  py310h06a4308_0         1.7 MB
+sqlite-3.45.3              |       h5eee18b_0         1.2 MB
+tk-8.6.14                  |       h993c535_1         3.4 MB
+tzdata-2025b               |       h04d1e81_0         116 KB
+wheel-0.45.1               |  py310h06a4308_0         115 KB
+xorg-libx11-1.8.12         |       h9b100fa_1         895 KB
+xorg-libxau-1.0.12         |       h9b100fa_0          13 KB
+xorg-libxdmcp-1.1.5        |       h9b100fa_0          19 KB
+xorg-xorgproto-2024.1      |       h5eee18b_1         580 KB
+xz-5.6.4                   |       h5eee18b_1         567 KB
+zlib-1.2.13                |       h5eee18b_1         111 KB
+------------------------------------------------------------
+Total:        55.4 MB
+The following NEW packages will be INSTALLED:
+_libgcc_mutex      pkgs/main/linux-64::_libgcc_mutex-0.1-main
+_openmp_mutex      pkgs/main/linux-64::_openmp_mutex-5.1-1_gnu
+bzip2              pkgs/main/linux-64::bzip2-1.0.8-h5eee18b_6
+ca-certificates    pkgs/main/linux-64::ca-certificates-2025.2.25-h06a4308_0
+expat              pkgs/main/linux-64::expat-2.7.1-h6a678d5_0
+ld_impl_linux-64   pkgs/main/linux-64::ld_impl_linux-64-2.40-h12ee557_0
+libffi             pkgs/main/linux-64::libffi-3.4.4-h6a678d5_1
+libgcc-ng          pkgs/main/linux-64::libgcc-ng-11.2.0-h1234567_1
+libgomp            pkgs/main/linux-64::libgomp-11.2.0-h1234567_1
+libstdcxx-ng       pkgs/main/linux-64::libstdcxx-ng-11.2.0-h1234567_1
+libuuid            pkgs/main/linux-64::libuuid-1.41.5-h5eee18b_0
+libxcb             pkgs/main/linux-64::libxcb-1.17.0-h9b100fa_0
+ncurses            pkgs/main/linux-64::ncurses-6.4-h6a678d5_0
+openssl            pkgs/main/linux-64::openssl-3.0.16-h5eee18b_0
+pip                pkgs/main/noarch::pip-25.1-pyhc872135_2
+pthread-stubs      pkgs/main/linux-64::pthread-stubs-0.3-h0ce48e5_1
+python             pkgs/main/linux-64::python-3.10.18-h1a3bd86_0
+readline           pkgs/main/linux-64::readline-8.2-h5eee18b_0
+setuptools         pkgs/main/linux-64::setuptools-78.1.1-py310h06a4308_0
+sqlite             pkgs/main/linux-64::sqlite-3.45.3-h5eee18b_0
+tk                 pkgs/main/linux-64::tk-8.6.14-h993c535_1
+tzdata             pkgs/main/noarch::tzdata-2025b-h04d1e81_0
+wheel              pkgs/main/linux-64::wheel-0.45.1-py310h06a4308_0
+xorg-libx11        pkgs/main/linux-64::xorg-libx11-1.8.12-h9b100fa_1
+xorg-libxau        pkgs/main/linux-64::xorg-libxau-1.0.12-h9b100fa_0
+xorg-libxdmcp      pkgs/main/linux-64::xorg-libxdmcp-1.1.5-h9b100fa_0
+xorg-xorgproto     pkgs/main/linux-64::xorg-xorgproto-2024.1-h5eee18b_1
+xz                 pkgs/main/linux-64::xz-5.6.4-h5eee18b_1
+zlib               pkgs/main/linux-64::zlib-1.2.13-h5eee18b_1
+Downloading and Extracting Packages
+setuptools-78.1.1    | 1.7 MB    |            |   0%
+setuptools-78.1.1    | 1.7 MB    |            |   1%
+setuptools-78.1.1    | 1.7 MB    | ########## | 100%
+setuptools-78.1.1    | 1.7 MB    | ########## | 100%
+ca-certificates-2025 | 129 KB    |            |   0%
+ca-certificates-2025 | 129 KB    | ########## | 100%
+ncurses-6.4          | 914 KB    |            |   0%
+ncurses-6.4          | 914 KB    | ########## | 100%
+ncurses-6.4          | 914 KB    | ########## | 100%
+xz-5.6.4             | 567 KB    |            |   0%
+xz-5.6.4             | 567 KB    | ########## | 100%
+wheel-0.45.1         | 115 KB    |            |   0%
+wheel-0.45.1         | 115 KB    | ########## | 100%
+xorg-xorgproto-2024. | 580 KB    |            |   0%
+xorg-xorgproto-2024. | 580 KB    | ########## | 100%
+zlib-1.2.13          | 111 KB    |            |   0%
+zlib-1.2.13          | 111 KB    | ########## | 100%
+libgcc-ng-11.2.0     | 5.3 MB    |            |   0%
+libgcc-ng-11.2.0     | 5.3 MB    | ########## | 100%
+libgcc-ng-11.2.0     | 5.3 MB    | ########## | 100%
+ld_impl_linux-64-2.4 | 710 KB    |            |   0%
+ld_impl_linux-64-2.4 | 710 KB    | ########## | 100%
+expat-2.7.1          | 182 KB    |            |   0%
+expat-2.7.1          | 182 KB    | ########## | 100%
+xorg-libx11-1.8.12   | 895 KB    |            |   0%
+xorg-libx11-1.8.12   | 895 KB    | 1          |   2%
+xorg-libx11-1.8.12   | 895 KB    | ##5        |  25%
+xorg-libx11-1.8.12   | 895 KB    | ########## | 100%
+readline-8.2         | 357 KB    |            |   0%
+readline-8.2         | 357 KB    | ########## | 100%
+libuuid-1.41.5       | 27 KB     |            |   0%
+libuuid-1.41.5       | 27 KB     | ########## | 100%
+libgomp-11.2.0       | 474 KB    |            |   0%
+libgomp-11.2.0       | 474 KB    | ########## | 100%
+bzip2-1.0.8          | 262 KB    |            |   0%
+bzip2-1.0.8          | 262 KB    | ########## | 100%
+sqlite-3.45.3        | 1.2 MB    |            |   0%
+sqlite-3.45.3        | 1.2 MB    | ########## | 100%
+xorg-libxdmcp-1.1.5  | 19 KB     |            |   0%
+xorg-libxdmcp-1.1.5  | 19 KB     | ########## | 100%
+python-3.10.18       | 26.5 MB   |            |   0%
+python-3.10.18       | 26.5 MB   | #6         |  16%
+python-3.10.18       | 26.5 MB   | ####9      |  50%
+python-3.10.18       | 26.5 MB   | ########   |  81%
+python-3.10.18       | 26.5 MB   | ########## | 100%
+openssl-3.0.16       | 5.2 MB    |            |   0%
+openssl-3.0.16       | 5.2 MB    | ########## | 100%
+openssl-3.0.16       | 5.2 MB    | ########## | 100%
+xorg-libxau-1.0.12   | 13 KB     |            |   0%
+xorg-libxau-1.0.12   | 13 KB     | ########## | 100%
+libstdcxx-ng-11.2.0  | 4.7 MB    |            |   0%
+libstdcxx-ng-11.2.0  | 4.7 MB    | ###8       |  38%
+libstdcxx-ng-11.2.0  | 4.7 MB    | ########## | 100%
+libstdcxx-ng-11.2.0  | 4.7 MB    | ########## | 100%
+libxcb-1.17.0        | 430 KB    |            |   0%
+libxcb-1.17.0        | 430 KB    | ########## | 100%
+libffi-3.4.4         | 141 KB    |            |   0%
+libffi-3.4.4         | 141 KB    | ########## | 100%
+pthread-stubs-0.3    | 5 KB      |            |   0%
+pthread-stubs-0.3    | 5 KB      | ########## | 100%
+pip-25.1             | 1.3 MB    |            |   0%
+pip-25.1             | 1.3 MB    | ########## | 100%
+pip-25.1             | 1.3 MB    | ########## | 100%
+tk-8.6.14            | 3.4 MB    |            |   0%
+tk-8.6.14            | 3.4 MB    | ########## | 100%
+tk-8.6.14            | 3.4 MB    | ########## | 100%
+_libgcc_mutex-0.1    | 3 KB      |            |   0%
+_libgcc_mutex-0.1    | 3 KB      | ########## | 100%
+_openmp_mutex-5.1    | 21 KB     |            |   0%
+_openmp_mutex-5.1    | 21 KB     | ########## | 100%
+tzdata-2025b         | 116 KB    |            |   0%
+tzdata-2025b         | 116 KB    | ########## | 100%
+Preparing transaction: ...working...
+done
+Verifying transaction: ...working...
+done
+Executing transaction: ...working...
+> ./.conda/bin/python -I ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/interpreterInfo.py
+done
+#
+# To activate this environment, use
+#
+#     $ conda activate /mnt/code/.conda
+#
+# To deactivate an active environment, use
+#
+#     $ conda deactivate
+Retrieving notices: ...working...
+done
+CREATED_CONDA_ENV:/mnt/code/.conda
+Creating: /mnt/code/.conda/.gitignore
+> conda run -p ./.conda --no-capture-output python ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/printEnvVariables.py
+Python interpreter path: ./.conda/bin/python
+Starting Jedi language server for code.
+> conda run -p ./.conda --no-capture-output python ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/get_output_via_markers.py ~/.local/share/code-server/extensions/ms-python.python-2023.4.1/pythonFiles/printEnvVariables.py

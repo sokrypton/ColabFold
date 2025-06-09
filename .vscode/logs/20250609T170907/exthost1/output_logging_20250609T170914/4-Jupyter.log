@@ -1,0 +1,68 @@
+code-server (1.85.1, domino-glue01.pg.wwtatc.ai, server-distro)
+Jupyter Extension Version: 2023.9.100.
+Python Extension Version: 2023.4.1.
+Platform: linux (x64).
+Workspace folder /mnt/code, Home = /home/ubuntu
+17:09:21.532 [info] User belongs to experiment group 'NewJupyterSession'
+17:09:21.801 [info] Start refreshing Kernel Picker (1749488961801)
+17:09:21.808 [info] Using Pylance
+17:09:22.700 [info] Process Execution: /mnt/code/.conda/bin/python -m pip list
+17:09:22.937 [info] End refreshing Kernel Picker (1749488961801)
+17:09:34.321 [info] Handle Execution of Cells 2,3,4,5,6,7,8,9,10,11 for /mnt/code/AlphaFold2.ipynb
+17:09:34.330 [info] Starting Kernel startUsingPythonInterpreter, .jvsc74a57bd05d11fc04813316d0ab1a556df5cbaf233de9c8b4a5b02f362e2bb4f0cfd073a0./mnt/code/.conda/python./mnt/code/.conda/python.-m#ipykernel_launcher  (Python Path: /mnt/code/.conda/bin/python, Conda, 3.10.18) for '/mnt/code/AlphaFold2.ipynb' (disableUI=false)
+17:09:34.357 [info] Process Execution: /mnt/code/.conda/bin/python -c "import ipykernel; print(ipykernel.__version__); print("5dc3a68c-e34e-4080-9c3e-2a532b2ccb4d"); print(ipykernel.__file__)"
+17:09:34.396 [info] Process Execution: /mnt/code/.conda/bin/python -m ipykernel_launcher --ip=127.0.0.1 --stdin=9004 --control=9002 --hb=9001 --Session.signature_scheme="hmac-sha256" --Session.key=b"22f7e196-442b-4b67-8fe0-c87267d18dff" --shell=9003 --transport="tcp" --iopub=9005 --f=~/.local/share/jupyter/runtime/kernel-v2-247LDonH5tkSz4O.json
+    > cwd: /mnt/code
+17:09:34.704 [info] ipykernel version & path 6.29.5, /mnt/code/.conda/lib/python3.10/site-packages/ipykernel/__init__.py for /mnt/code/.conda/bin/python
+17:09:35.884 [info] Started Kernel .conda (Python 3.10.18) (pid: 428)
+17:09:35.885 [info] Started new session 9adcbf74-169d-4ba4-911d-50f5ded117eb
+17:09:35.947 [info] Process Execution: /mnt/code/.conda/bin/python ~/.local/share/code-server/extensions/ms-toolsai.jupyter-2023.9.100-universal/pythonFiles/printJupyterDataDir.py
+17:09:35.959 [info] Kernel acknowledged execution of cell 2 @ 1749488975958
+17:09:35.963 [info] End cell 2 execution @ 1749488975962, started @ 1749488975958, elapsed time = 0.004s
+17:09:35.966 [info] Kernel acknowledged execution of cell 3 @ 1749488975966
+17:09:35.973 [info] End cell 3 execution @ 1749488975973, started @ 1749488975966, elapsed time = 0.007s
+17:09:35.979 [info] Kernel acknowledged execution of cell 4 @ 1749488975979
+17:09:35.981 [info] End cell 4 execution @ 1749488975981, started @ 1749488975979, elapsed time = 0.002s
+17:09:35.987 [info] Kernel acknowledged execution of cell 5 @ 1749488975987
+17:09:35.989 [info] End cell 5 execution @ 1749488975989, started @ 1749488975987, elapsed time = 0.002s
+17:09:35.995 [info] Kernel acknowledged execution of cell 6 @ 1749488975995
+17:09:47.921 [info] End cell 6 execution @ 1749488987921, started @ 1749488975995, elapsed time = 11.926s
+17:09:47.926 [info] Kernel acknowledged execution of cell 7 @ 1749488987926
+17:09:55.401 [info] End cell 7 execution @ 1749488995401, started @ 1749488987926, elapsed time = 7.475s
+17:09:55.412 [info] Kernel acknowledged execution of cell 8 @ 1749488995412
+17:09:59.601 [warn] StdErr from Kernel Process /bin/sh: 1: nvidia-smi: not found
+17:10:32.520 [warn] StdErr from Kernel Process WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1749489032.517355     428 mlir_graph_optimization_pass.cc:425] MLIR V1 optimization pass is not enabled
+17:53:05.197 [info] End cell 7 execution @ 1749491585197, started @ 1749488995412, elapsed time = 2589.785s
+17:53:05.208 [info] Kernel acknowledged execution of cell 8 @ 1749491585207
+17:53:05.266 [info] End cell 8 execution @ 1749491585265, started @ 1749491585207, elapsed time = 0.058s
+17:53:05.274 [info] Kernel acknowledged execution of cell 9 @ 1749491585274
+17:53:05.285 [info] End cell 9 execution @ 1749491585285, started @ 1749491585274, elapsed time = 0.011s
+17:53:05.292 [info] Kernel acknowledged execution of cell 10 @ 1749491585292
+17:53:05.662 [info] End cell 10 execution @ 1749491585661, started @ 1749491585292, elapsed time = 0.369s
+17:53:05.662 [warn] Cancel all remaining cells due to cancellation or failure in execution
+18:02:46.802 [info] Handle Execution of Cells 10 for /mnt/code/AlphaFold2.ipynb
+18:02:46.813 [info] Kernel acknowledged execution of cell 10 @ 1749492166813
+18:02:46.816 [info] End cell 10 execution @ 1749492166816, started @ 1749492166813, elapsed time = 0.003s
+18:05:52.130 [info] Handle Execution of Cells 10 for /mnt/code/AlphaFold2.ipynb
+18:05:52.140 [info] Kernel acknowledged execution of cell 10 @ 1749492352140
+18:05:52.143 [info] End cell 10 execution @ 1749492352143, started @ 1749492352140, elapsed time = 0.003s
+18:05:55.372 [info] Handle Execution of Cells 10 for /mnt/code/AlphaFold2.ipynb
+18:05:55.379 [info] Kernel acknowledged execution of cell 10 @ 1749492355379
+18:05:55.382 [info] End cell 10 execution @ 1749492355382, started @ 1749492355379, elapsed time = 0.003s
+18:06:31.332 [info] Handle Execution of Cells 10 for /mnt/code/AlphaFold2.ipynb
+18:06:31.341 [info] Kernel acknowledged execution of cell 10 @ 1749492391341
+18:06:31.344 [info] End cell 10 execution @ 1749492391344, started @ 1749492391341, elapsed time = 0.003s
+18:06:34.962 [info] Handle Execution of Cells 10 for /mnt/code/AlphaFold2.ipynb
+18:06:34.969 [info] Kernel acknowledged execution of cell 10 @ 1749492394969
+18:06:34.972 [info] End cell 10 execution @ 1749492394972, started @ 1749492394969, elapsed time = 0.003s
+18:06:45.493 [info] Handle Execution of Cells 10 for /mnt/code/AlphaFold2.ipynb
+18:06:45.501 [info] Kernel acknowledged execution of cell 10 @ 1749492405501
+18:06:45.504 [info] End cell 10 execution @ 1749492405503, started @ 1749492405501, elapsed time = 0.002s
+18:07:41.220 [info] Handle Execution of Cells 10 for /mnt/code/AlphaFold2.ipynb
+18:07:41.226 [info] Kernel acknowledged execution of cell 10 @ 1749492461226
+18:07:41.342 [info] End cell 10 execution @ 1749492461342, started @ 1749492461226, elapsed time = 0.116s
+18:07:41.343 [warn] Cancel all remaining cells due to cancellation or failure in execution
+18:10:43.031 [info] Handle Execution of Cells 10 for /mnt/code/AlphaFold2.ipynb
+18:10:43.047 [info] Kernel acknowledged execution of cell 10 @ 1749492643047
+18:10:43.049 [info] End cell 10 execution @ 1749492643049, started @ 1749492643047, elapsed time = 0.002s
