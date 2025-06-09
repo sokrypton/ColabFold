@@ -1,0 +1,4 @@
+2025-06-09 13:28:05,118 WARNING: no GPU detected, will be using CPU
+2025-06-09 13:28:17,973 Found 5 citations for tools or databases
+2025-06-09 13:28:17,975 Query 1/1: test_a5e17_6 (length 59)
+2025-06-09 13:28:20,195 Setting max_seq=512, max_extra_seq=5120

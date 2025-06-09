@@ -286,3 +286,7 @@ Workspace folder /mnt/code, Home = /home/ubuntu
 02:35:00.065 [info] End cell 11 execution @ undefined, started @ undefined, elapsed time = 0s
 02:35:00.065 [info] End cell 12 execution @ undefined, started @ undefined, elapsed time = 0s
 02:35:00.212 [info] End cell 9 execution @ undefined, started @ undefined, elapsed time = 0s
+02:36:39.203 [info] Disposing HostJupyterExecution
+02:36:39.203 [info] Shutting down notebooks for 54579597-6b5e-4be5-9eca-177288390b45
+02:36:39.203 [info] Dispose Kernel '/mnt/code/AlphaFold2.ipynb' associated with '/mnt/code/AlphaFold2.ipynb'
+02:36:39.205 [info] Disposing HostJupyterExecution

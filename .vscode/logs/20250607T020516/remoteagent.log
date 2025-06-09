@@ -27,3 +27,5 @@
 
 2025-06-07 02:34:18.415 [info] [127.0.0.1][b30ba6ae][ExtensionHostConnection] <243> Kernel: starting (033f64ae-5cea-42a2-8c9d-c07c929199e7)
 
+2025-06-07 02:36:39.160 [info] [127.0.0.1][ad12d035][ManagementConnection] The client has disconnected gracefully, so the connection will be disposed.
+2025-06-07 02:36:39.251 [info] [127.0.0.1][b30ba6ae][ExtensionHostConnection] <243> Extension Host Process exited with code: 0, signal: null.

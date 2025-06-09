@@ -1,0 +1,31 @@
+2025-06-09 16:31:13.470 [info] 
+
+
+
+
+2025-06-09 16:31:13.478 [info] Extension host agent started.
+2025-06-09 16:31:15.967 [info] [127.0.0.1][0a15c659][ManagementConnection] New connection established.
+2025-06-09 16:31:16.939 [info] [127.0.0.1][4f90c8a5][ExtensionHostConnection] New connection established.
+2025-06-09 16:31:17.338 [info] [127.0.0.1][4f90c8a5][ExtensionHostConnection] <244> Launched Extension Host Process.
+2025-06-09 16:31:23.314 [info] Getting Manifest... ms-toolsai.jupyter-renderers
+2025-06-09 16:31:24.439 [info] Installing extension: ms-toolsai.jupyter-renderers
+2025-06-09 16:31:25.916 [info] Extension signature verification is not done: ms-toolsai.jupyter-renderers
+2025-06-09 16:31:27.630 [info] Extracted extension to file:///home/ubuntu/.local/share/code-server/extensions/ms-toolsai.jupyter-renderers-1.0.19-universal: ms-toolsai.jupyter-renderers
+2025-06-09 16:31:27.633 [info] Renamed to /home/ubuntu/.local/share/code-server/extensions/ms-toolsai.jupyter-renderers-1.0.19-universal
+2025-06-09 16:31:27.714 [info] Extracting extension completed. ms-toolsai.jupyter-renderers
+2025-06-09 16:31:27.717 [info] Extension installed successfully: ms-toolsai.jupyter-renderers
+2025-06-09 16:31:27.721 [info] Marked extension as uninstalled ms-toolsai.jupyter-renderers-1.0.17-universal
+2025-06-09 16:32:38.534 [info] [127.0.0.1][4f90c8a5][ExtensionHostConnection] <244> Kernel: starting (6862066d-afd1-417d-ac00-7ef9c4ab5a76)
+
+2025-06-09 16:35:32.496 [info] [127.0.0.1][4f90c8a5][ExtensionHostConnection] <244> Kernel: starting (dd8d5d68-f2de-40ff-8068-f7da5751d690)
+
+2025-06-09 16:40:23.998 [info] [127.0.0.1][4f90c8a5][ExtensionHostConnection] <244> Kernel: starting (fb75ef7d-3ee9-4041-959d-74657c18d6a3)
+
+2025-06-09 16:49:36.076 [info] [127.0.0.1][4f90c8a5][ExtensionHostConnection] <244> Kernel: starting (8db58a9d-aa8e-4e37-ae29-0d5ecef45168)
+
+2025-06-09 16:55:43.433 [info] [127.0.0.1][4f90c8a5][ExtensionHostConnection] <244> Kernel: starting (a9f0fac2-4b26-461b-bc01-e0f93354701d)
+
+2025-06-09 17:06:22.802 [info] [127.0.0.1][4f90c8a5][ExtensionHostConnection] <244> Kernel: starting (2c929299-c1bc-4c5b-8c60-d792267f4747)
+
+2025-06-09 17:08:20.595 [info] [127.0.0.1][0a15c659][ManagementConnection] The client has disconnected gracefully, so the connection will be disposed.
+2025-06-09 17:08:20.695 [info] [127.0.0.1][4f90c8a5][ExtensionHostConnection] <244> Extension Host Process exited with code: 0, signal: null.
