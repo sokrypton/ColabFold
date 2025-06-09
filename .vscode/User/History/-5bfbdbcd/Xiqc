@@ -1,0 +1,111 @@
+Adjusting imports
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch main
+# Your branch is up to date with 'origin/main'.
+#
+# Changes to be committed:
+#	new file:   .ipynb_checkpoints/AlphaFold2-checkpoint.ipynb
+#	new file:   .ipynb_checkpoints/Untitled-checkpoint.ipynb
+#	new file:   .vscode/CachedExtensionVSIXs/ms-toolsai.jupyter-renderers-1.0.19-universal
+#	new file:   .vscode/CachedProfilesData/__default__profile__/extensions.builtin.cache
+#	new file:   .vscode/User/History/-72386d8e/0N9h.ipynb
+#	new file:   .vscode/User/History/-72386d8e/1q6L.ipynb
+#	new file:   .vscode/User/History/-72386d8e/1zIE.ipynb
+#	new file:   .vscode/User/History/-72386d8e/5AvH.ipynb
+#	new file:   .vscode/User/History/-72386d8e/5yZl.ipynb
+#	new file:   .vscode/User/History/-72386d8e/6kK3.ipynb
+#	new file:   .vscode/User/History/-72386d8e/7GMs.ipynb
+#	new file:   .vscode/User/History/-72386d8e/DMpm.ipynb
+#	new file:   .vscode/User/History/-72386d8e/JWL1.ipynb
+#	new file:   .vscode/User/History/-72386d8e/K4QV.ipynb
+#	new file:   .vscode/User/History/-72386d8e/KmDp.ipynb
+#	new file:   .vscode/User/History/-72386d8e/MR4C.ipynb
+#	new file:   .vscode/User/History/-72386d8e/OwJN.ipynb
+#	new file:   .vscode/User/History/-72386d8e/Q6OF.ipynb
+#	new file:   .vscode/User/History/-72386d8e/QuV5.ipynb
+#	new file:   .vscode/User/History/-72386d8e/TL8j.ipynb
+#	new file:   .vscode/User/History/-72386d8e/TZBh.ipynb
+#	new file:   .vscode/User/History/-72386d8e/VtAK.ipynb
+#	new file:   .vscode/User/History/-72386d8e/W107.ipynb
+#	new file:   .vscode/User/History/-72386d8e/YDrh.ipynb
+#	new file:   .vscode/User/History/-72386d8e/YX1e.ipynb
+#	new file:   .vscode/User/History/-72386d8e/entries.json
+#	new file:   .vscode/User/History/-72386d8e/faAL.ipynb
+#	new file:   .vscode/User/History/-72386d8e/jBn2.ipynb
+#	new file:   .vscode/User/History/-72386d8e/oCTn.ipynb
+#	new file:   .vscode/User/History/-72386d8e/oVUi.ipynb
+#	new file:   .vscode/User/History/-72386d8e/uFtX.ipynb
+#	new file:   .vscode/User/History/-72386d8e/usNL.ipynb
+#	new file:   .vscode/User/History/-72386d8e/uzGJ.ipynb
+#	new file:   .vscode/User/History/-72386d8e/yJSl.ipynb
+#	new file:   .vscode/User/History/-7e3d69b7/entries.json
+#	new file:   .vscode/User/History/-7e3d69b7/zawl.py
+#	new file:   .vscode/User/caches/CachedConfigurations/folder/-7404150f/configuration.json
+#	new file:   .vscode/User/customBuiltinExtensionsCache.json
+#	new file:   .vscode/User/globalStorage/storage.json
+#	new file:   .vscode/User/systemExtensionsCache.json
+#	new file:   .vscode/User/workspaceStorage/31ef9a28/vscode.lock
+#	new file:   .vscode/coder.json
+#	new file:   .vscode/logs/20250607T020516/exthost1/output_logging_20250607T020521/1-Python.log
+#	new file:   .vscode/logs/20250607T020516/exthost1/output_logging_20250607T020521/2-Python Test Log.log
+#	new file:   .vscode/logs/20250607T020516/exthost1/output_logging_20250607T020521/3-Python Language Server.log
+#	new file:   .vscode/logs/20250607T020516/exthost1/output_logging_20250607T020521/4-Jupyter.log
+#	new file:   .vscode/logs/20250607T020516/exthost1/output_logging_20250607T020521/5-Jupyter Server Console.log
+#	new file:   .vscode/logs/20250607T020516/exthost1/remoteexthost.log
+#	new file:   .vscode/logs/20250607T020516/exthost1/vscode.git/Git.log
+#	new file:   .vscode/logs/20250607T020516/exthost1/vscode.github-authentication/GitHub Authentication.log
+#	new file:   .vscode/logs/20250607T020516/exthost1/vscode.github/GitHub.log
+#	new file:   .vscode/logs/20250607T020516/network.log
+#	new file:   .vscode/logs/20250607T020516/remoteagent.log
+#	new file:   .vscode/serve-web-key-half
+#	new file:   .vscode/settings.json
+#	modified:   AlphaFold2.ipynb
+#	new file:   COLABFOLD_READY
+#	new file:   Untitled.ipynb
+#	new file:   alphafold
+#	modified:   colabfold/alphafold/models.py
+#	new file:   colabfold/colabfold
+#	new file:   test_a5e17/test_a5e17.csv
+#	new file:   test_a5e17_0/test_a5e17_0.csv
+#	new file:   test_a5e17_1/test_a5e17_1.csv
+#	new file:   test_a5e17_2/log.txt
+#	new file:   test_a5e17_2/test_a5e17_2.csv
+#	new file:   test_a5e17_3/cite.bibtex
+#	new file:   test_a5e17_3/config.json
+#	new file:   test_a5e17_3/log.txt
+#	new file:   test_a5e17_3/test_a5e17_3.a3m
+#	new file:   test_a5e17_3/test_a5e17_3.csv
+#	new file:   test_a5e17_3/test_a5e17_3_coverage.png
+#	new file:   test_a5e17_3/test_a5e17_3_env/bfd.mgnify30.metaeuk30.smag30.a3m
+#	new file:   test_a5e17_3/test_a5e17_3_env/msa.sh
+#	new file:   test_a5e17_3/test_a5e17_3_env/out.tar.gz
+#	new file:   test_a5e17_3/test_a5e17_3_env/pdb70.m8
+#	new file:   test_a5e17_3/test_a5e17_3_env/uniref.a3m
+#	new file:   test_a5e17_4/cite.bibtex
+#	new file:   test_a5e17_4/config.json
+#	new file:   test_a5e17_4/log.txt
+#	new file:   test_a5e17_4/test_a5e17_4.a3m
+#	new file:   test_a5e17_4/test_a5e17_4.csv
+#	new file:   test_a5e17_4/test_a5e17_4_coverage.png
+#	new file:   test_a5e17_4/test_a5e17_4_env/bfd.mgnify30.metaeuk30.smag30.a3m
+#	new file:   test_a5e17_4/test_a5e17_4_env/msa.sh
+#	new file:   test_a5e17_4/test_a5e17_4_env/out.tar.gz
+#	new file:   test_a5e17_4/test_a5e17_4_env/pdb70.m8
+#	new file:   test_a5e17_4/test_a5e17_4_env/uniref.a3m
+#	new file:   test_a5e17_5/cite.bibtex
+#	new file:   test_a5e17_5/config.json
+#	new file:   test_a5e17_5/log.txt
+#	new file:   test_a5e17_5/test_a5e17_5.a3m
+#	new file:   test_a5e17_5/test_a5e17_5.csv
+#	new file:   test_a5e17_5/test_a5e17_5_coverage.png
+#	new file:   test_a5e17_5/test_a5e17_5_env/bfd.mgnify30.metaeuk30.smag30.a3m
+#	new file:   test_a5e17_5/test_a5e17_5_env/msa.sh
+#	new file:   test_a5e17_5/test_a5e17_5_env/out.tar.gz
+#	new file:   test_a5e17_5/test_a5e17_5_env/pdb70.m8
+#	new file:   test_a5e17_5/test_a5e17_5_env/uniref.a3m
+#
+# Changes not staged for commit:
+#	modified:   .vscode/logs/20250607T020516/exthost1/vscode.git/Git.log
+#
