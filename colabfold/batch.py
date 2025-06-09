@@ -62,6 +62,7 @@ from colabfold.utils import (
     get_commit,
     setup_logging,
     CFMMCIFIO,
+    AF3Utils,
 )
 from colabfold.input import (
     pair_msa,
@@ -1031,7 +1032,7 @@ def put_mmciffiles_into_resultdir(
 
 
 def run(
-    queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]]]],
+    queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]], Optional[List[Tuple[str, str,int]]]]],
     result_dir: Union[str, Path],
     num_models: int,
     is_complex: bool,
@@ -1145,7 +1146,7 @@ def run(
     # get max length
     max_len = 0
     max_num = 0
-    for _, query_sequence, _ in queries:
+    for _, query_sequence, _, _ in queries:
         N = 1 if isinstance(query_sequence,str) else len(query_sequence)
         L = len("".join(query_sequence))
         if L > max_len: max_len = L
@@ -1237,7 +1238,7 @@ def run(
     ranks, metrics = [],[]
     first_job = True
     job_number = 0
-    for job_number, (raw_jobname, query_sequence, a3m_lines) in enumerate(queries):
+    for job_number, (raw_jobname, query_sequence, a3m_lines, _) in enumerate(queries):
         if jobname_prefix is not None:
             # pad job number based on number of queries
             fill = len(str(len(queries)))
@@ -1504,6 +1505,64 @@ def set_model_type(is_complex: bool, model_type: str) -> str:
         else:
             model_type = "alphafold2_ptm"
     return model_type
+
+def generate_af3_input(
+    queries: List[Tuple[str, Union[str, List[str]], Optional[List[str]], Optional[List[Tuple[str, str, int]]]]],
+    result_dir: Union[str, Path],
+    msa_mode: str = "mmseqs2_uniref_env",
+    pair_mode: str = "unpaired_paired",
+    pairing_strategy: str = "greedy",
+    use_templates: bool = False,
+    custom_template_path: str = None,
+    jobname_prefix: Optional[str] = None,
+    host_url: str = DEFAULT_API_SERVER, #NOTE: what is this ?
+    user_agent: str = "", #NOTE: what is this ?
+    # is_complex: bool,
+    # model_type: str = "auto",
+):
+    result_dir = Path(result_dir) 
+    result_dir.mkdir(exist_ok=True)
+
+    job_number = 0
+
+    for job_number, (raw_jobname, query_sequences, a3m_lines, other_molecules) in enumerate(queries):
+        if jobname_prefix is not None:
+            # pad job number based on number of queries
+            fill = len(str(len(queries)))
+            jobname = safe_filename(jobname_prefix) + "_" + str(job_number).zfill(fill)
+            # job_number += 1 # Why add?
+        else:
+            jobname = safe_filename(raw_jobname)
+
+        ###########################################
+        # generate MSA (a3m_lines) and templates
+        ###########################################
+        try:
+            if a3m_lines is None:
+                (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
+                = get_msa_and_templates(jobname, query_sequences, a3m_lines, result_dir, msa_mode, use_templates,
+                    custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+
+            elif a3m_lines is not None:
+                (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
+                = unserialize_msa(a3m_lines, query_sequences)
+                # if use_templates:
+                #     (_, _, _, _, template_features) \
+                #         = get_msa_and_templates(jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
+                #             custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+
+            # save json
+            af3 = AF3Utils(jobname, query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa, other_molecules)
+            with open(result_dir.joinpath(f"{jobname}.json"), "w") as f:
+                f.write(json.dumps(af3.content, indent = 4))
+                
+            # save a3m
+            msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
+            result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
+
+        except Exception as e:
+            logger.exception(f"Failed to generate AF3 input json for {jobname}: Could not get MSA/templates. {e}")
+            continue
 
 def main():
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
@@ -1832,6 +1891,15 @@ def main():
         "Set to 0 to disable.",
     )
 
+    af3_group = parser.add_argument_group(
+        "AlphaFold3 arguments", ""
+    )
+    af3_group.add_argument(
+        "--af3-json",
+        help="Generate input JSON for AlphaFold3 from the provided FASTA/A3M file.",
+        action="store_true",
+    )
+    
     args = parser.parse_args()
 
     if (args.custom_template_path is not None) and (args.pdb_hit_file is not None):
@@ -1853,6 +1921,7 @@ def main():
     data_dir = Path(args.data or default_data_dir)
 
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
+
     model_type = set_model_type(is_complex, args.model_type)
 
     if args.msa_only:
@@ -1878,6 +1947,23 @@ def main():
     use_probs_extra = False if args.no_use_probs_extra else True
 
     user_agent = f"colabfold/{version}"
+
+    if args.af3_json:
+        generate_af3_input(
+            queries=queries,
+            result_dir=args.results,
+            msa_mode=args.msa_mode,
+            pair_mode=args.pair_mode,
+            pairing_strategy=args.pair_strategy,
+            use_templates=args.templates,
+            custom_template_path=args.custom_template_path,
+            jobname_prefix=args.jobname_prefix,
+            host_url=args.host_url,
+            user_agent=user_agent,
+            # extra_molecules=extra_molecules,
+        )
+        return
+    
     run(
         queries=queries,
         result_dir=args.results,

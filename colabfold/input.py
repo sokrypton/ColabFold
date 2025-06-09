@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple, Union
 from pathlib import Path
 import random
 import logging
+from colabfold.utils import MolType
 logger = logging.getLogger(__name__)
 
 def safe_filename(file: str) -> str:
@@ -114,11 +115,38 @@ def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
 
     return sequences, descriptions
 
+def classify_molecules(query_sequence: str) -> Tuple[List[str], Optional[List[Tuple[MolType, str, int]]]]:
+    """Classifies the sequences in the query sequence string into protein and non-protein sequences.
+
+    Returns a tuple of two lists:
+    * A list of protein sequences.
+    * A list of tuples, each containing a molecule type, a sequence, and number of copies.
+    """
+    sequences = query_sequence.upper().split(":")
+    protein_queries = []
+    other_queries = []
+    for seq in sequences:
+        if seq.count("|") == 0:
+            protein_queries.append(seq)
+        else:
+            parts = seq.split("|")
+            moltype, sequence, *rest = parts
+            moltype = MolType.get_moltype(moltype)
+            if moltype == MolType.SMILES:
+                sequence = sequence.replace(";", ":")
+            copies = int(rest[0]) if rest else 1
+            other_queries.append((moltype, sequence, copies))  # (molecule type, sequence, copies)
+
+    if len(other_queries) == 0:
+        other_queries = None
+
+    return protein_queries, other_queries
+
 def get_queries(
     input_path: Union[str, Path], sort_queries_by: str = "length"
-) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
+) -> Tuple[List[Tuple[str, str, Optional[List[str]], Optional[List[Tuple[MolType, str, int]]]]], bool]:
     """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
-    of job name, sequence and the optional a3m lines"""
+    of job name, sequence, optional a3m lines, and the optional non-protein sequences."""
 
     input_path = Path(input_path)
     if not input_path.exists():
@@ -131,12 +159,12 @@ def get_queries(
             df = pandas.read_csv(input_path, sep=sep, dtype=str)
             assert "id" in df.columns and "sequence" in df.columns
             queries = [
-                (seq_id, sequence.upper().split(":"), None)
+                (seq_id, sequence.upper().split(":"), None, None)
                 for seq_id, sequence in df[["id", "sequence"]].itertuples(index=False)
             ]
             for i in range(len(queries)):
                 if len(queries[i][1]) == 1:
-                    queries[i] = (queries[i][0], queries[i][1][0], None)
+                    queries[i] = (queries[i][0], queries[i][1][0], None, None)
         elif input_path.suffix == ".a3m":
             (seqs, header) = parse_fasta(input_path.read_text())
             if len(seqs) == 0:
@@ -144,7 +172,7 @@ def get_queries(
             query_sequence = seqs[0]
             # Use a list so we can easily extend this to multiple msas later
             a3m_lines = [input_path.read_text()]
-            queries = [(input_path.stem, query_sequence, a3m_lines)]
+            queries = [(input_path.stem, query_sequence, a3m_lines, None)]
         elif input_path.suffix in [".fasta", ".faa", ".fa"]:
             (sequences, headers) = parse_fasta(input_path.read_text())
             queries = []
@@ -152,10 +180,11 @@ def get_queries(
                 sequence = sequence.upper()
                 if sequence.count(":") == 0:
                     # Single sequence
-                    queries.append((header, sequence, None))
+                    queries.append((header, sequence, None, None))
                 else:
                     # Complex mode
-                    queries.append((header, sequence.upper().split(":"), None))
+                    protein_queries, other_queries = classify_molecules(sequence)
+                    queries.append((header, protein_queries, None, other_queries))
         else:
             raise ValueError(f"Unknown file format {input_path.suffix}")
     else:
@@ -179,14 +208,15 @@ def get_queries(
 
             if file.suffix.lower() == ".a3m":
                 a3m_lines = [file.read_text()]
-                queries.append((file.stem, query_sequence.upper(), a3m_lines))
+                queries.append((file.stem, query_sequence.upper(), a3m_lines, None))
             else:
                 if query_sequence.count(":") == 0:
                     # Single sequence
-                    queries.append((file.stem, query_sequence, None))
+                    queries.append((file.stem, query_sequence, None, None))
                 else:
                     # Complex mode
-                    queries.append((file.stem, query_sequence.upper().split(":"), None))
+                    protein_queries, other_queries = classify_molecules(query_sequence)
+                    queries.append((file.stem, protein_queries, None, other_queries))
 
     # sort by seq. len
     if sort_queries_by == "length":
@@ -196,7 +226,7 @@ def get_queries(
         random.shuffle(queries)
 
     is_complex = False
-    for job_number, (_, query_sequence, a3m_lines) in enumerate(queries):
+    for job_number, (_, query_sequence, a3m_lines, _) in enumerate(queries):
         if isinstance(query_sequence, list):
             is_complex = True
             break
