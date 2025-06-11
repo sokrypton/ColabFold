@@ -28,14 +28,45 @@ def initialize_project(jobs) -> list:
             job_dict = json.load(file)
             user_JIDs = [int(job["JID"]) for job in job_dict["jobs"] if job["user"] == username]
             last_user_JID = max(user_JIDs) if user_JIDs else 0
-            key_values.append(("JID", last_user_JID+1))
+            current_JID = last_user_JID + 1
+            key_values.append(("JID", current_JID))
     except FileNotFoundError:
         key_values.append(("JID", 0))
     append_json(jobs, key_values)
 
-    # Create shell script in same directory as wrapper.py
+    # Obtain input file
+    while True:
+        input_file = input("Input file name in the format 'name.fasta': ")
+        if os.path.isfile(f"./{input_file}"):
+            break
+        else:
+            print("###### Invalid filepath ######")
     
-        
+    # Obtain num recycles
+    while True:
+        num_c = input("Desired number of recycles (integer) (max 5, min 0): ")
+        try:
+            if 0 <= int(num_c) < 6:
+                break
+            else:
+                print("###### Invalid input ######")
+        except ValueError:
+                print("###### Invalid input ######")
+    
+
+    # Obtain num seeds
+
+
+    # Create shell script to run colabfold_batch
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    script_name = "wrapper.sh"
+    script_path = os.path.join(current_dir, script_name)
+    # Writing script
+    script_content = f"""
+        JID={current_JID}
+        num_c=
+    """
+     
 
 def append_json(jobs, key_values):
     # Convert list of tuples into a proper dictionary
