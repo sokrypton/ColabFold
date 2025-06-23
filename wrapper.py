@@ -55,6 +55,15 @@ def initialize_project(jobs) -> list:
     
 
     # Obtain num seeds
+    while True:
+        nseed = input("Desired number of seeds (integer) (min 0): ")
+        try:
+            if 0 < int(nseed):
+                break
+            else:
+                print("###### Invalid input #######")
+        except ValueError:
+                print("###### Invalid input #######")
 
 
     # Create shell script to run colabfold_batch
@@ -64,7 +73,26 @@ def initialize_project(jobs) -> list:
     # Writing script
     script_content = f"""
         JID={current_JID}
-        num_c=
+        num_c={num_c}
+        seed=1
+        nseed={nseed}
+        m_e_msa=32
+        m_msa=$(($m_e_msa / 2))
+        input_file=./{input_file}
+        outputdir={username}{current_JID}mm$m_msa
+        temp_dir
+
+        colabfold_batch --pair-mode unpaired_paired --templates \
+        --msa-mode mmseqs2_uniref_env \
+        --custom-template-path $temp_dir \
+        --max-msa $m_msa:$m_e_msa \
+        --use-dropout \
+        --random-seed $seed \
+        --num-seeds $nseed \
+        --num-recycle $num_c \
+        --relax-max-iterations 100 \
+        --use-gpu-relax \
+        $inputfile $outputdir
     """
      
 
