@@ -40,8 +40,17 @@ def initialize_project(jobs) -> str:
         if os.path.isfile(f"./{input_file}"):
             break
         else:
-            print("###### Invalid filepath ######")
-    key_values.append(("input_file", input_file))    
+            print("###### INVALID FILEPATH ######")
+    key_values.append(("input_file", input_file))
+
+    # Obtain template directory
+    while True:
+        temp_dir = input("Input template directory: ")
+        if os.path.isdir(temp_dir):
+            break
+        else:
+            print("###### INVALID DIRECTORY ######")
+    key_values.append(("temp_dir", temp_dir))
 
     # Obtain num recycles
     while True:
@@ -73,16 +82,16 @@ def initialize_project(jobs) -> str:
     script_name = "wrapper.sh"
     script_path = os.path.join(current_dir, script_name)
     # Writing script
-    script_content = f"""
+    script_content = f"""#!/bin/bash
 JID={current_JID}
 num_c={num_c}
 seed=1
 num_s={num_s}
 m_e_msa=32
 m_msa=$(($m_e_msa / 2))
-input_file=./{input_file}
+inputfile=./{input_file}
 outputdir={username}{current_JID}mm$m_msa
-temp_dir
+temp_dir={temp_dir}
 
 colabfold_batch --pair-mode unpaired_paired --templates \\
 --msa-mode mmseqs2_uniref_env \\
@@ -100,7 +109,6 @@ $inputfile $outputdir
     with open(script_path, 'w') as file:
         print(">>> WRITING SHELL SCRIPT")
         file.write(script_content)
-    os.chmod(script_path, 0o755)
     append_json("jobs.json", key_values)
     return script_path
 
@@ -126,7 +134,7 @@ def append_json(jobs, key_values):
 
 
 def run_colabfold(script_path):
-    print(">>> ATTEMPTING RUN")
+    os.chmod(script_path, 0o755)
     subprocess.run([script_path], check=True)
     return 0
 
@@ -144,6 +152,9 @@ def main():
     print("*" * 31)
     
     script_path = initialize_project("jobs.json")
+
+    print(">>> ATTEMPTING TO RUN COLABFOLD")
+    #run_colabfold(script_path)
 
 if __name__ == '__main__':
     main()
