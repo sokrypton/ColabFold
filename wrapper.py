@@ -116,7 +116,6 @@ $inputfile $outputdir
 def append_json(jobs, key_values):
     # Convert list of tuples into a proper dictionary
     new_entry = {key: value for key, value in key_values}
-
     try:
         with open(jobs, "r") as f:
             job_dict = json.load(f)
@@ -136,11 +135,31 @@ def append_json(jobs, key_values):
 def run_colabfold(script_path):
     os.chmod(script_path, 0o755)
     subprocess.run([script_path], check=True)
+    filter_output()
     return 0
 
 
 def filter_output():
+    # Collect pdb files from output folder listed in 
+    # json or directly from initialize_project()
+    
+    # loop through files and run DistanceFinder.py on each
+
+    # sort by shortest distance and populate a temporary directory with 2 best templates
+    
     return 0
+
+
+def update_temp_dir(script_path, dir_name):
+    with open(script_path, 'r') as file:
+        lines = file.readlines()
+    
+    with open(script_path, 'w') as file:
+        for line in lines:
+            if line.startswith("temp_dir="):
+                file.write(f"temp_dir={dir_name} \\")
+            else:
+                file.write(line)
 
 
 def main():
@@ -154,7 +173,8 @@ def main():
     script_path = initialize_project("jobs.json")
 
     print(">>> ATTEMPTING TO RUN COLABFOLD")
-    #run_colabfold(script_path)
+    for _ in range(3):
+        run_colabfold(script_path)
 
 if __name__ == '__main__':
     main()
