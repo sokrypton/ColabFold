@@ -5,7 +5,9 @@ Template Cycling with Experimental Distance Restraint Data
 Ma Lab
 """
 import os
+import sys
 import subprocess
+import shutil
 import json
 import getpass
 
@@ -142,24 +144,72 @@ def append_json(jobs, key_values):
         print("###### COMPLETE ######")
 
 
-def run_colabfold(script_path):
+def run_colabfold(script_path, jobs):
     for run_number in range(3):
         os.chmod(script_path, 0o755)
         subprocess.run([script_path], check=True)
-        filter_output(run_number)
+        filter_output(run_number, jobs, script_path)
     return 0
 
 
-def filter_output(run_number):
-    # Collect pdb files from output folder listed in 
-    # json or directly from initialize_project()
-    current_dir = os.getcwd()
+def filter_output(run_number, jobs, script_path):
+    # Load json and obtain outputdir name
+    try:
+        with open(jobs, "r") as f:
+            jobs_dict = json.load(f)
+            current_job = jobs_dict["jobs"][-1]
+            current_job_values = list(current_job.values())
+            outputdir = current_job_values[-1]
+
+    except FileNotFoundError:
+        print("###### JSON FILE NOT FOUND ######")
+        return -1
     
+    current_dir = os.getcwd()
+    colabfold_output = os.listdir(f"{current_dir}/{outputdir}")
     # loop through files and run DistanceFinder.py on each
+    distances = []
+    for file in colabfold_output:
+        if file.endswith(".pdb"):
+            distances.append((run_distance_finder(f"{outputdir}/{file}", "100", "473"), file))
 
     # sort by shortest distance and populate a temporary directory with 2 best templates
-    
-    return 0
+    template_1 = min(distances, key=lambda x: abs(float(x[0]) - 68.4))
+    distances.remove(template_1)
+    template_2 = min(distances, key=lambda x: abs(float(x[0]) - 68.4))
+    temp_dir = f"recycle{run_number + 1}"
+    try:
+        print(">>> CREATING DIRECTORY FOR BEST TEMPLATES")
+        os.mkdir(temp_dir)
+        subprocess.run(["cp", f"{outputdir}/{template_1[1]}", temp_dir])
+        subprocess.run(["mv", f"{temp_dir}/{template_1[1]}", f"{temp_dir}/abcd.pdb"])
+        subprocess.run(["cp", f"{outputdir}/{template_2[1]}", temp_dir])
+        subprocess.run(["mv", f"{temp_dir}/{template_2[1]}", f"{temp_dir}/efgh.pdb"])
+        print("###### DIRECTORY POPULATED ######")
+        update_temp_dir(script_path, temp_dir)
+    except FileExistsError:
+        shutil.rmtree(temp_dir)
+        print(">>> CREATING DIRECTORY FOR BEST TEMPLATES")
+        os.mkdir(temp_dir)
+        subprocess.run(["cp", f"{outputdir}/{template_1[1]}", temp_dir])
+        subprocess.run(["mv", f"{temp_dir}/{template_1[1]}", f"{temp_dir}/abcd.pdb"])
+        subprocess.run(["cp", f"{outputdir}/{template_2[1]}", temp_dir])
+        subprocess.run(["mv", f"{temp_dir}/{template_2[1]}", f"{temp_dir}/efgh.pdb"])
+        print("###### DIRECTORY POPULATED ######")
+        update_temp_dir(script_path, temp_dir)
+    sys.exit()
+
+
+def run_distance_finder(structure_file, p1, p2):
+    distance = subprocess.run(
+        ["python3", "distance_finder/DistanceFinder.py", structure_file, p1, p2],
+        capture_output=True,
+        text=True
+    )
+    if distance.returncode != 0:
+        print("Error:", distance.stderr)
+        return None
+    return distance.stdout.strip()
 
 
 def update_temp_dir(script_path, dir_name):
@@ -181,11 +231,13 @@ def main():
     print((" " * 7) + "ColabFold Wrapper")
     print()
     print("*" * 31)
+
+    jobs = "jobs.json"
     
-    script_path = initialize_project("jobs.json")
+    script_path = initialize_project(jobs)
 
     print(">>> ATTEMPTING TO RUN COLABFOLD")
-    run_colabfold(script_path)
+    run_colabfold(script_path, jobs)
 
 if __name__ == '__main__':
     main()
