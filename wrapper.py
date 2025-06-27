@@ -67,7 +67,7 @@ def initialize_project(jobs) -> str:
 
     # Obtain num seeds
     while True:
-        num_s = input("Desired number of seeds (integer) (min 0): ")
+        num_s = input("Desired number of seeds (integer) (min 1): ")
         try:
             if 0 < int(num_s):
                 break
@@ -76,6 +76,16 @@ def initialize_project(jobs) -> str:
         except ValueError:
                 print("###### Invalid input #######")
     key_values.append(("num_s", num_s))
+
+    # Variable for max number of msa's
+    m_e_msa = 32
+    m_msa = m_e_msa // 2
+    key_values.append(("m_e_msa", m_e_msa))
+    key_values.append(("m_msa", m_msa))
+
+    # Variable for full output directory by user, job id, and max msa's
+    outputdir = f"{username}{current_JID}mm{m_msa}"
+    key_values.append(("outputdir", outputdir))
 
     # Create shell script to run colabfold_batch
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -87,10 +97,10 @@ JID={current_JID}
 num_c={num_c}
 seed=1
 num_s={num_s}
-m_e_msa=32
-m_msa=$(($m_e_msa / 2))
+m_e_msa={m_e_msa}
+m_msa={m_msa}
 inputfile=./{input_file}
-outputdir={username}{current_JID}mm$m_msa
+outputdir={outputdir}
 temp_dir={temp_dir}
 
 colabfold_batch --pair-mode unpaired_paired --templates \\
@@ -133,15 +143,17 @@ def append_json(jobs, key_values):
 
 
 def run_colabfold(script_path):
-    os.chmod(script_path, 0o755)
-    subprocess.run([script_path], check=True)
-    filter_output()
+    for run_number in range(3):
+        os.chmod(script_path, 0o755)
+        subprocess.run([script_path], check=True)
+        filter_output(run_number)
     return 0
 
 
-def filter_output():
+def filter_output(run_number):
     # Collect pdb files from output folder listed in 
     # json or directly from initialize_project()
+    current_dir = os.getcwd()
     
     # loop through files and run DistanceFinder.py on each
 
@@ -173,8 +185,7 @@ def main():
     script_path = initialize_project("jobs.json")
 
     print(">>> ATTEMPTING TO RUN COLABFOLD")
-    for _ in range(3):
-        run_colabfold(script_path)
+    run_colabfold(script_path)
 
 if __name__ == '__main__':
     main()
