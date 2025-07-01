@@ -576,7 +576,7 @@ def main():
         # rename m8 files
         if args.use_templates:
             id = 0
-            for raw_jobname, query_sequences, query_seqs_cardinality in queries_unique:
+            for raw_jobname, query_sequences, query_seqs_cardinality, _ in queries_unique:
                 with args.base.joinpath(f"{safe_filename(raw_jobname)}_{args.db2}.m8").open(
                     "w"
                 ) as f:
