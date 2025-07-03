@@ -100,7 +100,7 @@ if [ -n "${GPU}" ]; then
 fi
 
 if [ ! -f UNIREF30_READY ]; then
-  tar xzvf "${UNIREF30DB}.tar.gz"
+  tar xzvf "${UNIREF30DB}.tar.gz" --no-same-owner
   mmseqs tsv2exprofiledb "${UNIREF30DB}" "${UNIREF30DB}_db" ${GPU_PAR}
   if [ -z "$MMSEQS_NO_INDEX" ]; then
     mmseqs createindex "${UNIREF30DB}_db" tmp1 --remove-tmp-files 1 ${GPU_INDEX_PAR}
@@ -115,7 +115,7 @@ if [ ! -f UNIREF30_READY ]; then
 fi
 
 if [ ! -f COLABDB_READY ]; then
-  tar xzvf "colabfold_envdb_202108.tar.gz"
+  tar xzvf "colabfold_envdb_202108.tar.gz" --no-same-owner
   mmseqs tsv2exprofiledb "colabfold_envdb_202108" "colabfold_envdb_202108_db" ${GPU_PAR}
   # TODO: split memory value for createindex?
   if [ -z "$MMSEQS_NO_INDEX" ]; then
@@ -139,6 +139,6 @@ if [ ! -f PDB_READY ]; then
 fi
 
 if [ ! -f PDB100_READY ]; then
-  tar xzvf pdb100_foldseek_230517.tar.gz pdb100_a3m.ffdata pdb100_a3m.ffindex
+  tar xzvf pdb100_foldseek_230517.tar.gz pdb100_a3m.ffdata pdb100_a3m.ffindex --no-same-owner
   touch PDB100_READY
 fi
