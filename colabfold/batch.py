@@ -376,7 +376,8 @@ def predict_structure(
             # process input features
             #########################
             if "multimer" in model_type:
-                if model_num == 0 and seed_num == 0:
+                #if model_num == 0 and seed_num == 0:
+                if seed_num == 0:
                     # TODO: add pad_input_mulitmer()
                     input_features = feature_dict
                     input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
