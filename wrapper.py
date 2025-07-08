@@ -186,44 +186,41 @@ def filter_output(run_number, jobs, script_path):
 
     # Filter files to only include probe distances +- 10 angstrom
     ranges = {}
-    for filename, distance in distances:
+    for filename, distance in distances.items():
         if abs(float(distance) - 68.4) < 10:
             ranges[filename] = distance
     # Check for any files with a distance below 10
     if not ranges:
-        for filename, distance in distances:
+        for filename, distance in distances.items():
             if abs(float(distance) - 68.4) < 20:
                 ranges[filename] = distance
 
-    # If ranges dictionary is still empty after both checks
+    # If ranges dictionary is still empty after both checks,
     # proceed to next iteration with user provided templates 
     if not ranges:
+        print("###### NO VALID TEMPLATES PRODUCED ######")
         update_temp_dir(script_path, temp_dir)
     else:
-        temp_dir = f"recycles/recycle{run_number + 1}"
+        temp_dir = f"recycle{run_number + 1}"
         try:
             os.mkdir("recycles")
+            print(">>> CREATING DIRECTORY FOR BEST TEMPLATES")
         except FileExistsError:
-            shutil.rmtree("recycles")
-            os.mkdir("recycles")
+            print(">>> APPENDING TO RECYCLES DIRECTORY")
 
-        print(">>> CREATING DIRECTORY FOR BEST TEMPLATES")
         template_number = 0
-        for filename, distance in ranges:
+        for filename, distance in ranges.items():
             template_number = template_number + 1
             try:
-                os.mkdir(temp_dir)
-                subprocess.run(["cp", f"{outputdir}/{filename}", temp_dir])
-                subprocess.run(["mv", f"{temp_dir}/{filename}", f"{temp_dir}/tmp{template_number}.pdb"])
-                print(f"###### {filename} ADDED TO {temp_dir} ######")
-                update_temp_dir(script_path, temp_dir)
+                os.mkdir(f"recycles/{temp_dir}")
             except FileExistsError:
                 shutil.rmtree(f"recycles/{temp_dir}")
-                os.mkdir(temp_dir)
-                subprocess.run(["cp", f"{outputdir}/{filename}", temp_dir])
-                subprocess.run(["mv", f"{temp_dir}/{filename}", f"{temp_dir}/tmp{template_number}.pdb"])
-                print(f"###### {filename} ADDED TO {temp_dir} ######")
-                update_temp_dir(script_path, temp_dir)
+                os.mkdir(f"recycles/{temp_dir}")
+                
+            subprocess.run(["cp", f"{outputdir}/{filename}", f"recycles/{temp_dir}"])
+            subprocess.run(["mv", f"recycles/{temp_dir}/{filename}", f"recycles/{temp_dir}/tmp{template_number}.pdb"])
+            print(f"###### {filename} ADDED TO {temp_dir} ######")
+            update_temp_dir(script_path, f"recycles/{temp_dir}")
         # Clear ouput directory
         #subprocess.run(["rm", "-r", outputdir])
     
