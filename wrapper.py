@@ -123,6 +123,14 @@ $inputfile $outputdir
     return script_path
 
 
+def clear_directory(dir_path):
+    try:
+        shutil.rmtree(dir_path)
+        return True
+    except OSError:
+        return False        
+
+
 def append_json(jobs, key_values):
     # Convert list of tuples into a proper dictionary
     new_entry = {key: value for key, value in key_values}
@@ -143,6 +151,7 @@ def append_json(jobs, key_values):
 
 
 def run_colabfold(script_path, jobs):
+    clear_directory("./recycles/")
     for run_number in range(3):
         """
         Start with three iterations for testing
@@ -185,19 +194,19 @@ def filter_output(run_number, jobs, script_path):
             distances[file] = run_distance_finder(f"{outputdir}/{file}", "100", "473")
 
     # Filter files to only include probe distances +- 10 angstrom
-    ranges = {}
+    included_distances = {}
     for filename, distance in distances.items():
         if abs(float(distance) - 68.4) < 10:
-            ranges[filename] = distance
+            included_distances[filename] = distance
     # Check for any files with a distance below 10
-    if not ranges:
+    if not included_distances:
         for filename, distance in distances.items():
             if abs(float(distance) - 68.4) < 20:
-                ranges[filename] = distance
+                included_distances[filename] = distance
 
-    # If ranges dictionary is still empty after both checks,
+    # If included_distances dictionary is still empty after both checks,
     # proceed to next iteration with user provided templates 
-    if not ranges:
+    if not included_distances:
         print("###### NO VALID TEMPLATES PRODUCED ######")
         update_temp_dir(script_path, temp_dir)
     else:
@@ -208,19 +217,22 @@ def filter_output(run_number, jobs, script_path):
         except FileExistsError:
             print(">>> APPENDING TO RECYCLES DIRECTORY")
 
-        template_number = 0
-        for filename, distance in ranges.items():
-            template_number = template_number + 1
-            try:
-                os.mkdir(f"recycles/{temp_dir}")
-            except FileExistsError:
-                shutil.rmtree(f"recycles/{temp_dir}")
-                os.mkdir(f"recycles/{temp_dir}")
-                
+        try:
+            os.mkdir(f"recycles/{temp_dir}")
+        except FileExistsError:
+            shutil.rmtree(f"recycles/{temp_dir}")
+            os.mkdir(f"recycles/{temp_dir}")
+
+        template_number = 1
+        for filename, distance in included_distances.items():
             subprocess.run(["cp", f"{outputdir}/{filename}", f"recycles/{temp_dir}"])
             subprocess.run(["mv", f"recycles/{temp_dir}/{filename}", f"recycles/{temp_dir}/tmp{template_number}.pdb"])
-            print(f"###### {filename} ADDED TO {temp_dir} ######")
-            update_temp_dir(script_path, f"recycles/{temp_dir}")
+            print(f"###### {filename} ADDED TO {temp_dir} ({distance} A) ######")
+            template_number = template_number + 1
+
+            
+            
+        update_temp_dir(script_path, f"recycles/{temp_dir}")
         # Clear ouput directory
         #subprocess.run(["rm", "-r", outputdir])
     
