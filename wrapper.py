@@ -181,7 +181,7 @@ def filter_output(run_number, jobs, script_path):
     colabfold_output = os.listdir(f"{current_dir}/{outputdir}")
 
     """
-    TODO: Modify filter to include +- 10 angstrom
+    Modify filter to include +- 10 angstrom
     If no templates fall within range increase range to 20
     Cap at 20
     Print number of templates within range and their distances
@@ -230,10 +230,9 @@ def filter_output(run_number, jobs, script_path):
             print(f"###### {filename} ADDED TO {temp_dir} ({distance} A) ######")
             template_number = template_number + 1
 
-            
-            
         update_temp_dir(script_path, f"recycles/{temp_dir}")
         # Clear ouput directory
+        clear_directory(outputdir)
         #subprocess.run(["rm", "-r", outputdir])
     
 
