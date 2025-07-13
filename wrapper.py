@@ -123,12 +123,21 @@ $inputfile $outputdir
     return script_path
 
 
-def clear_directory(dir_path):
+def delete_directory(dir_path):
     try:
         shutil.rmtree(dir_path)
         return True
     except OSError:
         return False        
+
+
+def clear_directory(dir_path):
+    for item in os.listdir(dir_path):
+        item_path = os.path.join(dir_path, item)
+        if os.path.isfile(item_path):
+            os.remove(item_path)  # Remove files
+        elif os.path.isdir(item_path):
+            shutil.rmtree(item_path)
 
 
 def append_json(jobs, key_values):
@@ -151,7 +160,7 @@ def append_json(jobs, key_values):
 
 
 def run_colabfold(script_path, jobs):
-    clear_directory("./recycles/")
+    delete_directory("./recycles/")
     for run_number in range(3):
         """
         Start with three iterations for testing
@@ -232,7 +241,8 @@ def filter_output(run_number, jobs, script_path):
 
         update_temp_dir(script_path, f"recycles/{temp_dir}")
         # Clear ouput directory
-        clear_directory(outputdir)
+        if run_number < 2:
+            clear_directory(outputdir)
         #subprocess.run(["rm", "-r", outputdir])
     
 
