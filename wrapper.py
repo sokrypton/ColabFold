@@ -11,7 +11,18 @@ import shutil
 import json
 import getpass
 
-def initialize_project(jobs) -> str:
+def initialize_project(jobs):
+    """
+    Initializes a ColabFold project by gathering user input,
+    creating necessary variables, generating a shell script,
+    and appending metadata to a JSON log.
+
+    Args:
+        jobs (str): Path to the JSON file tracking job metadata.
+
+    Returns:
+        str: Path to the generated shell script for running ColabFold.
+    """
     key_values = []
     # Obtain username
     try:
@@ -65,7 +76,6 @@ def initialize_project(jobs) -> str:
         except ValueError:
                 print("###### Invalid input ######")
     key_values.append(("num_recycles", num_c))    
-    
 
     # Obtain num seeds
     while True:
@@ -124,6 +134,15 @@ $inputfile $outputdir
 
 
 def delete_directory(dir_path):
+    """
+    Deletes a directory and all its contents.
+
+    Args:
+        dir_path (str): The path to the directory to delete.
+
+    Returns:
+        bool: True if the directory was successfully deleted, False otherwise.
+    """
     try:
         shutil.rmtree(dir_path)
         return True
@@ -132,6 +151,12 @@ def delete_directory(dir_path):
 
 
 def clear_directory(dir_path):
+    """
+    Clears the contents of a directory without deleting the directory itself.
+
+    Args:
+        dir_path (str): Path to the directory to be cleared.
+    """
     for item in os.listdir(dir_path):
         item_path = os.path.join(dir_path, item)
         if os.path.isfile(item_path):
@@ -141,6 +166,14 @@ def clear_directory(dir_path):
 
 
 def append_json(jobs, key_values):
+    """
+    Appends job metadata to a JSON file. If the file does not exist,
+    it creates a new one.
+
+    Args:
+        jobs (str): Path to the JSON file.
+        key_values (list): List of (key, value) tuples to append.
+    """
     # Convert list of tuples into a proper dictionary
     new_entry = {key: value for key, value in key_values}
     try:
@@ -160,6 +193,14 @@ def append_json(jobs, key_values):
 
 
 def run_colabfold(script_path, jobs):
+    """
+    Runs the ColabFold shell script multiple times and filters output
+    based on template distance criteria.
+
+    Args:
+        script_path (str): Path to the shell script.
+        jobs (str): Path to the job metadata JSON file.
+    """
     delete_directory("./recycles/")
     for run_number in range(3):
         """
@@ -169,10 +210,18 @@ def run_colabfold(script_path, jobs):
         os.chmod(script_path, 0o755)
         subprocess.run([script_path], check=True)
         filter_output(run_number, jobs, script_path)
-    return 0
 
 
 def filter_output(run_number, jobs, script_path):
+    """
+    Filters PDB output files based on proximity to target distances.
+    Updates template directory for next ColabFold iteration accordingly.
+
+    Args:
+        run_number (int): The current recycle iteration number.
+        jobs (str): Path to the job metadata JSON file.
+        script_path (str): Path to the ColabFold execution script.
+    """
     # Load json and obtain outputdir name
     try:
         with open(jobs, "r") as f:
@@ -190,7 +239,7 @@ def filter_output(run_number, jobs, script_path):
     colabfold_output = os.listdir(f"{current_dir}/{outputdir}")
 
     """
-    Modify filter to include +- 10 angstrom
+    Filter to include +- 10 angstrom
     If no templates fall within range increase range to 20
     Cap at 20
     Print number of templates within range and their distances
@@ -247,6 +296,18 @@ def filter_output(run_number, jobs, script_path):
     
 
 def run_distance_finder(structure_file, p1, p2):
+    """
+    Runs an external script to calculate the distance between two residues
+    in a protein structure.
+
+    Args:
+        structure_file (str): Path to the .pdb file.
+        p1 (str): Residue index 1.
+        p2 (str): Residue index 2.
+
+    Returns:
+        str or None: Distance in angstroms as a string, or None if failed.
+    """
     distance = subprocess.run(
         ["python3", "distance_finder/DistanceFinder.py", structure_file, p1, p2],
         capture_output=True,
@@ -259,6 +320,13 @@ def run_distance_finder(structure_file, p1, p2):
 
 
 def update_temp_dir(script_path, dir_name):
+    """
+    Updates the 'temp_dir' line in the shell script to point to a new directory.
+
+    Args:
+        script_path (str): Path to the shell script.
+        dir_name (str): Name of the new template directory.
+    """
     with open(script_path, 'r') as file:
         lines = file.readlines()
     
@@ -271,7 +339,12 @@ def update_temp_dir(script_path, dir_name):
 
 
 def main():
-    """ Welcome """
+    """
+    Entry point for the ColabFold Wrapper.
+    Initializes project setup and executes the template filtering loop.
+    """
+
+    # Welcome message
     print("*" * 31)
     print()
     print((" " * 7) + "ColabFold Wrapper")
@@ -284,6 +357,7 @@ def main():
 
     print(">>> ATTEMPTING TO RUN COLABFOLD")
     run_colabfold(script_path, jobs)
+
 
 if __name__ == '__main__':
     main()
