@@ -560,10 +560,18 @@ def main():
                     args.base.joinpath(f"{job_number}.a3m").write_text(msa)
     else:
         if args.af3_json:
-            af3 = AF3Utils(raw_jobname, query_sequences, query_seqs_cardinality, unpaired_msa, None, other_molecules)
-            with open(args.base.joinpath(f"{job_number}.json"), 'w') as f:
-                f.write(json.dumps(af3.content, indent=4))
-            
+            id = 0
+            for job_number, (raw_jobname, query_sequences, query_seqs_cardinality, other_molecules) in enumerate(queries_unique):
+                unpaired_msa = []
+                for seq in query_sequences:
+                    with args.base.joinpath(f"{id}.a3m").open("r") as f:
+                        unpaired_msa.append(f.read())
+                    id += 1
+
+                # Create AF3Utils object and write JSON
+                af3 = AF3Utils(raw_jobname, query_sequences, query_seqs_cardinality, unpaired_msa, None, other_molecules)
+                with open(args.base.joinpath(f"{job_number}.json"), 'w') as f:
+                    f.write(json.dumps(af3.content, indent=4))
 
     if args.unpack:
         # rename a3m files
