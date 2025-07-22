@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 # Setup everything for using mmseqs locally
 # Set MMSEQS_NO_INDEX to skip the index creation step (not useful for colabfold_search in most cases)
 ARIA_NUM_CONN=8
@@ -14,6 +14,9 @@ PDB_AWS_SNAPSHOT="20240101"
 UNIREF30DB="uniref30_2302"
 MMSEQS_NO_INDEX=${MMSEQS_NO_INDEX:-}
 DOWNLOADS_ONLY=${DOWNLOADS_ONLY:-}
+# download prebuilt MMseqs2 databases that support both CPU and GPU
+# these can result in different results on MMseqs2-CPU due to database ordering
+FAST_PREBUILT_DATABASES=${FAST_PREBUILT_DATABASES:-"1"}
 GPU=${GPU:-}
 mkdir -p -- "${WORKDIR}"
 cd "${WORKDIR}"
@@ -21,6 +24,15 @@ cd "${WORKDIR}"
 hasCommand () {
     command -v "$1" >/dev/null 2>&1
 }
+
+fail() {
+    echo "Error: $1"
+    exit 1
+}
+
+if ! hasCommand mmseqs; then
+  fail "mmseqs command not found in PATH. Please install MMseqs2."
+fi
 
 STRATEGY=""
 if hasCommand aria2c; then STRATEGY="$STRATEGY ARIA"; fi
@@ -60,10 +72,17 @@ downloadFile() {
 }
 
 if [ ! -f DOWNLOADS_READY ]; then
-  downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/${UNIREF30DB}.tar.gz" "${UNIREF30DB}.tar.gz"
-  downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/colabfold_envdb_202108.tar.gz" "colabfold_envdb_202108.tar.gz"
-  downloadFile "https://wwwuser.gwdg.de/~compbiol/colabfold/pdb100_230517.fasta.gz" "pdb100_230517.fasta.gz"
-  downloadFile "https://wwwuser.gwdg.de/~compbiol/data/hhsuite/databases/hhsuite_dbs/pdb100_foldseek_230517.tar.gz" "pdb100_foldseek_230517.tar.gz"
+  if [ "${FAST_PREBUILT_DATABASES}" = "1" ]; then
+    # new prebuilt GPU+CPU databases, that don't require calling tsv2exprofiledb
+    downloadFile "https://opendata.steineggerlab.workers.dev/colabfold/${UNIREF30DB}.db.tar.gz" "${UNIREF30DB}.tar.gz"
+    downloadFile "https://opendata.steineggerlab.workers.dev/colabfold/colabfold_envdb_202108.db.tar.gz" "colabfold_envdb_202108.tar.gz"
+  else
+    # old .tsv + tsv2exprofiledb databases
+    downloadFile "https://opendata.steineggerlab.workers.dev/colabfold/${UNIREF30DB}.tar.gz" "${UNIREF30DB}.tar.gz"
+    downloadFile "https://opendata.steineggerlab.workers.dev/colabfold/colabfold_envdb_202108.tar.gz" "colabfold_envdb_202108.tar.gz"
+  fi
+  downloadFile "https://opendata.steineggerlab.workers.dev/colabfold/pdb100_230517.fasta.gz" "pdb100_230517.fasta.gz"
+  downloadFile "https://opendata.steineggerlab.workers.dev/colabfold/pdb100_foldseek_230517.tar.gz" "pdb100_foldseek_230517.tar.gz"
   touch DOWNLOADS_READY
 fi
 
@@ -100,12 +119,22 @@ if [ -n "${GPU}" ]; then
 fi
 
 if [ ! -f UNIREF30_READY ]; then
-  tar xzvf "${UNIREF30DB}.tar.gz"
-  mmseqs tsv2exprofiledb "${UNIREF30DB}" "${UNIREF30DB}_db" ${GPU_PAR}
+  tar -xzvf "${UNIREF30DB}.tar.gz"
+  if [ "${FAST_PREBUILT_DATABASES}" != "1" ]; then
+    mmseqs tsv2exprofiledb "${UNIREF30DB}" "${UNIREF30DB}_db" ${GPU_PAR}
+  fi
   if [ -z "$MMSEQS_NO_INDEX" ]; then
     mmseqs createindex "${UNIREF30DB}_db" tmp1 --remove-tmp-files 1 ${GPU_INDEX_PAR}
   fi
+
   if [ -e ${UNIREF30DB}_db_mapping ]; then
+    # create binary, mmap-able taxonomy mapping, saves a few seconds of load time during pairing
+    TAXHEADER=$(od -An -N4 -t x4 "${UNIREF30DB}_db_mapping" | tr -d ' ')
+    # check if the file is already binary, it has a binary-encoded header that spells TAXM if so
+    if [ "${TAXHEADER}" != "0c170013" ]; then
+      mmseqs createbintaxmapping "${UNIREF30DB}_db_mapping" "${UNIREF30DB}_db_mapping.bin"
+      mv -f -- "${UNIREF30DB}_db_mapping.bin" "${UNIREF30DB}_db_mapping"
+    fi
     ln -sf ${UNIREF30DB}_db_mapping ${UNIREF30DB}_db.idx_mapping
   fi
   if [ -e ${UNIREF30DB}_db_taxonomy ]; then
@@ -115,8 +144,10 @@ if [ ! -f UNIREF30_READY ]; then
 fi
 
 if [ ! -f COLABDB_READY ]; then
-  tar xzvf "colabfold_envdb_202108.tar.gz"
-  mmseqs tsv2exprofiledb "colabfold_envdb_202108" "colabfold_envdb_202108_db" ${GPU_PAR}
+  tar -xzvf "colabfold_envdb_202108.tar.gz"
+  if [ "${FAST_PREBUILT_DATABASES}" != "1" ]; then
+    mmseqs tsv2exprofiledb "colabfold_envdb_202108" "colabfold_envdb_202108_db" ${GPU_PAR}
+  fi
   # TODO: split memory value for createindex?
   if [ -z "$MMSEQS_NO_INDEX" ]; then
     mmseqs createindex "colabfold_envdb_202108_db" tmp2 --remove-tmp-files 1 ${GPU_INDEX_PAR}
@@ -125,7 +156,9 @@ if [ ! -f COLABDB_READY ]; then
 fi
 
 if [ ! -f PDB_READY ]; then
-  if [ -n "${GPU}" ]; then
+  # for consistency with the other prebuilt databases
+  # make pdb also compatible with both gpu and cpu
+  if [ -n "${GPU}" ] || [ "${FAST_PREBUILT_DATABASES}" = "1" ]; then
     mmseqs createdb pdb100_230517.fasta.gz pdb100_230517_tmp
     mmseqs makepaddedseqdb pdb100_230517_tmp pdb100_230517
     mmseqs rmdb pdb100_230517_tmp
@@ -139,6 +172,6 @@ if [ ! -f PDB_READY ]; then
 fi
 
 if [ ! -f PDB100_READY ]; then
-  tar xzvf pdb100_foldseek_230517.tar.gz pdb100_a3m.ffdata pdb100_a3m.ffindex
+  tar -xzvf pdb100_foldseek_230517.tar.gz pdb100_a3m.ffdata pdb100_a3m.ffindex
   touch PDB100_READY
 fi
