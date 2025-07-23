@@ -249,18 +249,19 @@ def filter_output(run_number, jobs, script_path):
     for file in colabfold_output:
         if file.endswith(".pdb"):
             #distances.append((run_distance_finder(f"{outputdir}/{file}", "100", "473"), file))
-            distances[file] = run_distance_finder(f"{outputdir}/{file}", "100", "473")
+            distances[run_distance_finder(f"{outputdir}/{file}", "100", "473")] = file
 
     # Filter files to only include probe distances +- 10 angstrom
+    # TODO: Only include maximum of 9 files, sort by distance and take 9 best
     included_distances = {}
-    for filename, distance in distances.items():
+    for distance, filename in distances.items():
         if abs(float(distance) - 68.4) < 10:
-            included_distances[filename] = distance
+            included_distances[distance] = filename
     # Check for any files with a distance below 10
     if not included_distances:
-        for filename, distance in distances.items():
+        for distance, filename in distances.items():
             if abs(float(distance) - 68.4) < 20:
-                included_distances[filename] = distance
+                included_distances[distance] = filename
 
     # If included_distances dictionary is still empty after both checks,
     # proceed to next iteration with user provided templates 
@@ -268,6 +269,9 @@ def filter_output(run_number, jobs, script_path):
         print("###### NO VALID TEMPLATES PRODUCED ######")
         update_temp_dir(script_path, temp_dir)
     else:
+        # Sort included_distances by shortest distance
+        included_distances = dict(sorted(included_distances.items()))
+
         temp_dir = f"recycle{run_number + 1}"
         try:
             os.mkdir("recycles")
@@ -281,12 +285,13 @@ def filter_output(run_number, jobs, script_path):
             shutil.rmtree(f"recycles/{temp_dir}")
             os.mkdir(f"recycles/{temp_dir}")
 
-        template_number = 1
-        for filename, distance in included_distances.items():
-            subprocess.run(["cp", f"{outputdir}/{filename}", f"recycles/{temp_dir}"])
-            subprocess.run(["mv", f"recycles/{temp_dir}/{filename}", f"recycles/{temp_dir}/tmp{template_number}.pdb"])
-            print(f"###### {filename} ADDED TO {temp_dir} ({distance} A) ######")
-            template_number = template_number + 1
+        template_number = 0
+        for distance, filename in included_distances.items():
+            if template_number < 10:
+                subprocess.run(["cp", f"{outputdir}/{filename}", f"recycles/{temp_dir}"])
+                subprocess.run(["mv", f"recycles/{temp_dir}/{filename}", f"recycles/{temp_dir}/tmp{template_number}.pdb"])
+                print(f"###### {filename} ADDED TO {temp_dir} ({distance} A) ######")
+                template_number = template_number + 1
 
         update_temp_dir(script_path, f"recycles/{temp_dir}")
         # Clear ouput directory
@@ -356,7 +361,15 @@ def main():
     script_path = initialize_project(jobs)
 
     print(">>> ATTEMPTING TO RUN COLABFOLD")
-    run_colabfold(script_path, jobs)
+    for run_number in range(3):
+        """
+        Start with three iterations for testing
+        Once running, continue iterating until an ideal structure is output
+        """
+        os.chmod(script_path, 0o755)
+        subprocess.run([script_path], check=True)
+        filter_output(run_number, jobs, script_path)
+    #run_colabfold(script_path, jobs)
 
 
 if __name__ == '__main__':
