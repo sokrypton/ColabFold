@@ -311,20 +311,6 @@ def pad_input(
     )  # template_mask (4, 4) second value
     return input_fix
 
-MODRES = {'MSE':'MET','MLY':'LYS','FME':'MET','HYP':'PRO',
-          'TPO':'THR','CSO':'CYS','SEP':'SER','M3L':'LYS',
-          'HSK':'HIS','SAC':'SER','PCA':'GLU','DAL':'ALA',
-          'CME':'CYS','CSD':'CYS','OCS':'CYS','DPR':'PRO',
-          'B3K':'LYS','ALY':'LYS','YCM':'CYS','MLZ':'LYS',
-          '4BF':'TYR','KCX':'LYS','B3E':'GLU','B3D':'ASP',
-          'HZP':'PRO','CSX':'CYS','BAL':'ALA','HIC':'HIS',
-          'DBZ':'ALA','DCY':'CYS','DVA':'VAL','NLE':'LEU',
-          'SMC':'CYS','AGM':'ARG','B3A':'ALA','DAS':'ASP',
-          'DLY':'LYS','DSN':'SER','DTH':'THR','GL3':'GLY',
-          'HY3':'PRO','LLP':'LYS','MGN':'GLN','MHS':'HIS',
-          'TRQ':'TRP','B3Y':'TYR','PHI':'PHE','PTR':'TYR',
-          'TYS':'TYR','IAS':'ASP','GPL':'LYS','KYN':'TRP',
-          'CSD':'CYS','SEC':'CYS'}
 
 def pdb_to_string(
         pdb_file: str, 
@@ -339,7 +325,7 @@ def pdb_to_string(
   if models is not None:
     if not isinstance(models,list): models = [models]
 
-  modres = {**MODRES}
+  modres = {**modified_mapping}
   lines = []
   seen = []
   model = 1
@@ -691,178 +677,6 @@ def decode_structure_sequences(
     decoded_sequences.append("".join(current_sequence))
 
     return decoded_sequences
-
-def get_queries(
-    input_path: Union[str, Path], sort_queries_by: str = "length"
-) -> Tuple[List[Tuple[str, str, Optional[List[str]]]], bool]:
-    """Reads a directory of fasta files, a single fasta file or a csv file and returns a tuple
-    of job name, sequence and the optional a3m lines"""
-
-    input_path = Path(input_path)
-    if not input_path.exists():
-        raise OSError(f"{input_path} could not be found")
-
-    if input_path.is_file():
-        if input_path.suffix == ".csv" or input_path.suffix == ".tsv":
-            sep = "\t" if input_path.suffix == ".tsv" else ","
-            df = pandas.read_csv(input_path, sep=sep)
-            assert "id" in df.columns and "sequence" in df.columns
-            queries = [
-                (seq_id, sequence.upper().split(":"), None)
-                for seq_id, sequence in df[["id", "sequence"]].itertuples(index=False)
-            ]
-            for i in range(len(queries)):
-                if len(queries[i][1]) == 1:
-                    queries[i] = (queries[i][0], queries[i][1][0], None)
-        elif input_path.suffix == ".a3m":
-            (seqs, header) = parse_fasta(input_path.read_text())
-            if len(seqs) == 0:
-                raise ValueError(f"{input_path} is empty")
-            query_sequence = seqs[0]
-            # Use a list so we can easily extend this to multiple msas later
-            a3m_lines = [input_path.read_text()]
-            queries = [(input_path.stem, query_sequence, a3m_lines)]
-        elif input_path.suffix in [".fasta", ".faa", ".fa"]:
-            (sequences, headers) = parse_fasta(input_path.read_text())
-            queries = []
-            for sequence, header in zip(sequences, headers):
-                sequence = sequence.upper()
-                if sequence.count(":") == 0:
-                    # Single sequence
-                    queries.append((header, sequence, None))
-                else:
-                    # Complex mode
-                    queries.append((header, sequence.upper().split(":"), None))
-        elif input_path.suffix in [".pdb", ".cif"]:
-            if input_path.suffix == ".pdb":
-                pdb_string = pdb_to_string(input_path.read_text())
-                prot = protein.from_pdb_string(pdb_string)
-            elif input_path.suffix == ".cif":
-                prot = protein.from_mmcif_string(input_path.read_text())
-            header = input_path.stem
-            sequences = decode_structure_sequences(prot.aatype, prot.chain_index)
-
-            if len(sequences) == 0:
-                raise ValueError(f"{input_path} is empty")
-                
-            queries = [(header, sequences, None)]
-
-        else:
-            raise ValueError(f"Unknown file format {input_path.suffix}")
-    else:
-        assert input_path.is_dir(), "Expected either an input file or a input directory"
-        queries = []
-        for file in sorted(input_path.iterdir()):
-            if not file.is_file():
-                continue
-            if file.suffix.lower() not in [".a3m", ".fasta", ".faa", ".pdb", ".cif"]:
-                logger.warning(f"non-fasta/a3m/pdb/cif file in input directory: {file}")
-                continue
-            if file.suffix.lower() in [".pdb", ".cif"]:
-                header = file.stem
-                if file.suffix.lower() == ".pdb":
-                    pdb_string = pdb_to_string(file.read_text())
-                    prot = protein.from_pdb_string(pdb_string)
-                else:  # file.suffix.lower() == ".cif"
-                    prot = protein.from_mmcif_string(file.read_text())
-                sequences = decode_structure_sequences(prot.aatype, prot.chain_index)
-
-                if len(sequences) == 0:
-                    logger.error(f"{file} is empty")
-                    continue
-
-                queries.append((header, sequences, None))
-            else:  # file.suffix.lower() in [".a3m", ".fasta", ".faa"]
-                (seqs, header) = parse_fasta(file.read_text())
-                if len(seqs) == 0:
-                    logger.error(f"{file} is empty")
-                    continue
-                query_sequence = seqs[0]
-                if len(seqs) > 1 and file.suffix in [".fasta", ".faa", ".fa"]:
-                    logger.warning(
-                        f"More than one sequence in {file}, ignoring all but the first sequence"
-                    )
-
-                if file.suffix.lower() == ".a3m":
-                    a3m_lines = [file.read_text()]
-                    queries.append((file.stem, query_sequence.upper(), a3m_lines))
-                else:
-                    if query_sequence.count(":") == 0:
-                        # Single sequence
-                        queries.append((file.stem, query_sequence, None))
-                    else:
-                        # Complex mode
-                        queries.append((file.stem, query_sequence.upper().split(":"), None))
-
-    # sort by seq. len
-    if sort_queries_by == "length":
-        queries.sort(key=lambda t: len("".join(t[1])))
-
-    elif sort_queries_by == "random":
-        random.shuffle(queries)
-
-    is_complex = False
-    for job_number, (_, query_sequence, a3m_lines) in enumerate(queries):
-        if isinstance(query_sequence, list):
-            is_complex = True
-            break
-        if a3m_lines is not None and a3m_lines[0].startswith("#"):
-            a3m_line = a3m_lines[0].splitlines()[0]
-            tab_sep_entries = a3m_line[1:].split("\t")
-            if len(tab_sep_entries) == 2:
-                query_seq_len = tab_sep_entries[0].split(",")
-                query_seq_len = list(map(int, query_seq_len))
-                query_seqs_cardinality = tab_sep_entries[1].split(",")
-                query_seqs_cardinality = list(map(int, query_seqs_cardinality))
-                is_single_protein = (
-                    True
-                    if len(query_seq_len) == 1 and query_seqs_cardinality[0] == 1
-                    else False
-                )
-                if not is_single_protein:
-                    is_complex = True
-                    break
-    return queries, is_complex
-
-def pair_sequences(
-    a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
-) -> str:
-    a3m_line_paired = [""] * len(a3m_lines[0].splitlines())
-    for n, seq in enumerate(query_sequences):
-        lines = a3m_lines[n].splitlines()
-        for i, line in enumerate(lines):
-            if line.startswith(">"):
-                if n != 0:
-                    line = line.replace(">", "\t", 1)
-                a3m_line_paired[i] = a3m_line_paired[i] + line
-            else:
-                a3m_line_paired[i] = a3m_line_paired[i] + line * query_cardinality[n]
-    return "\n".join(a3m_line_paired)
-
-def pad_sequences(
-    a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
-) -> str:
-    _blank_seq = [
-        ("-" * len(seq))
-        for n, seq in enumerate(query_sequences)
-        for _ in range(query_cardinality[n])
-    ]
-    a3m_lines_combined = []
-    pos = 0
-    for n, seq in enumerate(query_sequences):
-        for j in range(0, query_cardinality[n]):
-            lines = a3m_lines[n].split("\n")
-            for a3m_line in lines:
-                if len(a3m_line) == 0:
-                    continue
-                if a3m_line.startswith(">"):
-                    a3m_lines_combined.append(a3m_line)
-                else:
-                    a3m_lines_combined.append(
-                        "".join(_blank_seq[:pos] + [a3m_line] + _blank_seq[pos + 1 :])
-                    )
-            pos += 1
-    return "\n".join(a3m_lines_combined)
 
 def get_msa_and_templates(
     jobname: str,

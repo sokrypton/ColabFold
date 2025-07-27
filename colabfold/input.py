@@ -185,6 +185,20 @@ def get_queries(
                     # Complex mode
                     protein_queries, other_queries = classify_molecules(sequence)
                     queries.append((header, protein_queries, None, other_queries))
+        elif input_path.suffix in [".pdb", ".cif"]:
+            if input_path.suffix == ".pdb":
+                pdb_string = pdb_to_string(input_path.read_text())
+                prot = protein.from_pdb_string(pdb_string)
+            elif input_path.suffix == ".cif":
+                prot = protein.from_mmcif_string(input_path.read_text())
+            header = input_path.stem
+            sequences = decode_structure_sequences(prot.aatype, prot.chain_index)
+
+            if len(sequences) == 0:
+                raise ValueError(f"{input_path} is empty")
+
+            queries = [(header, sequences, None, None)]
+
         else:
             raise ValueError(f"Unknown file format {input_path.suffix}")
     else:
@@ -193,9 +207,24 @@ def get_queries(
         for file in sorted(input_path.iterdir()):
             if not file.is_file():
                 continue
-            if file.suffix.lower() not in [".a3m", ".fasta", ".faa"]:
-                logger.warning(f"non-fasta/a3m file in input directory: {file}")
+            if file.suffix.lower() not in [".a3m", ".fasta", ".faa", ".fa", ".pdb", ".cif"]:
+                logger.warning(f"non-fasta/a3m/pdb/cif file in input directory: {file}")
                 continue
+            if file.suffix.lower() in [".pdb", ".cif"]:
+                header = file.stem
+                if file.suffix.lower() == ".pdb":
+                    pdb_string = pdb_to_string(file.read_text())
+                    prot = protein.from_pdb_string(pdb_string)
+                else:  # file.suffix.lower() == ".cif"
+                    prot = protein.from_mmcif_string(file.read_text())
+                sequences = decode_structure_sequences(prot.aatype, prot.chain_index)
+
+                if len(sequences) == 0:
+                    logger.error(f"{file} is empty")
+                    continue
+
+                queries.append((header, sequences, None))
+            else:  # file.suffix.lower() in [".a3m", ".fasta", ".faa"]
             (seqs, header) = parse_fasta(file.read_text())
             if len(seqs) == 0:
                 logger.error(f"{file} is empty")
