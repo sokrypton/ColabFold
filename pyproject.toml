@@ -28,7 +28,7 @@ tensorflow = { version = "^2.16.2", markers = "platform_machine == 'aarch64' or 
 biopython = "<1.86"
 numpy = "^2.0.2"
 pandas = "^2.2.2"
-alphafold-colabfold = { version = "v2.3.8", optional = true }
+alphafold-colabfold = { version = "v2.3.9", optional = true }
 #alphafold-colabfold = { path = "../alphafold", develop = true, optional = true }
 requests = "^2.26.0"
 tqdm = "^4.62.2"
