@@ -225,7 +225,7 @@ def get_queries(
 
                 queries.append((header, sequences, None))
             else:  # file.suffix.lower() in [".a3m", ".fasta", ".faa"]
-            (seqs, header) = parse_fasta(file.read_text())
+                (seqs, header) = parse_fasta(file.read_text())
             if len(seqs) == 0:
                 logger.error(f"{file} is empty")
                 continue
