@@ -192,6 +192,22 @@ def append_json(jobs, key_values):
         print("###### COMPLETE ######")
 
 
+def retrieve_from_current_job(jobs_file, items):
+    try:
+        with open(jobs_file, "r") as file:
+            jobs_dict = json.load(file)
+            current_job_info = jobs_dict["jobs"][-1]
+            for item in items:
+                match item:
+                    case "user":
+                        return 0
+                    # TODO: finish cases and return values as an array
+
+    except FileNotFoundError:
+        print("###### JSON FILE NOT FOUND ######")
+    return 0
+
+
 def run_colabfold(script_path, jobs):
     """
     Runs the ColabFold shell script multiple times and filters output
@@ -233,7 +249,7 @@ def filter_output(run_number, jobs, script_path):
 
     except FileNotFoundError:
         print("###### JSON FILE NOT FOUND ######")
-        return -1
+        exit()
     
     current_dir = os.getcwd()
     colabfold_output = os.listdir(f"{current_dir}/{outputdir}")
@@ -360,7 +376,9 @@ def main():
     
     script_path = initialize_project(jobs)
 
-    print(">>> ATTEMPTING TO RUN COLABFOLD")
+    print(">>> ATTEMPTING TO RUN COLABFOLD\n")
+
+    delete_directory("./recycles/")
     for run_number in range(3):
         """
         Start with three iterations for testing
@@ -369,7 +387,17 @@ def main():
         os.chmod(script_path, 0o755)
         subprocess.run([script_path], check=True)
         filter_output(run_number, jobs, script_path)
-    #run_colabfold(script_path, jobs)
+    # Move recycles directory into output directory to save results
+    try:
+        with open(jobs, "r") as f:
+            jobs_dict = json.load(f)
+            current_job = jobs_dict["jobs"][-1]
+            current_job_values = list(current_job.values())
+            outputdir = current_job_values[-1]
+    except FileNotFoundError:
+        print("###### JSON FILE NOT FOUND ######")
+        exit()
+    subprocess.run(["mv", "./recycles/", outputdir])
 
 
 if __name__ == '__main__':
