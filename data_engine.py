@@ -5,7 +5,7 @@ Functions for graphing and data analysis
 Ma Lab
 """
 
-def graph_output_distance():
+def graph_output_accuracy():
     return 0
 
 
