@@ -4,9 +4,8 @@ For details of what was changed in v1.5, see [change log](https://github.com/sok
 
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
-```diff
-+ 04Aug2025: We changed the taxonomy/pairing files for the UniRef100 database. This might affect multimer predictions. Check [the wiki entry](https://github.com/sokrypton/ColabFold/wiki/MSA-Server-Database-History) for details. 
-```
+> [!NOTE]
+> 04Aug2025: We changed the taxonomy/pairing files for the UniRef100 database. This might affect multimer predictions. Check [the wiki entry](https://github.com/sokrypton/ColabFold/wiki/MSA-Server-Database-History) for details. 
 
 ### Making Protein folding accessible to all via Google Colab!
 
