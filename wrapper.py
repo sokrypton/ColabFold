@@ -10,6 +10,7 @@ import subprocess
 import shutil
 import json
 import getpass
+import data_engine as engine
 
 def initialize_project(jobs):
     """
@@ -192,17 +193,33 @@ def append_json(jobs, key_values):
         print("###### COMPLETE ######")
 
 
-def retrieve_from_current_job(jobs_file, items):
+def get_from_current_job(jobs_file, items) -> list:
     try:
         with open(jobs_file, "r") as file:
             jobs_dict = json.load(file)
-            current_job_info = jobs_dict["jobs"][-1]
+            current_job_info = list(jobs_dict["jobs"][-1].values())
+            requested_items = []
             for item in items:
                 match item:
                     case "user":
-                        return 0
-                    # TODO: finish cases and return values as an array
-
+                        requested_items.append(current_job_info[0])
+                    case "JID":
+                        requested_items.append(current_job_info[1])
+                    case "input_file":
+                        requested_items.append(current_job_info[2])
+                    case "temp_dir":
+                        requested_items.append(current_job_info[3])
+                    case "num_recycles":
+                        requested_items.append(current_job_info[4])
+                    case "num_s":
+                        requested_items.append(current_job_info[5])
+                    case "m_e_msa":
+                        requested_items.append(current_job_info[6])
+                    case "m_msa":
+                        requested_items.append(current_job_info[7])
+                    case "outputdir":
+                        requested_items.append(current_job_info[8])
+        return requested_items
     except FileNotFoundError:
         print("###### JSON FILE NOT FOUND ######")
     return 0
@@ -217,7 +234,7 @@ def run_colabfold(script_path, jobs):
         script_path (str): Path to the shell script.
         jobs (str): Path to the job metadata JSON file.
     """
-    delete_directory("./recycles/")
+    delete_directory("./iterations/")
     for run_number in range(3):
         """
         Start with three iterations for testing
@@ -239,6 +256,7 @@ def filter_output(run_number, jobs, script_path):
         script_path (str): Path to the ColabFold execution script.
     """
     # Load json and obtain outputdir name
+    """
     try:
         with open(jobs, "r") as f:
             jobs_dict = json.load(f)
@@ -250,7 +268,9 @@ def filter_output(run_number, jobs, script_path):
     except FileNotFoundError:
         print("###### JSON FILE NOT FOUND ######")
         exit()
-    
+    """
+    outputdir, temp_dir = get_from_current_job(jobs, ["outputdir", "temp_dir"])
+        
     current_dir = os.getcwd()
     colabfold_output = os.listdir(f"{current_dir}/{outputdir}")
 
@@ -267,8 +287,10 @@ def filter_output(run_number, jobs, script_path):
             #distances.append((run_distance_finder(f"{outputdir}/{file}", "100", "473"), file))
             distances[run_distance_finder(f"{outputdir}/{file}", "100", "473")] = file
 
+    plot_and_save_distances(distances, run_number)
+
     # Filter files to only include probe distances +- 10 angstrom
-    # TODO: Only include maximum of 9 files, sort by distance and take 9 best
+    # Only include maximum of 9 files, sort by distance and take 9 best
     included_distances = {}
     for distance, filename in distances.items():
         if abs(float(distance) - 68.4) < 10:
@@ -290,26 +312,29 @@ def filter_output(run_number, jobs, script_path):
 
         temp_dir = f"recycle{run_number + 1}"
         try:
-            os.mkdir("recycles")
+            os.mkdir("iterations")
             print(">>> CREATING DIRECTORY FOR BEST TEMPLATES")
         except FileExistsError:
-            print(">>> APPENDING TO RECYCLES DIRECTORY")
+            print(">>> APPENDING TO ITERATIONS DIRECTORY")
 
         try:
-            os.mkdir(f"recycles/{temp_dir}")
+            os.mkdir(f"iterations/{temp_dir}")
         except FileExistsError:
-            shutil.rmtree(f"recycles/{temp_dir}")
-            os.mkdir(f"recycles/{temp_dir}")
+            shutil.rmtree(f"iterations/{temp_dir}")
+            os.mkdir(f"iterations/{temp_dir}")
 
+        # TODO: change naming convention to be from 0000.pdb to 9999.pdb
         template_number = 0
         for distance, filename in included_distances.items():
-            if template_number < 10:
-                subprocess.run(["cp", f"{outputdir}/{filename}", f"recycles/{temp_dir}"])
-                subprocess.run(["mv", f"recycles/{temp_dir}/{filename}", f"recycles/{temp_dir}/tmp{template_number}.pdb"])
-                print(f"###### {filename} ADDED TO {temp_dir} ({distance} A) ######")
-                template_number = template_number + 1
+            subprocess.run(["cp", f"{outputdir}/{filename}", f"iterations/{temp_dir}"])
+            template_number_str = f"{template_number}"
+            while len(template_number_str) < 4:
+                template_number_str = "0" + template_number_str
+            subprocess.run(["mv", f"iterations/{temp_dir}/{filename}", f"iterations/{temp_dir}/{template_number_str}.pdb"])
+            print(f"###### {filename} ADDED TO {temp_dir} ({distance} A) ######")
+            template_number = template_number + 1
 
-        update_temp_dir(script_path, f"recycles/{temp_dir}")
+        update_temp_dir(script_path, f"iterations/{temp_dir}")
         # Clear ouput directory
         if run_number < 2:
             clear_directory(outputdir)
@@ -359,10 +384,18 @@ def update_temp_dir(script_path, dir_name):
                 file.write(line)
 
 
+def plot_and_save_distances(distances, run_number):
+        os.makedirs("distance_distributions", exist_ok=True)
+        plot_name = f"{engine.graph_output_accuracy(distances)}"
+        subprocess.run(["mv", f"{plot_name}.png", f"./distance_distributions/{plot_name}{run_number+1}.png"])
+        return 0
+
+
 def main():
     """
     Entry point for the ColabFold Wrapper.
     Initializes project setup and executes the template filtering loop.
+    TODO: Changes all uses of recycles in directories to 'iterations'
     """
 
     # Welcome message
@@ -378,7 +411,7 @@ def main():
 
     print(">>> ATTEMPTING TO RUN COLABFOLD\n")
 
-    delete_directory("./recycles/")
+    #delete_directory("./iterations/")
     for run_number in range(3):
         """
         Start with three iterations for testing
@@ -387,17 +420,11 @@ def main():
         os.chmod(script_path, 0o755)
         subprocess.run([script_path], check=True)
         filter_output(run_number, jobs, script_path)
-    # Move recycles directory into output directory to save results
-    try:
-        with open(jobs, "r") as f:
-            jobs_dict = json.load(f)
-            current_job = jobs_dict["jobs"][-1]
-            current_job_values = list(current_job.values())
-            outputdir = current_job_values[-1]
-    except FileNotFoundError:
-        print("###### JSON FILE NOT FOUND ######")
-        exit()
-    subprocess.run(["mv", "./recycles/", outputdir])
+    # Move iterations directory into output directory to save results
+        
+    outputdir = get_from_current_job(jobs, ["outputdir"])[0]
+    subprocess.run(["mv", "./iterations/", outputdir])
+    subprocess.run(["mv", "./distance_distributions/", outputdir])
 
 
 if __name__ == '__main__':
