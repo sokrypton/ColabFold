@@ -74,15 +74,18 @@ downloadFile() {
 if [ ! -f DOWNLOADS_READY ]; then
   if [ "${FAST_PREBUILT_DATABASES}" = "1" ]; then
     # new prebuilt GPU+CPU databases, that don't require calling tsv2exprofiledb
-    downloadFile "https://opendata.steineggerlab.workers.dev/colabfold/${UNIREF30DB}.db.tar.gz" "${UNIREF30DB}.tar.gz"
-    downloadFile "https://opendata.steineggerlab.workers.dev/colabfold/colabfold_envdb_202108.db.tar.gz" "colabfold_envdb_202108.tar.gz"
+    downloadFile "https://opendata.mmseqs.org/colabfold/${UNIREF30DB}.db.tar.gz" "${UNIREF30DB}.tar.gz"
+    downloadFile "https://opendata.mmseqs.org/colabfold/colabfold_envdb_202108.db.tar.gz" "colabfold_envdb_202108.tar.gz"
   else
     # old .tsv + tsv2exprofiledb databases
-    downloadFile "https://opendata.steineggerlab.workers.dev/colabfold/${UNIREF30DB}.tar.gz" "${UNIREF30DB}.tar.gz"
-    downloadFile "https://opendata.steineggerlab.workers.dev/colabfold/colabfold_envdb_202108.tar.gz" "colabfold_envdb_202108.tar.gz"
+    downloadFile "https://opendata.mmseqs.org/colabfold/${UNIREF30DB}.tar.gz" "${UNIREF30DB}.tar.gz"
+    downloadFile "https://opendata.mmseqs.org/colabfold/colabfold_envdb_202108.tar.gz" "colabfold_envdb_202108.tar.gz"
   fi
-  downloadFile "https://opendata.steineggerlab.workers.dev/colabfold/pdb100_230517.fasta.gz" "pdb100_230517.fasta.gz"
-  downloadFile "https://opendata.steineggerlab.workers.dev/colabfold/pdb100_foldseek_230517.tar.gz" "pdb100_foldseek_230517.tar.gz"
+  if [ "${UNIREF30DB}" = "uniref30_2302" ]; then
+    downloadFile "https://opendata.mmseqs.org/colabfold/uniref30_2302_newtaxonomy.tar.gz" "uniref30_2302_newtaxonomy.tar.gz"
+  fi
+  downloadFile "https://opendata.mmseqs.org/colabfold/pdb100_230517.fasta.gz" "pdb100_230517.fasta.gz"
+  downloadFile "https://opendata.mmseqs.org/colabfold/pdb100_foldseek_230517.tar.gz" "pdb100_foldseek_230517.tar.gz"
   touch DOWNLOADS_READY
 fi
 
@@ -125,6 +128,12 @@ if [ ! -f UNIREF30_READY ]; then
   fi
   if [ -z "$MMSEQS_NO_INDEX" ]; then
     mmseqs createindex "${UNIREF30DB}_db" tmp1 --remove-tmp-files 1 ${GPU_INDEX_PAR}
+  fi
+
+  # replace mapping and taxonomy with rebuilt versions, see:
+  # https://github.com/sokrypton/ColabFold/wiki/MSA-Server-Database-History#2025-08-04-updated-uniref100_2302-taxonomypairing-files
+  if [ -e "uniref30_2302_newtaxonomy.tar.gz" ]; then
+    tar -xzvf "uniref30_2302_newtaxonomy.tar.gz"
   fi
 
   if [ -e ${UNIREF30DB}_db_mapping ]; then
