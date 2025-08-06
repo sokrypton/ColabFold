@@ -448,7 +448,7 @@ def main():
 
     run_mmseqs(
         args.mmseqs,
-        ["createdb", query_file, args.base.joinpath("qdb"), "--shuffle", "0"],
+        ["createdb", query_file, args.base.joinpath("qdb"), "--shuffle", "0", "--dbtype", "1"],
     )
     with args.base.joinpath("qdb.lookup").open("w") as f:
         id = 0
