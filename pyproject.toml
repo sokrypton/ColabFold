@@ -23,19 +23,18 @@ python = ">=3.9"
 absl-py = "^1.0.0"
 jax = { version = "^0.5.2", optional = true }
 matplotlib = "^3.8.4"
-tensorflow-cpu = { version = "^2.16.2", markers = "platform_machine != 'aarch64' and platform_machine != 'arm64'" }
-tensorflow = { version = "^2.16.2", markers = "platform_machine == 'aarch64' or platform_machine == 'arm64'" }
+tensorflow-cpu = { version = "^2.16.2", markers = "platform_machine != 'aarch64' and platform_machine != 'arm64'", optional = true }
+tensorflow = { version = "^2.16.2", markers = "platform_machine == 'aarch64' or platform_machine == 'arm64'", optional = true }
 biopython = "<1.86"
 numpy = "^2.0.2"
 pandas = "^2.2.2"
 alphafold-colabfold = { version = "2.3.9", optional = true }
-#alphafold-colabfold = { path = "../alphafold", develop = true, optional = true }
 requests = "^2.26.0"
 tqdm = "^4.62.2"
 appdirs = "^1.4.4"
 py3Dmol = "^2.0.1"
-dm-tree = "^0.1.9"
-dm-haiku = "^0.0.13"
+dm-tree = { version = "^0.1.9", optional = true }
+dm-haiku = { version = "^0.0.13", optional = true }
 importlib-metadata = "^8.6.1"
 
 [tool.poetry.dev-dependencies]
@@ -45,8 +44,9 @@ jupyter = "^1.0.0"
 pytest = "^6.2.5"
 
 [tool.poetry.extras]
-alphafold = ["alphafold-colabfold", "jax"]
-alphafold-minus-jax = ["alphafold-colabfold"]
+alphafold = ["alphafold-colabfold", "jax", "dm-tree", "dm-haiku", "tensorflow-cpu", "tensorflow"]
+alphafold-minus-jax = ["alphafold-colabfold", "dm-tree", "dm-haiku", "tensorflow-cpu", "tensorflow"]
+colabfold-search = []
 
 [tool.pytest.ini_options]
 addopts = "--tb=short"
