@@ -80,8 +80,7 @@ from Bio.PDB.PDBIO import Select
 
 # logging settings
 logger = logging.getLogger(__name__)
-import jax
-import jax.numpy as jnp
+from jax import local_devices
 
 # from jax 0.4.6, jax._src.lib.xla_bridge moved to jax._src.xla_bridge
 # suppress warnings: Unable to initialize backend 'rocm' or 'tpu'
@@ -1089,7 +1088,7 @@ def run(
             logger.info('Running on TPU')
             use_gpu_relax = False
     except:
-        if jax.local_devices()[0].platform == 'cpu':
+        if local_devices()[0].platform == 'cpu':
             logger.info("WARNING: no GPU detected, will be using CPU")
             use_gpu_relax = False
         else:
