@@ -80,8 +80,7 @@ from Bio.PDB.PDBIO import Select
 
 # logging settings
 logger = logging.getLogger(__name__)
-import jax
-import jax.numpy as jnp
+from jax import local_devices
 
 # from jax 0.4.6, jax._src.lib.xla_bridge moved to jax._src.xla_bridge
 # suppress warnings: Unable to initialize backend 'rocm' or 'tpu'
@@ -1082,21 +1081,20 @@ def run(
     # check what device is available
     try:
         # check if TPU is available
-        import jax.tools.colab_tpu
-        jax.tools.colab_tpu.setup_tpu()
-        logger.info('Running on TPU')
-        DEVICE = "tpu"
-        use_gpu_relax = False
+        from tpu_info import device
+        if len(device.get_local_chips()) > 0:
+            import jax.tools.colab_tpu
+            jax.tools.colab_tpu.setup_tpu()
+            logger.info('Running on TPU')
+            use_gpu_relax = False
     except:
-        if jax.local_devices()[0].platform == 'cpu':
+        if local_devices()[0].platform == 'cpu':
             logger.info("WARNING: no GPU detected, will be using CPU")
-            DEVICE = "cpu"
             use_gpu_relax = False
         else:
             import tensorflow as tf
             tf.get_logger().setLevel(logging.ERROR)
             logger.info('Running on GPU')
-            DEVICE = "gpu"
             # disable GPU on tensorflow
             tf.config.set_visible_devices([], 'GPU')
 
