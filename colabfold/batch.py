@@ -873,6 +873,37 @@ def generate_input_feature(
             }
     return (input_feature, domain_names)
 
+def normalize_a3m(lines: list[str]) -> list[str]:
+    out = []
+    i = 0
+
+    # keep meta header
+    if lines and lines[0].startswith("#"):
+        out.append(lines[0].rstrip("\n"))
+        i = 1
+
+    header = None
+    seq_chunks = []
+    while i < len(lines):
+        line = lines[i].strip()
+        i += 1
+        if not line:
+            continue
+        if line.startswith(">"):
+            if header is not None:
+                out.append(header)
+                out.append("".join(seq_chunks))
+            header = line
+            seq_chunks = []
+        else:
+            # remove all whitespace inside sequence lines
+            seq_chunks.append("".join(line.split()))
+    if header is not None:
+        out.append(header)
+        out.append("".join(seq_chunks))
+
+    return out
+
 def unserialize_msa(
     a3m_lines: List[str], query_sequence: Union[List[str], str]
 ) -> Tuple[
@@ -883,6 +914,7 @@ def unserialize_msa(
     List[Dict[str, Any]],
 ]:
     a3m_lines = a3m_lines[0].replace("\x00", "").splitlines()
+    a3m_lines = normalize_a3m(a3m_lines)
     if not a3m_lines[0].startswith("#") or len(a3m_lines[0][1:].split("\t")) != 2:
         assert isinstance(query_sequence, str)
         return (
