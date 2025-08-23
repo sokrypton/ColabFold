@@ -47,7 +47,6 @@ pytest = "^6.2.5"
 [tool.poetry.extras]
 alphafold = ["alphafold-colabfold", "jax", "dm-tree", "dm-haiku", "tensorflow-cpu", "tensorflow"]
 alphafold-minus-jax = ["alphafold-colabfold", "dm-tree", "dm-haiku", "tensorflow-cpu", "tensorflow"]
-colabfold-search = []
 
 [tool.pytest.ini_options]
 addopts = "--tb=short"
