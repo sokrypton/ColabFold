@@ -19,7 +19,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9"
+python = ">=3.10"
 absl-py = "^1.0.0"
 jax = { version = "^0.5.2", optional = true }
 matplotlib = "^3.8.4"
