@@ -20,7 +20,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.10"
-absl-py = "^1.0.0"
+absl-py = { version = "^1.0.0", optional = true }
 jax = { version = "^0.5.2", optional = true }
 matplotlib = "^3.8.4"
 tensorflow-cpu = { version = "^2.16.2", markers = "platform_machine != 'aarch64' and platform_machine != 'arm64'", optional = true }
@@ -33,7 +33,7 @@ alphafold-colabfold = { version = "2.3.9", optional = true }
 requests = "^2.26.0"
 tqdm = "^4.62.2"
 appdirs = "^1.4.4"
-py3Dmol = "^2.0.1"
+py3Dmol = { version = "^2.0.1", optional = true }
 dm-tree = { version = "^0.1.9", optional = true }
 dm-haiku = { version = "^0.0.13", optional = true }
 importlib-metadata = "^8.6.1"
@@ -45,8 +45,8 @@ jupyter = "^1.0.0"
 pytest = "^6.2.5"
 
 [tool.poetry.extras]
-alphafold = ["alphafold-colabfold", "jax", "dm-tree", "dm-haiku", "tensorflow-cpu", "tensorflow"]
-alphafold-minus-jax = ["alphafold-colabfold", "dm-tree", "dm-haiku", "tensorflow-cpu", "tensorflow"]
+alphafold = ["alphafold-colabfold", "jax", "absl-py", "dm-tree", "dm-haiku", "tensorflow-cpu", "tensorflow", "py3Dmol"]
+alphafold-minus-jax = ["alphafold-colabfold", "absl-py", "dm-tree", "dm-haiku", "tensorflow-cpu", "tensorflow", "py3Dmol"]
 
 [tool.pytest.ini_options]
 addopts = "--tb=short"

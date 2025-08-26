@@ -5,7 +5,11 @@ from pathlib import Path
 from typing import Optional, Tuple, List
 from enum import Enum
 
-from absl import logging as absl_logging
+absl_imported = True
+try:
+    from absl import logging as absl_logging
+except:
+    absl_imported = False
 from importlib_metadata import distribution
 from tqdm import TqdmExperimentalWarning
 
@@ -56,8 +60,9 @@ def setup_logging(log_file: Path, mode: str = "w") -> None:
         handlers=[TqdmHandler(), logging.FileHandler(log_file, mode=mode)],
         force=True,
     )
-    # otherwise jax will tell us about its search for devices
-    absl_logging.set_verbosity("error")
+    if absl_imported:
+        # otherwise jax will tell us about its search for devices
+        absl_logging.set_verbosity("error")
     warnings.simplefilter(action="ignore", category=TqdmExperimentalWarning)
 
 def get_commit() -> Optional[str]:
