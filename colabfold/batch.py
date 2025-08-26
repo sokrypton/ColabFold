@@ -1933,6 +1933,12 @@ def main():
         "but overall performance increases due to not recompiling. "
         "Set to 0 to disable.",
     )
+    adv_group.add_argument(
+        "--debug-logging",
+        default=False,
+        action="store_true",
+        help="Enable debug message logging.",
+    )
 
     af3_group = parser.add_argument_group(
         "AlphaFold3 arguments", ""
@@ -1952,7 +1958,7 @@ def main():
         for k in ENV.keys():
             if k in os.environ: del os.environ[k]
 
-    setup_logging(Path(args.results).joinpath("log.txt"))
+    setup_logging(Path(args.results).joinpath("log.txt"), verbose=args.debug_logging)
 
     version = importlib_metadata.version("colabfold")
     commit = get_commit()

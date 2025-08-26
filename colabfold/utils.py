@@ -47,7 +47,7 @@ class TqdmHandler(logging.StreamHandler):
         tqdm.write(msg)
 
 
-def setup_logging(log_file: Path, mode: str = "w") -> None:
+def setup_logging(log_file: Path, mode: str = "w", verbose: bool = False) -> None:
     log_file.parent.mkdir(exist_ok=True, parents=True)
     root = logging.getLogger()
     if root.handlers:
@@ -55,12 +55,12 @@ def setup_logging(log_file: Path, mode: str = "w") -> None:
             handler.close()
             root.removeHandler(handler)
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG if verbose else logging.INFO,
         format="%(asctime)s %(message)s",
         handlers=[TqdmHandler(), logging.FileHandler(log_file, mode=mode)],
         force=True,
     )
-    if absl_imported:
+    if absl_imported and not verbose:
         # otherwise jax will tell us about its search for devices
         absl_logging.set_verbosity("error")
     warnings.simplefilter(action="ignore", category=TqdmExperimentalWarning)
