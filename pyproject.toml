@@ -41,7 +41,6 @@ importlib-metadata = "^8.6.1"
 [tool.poetry.dev-dependencies]
 # The latest version conflicts with tensorflow over typing-extensions
 black = "^23.1.0"
-jupyter = "^1.0.0"
 pytest = "^6.2.5"
 
 [tool.poetry.extras]
