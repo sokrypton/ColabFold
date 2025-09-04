@@ -542,19 +542,17 @@ def main():
                         unpaired_msa.append(f.read())
                     args.base.joinpath(f"{id}.a3m").unlink()
 
-                    if args.use_env_pairing:
-                        with open(args.base.joinpath(f"{id}.paired.a3m"), 'a') as file_pair:
-                            with open(args.base.joinpath(f"{id}.env.paired.a3m"), 'r') as file_pair_env:
-                                while chunk := file_pair_env.read(10 * 1024 * 1024):
-                                    file_pair.write(chunk)
-                        if args.merge_a3m:
-                            args.base.joinpath(f"{id}.env.paired.a3m").unlink()
-
                     if len(query_seqs_cardinality) > 1:
                         with args.base.joinpath(f"{id}.paired.a3m").open("r") as f:
-                            paired_msa.append(f.read())
-                    if args.merge_a3m:
-                        args.base.joinpath(f"{id}.paired.a3m").unlink()
+                            paired = f.read()
+                        if args.merge_a3m:
+                            args.base.joinpath(f"{id}.paired.a3m").unlink()
+                        if args.use_env_pairing:
+                            with open(args.base.joinpath(f"{id}.env.paired.a3m"), 'r') as file_pair_env:
+                                paired += file_pair_env.read()
+                            if args.merge_a3m:                            
+                                args.base.joinpath(f"{id}.env.paired.a3m").unlink()
+                        paired_msa.append(paired)
                     id += 1
 
                 if args.af3_json:
@@ -566,7 +564,7 @@ def main():
                     msa = msa_to_str(
                         unpaired_msa, paired_msa, query_sequences, query_seqs_cardinality
                     )
-                    args.base.joinpath(f"job_{job_number}.a3m").write_text(msa)
+                    args.base.joinpath(f"{job_number}.a3m").write_text(msa)
     else:
         if args.af3_json:
             id = 0
@@ -582,15 +580,38 @@ def main():
                 with open(args.base.joinpath(f"{job_number}.json"), 'w') as f:
                     f.write(json.dumps(af3.content, indent=4))
 
-    if args.merge_a3m:
+    if args.unpack:
         # rename a3m files
         for job_number, (raw_jobname, query_sequences, query_seqs_cardinality, other_molecules) in enumerate(queries_unique):
-            os.rename(
-                args.base.joinpath(f"job_{job_number}.a3m"),
-                args.base.joinpath(f"{safe_filename(raw_jobname)}.a3m"),
-            )
+            if args.merge_a3m:
+                os.rename(
+                    args.base.joinpath(f"{job_number}.a3m"),
+                    args.base.joinpath(f"{safe_filename(raw_jobname)}.a3m"),
+                )
+            else:
+                # Rename unpaired, paired and env paired files.
+                nseqs = len(query_seqs_cardinality)
+                for id in range(job_number * nseqs, (job_number+1) * nseqs):
+                    if nseqs > 1:
+                        os.rename(
+                            args.base.joinpath(f"{id}.a3m"),
+                            args.base.joinpath(f"{safe_filename(raw_jobname)}_{id}.a3m"),
+                        )
+                        os.rename(
+                            args.base.joinpath(f"{id}.paired.a3m"),
+                            args.base.joinpath(f"{safe_filename(raw_jobname)}_{id}.paired.a3m"),
+                        )
+                        if args.use_env_pairing:
+                            os.rename(
+                                args.base.joinpath(f"{id}.env.paired.a3m"),
+                                args.base.joinpath(f"{safe_filename(raw_jobname)}_{id}.env.paired.a3m"),
+                            )
+                    else:
+                        os.rename(
+                            args.base.joinpath(f"{id}.a3m"),
+                            args.base.joinpath(f"{safe_filename(raw_jobname)}.a3m"),
+                        )
 
-    if args.unpack:
         # rename m8 files
         if args.use_templates:
             id = 0
