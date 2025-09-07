@@ -211,8 +211,7 @@ def mmseqs_search_monomer(
 def mmseqs_search_pair(
     dbbase: Path,
     base: Path,
-    uniref_db: Path = Path("uniref30_2302_db"),
-    spire_db: Path = Path("spire_ctg10_2401_db"),
+    db: Path = Path("uniref30_2302_db"),
     mmseqs: Path = Path("mmseqs"),
     pair_env: bool = True,
     prefilter_mode: int = 0,
@@ -224,12 +223,12 @@ def mmseqs_search_pair(
     pairing_strategy: int = 0,
     unpack: bool = True,
 ):
-    if not dbbase.joinpath(f"{uniref_db}.dbtype").is_file():
-        raise FileNotFoundError(f"Database {uniref_db} does not exist")
+    if not dbbase.joinpath(f"{db}.dbtype").is_file():
+        raise FileNotFoundError(f"Database {db} does not exist")
     if (
         (
-            not dbbase.joinpath(f"{uniref_db}.idx").is_file()
-            and not dbbase.joinpath(f"{uniref_db}.idx.index").is_file()
+            not dbbase.joinpath(f"{db}.idx").is_file()
+            and not dbbase.joinpath(f"{db}.idx.index").is_file()
         )
         or os.environ.get("MMSEQS_IGNORE_INDEX", False)
     ):
@@ -242,10 +241,8 @@ def mmseqs_search_pair(
         dbSuffix2 = ".idx"
 
     if pair_env:
-        db = spire_db
         output = ".env.paired.a3m"
     else:
-        db = uniref_db
         output = ".paired.a3m"
 
     # fmt: off
@@ -493,7 +490,7 @@ def main():
             mmseqs=args.mmseqs,
             dbbase=args.dbbase,
             base=args.base,
-            uniref_db=args.db1,
+            db=args.db1,
             prefilter_mode=args.prefilter_mode,
             s=args.s,
             db_load_mode=args.db_load_mode,
@@ -509,8 +506,7 @@ def main():
                 mmseqs=args.mmseqs,
                 dbbase=args.dbbase,
                 base=args.base,
-                uniref_db=args.db1,
-                spire_db=args.db4,
+                db=args.db4,
                 prefilter_mode=args.prefilter_mode,
                 s=args.s,
                 db_load_mode=args.db_load_mode,
