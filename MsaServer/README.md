@@ -1,42 +1,56 @@
 # Setting up your local ColabFold API server
 
-Here you will find two examples of how to setup your own API server on a Linux machine.
+Here you will find two examples of how to setup your own API server on a Linux (or macOS for testing) machine.
 
 ## `setup-and-start-local.sh`
 
 The `setup-and-start-local.sh` script will execute most of the steps to get a server running for you.
 It will do the following steps:
-* check that all required software is installed (go, git, aria2c, curl)
-* download a specific MMseqs2 version that we tested to work with ColabFold
+* check that all required software is installed (`curl`, `aria2c`, `rsync`, `aws`)
+* download pinned **MMseqs2** and **mmseqs-server** binaries for your platform (Linux x86\_64/arm64, macOS universal)
 * download the databases (UniRef30 and ColabFoldDB, this might take some time)
 * download the API server and compile its binary
 * start the API server
 
-The script can be called repeatedly to start the server. It will avoid doing any unnecessary setup work.
+The script can be called repeatedly to (re)start the server. It avoids unnecessary work and only re-downloads components when the pinned commit changed.
 
-### Tweaking `config.json`
-You can tweak the provided example `config.json` file. Two values you will likely want to change are the:
-* `server.address` field to specify a custom port. We recommend putting a `nginx` server infront of the ColabFold API server to deal with gzip compression, SSL etc.
-* `local.workers` field to specify how many job workers are allowed to run in parallel.
+### CPU/GPU and platform detection
+
+* Uncomment the `export GPU=1` line to enable GPU mode (Linux only).
+* The script adds the parameters `--paths.colabfold.gpu.gpu 1 --paths.colabfold.gpu.server 1`. See `config.json` for more details.
+
+### Choosing a PDB rsync mirror
+
+At the top of the script you can set the PDB mirror to use (RCSB, PDBe or PDBj).
+Uncomment the pair you want. The script exits if no mirror is selected.
+
+### Configuration
+
+Edit `config.json` as needed. Common tweaks:
+
+* `server.address` — change the bind address/port (we recommend putting `nginx` in front for gzip/SSL).
+* `local.workers` — number of local job workers.
+* Optional GPU block under `paths.colabfold.gpu` lets you pin device IDs per DB when you run multi-GPU.
+* A `server.ratelimit` example is included and can be enabled.
+
+### Run
+
+```
+./setup-and-start-local.sh
+```
+
+If `DEBUG_MINI_DB=1` is set, the server starts with templates disabled and a tiny DB for quick tests.
 
 ## Setup a systemd service
-To better manage the ColabFold API server, we recommend to setup a systemd service. It will automatically restart the server in case of failure and allow managing the server with common operating system tools (like `journalctl`, `systemctl`, etc.).
+To better manage the ColabFold API server, we recommend to setup a systemd service. It will automatically restart on failure and lets you use `journalctl`/`systemctl`.
 
-You can first execute the `setup-and-start-local.sh` script to get a working server. Then tweak the `systemd-example-mmseqs-server.service` file and adjust the directories to the MSA server binary/directories.
-
-Afterwards copy the service file to `/etc/systemd/system/mmseqs-server.service` (this might vary by distribution).
-
-Then call:
-```
-sudo systemctl daemon-reload
-sudo systemctl start mmseqs-server.service
-```
-
-The `restart-systemd.sh` script contains an example how to stop the server, clear the job cache and start it again.
+1. First run `setup-and-start-local.sh` once to get the folder structure and binaries.
+2. Adjust the `systemd-example-mmseqs-server.service` example and point it to your paths:
+3. Enable and start `./restart-systemd.sh`
 
 ## Forcing databases to stay resident in system memory
 
-The ColabFold MSA API server will only achieve response time of few seconds if the search database are held fully within system memory. We use vmtouch (https://github.com/hoytech/vmtouch) to keep the precomputed database index file within system memory. This is the most expensive part of the MSA API server, as the two default databases (UniRef30+ColabFoldDB), require currently 768GB-1024GB RAM to stay resident in RAM and have enough RAM spare for worker processes. If you are only running batch searches or are using the command line tool with our API server, system requirements are much much lower.
+The ColabFold MSA API server will only achieve response time of few seconds if the search database are held fully within system memory. We use vmtouch (https://github.com/hoytech/vmtouch) to keep the precomputed database index file within system memory. In CPU mode, this is the most expensive part of the MSA API server, as the two default databases (UniRef30+ColabFoldDB) require currently 768GB-1024GB RAM to stay resident in RAM and have enough RAM spare for worker processes.
 
 After installing `vmtouch`, you can execute the following command to make sure that the search databases are not evicted from the system cache:
 
@@ -45,17 +59,7 @@ cd databases
 sudo vmtouch -f -w -t -l -d -m 1000G *.idx
 ```
 
-This assumes that precomputed database index was created without splits. Check that there are no `uniref30_2103_db.idx.{0,1,...}` or `colabfold_envdb_202108_db.idx.{0,1,...}` files in the databases folder. If these files are there, you should recreate the precomputed database indices with the following command:
-
-```
-cd databases
-rm uniref30_2103_db.idx* colabfold_envdb_202108_db.idx*
-mmseqs createindex uniref30_2103_db tmp --remove-tmp-files 1 --split 1
-mmseqs createindex colabfold_envdb_202108_db tmp --remove-tmp-files 1 --split 1
-```
-
 ## Using a custom API server
 
-You can now pass the server URL to `colabfold_batch`'s `--host-url` parameter. If you want to use the notebook with a custom API server add a `host_url=https://yourserver.example.org` parameter to the `run()` call in the *Run Prediction* cell.
-
-Templates are still requested from our server (if the `--templates` flag is used). We will improve templates in a future release.
+You can pass the server URL to `colabfold_batch` via `--host-url`.
+In notebooks, add `host_url=https://yourserver.example.org` to the `run()` call in the *Run Prediction* cell.
