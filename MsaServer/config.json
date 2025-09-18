@@ -1,39 +1,94 @@
 {
-    "app": "colabfold",
+	"app": "colabfold",
+    // should mmseqs und webserver output be printed
     "verbose": true,
     "server" : {
-        // you might want to change the port
-        "address"    : "127.0.0.1:80",
+        "address"    : "127.0.0.1:8080",
+        // prefix for all API endpoints
+        "pathprefix" : "/api/",
+        // enables additional API endpoints for adding databases
+        // WARNING: No additional authentication provided. Enable only within trusted network/for trusted admins.
         "dbmanagment": false,
-        "cors"       : true
-    },
-    "paths" : {
-        "databases"    : "~/databases",
-        "results"      : "~/jobs",
-        "temporary"    : "~/tmp",
-        "colabfold"    : {
-            // disable parallel stage execution if you plan to use exactly #workers of CPU-cores
-            // this will ~2-3x speedup the execution, while requiring more cores
-            "parallelstages": true,
-            "uniref"        : "~/databases/uniref30_2202_db",
-            "pdb"           : "~/databases/pdb100_230517",
-            "environmental" : "~/databases/colabfold_envdb_202108_db",
-            "pdb70"         : "~/databases/pdb100",
-            "pdbdivided"    : "~/databases/pdb/divided",
-            "pdbobsolete"   : "~/databases/pdb/obsolete"
+        /* enable HTTP Basic Auth (optional)
+        "auth": {
+            "username" : "",
+            "password" : "",
         },
-        "mmseqs"       : "~/mmseqs/bin/mmseqs"
+        // enable rate-limiting (optional)
+        "ratelimit"  : {
+            // this uses the token-bucket algorithm
+            // i.e. we start with a full bucket (with burst tokens) and refill it at a given rate
+            // each request consumes one token, if the bucket is empty the request is rejected
+            // the example below starts with 20 tokens and refills 0.0333 token per second (2 tokens per minute)
+            "rate"   : 0.03333333333333,
+            "burst"  : 20,
+            "ttl"    : 1,
+            "reason" : "The foldseek server is a shared resource. Please be mindful about submitting many jobs.",
+			// CIDRs to allow without rate-limiting
+			"allowlist": [],
+        },
+        */
+        // should CORS headers be set to allow requests from anywhere
+        "cors"       : true,
+		// should old jobs be checked on startup
+		"checkold"   : true,
     },
-    "local" : {
-        // this will allow up to 16 jobs at the same time
-        "workers"  : 16
+    "worker": {
+        // should workers exit immediately after SIGINT/SIGTERM signal or gracefully wait for job completion
+        "gracefulexit": false,
+        // How many databases can be searched in parallel (uses additional CPUs)
+        "paralleldatabases": 1,
     },
-    // ignore the rest, redis is not used here
+    // paths to workfolders and mmseqs, special character ~ is resolved relative to the binary location
+    "paths" : {
+        // path to job results and scratch directory, has to be shared between server/workers
+        "results"      : "~jobs",
+        // paths to colabfold templates
+        "colabfold"    : {
+			// configure GPU support for colabfold
+			// GPU support for mmseqs and foldseek is configured in database .params files
+			/*
+			"gpu" : {
+				// enable/disable
+				"gpu": true,
+				// enable gpuserver, saves about 1.5s per request in overhead
+				"server": true,
+				// set cuda visible devices for all databases, can be empty/omitted
+				// "devices": "0,1,2",
+				// set/override devices per database for better VRAM managment
+				// "uniref_devices": "0",
+				// "pdb_devices": "1",
+				// "environmental_devices": "2",
+			},
+			*/
+            // should stages be run in parallel, faster at the cost of more CPU
+            "parallelstages": false,
+            // paths for search databases
+            "uniref"        : "~databases/uniref30_2302_db",
+            "pdb"           : "~databases/pdb100_230517",
+            "environmental" : "~databases/colabfold_envdb_202108_db",
+            // not used in public MSA server
+			// "environmentalpair" : "~databases/spire_ctg10_2401_db",
+            // paths for templates
+            "pdb70"         : "~databases/pdb100",
+            "pdbdivided"    : "~databases/pdb/divided",
+            "pdbobsolete"   : "~databases/pdb/obsolete",
+        },
+        // path to mmseqs binary
+        "mmseqs"       : "mmseqs",
+    },
+    // connection details for redis database, not used in -local mode
     "redis" : {
         "network"  : "tcp",
-        "address"  : "mmseqs-web-redis:6379",
+        "address"  : "localhost:6379",
         "password" : "",
-        "index"    : 0
+        "index"    : 0,
+    },
+    // options for local/single-binary server
+    "local" : {
+        "workers"  : 1,
+		// should old jobs be checked on startup
+		"checkold" : true,
     },
     "mail" : {
         "type"      : "null",
