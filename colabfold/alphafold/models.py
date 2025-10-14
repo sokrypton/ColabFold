@@ -67,6 +67,7 @@ def load_models_and_params(
     model_order: Optional[List[int]] = None,
     model_type: str = "",
     data_dir: Path = Path("."),
+    attention_output_dir: str = None,
     stop_at_score: float = 100,
     rank_by: str = "auto",
     max_seq: Optional[int] = None,
@@ -169,6 +170,7 @@ def load_models_and_params(
             model_runner = model.RunModel(
                 model_config,
                 params,
+                attention_output_dir=attention_output_dir,
                 extended_ptm_config={'calc_extended_ptm': calc_extra_ptm,
                                      'use_probs_extended': use_probs_extra}
             )

@@ -19,7 +19,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10"
+python = ">=3.11"
 absl-py = { version = "^1.0.0", optional = true }
 jax = { version = "^0.5.2", optional = true }
 matplotlib = "^3.8.4"
@@ -28,8 +28,8 @@ tensorflow = { version = "^2.16.2", markers = "platform_machine == 'aarch64' or 
 biopython = "<1.86"
 numpy = "^2.0.2"
 pandas = "^2.2.2"
-alphafold-colabfold = { version = "2.3.10", optional = true }
-#alphafold-colabfold = { path = "../alphafold", develop = true, optional = true }
+#alphafold-colabfold = { version = "2.3.10", optional = true }
+alphafold-colabfold = { path = "./alphafold", develop = true, optional = true }
 requests = "^2.26.0"
 tqdm = "^4.62.2"
 appdirs = "^1.4.4"
@@ -38,7 +38,9 @@ dm-tree = { version = "^0.1.9", optional = true }
 dm-haiku = { version = "^0.0.13", optional = true }
 importlib-metadata = "^8.6.1"
 
-[tool.poetry.dev-dependencies]
+#[tool.poetry.dev-dependencies]
+scipy = "^1.16.2"
+[tool.poetry.group.dev.dependencies]
 # The latest version conflicts with tensorflow over typing-extensions
 black = "^23.1.0"
 pytest = "^6.2.5"
