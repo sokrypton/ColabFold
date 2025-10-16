@@ -52,10 +52,10 @@ class RunModel:
     else:
       def _forward_fn(batch):
         if self.config.data.eval.num_ensemble == 1:
-          model = modules.AlphaFold_noE(self.config.model, self.attention_output_dir)
+          model = modules.AlphaFold_noE(self.config.model, attention_output_dir=self.attention_output_dir)
           return model(batch, is_training=is_training)
         else:
-          model = modules.AlphaFold(self.config.model, self.attention_output_dir)
+          model = modules.AlphaFold(self.config.model, attention_output_dir=self.attention_output_dir)
           return model(
               batch,
               is_training=is_training,

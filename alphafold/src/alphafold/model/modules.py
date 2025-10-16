@@ -29,8 +29,13 @@ from alphafold.model import quat_affine
 from alphafold.model import utils
 import haiku as hk
 import numpy as np
+import os
 import jax
 import jax.numpy as jnp
+
+attention_head_counter = 0
+attention_dir = None
+
 
 def softmax_cross_entropy(logits, labels):
   """Computes softmax cross entropy given logits and one-hot class labels."""
@@ -117,26 +122,29 @@ def create_extra_msa_feature(batch):
               jnp.expand_dims(batch['extra_deletion_value'], axis=-1)]
   return jnp.concatenate(msa_feat, axis=-1)
 
-def write_array_to_file(x: np.ndarray, output_dir: str, counter: int, filename_prefix: str = "attention_head") -> int:
+def write_array_to_file(logits: np.ndarray, filename_prefix: str = "attention_head") -> int:
   """Save attention head array to disk in the specified directory."""
-  import os
-  os.makedirs(output_dir, exist_ok=True)
-  name = os.path.join(output_dir, f"{filename_prefix}_{counter}.npy")
-  np.save(name, x)
+  global attention_dir
+  global attention_head_counter
+
+  os.makedirs(attention_dir, exist_ok=True)
+
+  name = os.path.join(attention_dir, f"{filename_prefix}_{attention_head_counter}.npy")
+  np.save(name, logits)
+  attention_head_counter += 1
   return 0
 
 class AlphaFoldIteration_noE(hk.Module):
   """A single recycling iteration of AlphaFold architecture."""
-  def __init__(self, config, global_config, attention_output_dir=None, name='alphafold_iteration'):
+  def __init__(self, config, global_config, name='alphafold_iteration'):
     super().__init__(name=name)
     self.config = config
     self.global_config = global_config
-    self.attention_output_dir = attention_output_dir
 
   def __call__(self, batch, is_training, **kwargs):
 
     # Compute representations for each batch element and average.
-    evoformer_module = EmbeddingsAndEvoformer(self.config.embeddings_and_evoformer, self.global_config, self.attention_output_dir)
+    evoformer_module = EmbeddingsAndEvoformer(self.config.embeddings_and_evoformer, self.global_config)
     representations = evoformer_module(batch, is_training)    
     
     head_factory = {
@@ -172,15 +180,17 @@ class AlphaFoldIteration_noE(hk.Module):
 
 class AlphaFold_noE(hk.Module):
   """AlphaFold model"""
-  def __init__(self, config, name='alphafold', attention_output_dir=None):
+  def __init__(self, config, attention_output_dir=None, name='alphafold'):
     super().__init__(name=name)
     self.config = config
     self.global_config = config.global_config
-    self.attention_output_dir = attention_output_dir
+
+    global attention_dir
+    attention_dir = attention_output_dir
 
   def __call__(self, batch, is_training, return_representations=False, **kwargs):
     """Run the AlphaFold model"""
-    impl = AlphaFoldIteration_noE(self.config, self.global_config, self.attention_output_dir)
+    impl = AlphaFoldIteration_noE(self.config, self.global_config)
 
     def get_prev(ret):
       new_prev = {
@@ -383,11 +393,13 @@ class AlphaFold(hk.Module):
   Jumper et al. (2021) Suppl. Alg. 2 "Inference"
   """
 
-  def __init__(self, config, name='alphafold', attention_output_dir=None):
+  def __init__(self, config, attention_output_dir=None, name='alphafold'):
     super().__init__(name=name)
     self.config = config
     self.global_config = config.global_config
-    self.attention_output_dir = attention_output_dir
+    
+    global attention_dir
+    attention_dir = attention_output_dir
 
   def __call__(
       self,
@@ -637,13 +649,12 @@ def glorot_uniform():
 class Attention(hk.Module):
   """Multihead attention."""
 
-  def __init__(self, config, global_config, output_dim, attention_output_dir=None, name='attention'):
+  def __init__(self, config, global_config, output_dim, name='attention'):
     super().__init__(name=name)
 
     self.config = config
     self.global_config = global_config
     self.output_dim = output_dim
-    self.attention_output_dir = attention_output_dir
 
   def __call__(self, q_data, m_data, bias, nonbatched_bias=None):
     """Builds Attention module.
@@ -690,15 +701,17 @@ class Attention(hk.Module):
     logits = jnp.clip(logits, -1e8, 1e8)
 
     # Grab the attention weights for visualization
-    if self.attention_output_dir is not None:
+    if attention_dir is not None:
+      module_name = self.name
+        
+      result_shape = jax.ShapeDtypeStruct((), jax.numpy.int32)
+
       jax.experimental.io_callback(
         write_array_to_file,
-        jax.ShapeDtypeStruct((), jax.numpy.int32),
+        result_shape,
         logits,
-        output_dir=self.attention_output_dir,
-        counter=0,
         ordered=True
-    )
+      )
 
     weights = jax.nn.softmax(logits)
     weighted_avg = jnp.einsum('bhqk,bkhc->bqhc', weights, v)
@@ -847,12 +860,10 @@ class MSARowAttentionWithPairBias(hk.Module):
   """
 
   def __init__(self, config, global_config,
-               attention_output_dir=None,
                name='msa_row_attention_with_pair_bias'):
     super().__init__(name=name)
     self.config = config
     self.global_config = global_config
-    self.attention_output_dir = attention_output_dir
 
   def __call__(self,
                msa_act,
@@ -899,9 +910,7 @@ class MSARowAttentionWithPairBias(hk.Module):
     nonbatched_bias = jnp.einsum('qkc,ch->hqk', pair_act, weights)
 
     attn_mod = Attention(
-        c, self.global_config, msa_act.shape[-1],
-        attention_output_dir=self.attention_output_dir
-        )
+        c, self.global_config, msa_act.shape[-1],)
     msa_act = mapping.inference_subbatch(
         attn_mod,
         self.global_config.subbatch_size,
@@ -1762,13 +1771,11 @@ class EvoformerIteration(hk.Module):
   """
 
   def __init__(self, config, global_config, is_extra_msa,
-               attention_output_dir=None,
                name='evoformer_iteration'):
     super().__init__(name=name)
     self.config = config
     self.global_config = global_config
     self.is_extra_msa = is_extra_msa
-    self.attention_output_dir = attention_output_dir
 
   def __call__(self, activations, masks, is_training=True, safe_key=None):
     """Builds EvoformerIteration module.
@@ -1820,7 +1827,6 @@ class EvoformerIteration(hk.Module):
     msa_act = dropout_wrapper_fn(
         MSARowAttentionWithPairBias(
             c.msa_row_attention_with_pair_bias, gc,
-            attention_output_dir=self.attention_output_dir,
             name='msa_row_attention_with_pair_bias'),
         msa_act,
         msa_mask,
@@ -1829,7 +1835,8 @@ class EvoformerIteration(hk.Module):
 
     if not self.is_extra_msa:
       attn_mod = MSAColumnAttention(
-          c.msa_column_attention, gc, name='msa_column_attention')
+          c.msa_column_attention, gc,
+          name='msa_column_attention')
     else:
       attn_mod = MSAColumnGlobalAttention(
           c.msa_column_attention, gc, name='msa_column_global_attention')
@@ -1895,11 +1902,10 @@ class EmbeddingsAndEvoformer(hk.Module):
   Jumper et al. (2021) Suppl. Alg. 2 "Inference" line 5-18
   """
 
-  def __init__(self, config, global_config, attention_output_dir=None, name='evoformer'):
+  def __init__(self, config, global_config, name='evoformer'):
     super().__init__(name=name)
     self.config = config
     self.global_config = global_config
-    self.attention_output_dir = attention_output_dir
 
   def __call__(self, batch, is_training, safe_key=None):
 
@@ -1999,7 +2005,7 @@ class EmbeddingsAndEvoformer(hk.Module):
       }
 
       extra_msa_stack_iteration = EvoformerIteration(
-          c.evoformer, gc, is_extra_msa=True, attention_output_dir=self.attention_output_dir, name='extra_msa_stack')
+          c.evoformer, gc, is_extra_msa=True, name='extra_msa_stack')
 
       def extra_msa_stack_fn(x):
         act, safe_key = x

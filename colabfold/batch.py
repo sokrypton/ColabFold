@@ -28,7 +28,6 @@ import importlib_metadata
 import numpy as np
 
 try:
-    #import alphafold.src.alphafold as alphafold
     import alphafold as alphafold
 except ModuleNotFoundError:
     raise RuntimeError(
