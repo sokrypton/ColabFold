@@ -5,7 +5,7 @@ FROM nvidia/cuda:${CUDA_VERSION}-base-ubuntu22.04
 RUN apt-get update && apt-get install -y wget cuda-nvcc-$(echo $CUDA_VERSION | cut -d'.' -f1,2 | tr '.' '-') --no-install-recommends --no-install-suggests && rm -rf /var/lib/apt/lists/* && \
     wget -qnc https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh && \
     bash Miniforge3-Linux-x86_64.sh -bfp /usr/local && \
-    mamba config --set auto_update_conda false && \
+    conda config --set auto_update_conda false && \
     rm -f Miniforge3-Linux-x86_64.sh && \
     CONDA_OVERRIDE_CUDA=$(echo $CUDA_VERSION | cut -d'.' -f1,2) mamba create -y -n colabfold -c conda-forge -c bioconda colabfold=$COLABFOLD_VERSION jaxlib==*=cuda* && \
     mamba clean -afy
