@@ -28,14 +28,14 @@ tensorflow = { version = "^2.16.2", markers = "platform_machine == 'aarch64' or 
 biopython = "<1.86"
 numpy = "^2.0.2"
 pandas = "^2.2.2"
-alphafold-colabfold = { version = "2.3.10", optional = true }
+alphafold-colabfold = { version = "2.3.11", optional = true }
 #alphafold-colabfold = { path = "../alphafold", develop = true, optional = true }
 requests = "^2.26.0"
 tqdm = "^4.62.2"
 appdirs = "^1.4.4"
 py3Dmol = { version = "^2.0.1", optional = true }
 dm-tree = { version = "^0.1.9", optional = true }
-dm-haiku = { version = "^0.0.13", optional = true }
+dm-haiku = { version = "^0.0.14", optional = true }
 importlib-metadata = "^8.6.1"
 
 [tool.poetry.dev-dependencies]
