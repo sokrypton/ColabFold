@@ -15,15 +15,15 @@ files = [
 
 [[package]]
 name = "alphafold-colabfold"
-version = "2.3.10"
+version = "2.3.11"
 description = "An implementation of the inference pipeline of AlphaFold v2.3.1. This is a completely new model that was entered as AlphaFold2 in CASP14 and published in Nature. This package contains patches for colabfold."
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
-    {file = "alphafold_colabfold-2.3.10-py3-none-any.whl", hash = "sha256:9cfda1413cb0eaec978fa156d3d8c2607c61e9daf5f1db79b9f61a1eaedc7ad4"},
-    {file = "alphafold_colabfold-2.3.10.tar.gz", hash = "sha256:b493a2e9966a0022eb00d48fd0b1ffeab62182437525351bebc2a2a86efcff9b"},
+    {file = "alphafold_colabfold-2.3.11-py3-none-any.whl", hash = "sha256:ca755f61983c902934b33aeeae30a1998c3d54361c8038b739d3bfc3bb9597da"},
+    {file = "alphafold_colabfold-2.3.11.tar.gz", hash = "sha256:e7aedd2e7a9dfd4fcd3ec0c9809c70f0dcc350fba2359a34babb3a0ae60964ba"},
 ]
 
 [package.dependencies]
@@ -452,15 +452,15 @@ tests = ["pytest", "pytest-cov", "pytest-xdist"]
 
 [[package]]
 name = "dm-haiku"
-version = "0.0.13"
+version = "0.0.14"
 description = "Haiku is a library for building neural networks in JAX."
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
-    {file = "dm_haiku-0.0.13-py3-none-any.whl", hash = "sha256:ee9562c68a059f146ad07f555ca591cb8c11ef751afecc38353863562bd23f43"},
-    {file = "dm_haiku-0.0.13.tar.gz", hash = "sha256:029bb91b5b1edb0d3fe23304d3bf12a545ea6e485041f7f5d8c8d85ebcf6e17d"},
+    {file = "dm_haiku-0.0.14-py3-none-any.whl", hash = "sha256:79f2fc2bf2985f99687209b72a193769ba2bcfde471ce7746cd36a64ea9ce74a"},
+    {file = "dm_haiku-0.0.14.tar.gz", hash = "sha256:0c1d56ef20e1e04d8551f788ff8964167092c5d8051b7c17ed3f9ce60c0b0a59"},
 ]
 
 [package.dependencies]
