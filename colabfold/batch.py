@@ -950,75 +950,107 @@ def unserialize_msa(
     query_seq_len = list(map(int, query_seq_len))
     query_seqs_cardinality = tab_sep_entries[1].split(",")
     query_seqs_cardinality = list(map(int, query_seqs_cardinality))
+    num_chains = len(query_seq_len)
     is_homooligomer = (
-        True if len(query_seq_len) == 1 and query_seqs_cardinality[0] > 1 else False
+        True if num_chains == 1 and query_seqs_cardinality[0] > 1 else False
     )
     is_single_protein = (
-        True if len(query_seq_len) == 1 and query_seqs_cardinality[0] == 1 else False
+        True if num_chains == 1 and query_seqs_cardinality[0] == 1 else False
     )
+
     query_seqs_unique = []
-    prev_query_start = 0
-    # we store the a3m with cardinality of 1
-    for n, query_len in enumerate(query_seq_len):
-        query_seqs_unique.append(
-            a3m_lines[2][prev_query_start : prev_query_start + query_len]
-        )
-        prev_query_start += query_len
-    paired_msa = [""] * len(query_seq_len)
-    unpaired_msa = [""] * len(query_seq_len)
-    already_in = dict()
-    for i in range(1, len(a3m_lines), 2):
+    qcat = a3m_lines[2]
+    prev = 0
+    for qlen in query_seq_len:
+        nxt = prev + max(int(qlen), 0)
+        query_seqs_unique.append(qcat[prev:nxt])
+        prev = nxt
+
+    paired_chunks = [[] for _ in range(num_chains)]
+    unpaired_chunks = [[] for _ in range(num_chains)]
+    already_in = set()
+
+    qlens_local = query_seq_len
+    def _split_by_aln(s):
+        segments = [""] * num_chains
+        has_aa = [False] * num_chains
+        seg_idx = 0
+        aln_count = 0
+        start = 0
+        curr_has_aa = False
+
+        dash = '-'
+        A, Z = 'A', 'Z'
+        a, z = 'a', 'z'
+        n = len(s)
+        i = 0
+        while i < n and seg_idx < num_chains:
+            c = s[i]
+            # non-lowercase are aligned columns
+            if not (a <= c <= z):
+                if c != dash and (A <= c <= Z):
+                    curr_has_aa = True
+                aln_count += 1
+                if aln_count == qlens_local[seg_idx]:
+                    # close current segment
+                    segments[seg_idx] = s[start:i+1]
+                    has_aa[seg_idx] = curr_has_aa
+                    seg_idx += 1
+                    aln_count = 0
+                    start = i + 1
+                    curr_has_aa = False
+            i += 1
+        return segments, has_aa
+
+    i = 1
+    end = len(a3m_lines)
+    while i + 1 < end:
         header = a3m_lines[i]
         seq = a3m_lines[i + 1]
-        if (header, seq) in already_in:
-            continue
-        already_in[(header, seq)] = 1
-        has_amino_acid = [False] * len(query_seq_len)
-        seqs_line = []
-        prev_pos = 0
-        for n, query_len in enumerate(query_seq_len):
-            paired_seq = ""
-            curr_seq_len = 0
-            for pos in range(prev_pos, len(seq)):
-                if curr_seq_len == query_len:
-                    prev_pos = pos
-                    break
-                paired_seq += seq[pos]
-                if seq[pos].islower():
-                    continue
-                if seq[pos] != "-":
-                    has_amino_acid[n] = True
-                curr_seq_len += 1
-            seqs_line.append(paired_seq)
+        i += 2
 
-        # if sequence is paired add them to output
-        if (
-            not is_single_protein
-            and not is_homooligomer
-            and sum(has_amino_acid) > 1 # at least 2 sequences are paired
-        ):
-            header_no_faster = header.replace(">", "")
-            header_no_faster_split = header_no_faster.split("\t")
-            for j in range(0, len(seqs_line)):
-                paired_msa[j] += ">" + header_no_faster_split[j] + "\n"
-                paired_msa[j] += seqs_line[j] + "\n"
+        key = (header, seq)
+        if key in already_in:
+            continue
+        already_in.add(key)
+
+        segments, has_aa = _split_by_aln(seq)
+
+        # Paired if multi-chain (not single protein), not homo-oligomer, >=2 segments have AA
+        if (not is_single_protein) and (not is_homooligomer) and (sum(has_aa) > 1):
+            header_no_gt = header.replace(">", "")
+            header_fields = header_no_gt.split("\t")
+            for j, seg in enumerate(segments):
+                label = header_fields[j] if j < len(header_fields) else (header_fields[-1] if header_fields else "")
+                pc = paired_chunks[j]
+                pc.append(">")
+                pc.append(label)
+                pc.append("\n")
+                pc.append(seg)
+                pc.append("\n")
         else:
-            for j, seq in enumerate(seqs_line):
-                if has_amino_acid[j]:
-                    unpaired_msa[j] += header + "\n"
-                    unpaired_msa[j] += seq + "\n"
+            for j, seg in enumerate(segments):
+                if has_aa[j]:
+                    uc = unpaired_chunks[j]
+                    uc.append(header)
+                    uc.append("\n")
+                    uc.append(seg)
+                    uc.append("\n")
+
     if is_homooligomer:
-        # homooligomers
         num = 101
-        paired_msa = [""] * query_seqs_cardinality[0]
-        for i in range(0, query_seqs_cardinality[0]):
-            paired_msa[i] = ">" + str(num + i) + "\n" + query_seqs_unique[0] + "\n"
-    if is_single_protein:
-        paired_msa = None
-    template_features = []
-    for query_seq in query_seqs_unique:
-        template_feature = mk_mock_template(query_seq)
-        template_features.append(template_feature)
+        count = max(query_seqs_cardinality[0], 0)
+        q = query_seqs_unique[0] if query_seqs_unique else ""
+        paired_msa = [f">{num + k}\n{q}\n" for k in range(count)]
+    else:
+        if is_single_protein:
+            paired_msa = None
+        else:
+            paired_msa = ["".join(ch) for ch in paired_chunks]
+
+
+    unpaired_msa = ["".join(ch) for ch in unpaired_chunks]
+    template_features = [mk_mock_template(q) for q in query_seqs_unique]
 
     return (
         unpaired_msa,
