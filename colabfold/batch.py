@@ -10,6 +10,12 @@ from Bio import BiopythonDeprecationWarning # what can possibly go wrong...
 warnings.simplefilter(action='ignore', category=BiopythonDeprecationWarning)
 
 import json
+hasOrjson = False
+try:
+    import orjson
+    hasOrjson = True
+except ImportError:
+    pass
 import logging
 import math
 import sys
@@ -494,20 +500,24 @@ def predict_structure(
                 np.save(files.get("pair_repr","npy"),result["representations"]["pair"])
 
             # write an easy-to-use format (pAE and pLDDT)
-            with files.get("scores","json").open("w") as handle:
-                plddt = result["plddt"][:seq_len]
-                scores = {"plddt": np.around(plddt.astype(float), 2).tolist()}
-                if "predicted_aligned_error" in result:
-                  pae = result["predicted_aligned_error"][:seq_len,:seq_len]
-                  scores.update({"max_pae": pae.max().astype(float).item(),
-                                 "pae": np.around(pae.astype(float), 2).tolist()})
-                  if calc_extra_ptm:
+            plddt = result["plddt"][:seq_len]
+            scores = {"plddt": np.around(plddt.astype(float), 2).tolist()}
+            if "predicted_aligned_error" in result:
+                pae = result["predicted_aligned_error"][:seq_len,:seq_len]
+                scores.update({"max_pae": pae.max().astype(float).item(),
+                                "pae": np.around(pae.astype(float), 2).tolist()})
+                if calc_extra_ptm:
                     scores.update(extra_ptm_output)
-                  for k in ["ptm","iptm"]:
-                    if k in conf[-1]: scores[k] = np.around(conf[-1][k], 2).item()
-                  del pae
-                del plddt
-                json.dump(scores, handle)
+                for k in ["ptm", "iptm"]:
+                    if k in conf[-1]:
+                        scores[k] = np.around(conf[-1][k], 2).item()
+                del pae
+            del plddt
+            file = files.get("scores", "json")
+            if hasOrjson:
+                file.write_bytes(orjson.dumps(scores))
+            else:
+                file.write_text(json.dumps(scores))
 
             del result, unrelaxed_protein
 
@@ -1101,6 +1111,7 @@ def run(
     prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
+    skip_output: List[str] = [],
     jobname_prefix: Optional[str] = None,
     save_all: bool = False,
     save_recycles: bool = False,
@@ -1140,10 +1151,7 @@ def run(
             # disable GPU on tensorflow
             tf.config.set_visible_devices([], 'GPU')
 
-    from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
-    from colabfold.colabfold import plot_paes, plot_plddts
-    from colabfold.plot import plot_msa_v2
 
     data_dir = Path(data_dir)
     result_dir = Path(result_dir)
@@ -1346,8 +1354,9 @@ def run(
                     logger.info(f"Saved {pickled_msa_and_templates}")
 
             # save a3m
-            msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
-            result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
+            if not 'msa' in skip_output:
+                msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
+                result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
 
         except Exception as e:
             logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
@@ -1376,11 +1385,13 @@ def run(
         result_files = []
 
         # make msa plot
-        msa_plot = plot_msa_v2(feature_dict, dpi=dpi)
-        coverage_png = result_dir.joinpath(f"{jobname}_coverage.png")
-        msa_plot.savefig(str(coverage_png), bbox_inches='tight')
-        msa_plot.close()
-        result_files.append(coverage_png)
+        if not 'plots' in skip_output:
+            from colabfold.plot import plot_msa_v2
+            msa_plot = plot_msa_v2(feature_dict, dpi=dpi)
+            coverage_png = result_dir.joinpath(f"{jobname}_coverage.png")
+            msa_plot.savefig(str(coverage_png), bbox_inches='tight')
+            msa_plot.close()
+            result_files.append(coverage_png)
 
         if use_templates:
             templates_file = result_dir.joinpath(f"{jobname}_template_domain_names.json")
@@ -1490,40 +1501,45 @@ def run(
             ###############
 
             # load the scores
-            scores = []
-            for r in results["rank"][:5]:
-                scores_file = result_dir.joinpath(f"{jobname}_scores_{r}.json")
-                with scores_file.open("r") as handle:
-                    scores.append(json.load(handle))
+            if not 'pae_json' in skip_output:
+                scores = []
+                for r in results["rank"][:5]:
+                    scores_file = result_dir.joinpath(f"{jobname}_scores_{r}.json")
+                    with scores_file.open("r") as handle:
+                        scores.append(json.load(handle))
 
-            # write alphafold-db format (pAE)
-            if "pae" in scores[0]:
-                af_pae_file = result_dir.joinpath(f"{jobname}_predicted_aligned_error_v1.json")
-                af_pae_file.write_text(json.dumps({
-                    "predicted_aligned_error":scores[0]["pae"],
-                    "max_predicted_aligned_error":scores[0]["max_pae"]}))
-                result_files.append(af_pae_file)
+                # write alphafold-db format (pAE)
+                if "pae" in scores[0]:
+                    af_pae_file = result_dir.joinpath(f"{jobname}_predicted_aligned_error_v1.json")
+                    af_pae_file.write_text(json.dumps({
+                        "predicted_aligned_error":scores[0]["pae"],
+                        "max_predicted_aligned_error":scores[0]["max_pae"]}))
+                    result_files.append(af_pae_file)
 
-                # make pAE plots
-                paes_plot = plot_paes([np.asarray(x["pae"]) for x in scores],
-                    Ls=query_sequence_len_array, dpi=dpi)
-                pae_png = result_dir.joinpath(f"{jobname}_pae.png")
-                paes_plot.savefig(str(pae_png), bbox_inches='tight')
-                paes_plot.close()
-                result_files.append(pae_png)
+                    # make pAE plots
+                    if not 'plots' in skip_output:
+                        from colabfold.colabfold import plot_paes
+                        paes_plot = plot_paes([np.asarray(x["pae"]) for x in scores],
+                            Ls=query_sequence_len_array, dpi=dpi)
+                        pae_png = result_dir.joinpath(f"{jobname}_pae.png")
+                        paes_plot.savefig(str(pae_png), bbox_inches='tight')
+                        paes_plot.close()
+                        result_files.append(pae_png)
 
-                # make pairwise interface metric plots and chainwise ptm plot
-                if calc_extra_ptm:
-                    ext_metric_png = result_dir.joinpath(f"{jobname}_ext_metrics.png")
-                    extra_ptm.plot_chain_pairwise_analysis(scores, fig_path=ext_metric_png)
+                    # make pairwise interface metric plots and chainwise ptm plot
+                    if calc_extra_ptm:
+                        ext_metric_png = result_dir.joinpath(f"{jobname}_ext_metrics.png")
+                        extra_ptm.plot_chain_pairwise_analysis(scores, fig_path=ext_metric_png)
 
             # make pLDDT plot
-            plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
-                Ls=query_sequence_len_array, dpi=dpi)
-            plddt_png = result_dir.joinpath(f"{jobname}_plddt.png")
-            plddt_plot.savefig(str(plddt_png), bbox_inches='tight')
-            plddt_plot.close()
-            result_files.append(plddt_png)
+            if not 'plots' in skip_output:
+                from colabfold.colabfold import plot_plddts
+                plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
+                    Ls=query_sequence_len_array, dpi=dpi)
+                plddt_png = result_dir.joinpath(f"{jobname}_plddt.png")
+                plddt_plot.savefig(str(plddt_png), bbox_inches='tight')
+                plddt_plot.close()
+                result_files.append(plddt_png)
 
         if zip_results:
             with zipfile.ZipFile(result_zip, "w") as result_zip:
@@ -1926,6 +1942,14 @@ def main():
         action="store_true",
         help="Save the pair representation embeddings of all models.",
     )
+    def comma_separated_list(arg_string):
+        return [item.strip() for item in arg_string.split(',') if item.strip() in ['msa', 'plots', 'pae_json']]
+    output_group.add_argument(
+        "--skip-output",
+        help="Comma-separated list of output types to skip: msa, plots, pae_json.",
+        type=comma_separated_list,
+        default="",
+    )
     output_group.add_argument(
         "--overwrite-existing-results",
         default=False,
@@ -2097,6 +2121,7 @@ def main():
         zip_results=args.zip,
         save_single_representations=args.save_single_representations,
         save_pair_representations=args.save_pair_representations,
+        skip_output=args.skip_output,
         use_dropout=args.use_dropout,
         max_seq=args.max_seq,
         max_extra_seq=args.max_extra_seq,

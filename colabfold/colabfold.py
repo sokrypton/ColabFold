@@ -28,11 +28,6 @@ from matplotlib import collections as mcoll
 import logging
 logger = logging.getLogger(__name__)
 
-try:
-  import py3Dmol
-except:
-  pass
-
 from string import ascii_uppercase,ascii_lowercase
 
 pymol_color_list = ["#33ff33","#00ffff","#ff33cc","#ffff00","#ff9999","#e5e5e5","#7f7fff","#ff7f00",
@@ -574,7 +569,7 @@ def read_pdb_renum(pdb_filename, Ls=None):
 def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False,
              color="lDDT", chains=None, Ls=None, vmin=50, vmax=90,
              color_HP=False, size=(800,480)):
-  
+  import py3Dmol
   if chains is None:
     chains = 1 if Ls is None else len(Ls)
 

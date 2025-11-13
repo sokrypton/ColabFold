@@ -1,12 +1,10 @@
 from pathlib import Path
-
 import numpy as np
-from matplotlib import pyplot as plt
-
 
 def plot_predicted_alignment_error(
     jobname: str, num_models: int, outs: dict, result_dir: Path, show: bool = False
 ):
+    from matplotlib import pyplot as plt
     plt.figure(figsize=(3 * num_models, 2), dpi=100)
     for n, (model_name, value) in enumerate(outs.items()):
         plt.subplot(1, num_models, n + 1)
@@ -20,6 +18,7 @@ def plot_predicted_alignment_error(
 
 
 def plot_msa_v2(feature_dict, sort_lines=True, dpi=100):
+    from matplotlib import pyplot as plt
     seq = feature_dict["msa"][0]
     if "asym_id" in feature_dict:
       Ls = [0]
@@ -79,6 +78,7 @@ def plot_msa_v2(feature_dict, sort_lines=True, dpi=100):
     return plt
 
 def plot_msa(msa, query_sequence, seq_len_list, total_seq_len, dpi=100):
+    from matplotlib import pyplot as plt
     # gather MSA info
     prev_pos = 0
     msa_parts = []

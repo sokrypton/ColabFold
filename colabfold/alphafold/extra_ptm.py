@@ -5,9 +5,7 @@ import jax.numpy as jnp
 import jax
 import scipy
 import pandas as pd
-import matplotlib.pyplot as plt
 
-import os
 from alphafold.common import confidence
 
 """ Functions to calculate interface metrics on actual interfaces"""
@@ -333,6 +331,7 @@ def get_chain_and_interface_metrics(result, asym_id, use_probs_extra=False, use_
 def plot_matrix(actifptm_dict, iptm_dict, cptm_dict, prefix='rank', ax_in=None, fig_path=None):
     """This function plots the metrics in a matrix. The diagonal will be chain-wise pTM-s,
     the lower triangle displays actifptm and the upper triangle the ipTM (calculated in the original way)."""
+    from matplotlib import pyplot as plt
     if not ax_in: # In case, we are not plotting multiple models next to each other
         fig, ax = plt.subplots(1, 1, figsize=(5, 5), squeeze=False)
 
@@ -413,6 +412,7 @@ def plot_matrix(actifptm_dict, iptm_dict, cptm_dict, prefix='rank', ax_in=None, 
         plt.savefig(fig_path, dpi=200, bbox_inches='tight')
 
 def plot_chain_pairwise_analysis(info, prefix='rank_', fig_path="chain_pairwise_ptm.png"):
+    from matplotlib import pyplot as plt
     num_elements = len(info)
     fig, axes = plt.subplots(1, num_elements, figsize=(num_elements * 5, 5), squeeze=False)
     
