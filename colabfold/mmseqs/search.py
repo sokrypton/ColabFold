@@ -124,8 +124,8 @@ def mmseqs_search_monomer(
     if gpu_server:
         search_param += ["--gpu-server", str(gpu_server)]
 
-    filter_param = ["--filter-msa", str(filter), "--filter-min-enable", "1000", "--diff", str(diff), "--qid", "0.0,0.2,0.4,0.6,0.8,1.0", "--qsc", "0", "--max-seq-id", "0.95",]
-    expand_param = ["--expansion-mode", "0", "-e", str(expand_eval), "--expand-filter-clusters", str(filter), "--max-seq-id", "0.95",]
+    filter_param = ["--filter-msa", str(1 if filter else 0), "--filter-min-enable", "1000", "--diff", str(diff), "--qid", "0.0,0.2,0.4,0.6,0.8,1.0", "--qsc", "0", "--max-seq-id", "0.95",]
+    expand_param = ["--expansion-mode", "0", "-e", str(expand_eval), "--expand-filter-clusters", str(1 if filter else 0), "--max-seq-id", "0.95",]
 
     if not base.joinpath("uniref.a3m").with_suffix('.a3m.dbtype').exists():
         run_mmseqs(mmseqs, ["search", base.joinpath("qdb"), dbbase.joinpath(uniref_db), base.joinpath("res"), base.joinpath("tmp"), "--threads", str(threads)] + search_param)
