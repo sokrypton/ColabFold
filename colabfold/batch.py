@@ -206,6 +206,61 @@ def convert_pdb_to_mmcif(pdb_file: Path):
     cif_io.set_structure(structure)
     cif_io.save(str(cif_file), ReplaceOrRemoveHetatmSelect())
 
+def mk_hhsearch_single_entry_db(cif_file: Path, dbdir_cache_path: str):
+    dbdir = Path(dbdir_cache_path)
+    tmp_cif_path = str(dbdir_cache_path) + "/1dmy.cif"
+    shutil.copy2(cif_file, tmp_cif_path)
+    cif_file = Path(tmp_cif_path)
+    pdb70_db_files = dbdir.glob("pdb70*")
+    for f in pdb70_db_files:
+        os.remove(f)
+
+    with open(dbdir.joinpath("pdb70_a3m.ffdata"), "w") as a3m, open(
+        dbdir.joinpath("pdb70_cs219.ffindex"), "w"
+    ) as cs219_index, open(
+        dbdir.joinpath("pdb70_a3m.ffindex"), "w"
+    ) as a3m_index, open(
+        dbdir.joinpath("pdb70_cs219.ffdata"), "w"
+    ) as cs219:
+        n = 1000000
+        index_offset = 0
+        with open(cif_file) as f:
+            cif_string = f.read()
+        cif_fh = StringIO(cif_string)
+        parser = MMCIFParser(QUIET=True)
+        structure = parser.get_structure("none", cif_fh)
+        models = list(structure.get_models())
+        if len(models) != 1:
+            logger.warning(f"WARNING: Found {len(models)} models in {cif_file}. The first model will be used as a template.", )
+            # raise ValueError(
+            #     f"Only single model PDBs are supported. Found {len(models)} models in {cif_file}."
+            # )
+        model = models[0]
+        for chain in model:
+            amino_acid_res = []
+            for res in chain:
+                if res.id[2] != " ":
+                    logger.warning(f"WARNING: Found insertion code at chain {chain.id} and residue index {res.id[1]} of {cif_file}. "
+                                    "This file cannot be used as a template.")
+                    continue
+                    # raise ValueError(
+                    #     f"PDB {cif_file} contains an insertion code at chain {chain.id} and residue "
+                    #     f"index {res.id[1]}. These are not supported."
+                    # )
+                amino_acid_res.append(
+                    residue_constants.restype_3to1.get(res.resname, "X")
+                )
+
+            protein_str = "".join(amino_acid_res)
+            a3m_str = f">{cif_file.stem}_{chain.id}\n{protein_str}\n\0"
+            a3m_str_len = len(a3m_str)
+            a3m_index.write(f"{n}\t{index_offset}\t{a3m_str_len}\n")
+            cs219_index.write(f"{n}\t{index_offset}\t{len(protein_str)}\n")
+            index_offset += a3m_str_len
+            a3m.write(a3m_str)
+            cs219.write("\n\0")
+            n += 1
+
 def mk_hhsearch_db(template_dir: str):
     template_path = Path(template_dir)
 
@@ -1124,6 +1179,7 @@ def run(
     msa_mode: str = "mmseqs2_uniref_env",
     use_templates: bool = False,
     custom_template_path: str = None,
+    custom_template_cache_path: str = None,
     num_relax: int = 0,
     relax_max_iterations: int = 0,
     relax_tolerance: float = 2.39,
@@ -1317,14 +1373,17 @@ def run(
             custom_template_path = result_dir / "templates"
             put_mmciffiles_into_resultdir(pdb_hit_file, local_pdb_path, custom_template_path)
 
-    if custom_template_path is not None:
-        mk_hhsearch_db(custom_template_path)
 
     pad_len = 0
     ranks, metrics = [],[]
     first_job = True
     job_number = 0
-    for job_number, (raw_jobname, query_sequence, a3m_lines, _) in enumerate(queries):
+    for job_number, (raw_jobname, query_sequence, a3m_lines, custom_template_path) in enumerate(queries):
+
+        if custom_template_path is not None and isinstance(custom_template_path, Path):
+            mk_hhsearch_single_entry_db(custom_template_path, custom_template_cache_path)
+            custom_template_path = custom_template_cache_path
+
         if jobname_prefix is not None:
             # pad job number based on number of queries
             fill = len(str(len(queries)))
@@ -1370,6 +1429,8 @@ def run(
                     )
 
                 elif a3m_lines is not None:
+                    if(isinstance(a3m_lines, Path)):
+                        a3m_lines = [a3m_lines.read_text()]
                     (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
                     = unserialize_msa(a3m_lines, query_sequence)
                     if use_templates:
@@ -1733,6 +1794,12 @@ def main():
         help="Directory with PDB files to provide as custom templates to the predictor. "
         "No templates will be queried from the MSA server. "
         "'--templates' argument is also required to enable this.",
+    )
+    msa_group.add_argument(
+        "--custom-template-cache-path",
+        type=str,
+        default=None,
+        help="Directory to generate temporary HHsearch databases for custom templates.",
     )
     msa_group.add_argument(
         "--max-template-date",
@@ -2125,6 +2192,7 @@ def main():
         result_dir=args.results,
         use_templates=args.templates,
         custom_template_path=args.custom_template_path,
+        custom_template_cache_path=args.custom_template_cache_path,
         num_relax=args.num_relax,
         relax_max_iterations=args.relax_max_iterations,
         relax_tolerance=args.relax_tolerance,

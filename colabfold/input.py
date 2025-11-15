@@ -279,14 +279,14 @@ def get_queries(
             sep = "\t" if input_path.suffix == ".tsv" else ","
             import pandas
             df = pandas.read_csv(input_path, sep=sep, dtype=str)
-            assert "id" in df.columns and "sequence" in df.columns
+            assert "id" in df.columns and "sequence" and "a3mpath" and "templatepath" in df.columns
             queries = [
-                (seq_id, sequence.upper().split(":"), None, None)
-                for seq_id, sequence in df[["id", "sequence"]].itertuples(index=False)
+                (seq_id, sequence.upper().split(":"), Path(a3mpath), Path(templatepath))
+                for seq_id, sequence, a3mpath, templatepath in df[["id", "sequence", "a3mpath", "templatepath"]].itertuples(index=False)
             ]
             for i in range(len(queries)):
                 if len(queries[i][1]) == 1:
-                    queries[i] = (queries[i][0], queries[i][1][0], None, None)
+                    queries[i] = (queries[i][0], queries[i][1][0], queries[i][2], queries[i][3])
         elif input_path.suffix == ".a3m":
             (seqs, header) = parse_fasta(input_path.read_text())
             if len(seqs) == 0:
