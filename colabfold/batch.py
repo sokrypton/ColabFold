@@ -208,8 +208,11 @@ def convert_pdb_to_mmcif(pdb_file: Path):
 
 def mk_hhsearch_single_entry_db(cif_file: Path, dbdir_cache_path: str):
     dbdir = Path(dbdir_cache_path)
+    dbdir.mkdir(parents=True, exist_ok=True)
     tmp_cif_path = str(dbdir_cache_path) + "/1dmy.cif"
     shutil.copy2(cif_file, tmp_cif_path)
+    # clear internal AF2 cache of mmCIF files
+    templates._read_file.cache_clear()
     cif_file = Path(tmp_cif_path)
     pdb70_db_files = dbdir.glob("pdb70*")
     for f in pdb70_db_files:
