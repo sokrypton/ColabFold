@@ -1383,7 +1383,7 @@ def run(
     job_number = 0
     for job_number, (raw_jobname, query_sequence, a3m_lines, custom_template_path) in enumerate(queries):
 
-        if custom_template_path is not None and isinstance(custom_template_path, Path):
+        if use_templates and custom_template_path is not None and isinstance(custom_template_path, Path):
             mk_hhsearch_single_entry_db(custom_template_path, custom_template_cache_path)
             custom_template_path = custom_template_cache_path
 
