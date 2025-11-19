@@ -236,3 +236,52 @@ For more details, see [GPU-accelerated search](https://github.com/soedinglab/MMs
   Science (2021) doi: [10.1126/science.abj8754](https://doi.org/10.1126/science.abj8754)
 
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.5123296.svg)](https://doi.org/10.5281/zenodo.5123296)
+
+
+## Quick Start with Poetry
+
+Follow these steps to set up and run your local version of ColabFold using **Poetry**.
+
+### Prerequisites
+
+You need **Python 3.11** and **Poetry** installed on your system.
+
+* **Python:** Install [Python 3.11](https://www.python.org/downloads/).
+* **Poetry:** Install it by following the official [Poetry installation guide](https://python-poetry.org/docs/#installation).
+
+---
+
+### Installation & Setup
+
+1.  **Clone the repository and install Poetry:**
+
+    ```bash
+    git clone [https://github.com/sokrypton/ColabFold.git](https://github.com/sokrypton/ColabFold.git)
+    cd ColabFold
+    
+    # Install Poetry via pip (if not already installed)
+    pip install poetry
+    ```
+
+2.  **Generate the lock file and install dependencies:**
+    
+    The `poetry lock` command generates a stable lock file (`poetry.lock`). The `poetry install` command installs all project dependencies, including the necessary **`alphafold`** extra dependencies needed for structure prediction.
+
+    ```bash
+    poetry lock
+    poetry install -E alphafold
+    ```
+
+---
+
+### Running ColabFold
+
+Use the `poetry run` command to execute the `colabfold_batch` script within the isolated environment.
+
+**Command Structure:**
+
+```bash
+poetry run colabfold_batch \
+  {input_file_path} \
+  {structure_output_dir} \
+  --attention-output-dir {attention_output_dir}
