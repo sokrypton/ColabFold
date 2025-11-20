@@ -285,3 +285,14 @@ poetry run colabfold_batch \
   {input_file_path} \
   {structure_output_dir} \
   --attention-output-dir {attention_output_dir}
+```
+
+Note: AlphaFold provides several model type options to run with. The default is `alphafold2_ptm`. To run with other model types, provide this via the `model_type` argument.
+
+```bash
+poetry run colabfold_batch \
+  {input_file_path} \
+  {structure_output_dir} \
+  --attention-output-dir {attention_output_dir}
+  --model-type {model_type}
+```
