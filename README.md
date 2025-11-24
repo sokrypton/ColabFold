@@ -274,7 +274,7 @@ You need **Python 3.11** and **Poetry** installed on your system.
 
 ---
 
-### Running ColabFold
+### Running Attention Analysis in Development Mode
 
 Use the `poetry run` command to execute the `colabfold_batch` script within the isolated environment.
 
@@ -296,3 +296,42 @@ poetry run colabfold_batch \
   --attention-output-dir {attention_output_dir}
   --model-type {model_type}
 ```
+
+## Running Custom Attention Head Analysis Pipeline
+
+This section guides you through installing the environment and executing the custom script for collecting attention heads.
+
+### 1. Installation
+
+To set up the project, you must first clone the repository and then install all dependencies using **Poetry**.
+
+1.  **Clone the Repository:** Get the project source code from the remote repository.
+    ```bash
+    git clone [https://github.com/prameshsharma25/ColabFold.git](https://github.com/prameshsharma25/ColabFold.git)
+    cd ColabFold  # Navigate into the project directory
+    ```
+
+2.  **Install Dependencies:** Run the following command using Poetry.
+    ```bash
+    poetry install
+    ```
+    This command installs all dependencies defined in `pyproject.toml`, including your custom `alphafold-colabfold` package from PyPI.
+
+3.  **Activate Environment (Optional but Recommended):**
+    ```bash
+    poetry shell
+    ```
+    This prepares your terminal session for direct script execution.
+
+---
+
+### 2. Executing the Script
+
+Use the **`poetry run`** command to execute the new CLI script, `scripts/run_attention_heads.py`, within the isolated environment.
+
+The script processes an input MSA file (`.a3m` or `.fasta`), runs the prediction, and saves the final structures and the raw attention head matrices.
+
+**Command Structure:**
+
+```bash
+poetry run python scripts/run_attention_heads.py <input_fasta_path> [OPTIONS]
