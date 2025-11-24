@@ -28,7 +28,7 @@ import importlib_metadata
 import numpy as np
 
 try:
-    import alphafold
+    import alphafold as alphafold
 except ModuleNotFoundError:
     raise RuntimeError(
         "\n\nalphafold is not installed. Please run `pip install colabfold[alphafold]`\n"
@@ -1093,6 +1093,7 @@ def run(
     prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
+    attention_output_dir: str = None,
     jobname_prefix: Optional[str] = None,
     save_all: bool = False,
     save_recycles: bool = False,
@@ -1414,6 +1415,7 @@ def run(
                         model_order=model_order,
                         model_type=model_type,
                         data_dir=data_dir,
+                        attention_output_dir=attention_output_dir,
                         stop_at_score=stop_at_score,
                         rank_by=rank_by,
                         use_dropout=use_dropout,
@@ -1851,6 +1853,12 @@ def main():
         choices=["auto", "plddt", "ptm", "iptm", "multimer"],
     )
     output_group.add_argument(
+    "--attention-output-dir",
+    help='Directory where attention head matrices will be saved. Attention heads are not saved if this is omitted.',
+    type=str,
+    default=None,
+    )
+    output_group.add_argument(
         "--stop-at-score",
         help="Compute models until pLDDT (single chain) or pTM-score (multimer) > threshold is reached. "
         "This speeds up prediction by running less models for easier queries.",
@@ -2065,6 +2073,7 @@ def main():
         local_pdb_path=args.local_pdb_path,
         use_cluster_profile=not args.disable_cluster_profile,
         use_gpu_relax = args.use_gpu_relax,
+        attention_output_dir=args.attention_output_dir,
         jobname_prefix=args.jobname_prefix,
         save_all=args.save_all,
         save_recycles=args.save_recycles,
