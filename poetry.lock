@@ -13,19 +13,16 @@ files = [
 ]
 
 [[package]]
-name = "alphafold-colabfold"
-version = "2.3.11"
+name = "alphafold-attention"
+version = "0.0.1"
 description = "AlphaFold with attention head access for ColabFold"
 optional = true
 python-versions = "*"
 groups = ["main"]
-markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
-files = []
-develop = true
-
-[package.source]
-type = "directory"
-url = "alphafold"
+files = [
+    {file = "alphafold_attention-0.0.1-py2.py3-none-any.whl", hash = "sha256:b7ee690564da0609e33dc391f9f917bb2de55cb53db2f716b4e7597f30b1926f"},
+    {file = "alphafold_attention-0.0.1.tar.gz", hash = "sha256:2b936a82b525a5185a1ed4790b87deb2f7f80a460796f563bcc33112acd70a80"},
+]
 
 [[package]]
 name = "appdirs"
@@ -502,7 +499,7 @@ attrs = ">=18.2.0"
 numpy = [
     {version = ">=2.1.0", markers = "python_version >= \"3.13\""},
     {version = ">=1.26.0", markers = "python_version == \"3.12\""},
-    {version = ">=1.23.3", markers = "python_version == \"3.11\""},
+    {version = ">=1.23.3", markers = "python_version >= \"3.11\""},
 ]
 wrapt = ">=1.11.2"
 
@@ -831,7 +828,7 @@ jaxlib = "0.5.3"
 ml_dtypes = ">=0.4.0"
 numpy = [
     {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
-    {version = ">=1.25"},
+    {version = ">=1.25", markers = "python_version < \"3.12\""},
 ]
 opt_einsum = "*"
 scipy = ">=1.11.1"
@@ -2679,10 +2676,10 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more_it
 type = ["pytest-mypy"]
 
 [extras]
-alphafold = ["absl-py", "alphafold-colabfold", "dm-haiku", "dm-tree", "jax", "py3Dmol", "tensorflow", "tensorflow-cpu"]
-alphafold-minus-jax = ["absl-py", "alphafold-colabfold", "dm-haiku", "dm-tree", "py3Dmol", "tensorflow", "tensorflow-cpu"]
+alphafold = ["absl-py", "dm-haiku", "dm-tree", "jax", "py3Dmol", "tensorflow", "tensorflow-cpu"]
+alphafold-minus-jax = ["absl-py", "dm-haiku", "dm-tree", "py3Dmol", "tensorflow", "tensorflow-cpu"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "64103d17ff35e53ef8f141c3427d566fd389b60951d637de81a87c2f286c4c06"
+content-hash = "99bc41ab6c114b9e87064b78f0fb1f5ba4f50a1ed7e2b50c939fe5d83c0a7f64"
