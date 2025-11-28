@@ -537,7 +537,7 @@ def main():
                 for seq in query_sequences:
                     with args.base.joinpath(f"{id}.a3m").open("r") as f:
                         unpaired_msa.append(f.read())
-                    if args.af3_json:
+                    if args.unpack:
                         args.base.joinpath(f"{id}.a3m").unlink()
 
                     if args.use_env_pairing:
