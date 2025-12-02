@@ -194,8 +194,11 @@ Important: Ensure that the `CUDA_VISIBLE_DEVICES` environment variable is set co
 
 Run searches using the GPU server:
 ```
-colabfold_search --mmseqs /path/to/bin/mmseqs input_sequences.fasta /path/to/db_folder msas --gpu 1 --gpu-server 1
+colabfold_search --mmseqs /path/to/bin/mmseqs input_sequences.fasta /path/to/db_folder msas \
+    --gpu 1 --gpu-server 1 --db-load-mode 2
 ```
+Here, `--db-load-mode 2` is **criical** for fast single query performance. The parameter can be omitted if large batches of queries are supplied to `colabfold_search`. This parameter decides whether a database should be fully copied into RAM in each MMseqs2 module invocation (`--db-load-mode 0`; default), or if MMseqs2 can asusme that the databases are already present in RAM (`--db-load-mode 2`). For ideal performance, the database should still be preloaded into RAM (e.g. with `vmtouch`; see above), before the first `colabfold_search` invocation.
+
 To stop the server(s) when done:
 ```
 kill $PID1
