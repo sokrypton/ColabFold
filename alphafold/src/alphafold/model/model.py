@@ -181,6 +181,9 @@ class RunModel:
     
     # iterate through recycles
     for r in range(num_iters):      
+        # set recycle number for this iteration
+        modules.set_recycle_number(r)
+
         # grab subset of features
         if self.multimer_mode:
           sub_feat = feat

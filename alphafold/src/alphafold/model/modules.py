@@ -35,6 +35,7 @@ import jax.numpy as jnp
 
 attention_head_counter = 0
 attention_dir = None
+_recycle_number = None
 
 
 def softmax_cross_entropy(logits, labels):
@@ -122,14 +123,25 @@ def create_extra_msa_feature(batch):
               jnp.expand_dims(batch['extra_deletion_value'], axis=-1)]
   return jnp.concatenate(msa_feat, axis=-1)
 
+def set_recycle_number(recycle_number: int):
+  """Set the global recycle number for this run."""
+  global _recycle_number
+  _recycle_number = recycle_number
+
+def get_recycle_number() -> int:
+  """Get the global recycle number for this run."""
+  global _recycle_number
+  return _recycle_number
+
 def write_array_to_file(logits: np.ndarray, filename_prefix: str = "attention_head") -> int:
   """Save attention head array to disk in the specified directory."""
   global attention_dir
   global attention_head_counter
+  recycle_number = get_recycle_number()
 
   os.makedirs(attention_dir, exist_ok=True)
 
-  name = os.path.join(attention_dir, f"{filename_prefix}_{attention_head_counter}.npy")
+  name = os.path.join(attention_dir, f"{filename_prefix}_{attention_head_counter}_recycle_{recycle_number}.npy")
   np.save(name, logits)
   attention_head_counter += 1
   return 0
