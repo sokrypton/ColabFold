@@ -256,8 +256,9 @@ You need **Python 3.11** and **Poetry** installed on your system.
 1.  **Clone the repository and install Poetry:**
 
     ```bash
-    git clone [https://github.com/sokrypton/ColabFold.git](https://github.com/sokrypton/ColabFold.git)
+    git clone https://github.com/prameshsharma25/ColabFold.git
     cd ColabFold
+    git checkout global-attention-head
     
     # Install Poetry via pip (if not already installed)
     pip install poetry
