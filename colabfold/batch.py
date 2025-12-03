@@ -52,6 +52,7 @@ from alphafold.data import (
     templates,
 )
 from alphafold.data.tools import hhsearch
+from alphafold.model import modules
 from colabfold.citations import write_bibtex
 from colabfold.download import default_data_dir, download_alphafold_params
 from colabfold.utils import (
@@ -353,6 +354,8 @@ def predict_structure(
 
         # iterate through models
         for model_num, (model_name, model_runner, params) in enumerate(model_runner_and_params):
+            # set model number for this run
+            modules.set_model_number(model_num + 1)
 
             # swap params to avoid recompiling
             model_runner.params = params

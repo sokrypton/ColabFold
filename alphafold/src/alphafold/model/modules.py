@@ -36,6 +36,7 @@ import jax.numpy as jnp
 attention_head_counter = 0
 attention_dir = None
 _recycle_number = None
+_model_number = None
 
 
 def softmax_cross_entropy(logits, labels):
@@ -133,15 +134,26 @@ def get_recycle_number() -> int:
   global _recycle_number
   return _recycle_number
 
+def get_model_number() -> int:
+  """Get the global model number for this run."""
+  global _model_number
+  return _model_number
+
+def set_model_number(model_number: int):
+  """Set the global model number for this run."""
+  global _model_number
+  _model_number = model_number
+
 def write_array_to_file(logits: np.ndarray, filename_prefix: str = "attention_head") -> int:
   """Save attention head array to disk in the specified directory."""
   global attention_dir
   global attention_head_counter
   recycle_number = get_recycle_number()
+  model_number = get_model_number()
 
   os.makedirs(attention_dir, exist_ok=True)
 
-  name = os.path.join(attention_dir, f"{filename_prefix}_{attention_head_counter}_recycle_{recycle_number}.npy")
+  name = os.path.join(attention_dir, f"model_{model_number}_recycle_{recycle_number}_global_index_{attention_head_counter}.npy")
   np.save(name, logits)
   attention_head_counter += 1
   return 0
