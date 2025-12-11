@@ -502,7 +502,7 @@ attrs = ">=18.2.0"
 numpy = [
     {version = ">=2.1.0", markers = "python_version >= \"3.13\""},
     {version = ">=1.26.0", markers = "python_version == \"3.12\""},
-    {version = ">=1.23.3", markers = "python_version == \"3.11\""},
+    {version = ">=1.23.3", markers = "python_version >= \"3.11\""},
 ]
 wrapt = ">=1.11.2"
 
@@ -831,7 +831,7 @@ jaxlib = "0.5.3"
 ml_dtypes = ">=0.4.0"
 numpy = [
     {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
-    {version = ">=1.25"},
+    {version = ">=1.25", markers = "python_version < \"3.12\""},
 ]
 opt_einsum = "*"
 scipy = ">=1.11.1"
