@@ -57,3 +57,23 @@ jobs:
           tag_name: "v$(poetry version -s --directory ./alphafold)"
           name: "Release v$(poetry version -s --directory ./alphafold)"
           body: "Automated release based on latest merge to main."
+
+      - name: Update ColabFold Dependency
+        run: |
+          NEW_VERSION=$(poetry version -s --directory ./alphafold)
+          poetry add alphafold-attention@^$NEW_VERSION --lock 
+        working-directory: ./
+
+      - name: Commit Version Bumps
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          
+          git add alphafold/pyproject.toml
+          
+          git add pyproject.toml
+          git add poetry.lock
+          
+          git commit -m "chore(release): Automated version bump for alphafold-attention"
+          git push
+        working-directory: ./
