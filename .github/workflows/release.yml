@@ -37,10 +37,6 @@ jobs:
         run: poetry install --no-root
         working-directory: ./
 
-      - name: 🛠️ Install dependencies (AlphaFold)
-        run: poetry install --no-root
-        working-directory: ./alphafold
-
       - name: Configure PyPI token
         run: poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
         
