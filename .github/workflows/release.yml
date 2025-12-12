@@ -61,6 +61,11 @@ jobs:
           poetry add alphafold-attention@^$NEW_VERSION --lock 
         working-directory: ./
 
+      - name: Get New Version
+        id: get_version
+        run: echo "NEW_VERSION=$(poetry version -s --directory ./alphafold)" >> $GITHUB_OUTPUT
+        working-directory: ./
+
       - name: Commit Version Bumps
         run: |
           git config user.name github-actions[bot]
@@ -78,7 +83,7 @@ jobs:
       - name: Create GitHub Release and Tag
         uses: ncipollo/release-action@v1
         with:
-          tag: "v$(poetry version -s --directory ./alphafold)" 
-          name: "Release v$(poetry version -s --directory ./alphafold)"
+          tag: v${{ steps.get_version.outputs.NEW_VERSION }}
+          name: Release v${{ steps.get_version.outputs.NEW_VERSION }}
           body: "Automated release based on latest merge to main."
           token: ${{ secrets.GITHUB_TOKEN }} 
