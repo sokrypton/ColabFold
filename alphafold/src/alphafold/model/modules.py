@@ -37,7 +37,7 @@ attention_head_counter = 0
 attention_dir = None
 _recycle_number = None
 _model_number = None
-
+evoformer_loop_counter = -1
 
 def softmax_cross_entropy(logits, labels):
   """Computes softmax cross entropy given logits and one-hot class labels."""
@@ -150,12 +150,24 @@ def write_array_to_file(logits: np.ndarray, filename_prefix: str = "attention_he
   global attention_head_counter
   recycle_number = get_recycle_number()
   model_number = get_model_number()
+  global evoformer_loop_counter
 
   os.makedirs(attention_dir, exist_ok=True)
 
-  name = os.path.join(attention_dir, f"model_{model_number}_recycle_{recycle_number}_global_index_{attention_head_counter}.npy")
+  if evoformer_loop_counter % 52 < 4:
+    file_name = f"model_{model_number}_recycle_{recycle_number}_extra_msa_evoformer_loop_{evoformer_loop_counter % 52 + 1}_global_index_{attention_head_counter}.npy"
+  else:
+    file_name = f"model_{model_number}_recycle_{recycle_number}_main_evoformer_loop_{evoformer_loop_counter % 52 - 3}_global_index_{attention_head_counter}.npy"
+
+  name = os.path.join(attention_dir, file_name)
   np.save(name, logits)
   attention_head_counter += 1
+  return 0
+
+def increase_evoformer_loop_counter():
+  """Increase the global evoformer loop counter for this run."""
+  global evoformer_loop_counter
+  evoformer_loop_counter += 1
   return 0
 
 class AlphaFoldIteration_noE(hk.Module):
@@ -1817,6 +1829,14 @@ class EvoformerIteration(hk.Module):
     Returns:
       Outputs, same shape/type as act.
     """
+    result_shape = jax.ShapeDtypeStruct((), jax.numpy.int32)
+
+    jax.experimental.io_callback(
+      increase_evoformer_loop_counter,
+      result_shape,
+      ordered=True
+    )
+
     c = self.config
     gc = self.global_config
 
