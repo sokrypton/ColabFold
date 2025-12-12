@@ -1,0 +1,56 @@
+name: Release Package to PyPI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    # Prevents the job from running on forks
+    if: github.repository == 'prameshsharma25/ColabFold'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.x.x
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          
+      - name: Install dependencies
+        run: poetry install --no-root
+
+      - name: Configure PyPI token
+        run: poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
+        
+      - name: Bump Version
+        run: poetry version patch
+        working-directory: ./alphafold
+
+      - name: Build Package
+        run: poetry build
+        working-directory: ./alphafold
+        
+      - name: Publish Package
+        run: poetry publish
+        working-directory: ./alphafold
+        
+      - name: Create Git Tag and Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v$(poetry version -s --directory ./alphafold)"
+          name: "Release v$(poetry version -s --directory ./alphafold)"
+          body: "Automated release based on latest merge to main."
