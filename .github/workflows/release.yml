@@ -52,6 +52,9 @@ jobs:
         run: poetry publish
         working-directory: ./alphafold
 
+      - name: Wait for PyPI Indexing
+        run: sleep 10s
+
       - name: Update ColabFold Dependency
         run: |
           NEW_VERSION=$(poetry version -s --directory ./alphafold)
