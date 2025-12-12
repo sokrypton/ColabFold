@@ -8,6 +8,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
     
     # Prevents the job from running on forks
     if: github.repository == 'prameshsharma25/ColabFold'
