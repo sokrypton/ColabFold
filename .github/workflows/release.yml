@@ -71,3 +71,11 @@ jobs:
           git commit -m "chore(release): Automated version bump for alphafold-attention"
           git push
         working-directory: ./
+
+      - name: Create GitHub Release and Tag
+        uses: ncipollo/release-action@v1
+        with:
+          tag: "v$(poetry version -s --directory ./alphafold)" 
+          name: "Release v$(poetry version -s --directory ./alphafold)"
+          body: "Automated release based on latest merge to main."
+          token: ${{ secrets.GITHUB_TOKEN }} 
