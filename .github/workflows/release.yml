@@ -33,8 +33,13 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
           
-      - name: Install dependencies
+      - name: Install dependencies (ColabFold)
         run: poetry install --no-root
+        working-directory: ./
+
+      - name: 🛠️ Install dependencies (AlphaFold)
+        run: poetry install --no-root
+        working-directory: ./alphafold
 
       - name: Configure PyPI token
         run: poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
@@ -50,13 +55,6 @@ jobs:
       - name: Publish Package
         run: poetry publish
         working-directory: ./alphafold
-        
-      - name: Create Git Tag and Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: "v$(poetry version -s --directory ./alphafold)"
-          name: "Release v$(poetry version -s --directory ./alphafold)"
-          body: "Automated release based on latest merge to main."
 
       - name: Update ColabFold Dependency
         run: |
