@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "alphafold-attention"
-version = "0.0.5"
+version = "0.0.6"
 description = "AlphaFold with attention head access for ColabFold"
 authors = [
     "Suchetan Dontha <sdontha@umd.edu>",
