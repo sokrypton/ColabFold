@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 from colabfold.download import download_alphafold_params
 from colabfold.batch import run, get_queries
+from colabfold.utils import setup_logging
 
 def main():
     """
@@ -61,6 +62,13 @@ def main():
     queries, is_complex = get_queries(args.input_fasta)
 
     download_alphafold_params(args.model_type, Path("."))
+
+    main_results_dir = Path(args.result_dir)
+    
+    log_file_path = main_results_dir.joinpath("log.txt")
+    main_results_dir.mkdir(parents=True, exist_ok=True)
+
+    setup_logging(log_file_path, verbose=False)
     
     results = run(
         queries=queries,
