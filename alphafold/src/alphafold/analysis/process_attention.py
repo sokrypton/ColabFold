@@ -143,10 +143,9 @@ def align_attention(
             aligned_attention2[i2] = attention2[i2_vals]
             i2_vals += 1
 
-    # Because I'm always doing seq 1/seq 2
     # If seq 1 is longer then the ratio will be > 1
-    # Need to multiple seq 1 by ratio as its longer and needs more attention
+    # Multiply seq 1 by ratio as its longer and needs more attention
     # If seq 1 is shorter the ratio is < 1
-    # Multiple seq 1 by the ratio as its shorter and needs less attention
+    # Multiply seq 1 by the ratio as its shorter and needs less attention
     aligned_attention1 = aligned_attention1 * seq_ratio
     return aligned_attention1, aligned_attention2, gaps1, gaps2

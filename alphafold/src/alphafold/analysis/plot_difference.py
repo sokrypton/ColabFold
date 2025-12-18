@@ -16,7 +16,7 @@ def create_custom_xticks(
     return labels
 
 
-def _color_xtick_labels(
+def color_xtick_labels(
     residue_indices: np.ndarray,
     sequence: str,
     ax: plt.Axes,
@@ -76,7 +76,7 @@ def plot_attention(
         )
 
     if sequence:
-        _color_xtick_labels(
+        color_xtick_labels(
             residue_indices,
             sequence,
             ax,
@@ -118,7 +118,7 @@ def plot_difference(
     ax.bar(residue_indices, attn_diff_scores, color="gray")
 
     if sequence:
-        _color_xtick_labels(
+        color_xtick_labels(
             residue_indices,
             sequence,
             ax,

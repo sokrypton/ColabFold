@@ -65,9 +65,6 @@ def run_pipeline(
 
     query_zscores = zscore(query_attn_min_max)
     logger.info("Computed z-scores for query attention (len=%d)", query_zscores.size)
-    logger.debug(
-        "Query z-score sample: %s", np.array2string(query_zscores[:10], precision=3)
-    )
 
     query_important_indices = analyze_residue.find_important(
         attention=query_attn_min_max, zscores=query_zscores
