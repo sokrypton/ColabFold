@@ -29,10 +29,13 @@ def run_pipeline(
 ) -> None:
     logger.info("Reading query sequence file: %s", query_seq_path)
     query_sequence = process_attention.read_sequence_file(sequence_file=query_seq_path)
+    logger.info("Query sequence length: %d", len(query_sequence))
 
     query_pos_highlights = (
         list(query_highlight_indices) if query_highlight_indices else []
     )
+    if query_pos_highlights:
+        logger.info("Query highlight indices provided: %s", query_pos_highlights)
 
     logger.info("Processing attention data for query: %s", query_name)
     query_n = process_attention.get_n(folder_path=query_attn_dir)
@@ -41,25 +44,44 @@ def run_pipeline(
     query_attn_spectrum = process_attention.get_attention(
         folder_path=query_attn_dir, n=query_n
     )
+    logger.info(
+        "Retrieved query attention spectrum shape: %s", np.shape(query_attn_spectrum)
+    )
 
     logger.info("Averaging and normalizing query attention")
     query_attn_avg = process_attention.average(attention_spectrum=query_attn_spectrum)
-    logger.info("Shape of query attention average: %s", np.shape(query_attn_avg))
+    logger.info("Query attention average: %s", query_attn_avg)
 
     query_attn_min_max = process_attention.min_max(data=query_attn_avg)
     logger.info(
         "Shape of query attention after min-max: %s", np.shape(query_attn_min_max)
     )
+    logger.info(
+        "Query min-max stats: min=%g, max=%g, mean=%g",
+        float(np.min(query_attn_min_max)),
+        float(np.max(query_attn_min_max)),
+        float(np.mean(query_attn_min_max)),
+    )
 
     query_zscores = zscore(query_attn_min_max)
+    logger.info("Computed z-scores for query attention (len=%d)", query_zscores.size)
+    logger.debug(
+        "Query z-score sample: %s", np.array2string(query_zscores[:10], precision=3)
+    )
 
     query_important_indices = analyze_residue.find_important(
         attention=query_attn_min_max, zscores=query_zscores
+    )
+    logger.info(
+        "Query important indices detected (%d): %s",
+        len(query_important_indices) if query_important_indices is not None else 0,
+        query_important_indices,
     )
 
     if not target_name and not target_attn_dir:
         output_subdir = Path(save_path) / query_name
         output_subdir.mkdir(parents=True, exist_ok=True)
+        logger.info("Output directory created: %s", output_subdir)
 
         logger.info("Generating plots and analysis for single protein: %s", query_name)
         analyze_residue.find_highest_attention(
@@ -79,16 +101,22 @@ def run_pipeline(
             query_highlight_positions=query_pos_highlights,
             query_highlight_color=query_highlight_color,
         )
+        logger.info(
+            "Saved attention plot: %s",
+            output_subdir / f"{query_name}_average_attention.png",
+        )
 
     if target_name and target_attn_dir:
         logger.info("Reading target sequence file: %s", target_seq_path)
         target_sequence = process_attention.read_sequence_file(
             sequence_file=target_seq_path
         )
+        logger.info("Target sequence length: %d", len(target_sequence))
 
         target_pos_highlights = (
             list(target_highlight_indices) if target_highlight_indices else []
         )
+        logger.info("Target highlight indices provided: %s", target_pos_highlights)
 
         if (len(query_sequence) != len(target_sequence)) and not alignment_path:
             logger.error(
@@ -109,7 +137,8 @@ def run_pipeline(
             folder_path=target_attn_dir, n=target_n
         )
         logger.info(
-            "Shape of target attention spectrum: %s", np.shape(target_attn_spectrum)
+            "Retrieved target attention spectrum shape: %s",
+            np.shape(target_attn_spectrum),
         )
 
         logger.info("Averaging and normalizing target attention")
@@ -117,9 +146,16 @@ def run_pipeline(
             attention_spectrum=target_attn_spectrum
         )
         logging.info("Shape of target attention average: %s", np.shape(target_attn_avg))
+        logger.info(
+            "Target attention average stats: min=%g, max=%g, mean=%g",
+            float(np.min(target_attn_avg)),
+            float(np.max(target_attn_avg)),
+            float(np.mean(target_attn_avg)),
+        )
 
         output_subdir = Path(save_path) / f"{query_name}_{target_name}"
         output_subdir.mkdir(parents=True, exist_ok=True)
+        logger.info("Output directory created: %s", output_subdir)
 
         if len(query_sequence) == len(target_sequence):
             target_attn_min_max = process_attention.min_max(data=target_attn_avg)
@@ -131,9 +167,21 @@ def run_pipeline(
             target_important_indices = analyze_residue.find_important(
                 attention=target_attn_min_max, zscores=target_zscores
             )
+            logger.info(
+                "Target important indices detected (%d): %s",
+                len(target_important_indices)
+                if target_important_indices is not None
+                else 0,
+                target_important_indices,
+            )
 
             query_blosum, target_blosum = analyze_residue.blosum_scores(
                 sequence1=query_sequence, sequence2=target_sequence
+            )
+            logger.info(
+                "Computed BLOSUM scores for query and target (arrays lengths: %d, %d)",
+                len(query_blosum),
+                len(target_blosum),
             )
 
             query_diff, target_diff = analyze_residue.calculate_differences(
@@ -145,6 +193,10 @@ def run_pipeline(
                 gaps2=[],
                 bool_alignment=False,
             )
+            logger.info(
+                "Calculated attention differences for unaligned sequences (len=%d)",
+                len(query_diff),
+            )
 
             for attn, seq, name in [
                 (query_attn_avg, query_sequence, query_name),
@@ -155,6 +207,11 @@ def run_pipeline(
                     sequence=seq,
                     output_dir=str(output_subdir),
                     protein=name,
+                )
+                logger.info(
+                    "Ran find_highest_attention for %s (results in %s)",
+                    name,
+                    output_subdir,
                 )
 
             plot_difference.plot_attention(
@@ -274,8 +331,7 @@ def run_pipeline(
                 protein_name=target_name,
                 output_dir=str(output_subdir),
                 sequence=aligned_seq_target,
-                query_highlight_positions=target_aligned_pos,
-                query_highlight_color=query_highlight_color,
+                target_highlight_positions=target_aligned_pos,
                 target_highlight_color=target_highlight_color,
             )
 
@@ -285,17 +341,13 @@ def run_pipeline(
                 output_dir=str(output_subdir),
                 sequence=aligned_seq_query,
                 query_highlight_positions=query_aligned_pos,
-                target_highlight_positions=target_aligned_pos,
                 query_highlight_color=query_highlight_color,
-                target_highlight_color=target_highlight_color,
             )
             plot_difference.plot_difference(
                 attn_diff_scores=diff_target_aligned,
                 protein_name=target_name,
                 output_dir=str(output_subdir),
                 sequence=aligned_seq_target,
-                query_highlight_positions=query_aligned_pos,
                 target_highlight_positions=target_aligned_pos,
-                query_highlight_color=query_highlight_color,
                 target_highlight_color=target_highlight_color,
             )

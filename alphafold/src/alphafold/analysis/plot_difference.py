@@ -47,6 +47,7 @@ def _color_xtick_labels(
             if 1 <= pos <= len(tick_labels):
                 tick_labels[pos - 1].set_color(target_highlight_color)
 
+
 def plot_attention(
     attention_scores: np.ndarray,
     highlighted_scores: np.ndarray,
