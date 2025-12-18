@@ -275,29 +275,6 @@ You need **Python 3.11** and **Poetry** installed on your system.
 
 ---
 
-### Running Attention Analysis in Development Mode
-
-Use the `poetry run` command to execute the `colabfold_batch` script within the isolated environment.
-
-**Command Structure:**
-
-```bash
-poetry run colabfold_batch \
-  {input_file_path} \
-  {structure_output_dir} \
-  --attention-output-dir {attention_output_dir}
-```
-
-Note: AlphaFold provides several model type options to run with. The default is `alphafold2_ptm`. To run with other model types, provide this via the `model_type` argument.
-
-```bash
-poetry run colabfold_batch \
-  {input_file_path} \
-  {structure_output_dir} \
-  --attention-output-dir {attention_output_dir}
-  --model-type {model_type}
-```
-
 ## Running Custom Attention Head Analysis Pipeline
 
 This section guides you through installing the environment and executing the custom script for collecting attention heads.
@@ -308,8 +285,8 @@ To set up the project, you must first clone the repository and then install all 
 
 1.  **Clone the Repository:** Get the project source code from the remote repository.
     ```bash
-    git clone [https://github.com/prameshsharma25/ColabFold.git](https://github.com/prameshsharma25/ColabFold.git)
-    cd ColabFold  # Navigate into the project directory
+    git clone https://github.com/prameshsharma25/CAAT.git
+    cd ColabFold
     ```
 
 2.  **Install Dependencies:** Run the following command using Poetry.
@@ -328,11 +305,11 @@ To set up the project, you must first clone the repository and then install all 
 
 ### 2. Executing the Script
 
-Use the **`poetry run`** command to execute the new CLI script, `scripts/run_attention_heads.py`, within the isolated environment.
+Use the **`poetry run`** command to execute the new CLI script, `scripts/run_e2e_pipeline.py`, within the isolated environment.
 
 The script processes an input MSA file (`.a3m` or `.fasta`), runs the prediction, and saves the final structures and the raw attention head matrices.
 
 **Command Structure:**
 
 ```bash
-poetry run python scripts/run_attention_heads.py <input_fasta_path> [OPTIONS]
+poetry run python scripts/run_e2e_pipeline.py <input_fasta_path> [OPTIONS]
