@@ -276,7 +276,7 @@ def run_pipeline(
                 attention=query_aligned_mm, zscores=query_aligned_z
             )
             target_aligned_imp = analyze_residue.find_important(
-                target_aligned_mm, zscores=target_aligned_z
+                attention=target_aligned_mm, zscores=target_aligned_z
             )
 
             query_aligned_blo, target_aligned_blo = analyze_residue.blosum_scores(
@@ -284,10 +284,10 @@ def run_pipeline(
             )
 
             query_aligned_pos = _map_indices_to_aligned(
-                aligned_seq_query, query_pos_highlights
+                aligned_seq=aligned_seq_query, indices=query_pos_highlights
             )
             target_aligned_pos = _map_indices_to_aligned(
-                aligned_seq_target, target_pos_highlights
+                aligned_seq=aligned_seq_target, indices=target_pos_highlights
             )
 
             (

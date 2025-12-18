@@ -1,5 +1,6 @@
 import argparse
 
+from alphafold.analysis.utils import _parse_indices
 from alphafold.analysis.attention_pipeline import run_pipeline
 
 
@@ -50,6 +51,28 @@ def main():
         help="Path to the alignment file (e.g., .ali) mapping query to target.",
     )
 
+    # Highlighting Options
+    parser.add_argument(
+        "--query_highlight_indices",
+        default=None,
+        help="Comma-separated 1-based indices to highlight in query (e.g. 1,5,10).",
+    )
+    parser.add_argument(
+        "--target_highlight_indices",
+        default=None,
+        help="Comma-separated 1-based indices to highlight in target (e.g. 1,5,10).",
+    )
+    parser.add_argument(
+        "--query_highlight_color",
+        default="#AE0639",
+        help="Hex color for query sequence highlights.",
+    )
+    parser.add_argument(
+        "--target_highlight_color",
+        default="#1f77b4",
+        help="Hex color for target sequence highlights.",
+    )
+
     args = parser.parse_args()
 
     if args.alignment_path:
@@ -76,6 +99,10 @@ def main():
         target_name=args.target_name,
         alignment_path=args.alignment_path,
         save_path=args.output_dir,
+        query_highlight_indices=_parse_indices(args.query_highlight_indices),
+        target_highlight_indices=_parse_indices(args.target_highlight_indices),
+        query_highlight_color=args.query_highlight_color,
+        target_highlight_color=args.target_highlight_color,
     )
 
 
