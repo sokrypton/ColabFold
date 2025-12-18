@@ -20,14 +20,14 @@ def _color_xtick_labels(
     residue_indices: np.ndarray,
     sequence: str,
     ax: plt.Axes,
-    highlight_positions_query: Optional[List[int]] = None,
-    highlight_positions_target: Optional[List[int]] = None,
-    highlight_color_query: str = "#AE0639",
-    highlight_color_target: str = "#1f77b4",
+    query_highlight_positions: Optional[List[int]] = None,
+    target_highlight_positions: Optional[List[int]] = None,
+    query_highlight_color: str = "#AE0639",
+    target_highlight_color: str = "#1f77b4",
 ) -> None:
     """Set x-tick label text and color amino-acid letters at provided 1-based indices.
 
-    If a position is present in both highlight lists, highlight_color_target takes precedence.
+    If a position is present in both highlight lists, target_highlight_color takes precedence.
     """
     ax.set_xticks(residue_indices)
     ax.set_xticklabels(create_custom_xticks(residue_indices, sequence))
@@ -37,16 +37,15 @@ def _color_xtick_labels(
     for lbl in tick_labels:
         lbl.set_color("black")
 
-    if highlight_positions_query:
-        for pos in highlight_positions_query:
+    if query_highlight_positions:
+        for pos in query_highlight_positions:
             if 1 <= pos <= len(tick_labels):
-                tick_labels[pos - 1].set_color(highlight_color_query)
+                tick_labels[pos - 1].set_color(query_highlight_color)
 
-    if highlight_positions_target:
-        for pos in highlight_positions_target:
+    if target_highlight_positions:
+        for pos in target_highlight_positions:
             if 1 <= pos <= len(tick_labels):
-                tick_labels[pos - 1].set_color(highlight_color_target)
-
+                tick_labels[pos - 1].set_color(target_highlight_color)
 
 def plot_attention(
     attention_scores: np.ndarray,
@@ -54,10 +53,10 @@ def plot_attention(
     protein_name: str,
     output_dir: Union[str, Path],
     sequence: Optional[str] = None,
-    highlight_positions_query: Optional[List[int]] = None,
-    highlight_positions_target: Optional[List[int]] = None,
-    highlight_color_query: str = "#AE0639",
-    highlight_color_target: str = "#1f77b4",
+    query_highlight_positions: Optional[List[int]] = None,
+    target_highlight_positions: Optional[List[int]] = None,
+    query_highlight_color: str = "#AE0639",
+    target_highlight_color: str = "#1f77b4",
 ) -> None:
     """Plots average attention per residue with important residues highlighted.
 
@@ -80,10 +79,10 @@ def plot_attention(
             residue_indices,
             sequence,
             ax,
-            highlight_positions_query=highlight_positions_query,
-            highlight_positions_target=highlight_positions_target,
-            highlight_color_query=highlight_color_query,
-            highlight_color_target=highlight_color_target,
+            query_highlight_positions=query_highlight_positions,
+            target_highlight_positions=target_highlight_positions,
+            query_highlight_color=query_highlight_color,
+            target_highlight_color=target_highlight_color,
         )
     else:
         ax.set_xticks(residue_indices)
@@ -101,10 +100,10 @@ def plot_difference(
     protein_name: str,
     output_dir: Union[str, Path],
     sequence: Optional[str] = None,
-    highlight_positions_query: Optional[List[int]] = None,
-    highlight_positions_target: Optional[List[int]] = None,
-    highlight_color_query: str = "#AE0639",
-    highlight_color_target: str = "#1f77b4",
+    query_highlight_positions: Optional[List[int]] = None,
+    target_highlight_positions: Optional[List[int]] = None,
+    query_highlight_color: str = "#AE0639",
+    target_highlight_color: str = "#1f77b4",
 ) -> None:
     """Plots the attention difference between two proteins or states.
 
@@ -122,10 +121,10 @@ def plot_difference(
             residue_indices,
             sequence,
             ax,
-            highlight_positions_query=highlight_positions_query,
-            highlight_positions_target=highlight_positions_target,
-            highlight_color_query=highlight_color_query,
-            highlight_color_target=highlight_color_target,
+            query_highlight_positions=query_highlight_positions,
+            target_highlight_positions=target_highlight_positions,
+            query_highlight_color=query_highlight_color,
+            target_highlight_color=target_highlight_color,
         )
     else:
         ax.set_xticks(residue_indices)

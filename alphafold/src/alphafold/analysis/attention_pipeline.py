@@ -9,6 +9,7 @@ from scipy.stats import zscore
 from alphafold.analysis.utils import _map_indices_to_aligned
 from alphafold.analysis import analyze_residue, plot_difference, process_attention
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,16 +22,16 @@ def run_pipeline(
     target_name: T.Optional[str] = None,
     alignment_path: T.Optional[str] = None,
     save_path: str = "attention_visualizations",
-    highlight_indices_query: T.Optional[T.List[int]] = None,
-    highlight_indices_target: T.Optional[T.List[int]] = None,
-    highlight_color_query: str = "#AE0639",
-    highlight_color_target: str = "#1f77b4",
+    query_highlight_indices: T.Optional[T.List[int]] = None,
+    target_highlight_indices: T.Optional[T.List[int]] = None,
+    query_highlight_color: str = "#AE0639",
+    target_highlight_color: str = "#1f77b4",
 ) -> None:
     logger.info("Reading query sequence file: %s", query_seq_path)
     query_sequence = process_attention.read_sequence_file(sequence_file=query_seq_path)
 
     query_pos_highlights = (
-        list(highlight_indices_query) if highlight_indices_query else []
+        list(query_highlight_indices) if query_highlight_indices else []
     )
 
     logger.info("Processing attention data for query: %s", query_name)
@@ -75,9 +76,8 @@ def run_pipeline(
             protein_name=query_name,
             output_dir=str(output_subdir),
             sequence=query_sequence,
-            highlight_positions_query=query_pos_highlights,
-            highlight_color_query=highlight_color_query,
-            highlight_color_target=highlight_color_target,
+            query_highlight_positions=query_pos_highlights,
+            query_highlight_color=query_highlight_color,
         )
 
     if target_name and target_attn_dir:
@@ -87,7 +87,7 @@ def run_pipeline(
         )
 
         target_pos_highlights = (
-            list(highlight_indices_target) if highlight_indices_target else []
+            list(target_highlight_indices) if target_highlight_indices else []
         )
 
         if (len(query_sequence) != len(target_sequence)) and not alignment_path:
@@ -163,8 +163,8 @@ def run_pipeline(
                 protein_name=query_name,
                 output_dir=str(output_subdir),
                 sequence=query_sequence,
-                highlight_positions_query=query_pos_highlights,
-                highlight_color_query=highlight_color_query,
+                query_highlight_positions=query_pos_highlights,
+                query_highlight_color=query_highlight_color,
             )
             plot_difference.plot_attention(
                 attention_scores=target_attn_min_max,
@@ -172,24 +172,24 @@ def run_pipeline(
                 protein_name=target_name,
                 output_dir=str(output_subdir),
                 sequence=target_sequence,
-                highlight_positions_target=target_pos_highlights,
-                highlight_color_target=highlight_color_target,
+                target_highlight_positions=target_pos_highlights,
+                target_highlight_color=target_highlight_color,
             )
             plot_difference.plot_difference(
                 attn_diff_scores=query_diff,
                 protein_name=query_name,
                 output_dir=str(output_subdir),
                 sequence=query_sequence,
-                highlight_positions_query=query_pos_highlights,
-                highlight_color_query=highlight_color_query,
+                query_highlight_positions=query_pos_highlights,
+                query_highlight_color=query_highlight_color,
             )
             plot_difference.plot_difference(
                 attn_diff_scores=target_diff,
                 protein_name=target_name,
                 output_dir=str(output_subdir),
                 sequence=target_sequence,
-                highlight_positions_target=target_pos_highlights,
-                highlight_color_target=highlight_color_target,
+                target_highlight_positions=target_pos_highlights,
+                target_highlight_color=target_highlight_color,
             )
 
         if alignment_path and target_name:
@@ -265,9 +265,8 @@ def run_pipeline(
                 protein_name=query_name,
                 output_dir=str(output_subdir),
                 sequence=aligned_seq_query,
-                highlight_positions_query=query_aligned_pos,
-                highlight_color_query=highlight_color_query,
-                highlight_color_target=highlight_color_target,
+                query_highlight_positions=query_aligned_pos,
+                query_highlight_color=query_highlight_color,
             )
             plot_difference.plot_attention(
                 attention=target_aligned_mm,
@@ -275,9 +274,9 @@ def run_pipeline(
                 protein_name=target_name,
                 output_dir=str(output_subdir),
                 sequence=aligned_seq_target,
-                highlight_positions_query=target_aligned_pos,
-                highlight_color_query=highlight_color_query,
-                highlight_color_target=highlight_color_target,
+                query_highlight_positions=target_aligned_pos,
+                query_highlight_color=query_highlight_color,
+                target_highlight_color=target_highlight_color,
             )
 
             plot_difference.plot_difference(
@@ -285,18 +284,18 @@ def run_pipeline(
                 protein_name=query_name,
                 output_dir=str(output_subdir),
                 sequence=aligned_seq_query,
-                highlight_positions_query=query_aligned_pos,
-                highlight_positions_target=target_aligned_pos,
-                highlight_color_query=highlight_color_query,
-                highlight_color_target=highlight_color_target,
+                query_highlight_positions=query_aligned_pos,
+                target_highlight_positions=target_aligned_pos,
+                query_highlight_color=query_highlight_color,
+                target_highlight_color=target_highlight_color,
             )
             plot_difference.plot_difference(
                 attn_diff_scores=diff_target_aligned,
                 protein_name=target_name,
                 output_dir=str(output_subdir),
                 sequence=aligned_seq_target,
-                highlight_positions_query=query_aligned_pos,
-                highlight_positions_target=target_aligned_pos,
-                highlight_color_query=highlight_color_query,
-                highlight_color_target=highlight_color_target,
+                query_highlight_positions=query_aligned_pos,
+                target_highlight_positions=target_aligned_pos,
+                query_highlight_color=query_highlight_color,
+                target_highlight_color=target_highlight_color,
             )

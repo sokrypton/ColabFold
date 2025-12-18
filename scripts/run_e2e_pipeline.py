@@ -22,7 +22,7 @@ def main() -> None:
     )
 
     prediction = parser.add_argument_group("prediction settings")
-    prediction.add_argument("input_fasta", type=str, help="Query MSA/Fasta file.")
+    prediction.add_argument("--query_seq_path", type=str, help="Query MSA/Fasta file.")
     prediction.add_argument("--model-type", type=str, default="alphafold2_ptm")
     prediction.add_argument("--num-models", type=int, default=5)
     prediction.add_argument("--result-dir", type=str, default="results")
@@ -33,22 +33,22 @@ def main() -> None:
         "--vis_output_dir", type=str, default="attention_visualizations"
     )
     analysis.add_argument(
-        "--highlight_indices_query",
+        "--query_highlight_indices",
         default=None,
         help="Comma-separated 1-based indices to highlight in query (e.g. 1,5,10).",
     )
     analysis.add_argument(
-        "--highlight_indices_target",
+        "--target_highlight_indices",
         default=None,
         help="Comma-separated 1-based indices to highlight in target (e.g. 1,5,10).",
     )
     analysis.add_argument(
-        "--highlight_color_query",
+        "--query_highlight_color",
         default="#AE0639",
         help="Hex color for query sequence highlights.",
     )
     analysis.add_argument(
-        "--highlight_color_target",
+        "--target_highlight_color",
         default="#1f77b4",
         help="Hex color for target sequence highlights.",
     )
@@ -77,7 +77,7 @@ def main() -> None:
 
     logging.getLogger().setLevel(logging.INFO)
 
-    query_data, is_complex_query = get_queries(args.input_fasta)
+    query_data, is_complex_query = get_queries(args.query_seq_path)
     logger.info("Generating Query Attention: %s", args.query_name)
 
     run(
@@ -110,8 +110,9 @@ def main() -> None:
         logging.getLogger().setLevel(logging.INFO)
 
     logger.info("Starting Attention Analysis: %s", args.query_name)
+
     run_pipeline(
-        query_seq_path=args.input_fasta,
+        query_seq_path=args.query_seq_path,
         query_attn_dir=str(query_attn_dir),
         query_name=args.query_name,
         save_path=args.vis_output_dir,
@@ -119,10 +120,10 @@ def main() -> None:
         target_attn_dir=str(target_attn_dir) if target_attn_dir else None,
         target_name=args.target_name,
         alignment_path=args.alignment_path,
-        highlight_indices_query=_parse_indices(args.highlight_indices_query),
-        highlight_indices_target=_parse_indices(args.highlight_indices_target),
-        highlight_color_query=args.highlight_color_query,
-        highlight_color_target=args.highlight_color_target,
+        query_highlight_indices=_parse_indices(args.query_highlight_indices),
+        target_highlight_indices=_parse_indices(args.target_highlight_indices),
+        query_highlight_color=args.query_highlight_color,
+        target_highlight_color=args.target_highlight_color,
     )
 
     logger.info("End-to-end pipeline complete. Results in %s", args.vis_output_dir)
