@@ -41,7 +41,6 @@ def find_important(attention: np.ndarray, zscores: np.ndarray = None) -> np.ndar
     important = np.zeros_like(attention)
     top_indices = np.argsort(attention)[-5:]
     important[top_indices] = attention[top_indices]
-
     return important
 
 
@@ -66,7 +65,6 @@ def blosum_scores(sequence1: str, sequence2: str) -> Tuple[np.ndarray, np.ndarra
         else:
             scores1[i] = aligner.substitution_matrix[s1, s2]
             scores2[i] = aligner.substitution_matrix[s1, s2]
-
     return scores1, scores2
 
 
@@ -98,5 +96,4 @@ def calculate_differences(
 
     important_diff_blosum1 = [diff * s for diff, s in zip(important_diff1, scores1)]
     important_diff_blosum2 = [diff * s for diff, s in zip(important_diff2, scores2)]
-
     return important_diff_blosum1, important_diff_blosum2

@@ -34,7 +34,6 @@ def get_n(folder_path: str) -> int:
         logger.info("%s: %d files", shape, count)
 
     most_frequent_shape = sorted_shapes[0][0]
-
     return most_frequent_shape[0]
 
 
@@ -56,7 +55,6 @@ def get_attention(folder_path: str, n: int) -> np.ndarray:
         attn = np.sum(arr, axis=(0, 1, 2))
         attention_spectrum.append(attn)
     attention_spectrum = np.array(attention_spectrum)
-
     return attention_spectrum
 
 

@@ -1,6 +1,6 @@
 import sys
-import argparse
 import logging
+import argparse
 
 from pathlib import Path
 
@@ -8,6 +8,7 @@ from colabfold.download import download_alphafold_params
 from colabfold.batch import run, get_queries
 from colabfold.utils import setup_logging
 
+from alphafold.analysis.utils import _parse_indices
 from alphafold.analysis.attention_pipeline import run_pipeline
 
 
@@ -30,6 +31,26 @@ def main() -> None:
     analysis.add_argument("--query_name", required=True, help="ID for query protein.")
     analysis.add_argument(
         "--vis_output_dir", type=str, default="attention_visualizations"
+    )
+    analysis.add_argument(
+        "--highlight_indices_query",
+        default=None,
+        help="Comma-separated 1-based indices to highlight in query (e.g. 1,5,10).",
+    )
+    analysis.add_argument(
+        "--highlight_indices_target",
+        default=None,
+        help="Comma-separated 1-based indices to highlight in target (e.g. 1,5,10).",
+    )
+    analysis.add_argument(
+        "--highlight_color_query",
+        default="#AE0639",
+        help="Hex color for query sequence highlights.",
+    )
+    analysis.add_argument(
+        "--highlight_color_target",
+        default="#1f77b4",
+        help="Hex color for target sequence highlights.",
     )
 
     comparison = parser.add_argument_group("comparison settings (optional)")
@@ -98,6 +119,10 @@ def main() -> None:
         target_attn_dir=str(target_attn_dir) if target_attn_dir else None,
         target_name=args.target_name,
         alignment_path=args.alignment_path,
+        highlight_indices_query=_parse_indices(args.highlight_indices_query),
+        highlight_indices_target=_parse_indices(args.highlight_indices_target),
+        highlight_color_query=args.highlight_color_query,
+        highlight_color_target=args.highlight_color_target,
     )
 
     logger.info("End-to-end pipeline complete. Results in %s", args.vis_output_dir)

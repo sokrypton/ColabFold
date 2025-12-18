@@ -16,31 +16,84 @@ def create_custom_xticks(
     return labels
 
 
+def _color_xtick_labels(
+    residue_indices: np.ndarray,
+    sequence: str,
+    ax: plt.Axes,
+    highlight_positions_query: Optional[List[int]] = None,
+    highlight_positions_target: Optional[List[int]] = None,
+    highlight_color_query: str = "#AE0639",
+    highlight_color_target: str = "#1f77b4",
+) -> None:
+    """Set x-tick label text and color amino-acid letters at provided 1-based indices.
+
+    If a position is present in both highlight lists, highlight_color_target takes precedence.
+    """
+    ax.set_xticks(residue_indices)
+    ax.set_xticklabels(create_custom_xticks(residue_indices, sequence))
+    tick_labels = ax.get_xticklabels()
+
+    # default color
+    for lbl in tick_labels:
+        lbl.set_color("black")
+
+    if highlight_positions_query:
+        for pos in highlight_positions_query:
+            if 1 <= pos <= len(tick_labels):
+                tick_labels[pos - 1].set_color(highlight_color_query)
+
+    if highlight_positions_target:
+        for pos in highlight_positions_target:
+            if 1 <= pos <= len(tick_labels):
+                tick_labels[pos - 1].set_color(highlight_color_target)
+
+
 def plot_attention(
     attention_scores: np.ndarray,
     highlighted_scores: np.ndarray,
     protein_name: str,
     output_dir: Union[str, Path],
     sequence: Optional[str] = None,
+    highlight_positions_query: Optional[List[int]] = None,
+    highlight_positions_target: Optional[List[int]] = None,
+    highlight_color_query: str = "#AE0639",
+    highlight_color_target: str = "#1f77b4",
 ) -> None:
-    """Plots average attention per residue with important residues highlighted."""
+    """Plots average attention per residue with important residues highlighted.
+
+    Note: amino-acid letters on the x-axis are color-coded (not the bars).
+    """
     residue_indices = np.arange(1, attention_scores.size + 1)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    plt.figure(figsize=(8, 6))
-    plt.bar(residue_indices, attention_scores, color="gray", zorder=1)
-    plt.bar(residue_indices, highlighted_scores, color="#AE0639", zorder=2)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.bar(residue_indices, attention_scores, color="gray", zorder=1)
+
+    if highlighted_scores is not None:
+        ax.bar(
+            residue_indices, highlighted_scores, color="#AE0639", zorder=2, alpha=0.6
+        )
 
     if sequence:
-        plt.xticks(residue_indices, create_custom_xticks(residue_indices, sequence))
+        _color_xtick_labels(
+            residue_indices,
+            sequence,
+            ax,
+            highlight_positions_query=highlight_positions_query,
+            highlight_positions_target=highlight_positions_target,
+            highlight_color_query=highlight_color_query,
+            highlight_color_target=highlight_color_target,
+        )
+    else:
+        ax.set_xticks(residue_indices)
 
-    plt.xlabel("Amino Acid Residue")
-    plt.ylabel("Average Attention Score")
-    plt.title(f"Attention Analysis: {protein_name}")
+    ax.set_xlabel("Amino Acid Residue")
+    ax.set_ylabel("Average Attention Score")
+    ax.set_title(f"Attention Analysis: {protein_name}")
 
-    plt.savefig(output_path / f"{protein_name}_average_attention.png", dpi=600)
-    plt.close()
+    fig.savefig(output_path / f"{protein_name}_average_attention.png", dpi=600)
+    plt.close(fig)
 
 
 def plot_difference(
@@ -48,21 +101,38 @@ def plot_difference(
     protein_name: str,
     output_dir: Union[str, Path],
     sequence: Optional[str] = None,
+    highlight_positions_query: Optional[List[int]] = None,
+    highlight_positions_target: Optional[List[int]] = None,
+    highlight_color_query: str = "#AE0639",
+    highlight_color_target: str = "#1f77b4",
 ) -> None:
-    """Plots the attention difference between two proteins or states."""
+    """Plots the attention difference between two proteins or states.
+
+    Note: amino-acid letters on the x-axis are color-coded (not the bars).
+    """
     residue_indices = np.arange(1, len(attn_diff_scores) + 1)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    plt.figure(figsize=(8, 6))
-    plt.bar(residue_indices, attn_diff_scores, color="gray")
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.bar(residue_indices, attn_diff_scores, color="gray")
 
     if sequence:
-        plt.xticks(residue_indices, create_custom_xticks(residue_indices, sequence))
+        _color_xtick_labels(
+            residue_indices,
+            sequence,
+            ax,
+            highlight_positions_query=highlight_positions_query,
+            highlight_positions_target=highlight_positions_target,
+            highlight_color_query=highlight_color_query,
+            highlight_color_target=highlight_color_target,
+        )
+    else:
+        ax.set_xticks(residue_indices)
 
-    plt.xlabel("Amino Acid Residue")
-    plt.ylabel("Attention Difference")
-    plt.title(f"Attention Difference: {protein_name}")
+    ax.set_xlabel("Amino Acid Residue")
+    ax.set_ylabel("Attention Difference")
+    ax.set_title(f"Attention Difference: {protein_name}")
 
-    plt.savefig(output_path / f"{protein_name}_attention_difference.png", dpi=600)
-    plt.close()
+    fig.savefig(output_path / f"{protein_name}_attention_difference.png", dpi=600)
+    plt.close(fig)
