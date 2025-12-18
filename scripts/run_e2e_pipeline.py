@@ -7,6 +7,7 @@ from pathlib import Path
 from colabfold.download import download_alphafold_params
 from colabfold.batch import run, get_queries
 from colabfold.utils import setup_logging
+
 from alphafold.analysis.attention_pipeline import run_pipeline
 
 
@@ -27,7 +28,9 @@ def main() -> None:
 
     analysis = parser.add_argument_group("analysis settings")
     analysis.add_argument("--query_name", required=True, help="ID for query protein.")
-    analysis.add_argument("--vis_output_dir", type=str, default="attention_visualizations")
+    analysis.add_argument(
+        "--vis_output_dir", type=str, default="attention_visualizations"
+    )
 
     comparison = parser.add_argument_group("comparison settings (optional)")
     comparison.add_argument(
@@ -51,9 +54,7 @@ def main() -> None:
     res_dir.mkdir(parents=True, exist_ok=True)
     setup_logging(res_dir / "log.txt")
 
-    logging.basicConfig(
-        level=logging.INFO, format="%(levelname)s: %(message)s", force=True
-    )
+    logging.getLogger().setLevel(logging.INFO)
 
     query_data, is_complex_query = get_queries(args.input_fasta)
     logger.info("Generating Query Attention: %s", args.query_name)
@@ -66,6 +67,8 @@ def main() -> None:
         model_type=args.model_type,
         is_complex=is_complex_query,
     )
+
+    logging.getLogger().setLevel(logging.INFO)
 
     if args.target_seq_path and args.target_name:
         if args.query_name == args.target_name:
@@ -83,6 +86,7 @@ def main() -> None:
             model_type=args.model_type,
             is_complex=is_complex_target,
         )
+        logging.getLogger().setLevel(logging.INFO)
 
     logger.info("Starting Attention Analysis: %s", args.query_name)
     run_pipeline(
@@ -96,7 +100,7 @@ def main() -> None:
         alignment_path=args.alignment_path,
     )
 
-    logger.info("End-to-end pipeline complete.")
+    logger.info("End-to-end pipeline complete. Results in %s", args.vis_output_dir)
 
 
 if __name__ == "__main__":

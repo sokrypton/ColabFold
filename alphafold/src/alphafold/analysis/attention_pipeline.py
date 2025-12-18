@@ -25,18 +25,25 @@ def run_pipeline(
 
     logger.info("Processing attention data for query: %s", query_name)
     query_n = process_attention.get_n(folder_path=query_attn_dir)
+    logger.info("Query attention n value: %d", query_n)
+
     query_attn_spectrum = process_attention.get_attention(
         folder_path=query_attn_dir, n=query_n
     )
 
     logger.info("Averaging and normalizing query attention")
     query_attn_avg = process_attention.average(attention_spectrum=query_attn_spectrum)
+    logger.info("Shape of query attention average: %s", np.shape(query_attn_avg))
+
     query_attn_min_max = process_attention.min_max(data=query_attn_avg)
+    logger.info(
+        "Shape of query attention after min-max: %s", np.shape(query_attn_min_max)
+    )
+
     query_zscores = zscore(query_attn_min_max)
 
     query_important_indices = analyze_residue.find_important(
-        attention=query_attn_min_max,
-        zscores=query_zscores
+        attention=query_attn_min_max, zscores=query_zscores
     )
 
     if not target_name and not target_attn_dir:
@@ -74,12 +81,18 @@ def run_pipeline(
             )
             sys.exit(1)
 
-        logger.info("Processing attention data for target: %s", target_name)
+        logger.info(
+            "Processing attention data for target: %s, %s", target_name, target_attn_dir
+        )
         target_n = process_attention.get_n(folder_path=target_attn_dir)
+        logger.info("Target attention n value: %d", target_n)
 
         logger.info("Getting target attention spectrum")
         target_attn_spectrum = process_attention.get_attention(
             folder_path=target_attn_dir, n=target_n
+        )
+        logger.info(
+            "Shape of target attention spectrum: %s", np.shape(target_attn_spectrum)
         )
 
         logger.info("Averaging and normalizing target attention")
@@ -93,7 +106,10 @@ def run_pipeline(
 
         if len(query_sequence) == len(target_sequence):
             target_attn_min_max = process_attention.min_max(data=target_attn_avg)
-            logging.info("Shape of target attention after min-max: %s", np.shape(target_attn_min_max))
+            logging.info(
+                "Shape of target attention after min-max: %s",
+                np.shape(target_attn_min_max),
+            )
             target_zscores = zscore(target_attn_min_max)
             target_important_indices = analyze_residue.find_important(
                 attention=target_attn_min_max, zscores=target_zscores

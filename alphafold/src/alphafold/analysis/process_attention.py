@@ -1,4 +1,5 @@
 import os
+import sys
 import jax
 import logging
 import linecache
@@ -10,20 +11,31 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def get_n(folder_path):
+def get_n(folder_path: str) -> int:
     shape_counts = {}
 
     for fname in os.listdir(folder_path):
         if fname.endswith(".npy"):
-            arr = np.load(os.path.join(folder_path, fname))
-            shape = arr.shape
-            shape_counts[shape] = shape_counts.get(shape, 0) + 1
+            try:
+                arr = np.load(os.path.join(folder_path, fname))
+                shape = arr.shape
+                shape_counts[shape] = shape_counts.get(shape, 0) + 1
+            except Exception as e:
+                logger.warning("Could not load %s: %s", fname, e)
 
-    logger.info("Unique shapes found:")
-    for shape, count in shape_counts.items():
+    if not shape_counts:
+        logger.error("No .npy files found in %s", folder_path)
+        sys.exit(1)
+
+    sorted_shapes = sorted(shape_counts.items(), key=lambda item: item[1], reverse=True)
+
+    logger.info("Unique shapes found (sorted by frequency):")
+    for shape, count in sorted_shapes:
         logger.info("%s: %d files", shape, count)
-    shapes = list(shape_counts.keys())
-    return shapes[0][0]
+
+    most_frequent_shape = sorted_shapes[0][0]
+
+    return most_frequent_shape[0]
 
 
 def get_attention(folder_path: str, n: int) -> np.ndarray:
