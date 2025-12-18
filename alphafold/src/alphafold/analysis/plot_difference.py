@@ -4,6 +4,18 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from typing import Optional, List, Union
 
+#LLP convert positive values to 0
+def negative_only(x):
+    if x < 0:
+        return x
+    else:
+        return 0
+
+#LLP custom ticks for difference plots
+def create_custom_xticks_top(x, sequence, interval=5):
+    # Use sequence[i-1]because x is 1-indexed
+    labels = [f'{i}\n{sequence[i-1]}' if i % interval == 0 else sequence[i-1] for i in x]
+    return labels
 
 def create_custom_xticks(
     residue_indices: np.ndarray, sequence: str, label_interval: int = 5
@@ -110,14 +122,21 @@ def plot_difference(
 
     Note: amino-acid letters on the x-axis are color-coded (not the bars).
     """
+
+    #Save only negative values; set positive values to 0 LLP
+    negative_attention_diff_scores = [negative_only(x) for x in attn_diff_scores]
+    
     residue_indices = np.arange(1, len(attn_diff_scores) + 1)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.bar(residue_indices, attn_diff_scores, color="gray")
+
+    #Use negative values (LLP)
+    ax.bar(residue_indices, negative_attention_diff_scores, color="gray")
 
     if sequence:
+        #Use create_custom_xticks_top to make proper ticks for this function
         color_xtick_labels(
             residue_indices,
             sequence,
@@ -130,9 +149,14 @@ def plot_difference(
     else:
         ax.set_xticks(residue_indices)
 
-    ax.set_xlabel("Amino Acid Residue")
+    #Get rid of bottom spine LLP
+    #ax.set_xlabel("Amino Acid Residue")
     ax.set_ylabel("Attention Difference")
     ax.set_title(f"Attention Difference: {protein_name}")
+
+    # Hide the right and bottom spines LLP
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
 
     fig.savefig(output_path / f"{protein_name}_attention_difference.png", dpi=600)
     plt.close(fig)
