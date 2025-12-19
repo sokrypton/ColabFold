@@ -14,14 +14,14 @@ files = [
 
 [[package]]
 name = "alphafold-attention"
-version = "0.0.7"
+version = "0.0.8"
 description = "AlphaFold with attention head access for ColabFold"
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "alphafold_attention-0.0.7-py2.py3-none-any.whl", hash = "sha256:3ca0966a2a62942ef5a391485594670fd12ebdfa86a604f8d01a499bb204613c"},
-    {file = "alphafold_attention-0.0.7.tar.gz", hash = "sha256:90ded2afff408de1d555035b687a26693be797152fc96ea641219c505a43b7d7"},
+    {file = "alphafold_attention-0.0.8-py2.py3-none-any.whl", hash = "sha256:32b98c30023f5633e084432ba949879f5c3ec82e79f0f71e58351bd6ad0f24e9"},
+    {file = "alphafold_attention-0.0.8.tar.gz", hash = "sha256:67cb01c18cb779e62c3fb11afc053d39d896b6474efbfee6f5b13aa8a2caec30"},
 ]
 
 [[package]]
@@ -2682,4 +2682,4 @@ alphafold-minus-jax = ["absl-py", "dm-haiku", "dm-tree", "py3Dmol", "tensorflow"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "aca91469b050d258a41402f8a363421ea5c689cf5021d2b7fa4216728af9d67a"
+content-hash = "854ffd708a55f72d6b8119f70362ad0d5428d8d4c1c0930aab19fb1b006cf6ec"
