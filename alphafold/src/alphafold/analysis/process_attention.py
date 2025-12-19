@@ -12,6 +12,21 @@ logger = logging.getLogger(__name__)
 
 
 def get_n(folder_path: str) -> int:
+    """Determine the sequence length `n` from attention .npy files in a folder.
+
+    Scans all .npy files in folder_path, records array shapes, and returns the
+    first dimension of the most frequently occurring shape. This is used to
+    infer the model sequence length (n) for downstream processing.
+
+    Args:
+        folder_path: path to a directory containing .npy attention files.
+
+    Returns:
+        int: the inferred `n` (first dimension) from the most common array shape.
+
+    Side effects:
+        Exits the process with sys.exit(1) if no .npy files could be loaded.
+    """
     shape_counts = {}
 
     for fname in os.listdir(folder_path):
@@ -38,6 +53,25 @@ def get_n(folder_path: str) -> int:
 
 
 def get_attention(folder_path: str, n: int) -> np.ndarray:
+    """Load and convert attention .npy files into a per-file attention spectrum.
+
+    For each .npy file the routine:
+      - loads the array,
+      - views it as float16,
+      - applies softmax (via jax.nn.softmax),
+      - filters arrays of shape (n, 4, n, n),
+      - collapses axes 0,1,2 by summation to produce a length-n vector.
+
+    The function returns an array of these per-file vectors (shape: (num_files, n)).
+
+    Args:
+        folder_path: directory containing attention .npy files.
+        n: expected sequence length (inferred by get_n).
+
+    Returns:
+        np.ndarray: 2D array where each row is the per-residue attention vector
+        derived from a single .npy file.
+    """
     file_list = [fname for fname in os.listdir(folder_path) if fname.endswith(".npy")]
     file_roots = sorted(file_list, key=lambda x: int(x.split("_")[-1].split(".")[0]))
 
@@ -59,10 +93,28 @@ def get_attention(folder_path: str, n: int) -> np.ndarray:
 
 
 def average(attention_spectrum: np.ndarray) -> np.ndarray:
+    """Compute the mean attention vector across an attention spectrum.
+
+    Args:
+        attention_spectrum: 2D array where each row is a per-file per-residue vector.
+
+    Returns:
+        np.ndarray: 1D array (length n) containing the mean attention per residue.
+    """
     return np.mean(attention_spectrum, axis=0)
 
 
 def min_max(data: np.ndarray) -> np.ndarray:
+    """Scale a numeric array to the [0, 1] range using min-max normalization.
+
+    If the array is constant (max == min) returns a zero array of the same shape.
+
+    Args:
+        data: 1D numeric array.
+
+    Returns:
+        np.ndarray: normalized array with values in [0, 1], or zeros if constant.
+    """
     data = np.asarray(data)
     min_val = data.min()
     max_val = data.max()
@@ -72,6 +124,19 @@ def min_max(data: np.ndarray) -> np.ndarray:
 
 
 def read_sequence_file(sequence_file: str) -> str:
+    """Read a FASTA-like sequence from a file.
+
+    The function handles files with one or multiple FASTA records. If a single
+    record is present it will read all lines after the header until EOF. If
+    multiple records are present it reads the sequence lines between the first
+    and second header lines.
+
+    Args:
+        sequence_file: path to the sequence file.
+
+    Returns:
+        str: concatenated sequence (header lines removed, whitespace stripped).
+    """
     with open(sequence_file, "r") as f:
         content = f.readlines()
         start_end = []
@@ -101,6 +166,20 @@ def read_sequence_file(sequence_file: str) -> str:
 
 
 def read_alignment(protein1: str, protein2: str, alignment: str) -> Tuple[str, str]:
+    """Extract aligned sequences for two protein identifiers from an alignment file.
+
+    The alignment file is expected to contain protein identifiers on a line
+    followed by the aligned sequence on the next line. Matching is case-insensitive.
+
+    Args:
+        protein1: identifier for the first protein to search in the file.
+        protein2: identifier for the second protein to search in the file.
+        alignment: path to the alignment file.
+
+    Returns:
+        Tuple[str, str]: (aligned_sequence1, aligned_sequence2). Empty strings are
+        returned for sequences not found.
+    """
     aligned_sequence1 = ""
     aligned_sequence2 = ""
     with open(alignment, "r") as f:
@@ -116,6 +195,30 @@ def read_alignment(protein1: str, protein2: str, alignment: str) -> Tuple[str, s
 def align_attention(
     attention1: np.ndarray, attention2: np.ndarray, sequence1: str, sequence2: str
 ) -> Tuple[np.ndarray, np.ndarray, List[int], List[int]]:
+    """Map per-residue attention arrays onto aligned sequences (introducing gaps).
+
+    For each aligned sequence position:
+      - if the residue is '-', the aligned attention at that position is set to 0
+        and the index is recorded in the corresponding gaps list;
+      - if the residue is alphabetic, the next value from the original attention
+        array is consumed and assigned.
+
+    The function also rescales the aligned attention for sequence1 by the ratio
+    of original sequence lengths to partially account for length differences.
+
+    Args:
+        attention1: 1D attention array for sequence1 (length = original seq1 length).
+        attention2: 1D attention array for sequence2 (length = original seq2 length).
+        sequence1: aligned sequence string for seq1 (may contain '-').
+        sequence2: aligned sequence string for seq2 (may contain '-').
+
+    Returns:
+        Tuple containing:
+          - aligned_attention1: 1D array mapped to sequence1 (length = len(sequence1)),
+          - aligned_attention2: 1D array mapped to sequence2 (length = len(sequence2)),
+          - gaps1: list of indices in sequence1 that are gaps,
+          - gaps2: list of indices in sequence2 that are gaps.
+    """
     og_seq1_len = len(attention1)
     og_seq2_len = len(attention2)
 

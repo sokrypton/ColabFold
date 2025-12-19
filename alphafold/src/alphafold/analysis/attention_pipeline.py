@@ -28,6 +28,38 @@ def run_pipeline(
     query_highlight_color: str = "#AE0639",
     target_highlight_color: str = "#1f77b4",
 ) -> None:
+    """Run the end-to-end attention analysis and visualization pipeline.
+
+    Reads sequence(s) and attention data, normalizes and scores attention,
+    identifies important residues, optionally aligns sequences/attentions,
+    computes BLOSUM-weighted differences, and writes CSVs and plots.
+
+    Modes:
+      - Single-protein mode: provide only query_* arguments. Produces ranking CSV
+        and an attention plot for the query.
+      - Pairwise mode: provide both query_* and target_* arguments. When
+        sequences are equal-length, pairwise comparison (BLOSUM + difference
+        plots) is performed. When an alignment_path is provided, aligned-mode
+        processing is used, mapping highlight indices into the alignment.
+
+    Args:
+        query_seq_path: Path to query sequence file.
+        query_attn_dir: Directory containing query attention files.
+        query_name: Identifier used for query output filenames.
+        target_seq_path: Optional path to target sequence file.
+        target_attn_dir: Optional directory with target attention files.
+        target_name: Optional identifier for target outputs.
+        alignment_path: Optional path to a precomputed alignment file (for aligned mode).
+        save_path: Directory where output subdirectories/files are written.
+        query_highlight_indices: Optional 1-based indices to highlight in query plots.
+        target_highlight_indices: Optional 1-based indices to highlight in target plots.
+        query_highlight_color: Color string for query highlight bars.
+        target_highlight_color: Color string for target highlight bars.
+
+    Returns:
+        None. Side effects include creating output directories, saving PNG plots
+        and CSV files. The function may call sys.exit(1) on fatal configuration errors.
+    """
     logger.info("Reading query sequence file: %s", query_seq_path)
     query_sequence = process_attention.read_sequence_file(sequence_file=query_seq_path)
     logger.info("Query sequence length: %d", len(query_sequence))
