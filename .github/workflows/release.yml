@@ -12,9 +12,6 @@ jobs:
     permissions:
       contents: write
     
-    # Prevents the job from running on forks
-    if: github.repository == 'prameshsharma25/ColabFold'
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

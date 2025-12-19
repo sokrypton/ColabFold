@@ -12,3 +12,4 @@ __pycache__
 /attention_outputs
 *.a3m
 *.fa
+dist/
