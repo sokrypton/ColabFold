@@ -10,6 +10,7 @@ from alphafold.analysis.utils import _map_indices_to_aligned
 from alphafold.analysis import analyze_residue, plot_difference, process_attention
 
 
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -141,7 +142,7 @@ def run_pipeline(
         target_attn_avg = process_attention.average(
             attention_spectrum=target_attn_spectrum
         )
-        logging.info(f"Target attention average: {target_attn_avg}")
+        logger.info(f"Target attention average: {target_attn_avg}")
         logger.info(
             "Target attention average stats: min=%g, max=%g, mean=%g",
             float(np.min(target_attn_avg)),
@@ -155,16 +156,12 @@ def run_pipeline(
 
         if len(query_sequence) == len(target_sequence):
             target_attn_min_max = process_attention.min_max(data=target_attn_avg)
-            logging.info(
-                f"Target attention after min-max: {target_attn_min_max}"
-            )
+            logger.info(f"Target attention after min-max: {target_attn_min_max}")
             target_zscores = zscore(target_attn_min_max)
             target_important_indices = analyze_residue.find_important(
                 attention=target_attn_min_max, zscores=target_zscores
             )
-            logger.info(
-                f"Target important indices detected {target_important_indices}"
-            )
+            logger.info(f"Target important indices detected {target_important_indices}")
 
             query_blosum, target_blosum = analyze_residue.blosum_scores(
                 sequence1=query_sequence, sequence2=target_sequence

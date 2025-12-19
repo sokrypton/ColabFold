@@ -11,3 +11,4 @@ __pycache__
 /attention_visualizations
 /attention_outputs
 *.a3m
+*.fa
