@@ -108,12 +108,12 @@ def run_pipeline(
         target_sequence = process_attention.read_sequence_file(
             sequence_file=target_seq_path
         )
-        logger.info("Target sequence length: %d", len(target_sequence))
+        logger.info(f"Target sequence: {target_sequence}")
 
         target_pos_highlights = (
             list(target_highlight_indices) if target_highlight_indices else []
         )
-        logger.info("Target highlight indices provided: %s", target_pos_highlights)
+        logger.info(f"Target highlight indices provided: {target_pos_highlights}")
 
         if (len(query_sequence) != len(target_sequence)) and not alignment_path:
             logger.error(
@@ -127,22 +127,21 @@ def run_pipeline(
             "Processing attention data for target: %s, %s", target_name, target_attn_dir
         )
         target_n = process_attention.get_n(folder_path=target_attn_dir)
-        logger.info("Target attention n value: %d", target_n)
+        logger.info(f"Target attention n value: {target_n}")
 
         logger.info("Getting target attention spectrum")
         target_attn_spectrum = process_attention.get_attention(
             folder_path=target_attn_dir, n=target_n
         )
         logger.info(
-            "Retrieved target attention spectrum shape: %s",
-            np.shape(target_attn_spectrum),
+            f"Retrieved target attention spectrum shape: {target_attn_spectrum.shape}"
         )
 
         logger.info("Averaging and normalizing target attention")
         target_attn_avg = process_attention.average(
             attention_spectrum=target_attn_spectrum
         )
-        logging.info("Shape of target attention average: %s", np.shape(target_attn_avg))
+        logging.info(f"Target attention average: {target_attn_avg}")
         logger.info(
             "Target attention average stats: min=%g, max=%g, mean=%g",
             float(np.min(target_attn_avg)),
@@ -157,28 +156,21 @@ def run_pipeline(
         if len(query_sequence) == len(target_sequence):
             target_attn_min_max = process_attention.min_max(data=target_attn_avg)
             logging.info(
-                "Shape of target attention after min-max: %s",
-                np.shape(target_attn_min_max),
+                f"Target attention after min-max: {target_attn_min_max}"
             )
             target_zscores = zscore(target_attn_min_max)
             target_important_indices = analyze_residue.find_important(
                 attention=target_attn_min_max, zscores=target_zscores
             )
             logger.info(
-                "Target important indices detected (%d): %s",
-                len(target_important_indices)
-                if target_important_indices is not None
-                else 0,
-                target_important_indices,
+                f"Target important indices detected {target_important_indices}"
             )
 
             query_blosum, target_blosum = analyze_residue.blosum_scores(
                 sequence1=query_sequence, sequence2=target_sequence
             )
             logger.info(
-                "Computed BLOSUM scores for query and target (arrays lengths: %d, %d)",
-                len(query_blosum),
-                len(target_blosum),
+                f"Computed BLOSUM scores for query and target: {query_blosum}, {target_blosum}"
             )
 
             query_diff, target_diff = analyze_residue.calculate_differences(
@@ -191,8 +183,10 @@ def run_pipeline(
                 bool_alignment=False,
             )
             logger.info(
-                "Calculated attention differences for unaligned sequences (len=%d)",
-                len(query_diff),
+                f"Calculated attention differences for query sequence\n: {query_diff}"
+            )
+            logger.info(
+                f"Calculated attention differences for target sequence\n: {target_diff}"
             )
 
             for attn, seq, name in [

@@ -91,7 +91,6 @@ def calculate_differences(
         important_diff2 = np.where(difference2 > 0, difference2, 0)
         for g in gaps1:
             important_diff2[g] = 0
-
     else:
         difference1 = attention1 - attention2
         important_diff1 = np.where(difference1 > 0, difference1, 0)
@@ -100,8 +99,13 @@ def calculate_differences(
         important_diff2 = np.where(difference2 > 0, difference2, 0)
 
     # Account for Edge Effects LLP
-    consecutive1 = consecutive(np.array(list(range(len(difference1)))))
-    consecutive2 = consecutive(np.array(list(range(len(difference2)))))
+    consecutive1 = consecutive(difference1)
+    consecutive2 = consecutive(difference2)
+
+    beginning_offset = 0
+    ending_offset = len(difference1)
+
+    logger.info("Beginning offset: %d, Ending offset: %d", beginning_offset, ending_offset)
 
     if [len(x) for x in consecutive1 if 0 in x]:
         beginning_offset = [len(x) for x in consecutive1 if 0 in x][0] + 5
@@ -118,6 +122,8 @@ def calculate_differences(
         ending_offset = [max(x) for x in consecutive2 if len(difference2) - 1 in x][
             0
         ] - 4
+
+    logger.info("Beginning offset: %d, Ending offset: %d", beginning_offset, ending_offset)
 
     # Update blosum with edge effects LLP
     important_diff_blosum1 = (

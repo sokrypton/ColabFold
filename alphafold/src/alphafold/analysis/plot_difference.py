@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Optional, List, Union
 
 
-# LLP convert positive values to 0
 def negative_only(x):
     if x < 0:
         return x
@@ -41,10 +40,10 @@ def color_xtick_marks(
     ax: plt.Axes,
     query_highlight_positions: Optional[List[int]] = None,
     target_highlight_positions: Optional[List[int]] = None,
-    query_highlight_color: str = "#AE0639",
-    target_highlight_color: str = "#1f77b4",
+    query_highlight_color: str = None,
+    target_highlight_color: str = None,
 ) -> None:
-    """Set x-tick label text and color tick lines at provided 1-based indices."""
+    """Set x-tick labels and color bar lines at provided 1-based indices."""
     ax.set_xticks(residue_indices)
     ax.set_xticklabels(create_custom_xticks(residue_indices, sequence))
 
@@ -70,14 +69,13 @@ def plot_attention(
     sequence: Optional[str] = None,
     query_highlight_positions: Optional[List[int]] = None,
     target_highlight_positions: Optional[List[int]] = None,
-    query_highlight_color: str = "#D3D3D3",
-    target_highlight_color: str = "#D3D3D3",
+    query_highlight_color: str = None,
+    target_highlight_color: str = None,
 ) -> None:
     """Plots average attention per residue with important residues highlighted.
 
     Note: amino-acid letters on the x-axis are color-coded (not the bars).
     """
-    logging.info("attention_scores.size: %d", attention_scores.size)
     residue_indices = np.arange(1, attention_scores.size + 1)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -128,8 +126,10 @@ def plot_difference(
 
     # Save only negative values; set positive values to 0 LLP
     negative_attention_diff_scores = [negative_only(x) for x in attn_diff_scores]
+    logging.info("Negative attention difference scores: %s", negative_attention_diff_scores)
 
     residue_indices = np.arange(1, len(attn_diff_scores) + 1)
+    logging.info("Residue indices: %s", residue_indices)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -141,7 +141,7 @@ def plot_difference(
     if sequence:
         # Use create_custom_xticks_top to make proper ticks for this function
         ax.set_xticks(residue_indices)
-        ax.set_xticklabels(create_custom_xticks_top(residue_indices, sequence))
+        ax.set_xticklabels(create_custom_xticks(residue_indices, sequence))
 
         color_xtick_marks(
             residue_indices,
