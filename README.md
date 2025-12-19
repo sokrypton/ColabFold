@@ -44,14 +44,30 @@ To set up the project, you must first clone the repository and then install all 
 
 ---
 
-## 2. Executing the Script
+## 2. Running the Pipeline
 
-The primary entry point is `scripts/run_e2e_pipeline.py`. This script handles the environment setup, triggers AlphaFold via ColabFold, and immediately processes the resulting matrices.
+CAAT offers three entry points depending on whether you need a full structural run or just specific analysis components.
 
-**Command Structure:**
+**Option A: Full End-to-End Run**
 
 ```bash
 poetry run python scripts/run_e2e_pipeline.py [OPTIONS]
+```
+
+**Option B: Generate Attention Heads Only**
+
+If you only require attention heads for your own analysis, run the following script:
+
+```bash
+poetry run python scripts/run_attention_heads.py [OPTIONS]
+```
+
+**Option C: Run Analysis Only**
+
+If you already have attention head .npy files and simply need to generate the plots and difference maps:
+
+```bash
+poetry run python scripts/run_analysis_pipeline.py [OPTIONS]
 ```
 
 ---

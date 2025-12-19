@@ -12,7 +12,6 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
-# Find consecutive residues LLP
 def consecutive(data: np.ndarray, stepsize: int = 1) -> list:
     """Split a sorted 1D array into runs of consecutive values.
 
