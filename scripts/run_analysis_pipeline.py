@@ -11,64 +11,64 @@ def main():
     )
 
     parser.add_argument(
-        "--query_attn_dir",
+        "--query-attn-dir",
         required=True,
         help="Path to the directory containing .npy attention files for the query protein.",
     )
     parser.add_argument(
-        "--query_name",
+        "--query-name",
         required=True,
         help="Identifier for the query protein (e.g., 'FUBP1').",
     )
     parser.add_argument(
-        "--query_seq_path",
+        "--query-seq-path",
         required=True,
         help="Path to the .a3m or .fasta file for the query protein.",
     )
     parser.add_argument(
-        "--output_dir",
+        "--output-dir",
         default="attention_visualizations",
         help="Directory where output visualizations will be saved.",
     )
 
     # Target Protein (Optional for Comparison)
     parser.add_argument(
-        "--target_attn_dir",
+        "--target-attn-dir",
         default=None,
         help="Path to attention directory for the target protein.",
     )
     parser.add_argument(
-        "--target_name", default=None, help="Identifier for the target protein."
+        "--target-name", default=None, help="Identifier for the target protein."
     )
     parser.add_argument(
-        "--target_seq_path",
+        "--target-seq-path",
         default=None,
         help="Path to sequence file for the target protein.",
     )
     parser.add_argument(
-        "--alignment_path",
+        "--alignment-path",
         default=None,
         help="Path to the alignment file (e.g., .ali) mapping query to target.",
     )
 
     # Highlighting Options
     parser.add_argument(
-        "--query_highlight_indices",
+        "--query-highlight-indices",
         default=None,
         help="Comma-separated 1-based indices to highlight in query (e.g. 1,5,10).",
     )
     parser.add_argument(
-        "--target_highlight_indices",
+        "--target-highlight-indices",
         default=None,
         help="Comma-separated 1-based indices to highlight in target (e.g. 1,5,10).",
     )
     parser.add_argument(
-        "--query_highlight_color",
+        "--query-highlight-color",
         default="#AE0639",
         help="Hex color for query sequence highlights.",
     )
     parser.add_argument(
-        "--target_highlight_color",
+        "--target-highlight-color",
         default="#1f77b4",
         help="Hex color for target sequence highlights.",
     )

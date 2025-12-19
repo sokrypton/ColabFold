@@ -22,46 +22,46 @@ def main() -> None:
     )
 
     prediction = parser.add_argument_group("prediction settings")
-    prediction.add_argument("--query_seq_path", type=str, help="Query MSA/Fasta file.")
+    prediction.add_argument("--query-seq-path", type=str, help="Query MSA/Fasta file.")
     prediction.add_argument("--model-type", type=str, default="alphafold2_ptm")
     prediction.add_argument("--num-models", type=int, default=5)
     prediction.add_argument("--result-dir", type=str, default="results")
 
     analysis = parser.add_argument_group("analysis settings")
-    analysis.add_argument("--query_name", required=True, help="ID for query protein.")
+    analysis.add_argument("--query-name", required=True, help="ID for query protein.")
     analysis.add_argument(
-        "--vis_output_dir", type=str, default="attention_visualizations"
+        "--vis-output-dir", type=str, default="attention_visualizations"
     )
     analysis.add_argument(
-        "--query_highlight_indices",
+        "--query-highlight-indices",
         default=None,
         help="Comma-separated 1-based indices to highlight in query (e.g. 1,5,10).",
     )
     analysis.add_argument(
-        "--target_highlight_indices",
+        "--target-highlight-indices",
         default=None,
         help="Comma-separated 1-based indices to highlight in target (e.g. 1,5,10).",
     )
     analysis.add_argument(
-        "--query_highlight_color",
+        "--query-highlight-color",
         default="#AE0639",
         help="Hex color for query sequence highlights.",
     )
     analysis.add_argument(
-        "--target_highlight_color",
+        "--target-highlight-color",
         default="#1f77b4",
         help="Hex color for target sequence highlights.",
     )
 
     comparison = parser.add_argument_group("comparison settings (optional)")
     comparison.add_argument(
-        "--target_name", default=None, help="ID for target protein."
+        "--target-name", default=None, help="ID for target protein."
     )
     comparison.add_argument(
-        "--target_seq_path", default=None, help="Path to target sequence."
+        "--target-seq-path", default=None, help="Path to target sequence."
     )
     comparison.add_argument(
-        "--alignment_path", default=None, help="Path to MSA alignment."
+        "--alignment-path", default=None, help="Path to MSA alignment."
     )
 
     args: argparse.Namespace = parser.parse_args()

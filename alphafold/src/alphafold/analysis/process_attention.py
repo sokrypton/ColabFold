@@ -115,12 +115,17 @@ def min_max(data: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: normalized array with values in [0, 1], or zeros if constant.
     """
-    data = np.asarray(data)
-    min_val = data.min()
-    max_val = data.max()
-    if max_val == min_val:
-        return np.zeros_like(data)
-    return (data - min_val) / (max_val - min_val)
+    min_max = np.zeros([len(data)])
+    data2 = [x for x in data if x != 0]
+    min = np.min(data2)
+    max = data.max()
+
+    for i, value in enumerate(data):
+        if value == 0:
+            min_max[i] = 0
+        else:
+            min_max[i] = (value - min) / (max - min)
+    return min_max
 
 
 def read_sequence_file(sequence_file: str) -> str:

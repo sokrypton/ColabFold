@@ -34,6 +34,12 @@ To set up the project, you must first clone the repository and then install all 
     ```bash
     poetry install
     ```
+
+    **Install AlphaFold Dependencies**:
+    ```bash
+    poetry install -E alphafold
+    ```
+
     This command installs all dependencies defined in `pyproject.toml`, including your custom `alphafold-colabfold` package from PyPI.
 
 3.  **Activate Environment (Optional but Recommended):**

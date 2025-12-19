@@ -19,7 +19,9 @@ def main():
 
     # --- Required Arguments ---
     parser.add_argument(
-        "input_fasta", type=str, help="Path to the input MSA file (.a3m or .fasta)."
+        "--query-seq-path",
+        type=str,
+        help="Path to the input MSA file (.a3m or .fasta).",
     )
 
     # --- Optional Arguments ---
@@ -50,15 +52,15 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"Starting ColabFold Prediction for: {args.input_fasta}")
+    print(f"Starting ColabFold Prediction for: {args.query_seq_path}")
     print(f"Model Type: {args.model_type}")
     print(f"Attention Output: {args.attention_output_dir}")
     print("-" * 30)
 
-    if not os.path.exists(args.input_fasta):
-        raise FileNotFoundError(f"Input file not found at: {args.input_fasta}")
+    if not os.path.exists(args.query_seq_path):
+        raise FileNotFoundError(f"Input file not found at: {args.query_seq_path}")
 
-    queries, is_complex = get_queries(args.input_fasta)
+    queries, is_complex = get_queries(args.query_seq_path)
 
     download_alphafold_params(args.model_type, Path("."))
 
