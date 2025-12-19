@@ -206,7 +206,7 @@ def run_pipeline(
                     protein=name,
                 )
                 logger.info(
-                    "Ran find_highest_attention for %s (results in %s)",
+                    "Finding highest attention for %s (results in %s)",
                     name,
                     output_subdir,
                 )

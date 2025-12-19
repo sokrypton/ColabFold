@@ -11,9 +11,11 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-#Find consecutive residues LLP
-def consecutive(data, stepsize=1):
-    return np.split(data, np.where(np.diff(data) != stepsize)[0]+1)
+
+# Find consecutive residues LLP
+def consecutive(data: np.ndarray, stepsize: int = 1) -> list:
+    return np.split(data, np.where(np.diff(data) != stepsize)[0] + 1)
+
 
 def find_highest_attention(
     attention: np.ndarray, sequence: str, output_dir, protein: str
@@ -97,22 +99,42 @@ def calculate_differences(
         difference2 = attention2 - attention1
         important_diff2 = np.where(difference2 > 0, difference2, 0)
 
-    #Account for Edge Effects LLP
+    # Account for Edge Effects LLP
+    consecutive1 = consecutive(np.array(list(range(len(difference1)))))
+    consecutive2 = consecutive(np.array(list(range(len(difference2)))))
 
     if [len(x) for x in consecutive1 if 0 in x]:
-        beginning_offset = [len(x) for x in consecutive1 if 0 in x][0]+5
-    elif [len(x) for x in consecutive2 if 0 in x]:
-        beginning_offset = [len(x) for x in consecutive2 if 0 in x][0]+5
-        
-    if [len(x) for x in consecutive1 if len(difference1)-1 in x]:
-        ending_offset = [len(x) for x in consecutive1 if len(difference1)-1 in x][0] -4
-    elif [len(x) for x in consecutive2 if len(difference2)-1 in x]:
-        ending_offset = [max(x) for x in consecutive2 if len(difference2)-1 in x][0] -4
-    
-    # Update blosum with edge effects LLP
-    important_diff_blosum1 = [0]*beginning_offset+[diff * s for diff, s in zip(important_diff1, scores1)][beginning_offset:ending_offset]+[0]*(len(difference1)-ending_offset)
-    important_diff_blosum2 = [0]*beginning_offset+[diff * s for diff, s in zip(important_diff2, scores2)][beginning_offset:ending_offset]+[0]*(len(difference1)-ending_offset)
+        beginning_offset = [len(x) for x in consecutive1 if 0 in x][0] + 5
 
-    #important_diff_blosum1 = [diff * s for diff, s in zip(important_diff1, scores1)]
-    #important_diff_blosum2 = [diff * s for diff, s in zip(important_diff2, scores2)]
+    if [len(x) for x in consecutive2 if 0 in x]:
+        beginning_offset = [len(x) for x in consecutive2 if 0 in x][0] + 5
+
+    if [len(x) for x in consecutive1 if len(difference1) - 1 in x]:
+        ending_offset = [len(x) for x in consecutive1 if len(difference1) - 1 in x][
+            0
+        ] - 4
+
+    if [len(x) for x in consecutive2 if len(difference2) - 1 in x]:
+        ending_offset = [max(x) for x in consecutive2 if len(difference2) - 1 in x][
+            0
+        ] - 4
+
+    # Update blosum with edge effects LLP
+    important_diff_blosum1 = (
+        [0] * beginning_offset
+        + [diff * s for diff, s in zip(important_diff1, scores1)][
+            beginning_offset:ending_offset
+        ]
+        + [0] * (len(difference1) - ending_offset)
+    )
+    important_diff_blosum2 = (
+        [0] * beginning_offset
+        + [diff * s for diff, s in zip(important_diff2, scores2)][
+            beginning_offset:ending_offset
+        ]
+        + [0] * (len(difference1) - ending_offset)
+    )
+
+    # important_diff_blosum1 = [diff * s for diff, s in zip(important_diff1, scores1)]
+    # important_diff_blosum2 = [diff * s for diff, s in zip(important_diff2, scores2)]
     return important_diff_blosum1, important_diff_blosum2

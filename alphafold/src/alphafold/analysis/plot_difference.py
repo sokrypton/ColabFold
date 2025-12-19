@@ -1,21 +1,28 @@
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
 from pathlib import Path
 from typing import Optional, List, Union
 
-#LLP convert positive values to 0
+
+# LLP convert positive values to 0
 def negative_only(x):
     if x < 0:
         return x
     else:
         return 0
 
-#LLP custom ticks for difference plots
+
+# LLP custom ticks for difference plots
 def create_custom_xticks_top(x, sequence, interval=5):
     # Use sequence[i-1]because x is 1-indexed
-    labels = [f'{i}\n{sequence[i-1]}' if i % interval == 0 else sequence[i-1] for i in x]
+    logging.info(x, sequence)
+    labels = [
+        f"{i}\n{sequence[i-1]}" if i % interval == 0 else sequence[i - 1] for i in x
+    ]
     return labels
+
 
 def create_custom_xticks(
     residue_indices: np.ndarray, sequence: str, label_interval: int = 5
@@ -28,7 +35,7 @@ def create_custom_xticks(
     return labels
 
 
-def color_xtick_labels(
+def color_xtick_marks(
     residue_indices: np.ndarray,
     sequence: str,
     ax: plt.Axes,
@@ -37,27 +44,22 @@ def color_xtick_labels(
     query_highlight_color: str = "#AE0639",
     target_highlight_color: str = "#1f77b4",
 ) -> None:
-    """Set x-tick label text and color amino-acid letters at provided 1-based indices.
-
-    If a position is present in both highlight lists, target_highlight_color takes precedence.
-    """
+    """Set x-tick label text and color tick lines at provided 1-based indices."""
     ax.set_xticks(residue_indices)
     ax.set_xticklabels(create_custom_xticks(residue_indices, sequence))
-    tick_labels = ax.get_xticklabels()
 
-    # default color
-    for lbl in tick_labels:
-        lbl.set_color("black")
+    tick_lines = ax.get_xticklines()
+    for i, res in enumerate(residue_indices):
+        pos = int(res)
+        color = "black"
 
-    if query_highlight_positions:
-        for pos in query_highlight_positions:
-            if 1 <= pos <= len(tick_labels):
-                tick_labels[pos - 1].set_color(query_highlight_color)
+        if target_highlight_positions and pos in target_highlight_positions:
+            color = target_highlight_color
+        elif query_highlight_positions and pos in query_highlight_positions:
+            color = query_highlight_color
 
-    if target_highlight_positions:
-        for pos in target_highlight_positions:
-            if 1 <= pos <= len(tick_labels):
-                tick_labels[pos - 1].set_color(target_highlight_color)
+        for line in tick_lines[2 * i : 2 * i + 2]:
+            line.set_color(color)
 
 
 def plot_attention(
@@ -68,19 +70,29 @@ def plot_attention(
     sequence: Optional[str] = None,
     query_highlight_positions: Optional[List[int]] = None,
     target_highlight_positions: Optional[List[int]] = None,
-    query_highlight_color: str = "#AE0639",
-    target_highlight_color: str = "#1f77b4",
+    query_highlight_color: str = "#D3D3D3",
+    target_highlight_color: str = "#D3D3D3",
 ) -> None:
     """Plots average attention per residue with important residues highlighted.
 
     Note: amino-acid letters on the x-axis are color-coded (not the bars).
     """
+    logging.info("attention_scores.size: %d", attention_scores.size)
     residue_indices = np.arange(1, attention_scores.size + 1)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
+    bar_colors = []
+    for pos in residue_indices:
+        if target_highlight_positions and pos in target_highlight_positions:
+            bar_colors.append(target_highlight_color)
+        elif query_highlight_positions and pos in query_highlight_positions:
+            bar_colors.append(query_highlight_color)
+        else:
+            bar_colors.append("#D3D3D3")
+
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.bar(residue_indices, attention_scores, color="gray", zorder=1)
+    ax.bar(residue_indices, attention_scores, color=bar_colors, zorder=1, alpha=0.8)
 
     if highlighted_scores is not None:
         ax.bar(
@@ -88,17 +100,8 @@ def plot_attention(
         )
 
     if sequence:
-        color_xtick_labels(
-            residue_indices,
-            sequence,
-            ax,
-            query_highlight_positions=query_highlight_positions,
-            target_highlight_positions=target_highlight_positions,
-            query_highlight_color=query_highlight_color,
-            target_highlight_color=target_highlight_color,
-        )
-    else:
         ax.set_xticks(residue_indices)
+        ax.set_xticklabels(create_custom_xticks(residue_indices, sequence))
 
     ax.set_xlabel("Amino Acid Residue")
     ax.set_ylabel("Average Attention Score")
@@ -123,21 +126,24 @@ def plot_difference(
     Note: amino-acid letters on the x-axis are color-coded (not the bars).
     """
 
-    #Save only negative values; set positive values to 0 LLP
+    # Save only negative values; set positive values to 0 LLP
     negative_attention_diff_scores = [negative_only(x) for x in attn_diff_scores]
-    
+
     residue_indices = np.arange(1, len(attn_diff_scores) + 1)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    #Use negative values (LLP)
+    # Use negative values (LLP)
     ax.bar(residue_indices, negative_attention_diff_scores, color="gray")
 
     if sequence:
-        #Use create_custom_xticks_top to make proper ticks for this function
-        color_xtick_labels(
+        # Use create_custom_xticks_top to make proper ticks for this function
+        ax.set_xticks(residue_indices)
+        ax.set_xticklabels(create_custom_xticks_top(residue_indices, sequence))
+
+        color_xtick_marks(
             residue_indices,
             sequence,
             ax,
@@ -149,14 +155,14 @@ def plot_difference(
     else:
         ax.set_xticks(residue_indices)
 
-    #Get rid of bottom spine LLP
-    #ax.set_xlabel("Amino Acid Residue")
+    # Get rid of bottom spine LLP
+    # ax.set_xlabel("Amino Acid Residue")
     ax.set_ylabel("Attention Difference")
     ax.set_title(f"Attention Difference: {protein_name}")
 
     # Hide the right and bottom spines LLP
-    ax.spines['right'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
 
     fig.savefig(output_path / f"{protein_name}_attention_difference.png", dpi=600)
     plt.close(fig)
