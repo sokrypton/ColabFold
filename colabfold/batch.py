@@ -125,12 +125,16 @@ def mk_mock_template(
     return template_features
 
 def mk_template(
-    a3m_lines: str, template_path: str, query_sequence: str
+    a3m_lines: str,
+    template_path: str,
+    query_sequence: str,
+    max_template_date="2100-01-01",
+    max_hits=20,
 ) -> Dict[str, Any]:
     template_featurizer = templates.HhsearchHitFeaturizer(
         mmcif_dir=template_path,
-        max_template_date="2100-01-01",
-        max_hits=20,
+        max_template_date=max_template_date,
+        max_hits=max_hits,
         kalign_binary_path="kalign",
         release_dates_path=None,
         obsolete_pdbs_path=None,
@@ -570,6 +574,8 @@ def get_msa_and_templates(
     pairing_strategy: str = "greedy",
     host_url: str = DEFAULT_API_SERVER,
     user_agent: str = "",
+    max_template_date="2100-01-01",
+    max_template_hits=20,
 ) -> Tuple[
     Optional[List[str]], Optional[List[str]], List[str], List[int], List[Dict[str, Any]]
 ]:
@@ -637,6 +643,8 @@ def get_msa_and_templates(
                         a3m_lines_mmseqs2[index],
                         template_paths[index],
                         query_seqs_unique[index],
+                        max_template_date=max_template_date,
+                        max_hits=max_template_hits,
                     )
                     if len(template_feature["template_domain_names"]) == 0:
                         template_feature = mk_mock_template(query_seqs_unique[index])
@@ -1112,6 +1120,8 @@ def run(
     feature_dict_callback: Callable[[Any], Any] = None,
     calc_extra_ptm: bool = False,
     use_probs_extra: bool = True,
+    max_template_date: str = "2100-01-01",
+    max_template_hits: int = 20,
     **kwargs
 ):
     # check what device is available
@@ -1251,6 +1261,8 @@ def run(
         "version": importlib_metadata.version("colabfold"),
         "calc_extra_ptm": calc_extra_ptm,
         "use_probs_extra": use_probs_extra,
+        "max_template_date": max_template_date,
+        "max_template_hits": max_template_hits,
     }
     config_out_file = result_dir.joinpath("config.json")
     config_out_file.write_text(json.dumps(config, indent=4))
@@ -1315,16 +1327,22 @@ def run(
             else:
                 if a3m_lines is None:
                     (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
-                    = get_msa_and_templates(jobname, query_sequence, a3m_lines, result_dir, msa_mode, use_templates,
-                        custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+                    = get_msa_and_templates(
+                        jobname, query_sequence, a3m_lines, result_dir, msa_mode, use_templates,
+                        custom_template_path, pair_mode, pairing_strategy, host_url, user_agent,
+                        max_template_date=max_template_date, max_template_hits=max_template_hits,
+                    )
 
                 elif a3m_lines is not None:
                     (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
                     = unserialize_msa(a3m_lines, query_sequence)
                     if use_templates:
                         (_, _, _, _, template_features) \
-                            = get_msa_and_templates(jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
-                                custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+                            = get_msa_and_templates(
+                                jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
+                                custom_template_path, pair_mode, pairing_strategy, host_url, user_agent,
+                                max_template_date=max_template_date, max_template_hits=max_template_hits,
+                            )
 
                 if num_models == 0:
                     with open(pickled_msa_and_templates, 'wb') as f:
@@ -1555,8 +1573,10 @@ def generate_af3_input(
     use_templates: bool = False,
     custom_template_path: str = None,
     jobname_prefix: Optional[str] = None,
-    host_url: str = DEFAULT_API_SERVER, #NOTE: what is this ?
-    user_agent: str = "", #NOTE: what is this ?
+    host_url: str = DEFAULT_API_SERVER,
+    user_agent: str = "",
+    max_template_date: str = "2100-01-01",
+    max_template_hits: int = 20,
     # is_complex: bool,
     # model_type: str = "auto",
 ):
@@ -1580,16 +1600,22 @@ def generate_af3_input(
         try:
             if a3m_lines is None:
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
-                = get_msa_and_templates(jobname, query_sequences, a3m_lines, result_dir, msa_mode, use_templates,
-                    custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+                = get_msa_and_templates(
+                    jobname, query_sequences, a3m_lines, result_dir, msa_mode, use_templates,
+                    custom_template_path, pair_mode, pairing_strategy, host_url, user_agent,
+                    max_template_date=max_template_date, max_template_hits=max_template_hits,
+                )
 
             elif a3m_lines is not None:
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
                 = unserialize_msa(a3m_lines, query_sequences)
                 # if use_templates:
                 #     (_, _, _, _, template_features) \
-                #         = get_msa_and_templates(jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
-                #             custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+                #         = get_msa_and_templates(
+                #               jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
+                #               custom_template_path, pair_mode, pairing_strategy, host_url, user_agent,
+                #               max_template_date=max_template_date, max_template_hits=max_template_hits,
+                #           )
 
             # save json
             af3 = AF3Utils(jobname, query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa, other_molecules)
@@ -1664,6 +1690,18 @@ def main():
         help="Directory with PDB files to provide as custom templates to the predictor. "
         "No templates will be queried from the MSA server. "
         "'--templates' argument is also required to enable this.",
+    )
+    msa_group.add_argument(
+        "--max-template-date",
+        type=str,
+        default="2100-01-01",
+        help="Maximum release date (YYYY-MM-DD) for templates to be considered."
+    )
+    msa_group.add_argument(
+        "--max-template-hits",
+        type=int,
+        default=20,
+        help="Maximum number of template hits to consider."
     )
     msa_group.add_argument(
         "--pdb-hit-file",
@@ -2031,6 +2069,8 @@ def main():
             jobname_prefix=args.jobname_prefix,
             host_url=args.host_url,
             user_agent=user_agent,
+            max_template_date=args.max_template_date,
+            max_template_hits=args.max_template_hits,
             # extra_molecules=extra_molecules,
         )
         return
@@ -2082,6 +2122,8 @@ def main():
         save_recycles=args.save_recycles,
         calc_extra_ptm=args.calc_extra_ptm,
         use_probs_extra=use_probs_extra,
+        max_template_date=args.max_template_date,
+        max_template_hits=args.max_template_hits,
     )
 
 if __name__ == "__main__":

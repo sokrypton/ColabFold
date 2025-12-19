@@ -89,6 +89,24 @@ This is the primary directory for human-readable insights.
 #### **B. Difference Maps** (`*_attention_difference.png`)
 * The residue-by-residue delta between the Query and the Target.
 
+Run searches using the GPU server:
+```
+colabfold_search --mmseqs /path/to/bin/mmseqs input_sequences.fasta /path/to/db_folder msas \
+    --gpu 1 --gpu-server 1 --db-load-mode 2
+```
+Here, `--db-load-mode 2` is **criical** for fast single query performance. The parameter can be omitted if large batches of queries are supplied to `colabfold_search`. This parameter decides whether a database should be fully copied into RAM in each MMseqs2 module invocation (`--db-load-mode 0`; default), or if MMseqs2 can asusme that the databases are already present in RAM (`--db-load-mode 2`). For ideal performance, the database should still be preloaded into RAM (e.g. with `vmtouch`; see above), before the first `colabfold_search` invocation.
+
+To stop the server(s) when done:
+```
+kill $PID1
+kill $PID2
+```
+For more details, see [GPU-accelerated search](https://github.com/soedinglab/MMseqs2/wiki#gpu-accelerated-search).
+
+### Tutorials & Presentations
+- ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI).
+
+### Projects based on ColabFold or helpers
 
 ## References
 

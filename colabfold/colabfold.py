@@ -4,7 +4,11 @@
 ############################################
 # imports
 ############################################
-import jax
+try:
+  import jax
+except ImportError:
+  pass
+
 import requests
 import hashlib
 import tarfile
