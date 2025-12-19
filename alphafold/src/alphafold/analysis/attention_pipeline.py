@@ -303,12 +303,19 @@ def run_pipeline(
                 sequence1=aligned_seq_query, sequence2=aligned_seq_target
             )
 
-            query_aligned_pos = _map_indices_to_aligned(
-                aligned_seq=aligned_seq_query, indices=query_pos_highlights
-            )
-            target_aligned_pos = _map_indices_to_aligned(
-                aligned_seq=aligned_seq_target, indices=target_pos_highlights
-            )
+            if query_pos_highlights:
+                query_aligned_pos = _map_indices_to_aligned(
+                    aligned_seq=aligned_seq_query, indices=query_pos_highlights
+                )
+            else:
+                query_aligned_pos = None
+
+            if target_pos_highlights:
+                target_aligned_pos = _map_indices_to_aligned(
+                    aligned_seq=aligned_seq_target, indices=target_pos_highlights
+                )
+            else:
+                target_aligned_pos = None
 
             (
                 diff_query_aligned,
