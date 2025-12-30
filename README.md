@@ -1,6 +1,6 @@
 # CAAT
 
-**CAAT** is an end-to-end pipeline designed to bridge the gap between protein structure prediction and functional biological insight. It automates the generation of AlphaFold2 structures and performs deep-dive analysis on the raw attention heads to identify residues of high functional importance.
+**CAAT** is an end-to-end pipeline designed to bridge the gap between protein structure prediction and functional biological insight. It automates the generation of AlphaFold2 structures and performs deep-dive analysis on the raw attention heads to identify residues of high structural importance to the model.
 
 
 ## Quick Start with Poetry
