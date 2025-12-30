@@ -27,7 +27,7 @@ To set up the project, you must first clone the repository and then install all 
 1.  **Clone the Repository:** Get the project source code from the remote repository.
     ```bash
     git clone https://github.com/prameshsharma25/CAAT.git
-    cd ColabFold
+    cd CAAT
     ```
 
 2.  **Install Dependencies:** Run the following command using Poetry.
@@ -74,6 +74,12 @@ If you already have attention head .npy files and simply need to generate the pl
 
 ```bash
 poetry run python scripts/run_analysis_pipeline.py [OPTIONS]
+```
+
+Additionally CAAT can be used in the same way as Colabfold as follows, with an additional custom flag for outputing attention heads locally:
+
+```bash
+poetry run colabfold_batch [OPTIONS] --output-attention-dir 'PATH/TO/HEADS'
 ```
 
 ---

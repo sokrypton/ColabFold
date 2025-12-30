@@ -38,6 +38,7 @@ attention_dir = None
 _recycle_number = None
 _model_number = None
 evoformer_loop_counter = -1
+is_triangle = None
 
 def softmax_cross_entropy(logits, labels):
   """Computes softmax cross entropy given logits and one-hot class labels."""
@@ -160,7 +161,11 @@ def write_array_to_file(logits: np.ndarray, filename_prefix: str = "attention_he
     file_name = f"model_{model_number}_recycle_{recycle_number}_main_evoformer_loop_{evoformer_loop_counter % 52 - 3}_global_index_{attention_head_counter}.npy"
 
   name = os.path.join(attention_dir, file_name)
-  np.save(name, logits)
+
+  global is_triangle
+  if is_triangle:
+    np.save(name, logits)
+
   attention_head_counter += 1
   return 0
 
@@ -168,6 +173,12 @@ def increase_evoformer_loop_counter():
   """Increase the global evoformer loop counter for this run."""
   global evoformer_loop_counter
   evoformer_loop_counter += 1
+  return 0
+
+def set_is_triangle(new_is_triangle):
+  """Update is_triangle"""
+  global is_triangle
+  is_triangle = new_is_triangle
   return 0
 
 class AlphaFoldIteration_noE(hk.Module):
@@ -580,6 +591,15 @@ class TemplatePairStack(hk.Module):
       safe_key, *sub_keys = safe_key.split(6)
       sub_keys = iter(sub_keys)
 
+      result_shape = jax.ShapeDtypeStruct((), jax.numpy.int32)
+
+      jax.experimental.io_callback(
+        set_is_triangle,
+        result_shape,
+        True,
+        ordered=True
+      )
+
       pair_act = dropout_wrapper_fn(
           TriangleAttention(c.triangle_attention_starting_node, gc,
                             name='triangle_attention_starting_node'),
@@ -609,6 +629,13 @@ class TemplatePairStack(hk.Module):
           pair_act,
           pair_mask,
           next(sub_keys))
+      
+      jax.experimental.io_callback(
+        set_is_triangle,
+        result_shape,
+        False,
+        ordered=True
+      )
 
       return pair_act, safe_key
 
@@ -1917,6 +1944,15 @@ class EvoformerIteration(hk.Module):
         pair_mask,
         safe_key=next(sub_keys))
 
+    result_shape = jax.ShapeDtypeStruct((), jax.numpy.int32)
+
+    jax.experimental.io_callback(
+      set_is_triangle,
+      result_shape,
+      True,
+      ordered=True
+    )
+    
     pair_act = dropout_wrapper_fn(
         TriangleAttention(c.triangle_attention_starting_node, gc,
                           name='triangle_attention_starting_node'),
@@ -1929,6 +1965,15 @@ class EvoformerIteration(hk.Module):
         pair_act,
         pair_mask,
         safe_key=next(sub_keys))
+    
+    result_shape = jax.ShapeDtypeStruct((), jax.numpy.int32)
+
+    jax.experimental.io_callback(
+      set_is_triangle,
+      result_shape,
+      False,
+      ordered=True
+    )
 
     pair_act = dropout_wrapper_fn(
         Transition(c.pair_transition, gc, name='pair_transition'),
