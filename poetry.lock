@@ -441,15 +441,15 @@ tests = ["pytest", "pytest-cov", "pytest-xdist"]
 
 [[package]]
 name = "dm-haiku"
-version = "0.0.13"
+version = "0.0.14"
 description = "Haiku is a library for building neural networks in JAX."
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
-    {file = "dm_haiku-0.0.13-py3-none-any.whl", hash = "sha256:ee9562c68a059f146ad07f555ca591cb8c11ef751afecc38353863562bd23f43"},
-    {file = "dm_haiku-0.0.13.tar.gz", hash = "sha256:029bb91b5b1edb0d3fe23304d3bf12a545ea6e485041f7f5d8c8d85ebcf6e17d"},
+    {file = "dm_haiku-0.0.14-py3-none-any.whl", hash = "sha256:79f2fc2bf2985f99687209b72a193769ba2bcfde471ce7746cd36a64ea9ce74a"},
+    {file = "dm_haiku-0.0.14.tar.gz", hash = "sha256:0c1d56ef20e1e04d8551f788ff8964167092c5d8051b7c17ed3f9ce60c0b0a59"},
 ]
 
 [package.dependencies]
@@ -460,7 +460,7 @@ tabulate = ">=0.8.9"
 
 [package.extras]
 flax = ["flax (>=0.7.1)"]
-jax = ["jax (>=0.4.28)", "jaxlib (>=0.4.28)"]
+jax = ["jax (>=0.6.0)", "jaxlib (>=0.6.0)"]
 
 [[package]]
 name = "dm-tree"
@@ -2682,4 +2682,4 @@ alphafold-minus-jax = ["absl-py", "dm-haiku", "dm-tree", "py3Dmol", "tensorflow"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "3329f319cf812047d10b377fb27a62043516815c69bddfcb57eae2dec2bf3343"
+content-hash = "ef4ed992f20230d32e2b77b468186e324e84011c2dfcf0269dee90d3842f78aa"
