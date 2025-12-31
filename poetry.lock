@@ -2682,4 +2682,4 @@ alphafold-minus-jax = ["absl-py", "dm-haiku", "dm-tree", "py3Dmol", "tensorflow"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "b5ef77d8c11ab5e12d1fd21124278f94aa5fef5f97d0b3ab372b78de811e6973"
+content-hash = "72e126bb871989b647c25a29ed1d8fe999fcc786ab5a241c307c29a014ae98cb"

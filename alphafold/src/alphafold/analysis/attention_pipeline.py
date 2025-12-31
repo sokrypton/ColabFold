@@ -271,7 +271,7 @@ def run_pipeline(
 
         if alignment_path and target_name:
             aligned_seq_query, aligned_seq_target = process_attention.read_alignment(
-                protein1=query_name, protein2=target_name, alignment_path=alignment_path
+                protein1=query_name, protein2=target_name, alignment=alignment_path
             )
 
             (
