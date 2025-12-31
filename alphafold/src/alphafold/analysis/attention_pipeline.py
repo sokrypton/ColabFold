@@ -344,7 +344,7 @@ def run_pipeline(
             )
 
             plot_difference.plot_attention(
-                attention=query_aligned_mm,
+                attention_scores=query_aligned_mm,
                 highlighted_scores=query_aligned_imp,
                 protein_name=query_name,
                 output_dir=str(output_subdir),
@@ -353,7 +353,7 @@ def run_pipeline(
                 query_highlight_color=query_highlight_color,
             )
             plot_difference.plot_attention(
-                attention=target_aligned_mm,
+                attention_scores=target_aligned_mm,
                 highlighted_scores=target_aligned_imp,
                 protein_name=target_name,
                 output_dir=str(output_subdir),
