@@ -2,6 +2,9 @@
 
 **CAAT** is an end-to-end pipeline designed to bridge the gap between protein structure prediction and functional biological insight. It automates the generation of AlphaFold2 structures and performs deep-dive analysis on the raw attention heads to identify residues of high structural importance to the model.
 
+## Using CAAT via Colab Notebook
+
+The quickest way to get up and running with CAAT is to use the publicly available notebook with the GPU runtime. You can find that [here](https://colab.research.google.com/drive/11UVndoYaP5cQD7762o8rT0DRlyzSnTnn?usp=sharing).
 
 ## Quick Start with Poetry
 
@@ -42,7 +45,7 @@ To set up the project, you must first clone the repository and then install all 
 
     This command installs all dependencies defined in `pyproject.toml`, including your custom `alphafold-colabfold` package from PyPI.
 
-3.  **Activate Environment (Optional but Recommended):**
+3.  **Activate Environment (Optional):**
     ```bash
     poetry shell
     ```
@@ -68,18 +71,18 @@ If you only require attention heads for your own analysis, run the following scr
 poetry run python scripts/run_attention_heads.py [OPTIONS]
 ```
 
+Additionally, attention heads can be retrieved from CAAT in the same way as ColabFold with an additional custom flag for outputting attention heads locally:
+
+```bash
+poetry run colabfold_batch [OPTIONS] --output-attention-dir 'PATH/TO/HEADS'
+```
+
 **Option C: Run Analysis Only**
 
 If you already have attention head .npy files and simply need to generate the plots and difference maps:
 
 ```bash
 poetry run python scripts/run_analysis_pipeline.py [OPTIONS]
-```
-
-Additionally CAAT can be used in the same way as Colabfold as follows, with an additional custom flag for outputing attention heads locally:
-
-```bash
-poetry run colabfold_batch [OPTIONS] --output-attention-dir 'PATH/TO/HEADS'
 ```
 
 ---
