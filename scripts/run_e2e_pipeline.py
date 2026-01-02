@@ -10,6 +10,7 @@ from colabfold.utils import setup_logging
 
 from alphafold.analysis.utils import _parse_indices
 from alphafold.analysis.attention_pipeline import run_pipeline
+from alphafold.model.modules import reset_attention_state
 
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,8 @@ def main() -> None:
     logging.getLogger().setLevel(logging.INFO)
 
     if args.target_seq_path and args.target_name:
+        reset_attention_state()
+
         if args.query_name == args.target_name:
             logger.error("Query and Target names must be different.")
             sys.exit(1)
