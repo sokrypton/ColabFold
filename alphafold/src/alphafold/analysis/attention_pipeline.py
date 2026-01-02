@@ -128,8 +128,6 @@ def run_pipeline(
             protein_name=query_name,
             output_dir=str(output_subdir),
             sequence=query_sequence,
-            query_highlight_positions=query_pos_highlights,
-            query_highlight_color=query_highlight_color,
         )
         logger.info(
             "Saved attention plot: %s",
@@ -240,8 +238,6 @@ def run_pipeline(
                 protein_name=query_name,
                 output_dir=str(output_subdir),
                 sequence=query_sequence,
-                query_highlight_positions=query_pos_highlights,
-                query_highlight_color=query_highlight_color,
             )
             plot_difference.plot_attention(
                 attention_scores=target_attn_min_max,
@@ -249,8 +245,6 @@ def run_pipeline(
                 protein_name=target_name,
                 output_dir=str(output_subdir),
                 sequence=target_sequence,
-                target_highlight_positions=target_pos_highlights,
-                target_highlight_color=target_highlight_color,
             )
             plot_difference.plot_difference(
                 attn_diff_scores=query_diff,
@@ -349,8 +343,6 @@ def run_pipeline(
                 protein_name=query_name,
                 output_dir=str(output_subdir),
                 sequence=aligned_seq_query,
-                query_highlight_positions=query_aligned_pos,
-                query_highlight_color=query_highlight_color,
             )
             plot_difference.plot_attention(
                 attention_scores=target_aligned_mm,
@@ -358,8 +350,6 @@ def run_pipeline(
                 protein_name=target_name,
                 output_dir=str(output_subdir),
                 sequence=aligned_seq_target,
-                target_highlight_positions=target_aligned_pos,
-                target_highlight_color=target_highlight_color,
             )
 
             plot_difference.plot_difference(

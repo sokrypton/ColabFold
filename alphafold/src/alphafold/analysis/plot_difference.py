@@ -113,10 +113,6 @@ def plot_attention(
     protein_name: str,
     output_dir: Union[str, Path],
     sequence: Optional[str] = None,
-    query_highlight_positions: Optional[List[int]] = None,
-    target_highlight_positions: Optional[List[int]] = None,
-    query_highlight_color: str = None,
-    target_highlight_color: str = None,
 ) -> None:
     """Create and save an average-attention bar plot with optional highlights.
 
@@ -132,10 +128,6 @@ def plot_attention(
         output_dir: directory (str or Path) where the PNG will be written.
         sequence: optional amino-acid sequence (string). When provided, x-tick
             labels show residue letters (and periodic numeric indices).
-        query_highlight_positions: optional list of 1-based indices to color as query.
-        target_highlight_positions: optional list of 1-based indices to color as target.
-        query_highlight_color: color string for query highlights (fallback used if None).
-        target_highlight_color: color string for target highlights (fallback used if None).
 
     Side effects:
         Saves a PNG named "{protein_name}_average_attention.png" at 600 dpi in output_dir.
@@ -146,11 +138,6 @@ def plot_attention(
 
     bar_colors = compute_bar_colors(
         residue_indices,
-        query_highlight_positions=query_highlight_positions,
-        target_highlight_positions=target_highlight_positions,
-        query_highlight_color=query_highlight_color or "#AE0639",
-        target_highlight_color=target_highlight_color or "#1f77b4",
-        default_color="#D3D3D3",
     )
 
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -205,7 +192,6 @@ def plot_difference(
     Side effects:
         Saves a PNG named "{protein_name}_attention_difference.png" at 600 dpi in output_dir.
     """
-    # Save only negative values; set positive values to 0 LLP
     negative_attention_diff_scores = [negative_only(x) for x in attn_diff_scores]
     logger.info(
         "Negative attention difference scores: %s", negative_attention_diff_scores
@@ -233,7 +219,6 @@ def plot_difference(
         default_color="gray",
     )
 
-    # Use negative values (LLP)
     ax.bar(residue_indices, negative_attention_diff_scores, color=bar_colors)
 
     if sequence:

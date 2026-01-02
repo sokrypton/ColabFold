@@ -173,7 +173,6 @@ def calculate_differences(
         difference2 = attention2 - attention1
         important_diff2 = np.where(difference2 > 0, difference2, 0)
 
-    # Account for Edge Effects LLP
     beginning_offset = 0
     ending_offset = len(difference1)
 
@@ -204,7 +203,6 @@ def calculate_differences(
         "Beginning offset: %d, Ending offset: %d", beginning_offset, ending_offset
     )
 
-    # Update blosum with edge effects LLP
     important_diff_blosum1 = (
         [0] * beginning_offset
         + [diff * s for diff, s in zip(important_diff1, scores1)][
