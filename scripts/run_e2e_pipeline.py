@@ -93,6 +93,7 @@ def main() -> None:
     logging.getLogger().setLevel(logging.INFO)
 
     if args.target_seq_path and args.target_name:
+        # Reset attention state before running on target
         reset_attention_state()
 
         if args.query_name == args.target_name:
