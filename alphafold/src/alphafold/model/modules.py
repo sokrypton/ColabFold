@@ -145,6 +145,13 @@ def set_model_number(model_number: int):
   global _model_number
   _model_number = model_number
 
+def reset_attention_state():
+  """Reset global attention bookkeeping between separate runs."""
+  global attention_head_counter, evoformer_loop_counter, is_triangle
+  attention_head_counter = 0
+  evoformer_loop_counter = -1
+  is_triangle = None
+
 def write_array_to_file(logits: np.ndarray, filename_prefix: str = "attention_head") -> int:
   """Save attention head array to disk in the specified directory."""
   global attention_dir
