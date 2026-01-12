@@ -37,9 +37,9 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          # --cov-report=xml generates coverage.xml for Codecov
-          # --cov-report=term-missing sends output to terminal for the PR comment
-          poetry run pytest --cov=alphafold.analysis --cov-report=term-missing --cov-report=xml:coverage.xml tests/test_pipeline.py | tee pytest-coverage.txt
+          # PYTHONPATH=. ensures pytest maps coverage to your local source code
+          # instead of the copy inside the .venv folder.
+          PYTHONPATH=. poetry run pytest --cov=alphafold.analysis --cov-report=term-missing --cov-report=xml:coverage.xml tests/test_pipeline.py | tee pytest-coverage.txt
 
       - name: Post Coverage Comment
         uses: MishaKav/pytest-coverage-comment@main
@@ -53,4 +53,3 @@ jobs:
           files: ./coverage.xml
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
-          
