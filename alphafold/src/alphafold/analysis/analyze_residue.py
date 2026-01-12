@@ -101,6 +101,9 @@ def blosum_scores(sequence1: str, sequence2: str) -> Tuple[np.ndarray, np.ndarra
         Tuple of two numpy arrays (scores1, scores2) containing the per-position
         substitution score for the corresponding residue in each sequence.
     """
+    if len(sequence1) != len(sequence2):
+        raise ValueError("Input sequences must be of equal length.")
+    
     aligner = Align.PairwiseAligner()
     aligner.substitution_matrix = substitution_matrices.load("BLOSUM62")
     scores1 = np.zeros([len(sequence1)])

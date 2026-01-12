@@ -120,6 +120,12 @@ def min_max(data: np.ndarray) -> np.ndarray:
     min = np.min(data2)
     max = data.max()
 
+    if min == max:
+        for i, value in enumerate(data):
+            if value != 0:
+                min_max[i] = 1.0
+        return min_max
+
     for i, value in enumerate(data):
         if value == 0:
             min_max[i] = 0

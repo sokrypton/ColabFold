@@ -43,7 +43,7 @@ def prediction_test(caplog):
 
 
 def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
-    queries = [("5AWL_1", "YYDPETGTWY", None), ("6A5J", "IKKILSKIKKLLK", None)]
+    queries = [("5AWL_1", "YYDPETGTWY", None, None), ("6A5J", "IKKILSKIKKLLK", None, None)]
 
     mock_run_model = MockRunModel(
         pytestconfig.rootpath.joinpath("test-data/batch"), ["5AWL_1", "6A5J"]
@@ -102,7 +102,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
 
 
 def test_zip(pytestconfig, caplog, tmp_path, prediction_test):
-    queries = [("5AWL_1", "YYDPETGTWY", None), ("6A5J", "IKKILSKIKKLLK", None)]
+    queries = [("5AWL_1", "YYDPETGTWY", None, None), ("6A5J", "IKKILSKIKKLLK", None, None)]
 
     mock_run_model = MockRunModel(
         pytestconfig.rootpath.joinpath("test-data/batch"), ["5AWL_1", "6A5J"]
@@ -142,7 +142,7 @@ def test_zip(pytestconfig, caplog, tmp_path, prediction_test):
       assert x in actual_zip
 
 def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
-    queries = [("5AWL_1", "YYDPETGTWY", None)]
+    queries = [("5AWL_1", "YYDPETGTWY", None, None)]
 
     mock_run_model = MockRunModel(
         pytestconfig.rootpath.joinpath("test-data/single"), ["5AWL_1"]
@@ -191,7 +191,7 @@ def test_single_sequence(pytestconfig, caplog, tmp_path, prediction_test):
 def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
     pdb_3g50_A = "MRILPISTIKGKLNEFVDAVSSTQDQITITKNGAPAAVLVGADEWESLQETLYWLAQPGIRESIAEADADIASGRTYGEDEIRAEFGVPRRPH"
     pdb_3g50_B = "MPYTVRFTTTARRDLHKLPPRILAAVVEFAFGDLSREPLRVGKPLRRELAGTFSARRGTYRLLYRIDDEHTTVVILRVDHRADIYRR"
-    queries = [("3G5O_A_3G5O_B", [pdb_3g50_A, pdb_3g50_B], None)]
+    queries = [("3G5O_A_3G5O_B", [pdb_3g50_A, pdb_3g50_B], None, None)]
 
     mock_run_model = MockRunModel(
         pytestconfig.rootpath.joinpath("test-data/complex"), ["3G5O_A_3G5O_B"]
@@ -230,7 +230,7 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
 def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     pdb_3g50_A = "MRILPISTIKGKLNEFVDAVSSTQDQITITKNGAPAAVLVGADEWESLQETLYWLAQPGIRESIAEADADIASGRTYGEDEIRAEFGVPRRPH"
     pdb_3g50_B = "MPYTVRFTTTARRDLHKLPPRILAAVVEFAFGDLSREPLRVGKPLRRELAGTFSARRGTYRLLYRIDDEHTTVVILRVDHRADIYRR"
-    queries = [("3G5O_A_3G5O_B", [pdb_3g50_A, pdb_3g50_B], None)]
+    queries = [("3G5O_A_3G5O_B", [pdb_3g50_A, pdb_3g50_B], None, None)]
 
     mock_run_model = MockRunModel(
         pytestconfig.rootpath.joinpath("test-data/complex_ptm"), ["3G5O_A_3G5O_B"]
@@ -268,7 +268,7 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
 
 def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
     A = "PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK"
-    queries = [("A_A", [A, A], None)]
+    queries = [("A_A", [A, A], None, None)]
 
     mock_run_model = MockRunModel(
         pytestconfig.rootpath.joinpath("test-data/complex_monomer_ptm"), ["A_A"]
@@ -308,7 +308,7 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
 
 def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
     A = "PIAQIHILEGRSDEQKETLIREVSEAISRSLDAPLTSVRVIITEMAKGHFGIGGELASK"
-    queries = [("A_A", [A, A], None)]
+    queries = [("A_A", [A, A], None, None)]
 
     mock_run_model = MockRunModel(
         pytestconfig.rootpath.joinpath("test-data/complex_monomer"), ["A_A"]
@@ -494,7 +494,7 @@ def test_msa_serialization(pytestconfig):
 
     # non-complex a3m files
     a3m_file = pytestconfig.rootpath.joinpath("test-data/a3m/5AWL1.a3m")
-    [(_, query_sequence, _)], is_complex = get_queries(a3m_file)
+    [(_, query_sequence, _, _)], is_complex = get_queries(a3m_file)
     assert not is_complex
     msa = a3m_file.read_text()
     (
