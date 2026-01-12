@@ -6,7 +6,7 @@ from colabfold.batch import get_queries, convert_pdb_to_mmcif, validate_and_fix_
 def test_get_queries_fasta_dir(pytestconfig, caplog):
     dir_path = pytestconfig.rootpath.joinpath("test-data/batch/input")
     queries, is_complex = get_queries(dir_path)
-    assert queries == [("5AWL_1", "YYDPETGTWY", None), ("6A5J", "IKKILSKIKKLLK", None)]
+    assert queries == [("5AWL_1", "YYDPETGTWY", None, None), ("6A5J", "IKKILSKIKKLLK", None, None)]
     assert not is_complex
     assert caplog.messages == [f"{dir_path}/empty.fasta is empty"]
 
@@ -23,7 +23,7 @@ def test_get_queries_csv(pytestconfig, caplog, tmp_path):
     )
 
     assert queries == [
-        ("5AWL_1", "YYDPETGTWY", None),
+        ("5AWL_1", "YYDPETGTWY", None, None),
         (
             "3G5O_A_3G5O_B",
             [
@@ -31,6 +31,7 @@ def test_get_queries_csv(pytestconfig, caplog, tmp_path):
                 "MPYTVRFTTTARRDLHKLPPRILAAVVEFAFGDLSREPLRVGKPLRRELAGTFSARRGTYRLLYRIDDEHTTVVILRVDHRADIYRR",
             ],
             None,
+            None
         ),
     ]
     assert is_complex
@@ -41,8 +42,8 @@ def test_a3m_input(pytestconfig, caplog, tmp_path):
     queries, is_complex = get_queries(pytestconfig.rootpath.joinpath("test-data/a3m"))
 
     assert queries == [
-        ("5AWL1", "YYDPETGTWY", [">101\nYYDPETGTWY"]),
-        ("6A5J", "IKKILSKIKKLLK", [">101\nIKKILSKIKKLLK\n>101\nIKKILSKIKKLLK"]),
+        ("5AWL1", "YYDPETGTWY", [">101\nYYDPETGTWY"], None),
+        ("6A5J", "IKKILSKIKKLLK", [">101\nIKKILSKIKKLLK\n>101\nIKKILSKIKKLLK"], None),
     ]
     assert not is_complex
 
@@ -51,7 +52,7 @@ def test_a3m_input(pytestconfig, caplog, tmp_path):
     )
 
     assert queries == [
-        ("6A5J", "IKKILSKIKKLLK", [">101\nIKKILSKIKKLLK\n>101\nIKKILSKIKKLLK"])
+        ("6A5J", "IKKILSKIKKLLK", [">101\nIKKILSKIKKLLK\n>101\nIKKILSKIKKLLK"], None)
     ]
     assert not is_complex
 

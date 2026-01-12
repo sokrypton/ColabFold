@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 2.2.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: |
+          # Installs project, alphafold extras, and dev tools (pytest-cov)
+          poetry install
+          poetry install -E alphafold
+
+      - name: Run tests with coverage
+        run: |
+          # --cov-report=xml generates coverage.xml for Codecov
+          # --cov-report=term-missing sends output to terminal for the PR comment
+          poetry run pytest --cov=alphafold.analysis --cov-report=term-missing --cov-report=xml:coverage.xml tests/test_pipeline.py | tee pytest-coverage.txt
+
+      - name: Post Coverage Comment
+        uses: MishaKav/pytest-coverage-comment@main
+        with:
+          pytest-coverage-path: ./pytest-coverage.txt
+          title: "Analysis Pipeline Coverage Report"
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
