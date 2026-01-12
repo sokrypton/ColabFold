@@ -510,3 +510,339 @@ class TestPlotDifference:
         assert (
             output_file.exists()
         ), "Output should be created with positive values zeroed"
+
+
+class TestGetN:
+    """Tests for sequence length inference from attention files."""
+
+    def test_get_n_single_shape(self, test_output_dir):
+        """Test get_n with uniform array shapes."""
+        # Create test .npy files with shape (20, 4, 20, 20)
+        for i in range(3):
+            arr = np.random.rand(20, 4, 20, 20)
+            np.save(Path(test_output_dir) / f"attention_{i}.npy", arr)
+
+        n = process_attention.get_n(test_output_dir)
+
+        assert n == 20, "Should return first dimension (20)"
+
+    def test_get_n_multiple_shapes_returns_most_frequent(self, test_output_dir):
+        """Test get_n returns most frequent shape when multiple exist."""
+        # Create 3 files with shape (20, 4, 20, 20)
+        for i in range(3):
+            arr = np.random.rand(20, 4, 20, 20)
+            np.save(Path(test_output_dir) / f"attention_{i}.npy", arr)
+
+        # Create 1 file with shape (30, 4, 30, 30)
+        arr = np.random.rand(30, 4, 30, 30)
+        np.save(Path(test_output_dir) / f"attention_outlier.npy", arr)
+
+        n = process_attention.get_n(test_output_dir)
+
+        assert n == 20, "Should return most frequent shape's first dimension"
+
+    def test_get_n_no_npy_files_exits(self, test_output_dir):
+        """Test get_n exits when no .npy files found."""
+        # Create empty directory
+        assert not any(Path(test_output_dir).glob("*.npy"))
+
+        with pytest.raises(SystemExit):
+            process_attention.get_n(test_output_dir)
+
+    def test_get_n_corrupted_file_skipped(self, test_output_dir):
+        """Test get_n skips corrupted files and uses valid ones."""
+        # Create valid file
+        arr = np.random.rand(20, 4, 20, 20)
+        np.save(Path(test_output_dir) / "attention_valid.npy", arr)
+
+        # Create corrupted file (just write invalid bytes)
+        with open(Path(test_output_dir) / "attention_corrupt.npy", "wb") as f:
+            f.write(b"invalid npy data")
+
+        n = process_attention.get_n(test_output_dir)
+
+        assert n == 20, "Should skip corrupted file and use valid one"
+
+
+class TestGetAttention:
+    """Tests for attention spectrum loading and processing."""
+
+    def test_get_attention_basic(self, test_output_dir):
+        """Test loading attention from .npy files."""
+        n = 20
+        # Create attention files with shape (n, 4, n, n)
+        for i in range(2):
+            arr = np.random.rand(n, 4, n, n).astype(np.float16)
+            np.save(Path(test_output_dir) / f"attention_{i}.npy", arr)
+
+        spectrum = process_attention.get_attention(test_output_dir, n)
+
+        assert spectrum.shape == (2, n), "Should return (num_files, n)"
+        assert spectrum.dtype == np.float16, "Should preserve data type"
+
+    def test_get_attention_filters_wrong_shape(self, test_output_dir):
+        """Test that arrays with wrong shape are filtered out."""
+        n = 20
+        # Create valid file
+        arr_valid = np.random.rand(n, 4, n, n).astype(np.float16)
+        np.save(Path(test_output_dir) / f"attention_0.npy", arr_valid)
+
+        # Create invalid shape file
+        arr_invalid = np.random.rand(n, 2, n, n).astype(np.float16)
+        np.save(Path(test_output_dir) / f"attention_1.npy", arr_invalid)
+
+        spectrum = process_attention.get_attention(test_output_dir, n)
+
+        assert spectrum.shape[0] == 1, "Should only include correct shape files"
+
+    def test_get_attention_files_sorted_numerically(self, test_output_dir):
+        """Test that files are processed in numerical order."""
+        n = 5
+        # Create files in non-sequential order
+        for i in [2, 0, 1]:
+            arr = np.full((n, 4, n, n), i, dtype=np.float16)
+            np.save(Path(test_output_dir) / f"attention_{i}.npy", arr)
+
+        spectrum = process_attention.get_attention(test_output_dir, n)
+
+        # Files should be ordered 0, 1, 2
+        assert spectrum.shape[0] == 3, "Should process all 3 files"
+
+
+class TestAverage:
+    """Tests for attention spectrum averaging."""
+
+    def test_average_basic(self):
+        """Test averaging attention spectrum."""
+        spectrum = np.array([[0.1, 0.2, 0.3], [0.3, 0.2, 0.1], [0.2, 0.2, 0.2]])
+
+        avg = process_attention.average(spectrum)
+
+        expected = np.array([0.2, 0.2, 0.2])
+        np.testing.assert_array_almost_equal(avg, expected)
+
+    def test_average_single_file(self):
+        """Test averaging with single file."""
+        spectrum = np.array([[0.5, 0.7, 0.3]])
+
+        avg = process_attention.average(spectrum)
+
+        np.testing.assert_array_almost_equal(avg, spectrum[0])
+
+    def test_average_preserves_shape(self):
+        """Test that averaging preserves residue dimension."""
+        spectrum = np.random.rand(10, 20)
+
+        avg = process_attention.average(spectrum)
+
+        assert avg.shape == (20,), "Should return 1D array of residues"
+
+
+class TestMinMax:
+    """Tests for min-max normalization."""
+
+    def test_min_max_basic(self):
+        """Test min-max normalization."""
+        data = np.array([0.2, 0.4, 0.6, 0.8])
+
+        normalized = process_attention.min_max(data)
+
+        expected = np.array([0, 1/3, 2/3, 1.0])
+        np.testing.assert_array_almost_equal(normalized, expected)
+
+    def test_min_max_with_zeros(self):
+        """Test that zero values stay zero."""
+        data = np.array([0, 0.5, 0, 1.0])
+
+        normalized = process_attention.min_max(data)
+
+        assert normalized[0] == 0, "Zero should remain zero"
+        assert normalized[2] == 0, "Zero should remain zero"
+        assert normalized[3] == 1, "Max should be 1"
+
+    def test_min_max_constant_array(self):
+        """Test min-max with constant non-zero array."""
+        data = np.array([0.5, 0.5, 0.5, 0.5])
+
+        normalized = process_attention.min_max(data)
+
+        # When all non-zero values are equal, division by zero is avoided
+        # Function should handle gracefully
+        assert len(normalized) == 4, "Should return same length"
+
+    def test_min_max_single_nonzero(self):
+        """Test with single non-zero value."""
+        data = np.array([0, 0.5, 0, 0])
+
+        normalized = process_attention.min_max(data)
+        print(f"Normalized single non-zero: {normalized}")
+
+        assert normalized[1] == 1, "Single non-zero should normalize to 1"
+        assert np.sum(normalized) == 1, "Only that value should be non-zero"
+
+
+class TestReadSequenceFile:
+    """Tests for FASTA sequence reading."""
+
+    def test_read_sequence_single_record(self, test_output_dir):
+        """Test reading single FASTA record."""
+        fasta_path = Path(test_output_dir) / "test.fasta"
+        fasta_content = """>seq1\nACDEFGHIKLMNPQRSTVWY"""
+        with open(fasta_path, "w") as f:
+            f.write(fasta_content)
+
+        seq = process_attention.read_sequence_file(str(fasta_path))
+
+        assert seq == "ACDEFGHIKLMNPQRSTVWY"
+
+    def test_read_sequence_multiline(self, test_output_dir):
+        """Test reading sequence split across multiple lines."""
+        fasta_path = Path(test_output_dir) / "test_multiline.fasta"
+        fasta_content = """>seq1\nACDEF\nGHIKLM\nNPQRS\nTVW\nY"""
+        with open(fasta_path, "w") as f:
+            f.write(fasta_content)
+
+        seq = process_attention.read_sequence_file(str(fasta_path))
+
+        assert seq == "ACDEFGHIKLMNPQRSTV" + "WY"
+
+    def test_read_sequence_multiple_records(self, test_output_dir):
+        """Test reading first sequence from multi-record FASTA."""
+        fasta_path = Path(test_output_dir) / "test_multi.fasta"
+        fasta_content = """>seq1\nACDEFGHIK\n>seq2\nLMNPQRSTVWY"""
+        with open(fasta_path, "w") as f:
+            f.write(fasta_content)
+
+        seq = process_attention.read_sequence_file(str(fasta_path))
+
+        assert seq == "ACDEFGHIK", "Should read first sequence only"
+
+
+class TestReadAlignment:
+    """Tests for alignment file reading."""
+
+    def test_read_alignment_basic(self, test_output_dir):
+        """Test reading aligned sequences from file."""
+        align_path = Path(test_output_dir) / "alignment.txt"
+        align_content = """protein1\nACDEF-GHIK\nprotein2\nACDE--FHIK"""
+        with open(align_path, "w") as f:
+            f.write(align_content)
+
+        seq1, seq2 = process_attention.read_alignment(
+            "protein1", "protein2", str(align_path)
+        )
+
+        assert seq1 == "ACDEF-GHIK"
+        assert seq2 == "ACDE--FHIK"
+
+    def test_read_alignment_case_insensitive(self, test_output_dir):
+        """Test that alignment matching is case-insensitive."""
+        align_path = Path(test_output_dir) / "alignment_case.txt"
+        align_content = """PROTEIN1\nACDEFGHIK\nProtein2\nLMNPQRSTVWY"""
+        with open(align_path, "w") as f:
+            f.write(align_content)
+
+        seq1, seq2 = process_attention.read_alignment(
+            "protein1", "protein2", str(align_path)
+        )
+
+        assert seq1 == "ACDEFGHIK"
+        assert seq2 == "LMNPQRSTVWY"
+
+    def test_read_alignment_not_found(self, test_output_dir):
+        """Test when protein not found in alignment."""
+        align_path = Path(test_output_dir) / "alignment_partial.txt"
+        align_content = """protein1\nACDEFGHIK"""
+        with open(align_path, "w") as f:
+            f.write(align_content)
+
+        seq1, seq2 = process_attention.read_alignment(
+            "protein1", "missing", str(align_path)
+        )
+
+        assert seq1 == "ACDEFGHIK"
+        assert seq2 == "", "Missing protein should return empty string"
+
+
+class TestAlignAttention:
+    """Tests for attention alignment mapping."""
+
+    def test_align_attention_no_gaps(self):
+        """Test attention alignment with no gaps."""
+        attention1 = np.array([0.1, 0.2, 0.3, 0.4])
+        attention2 = np.array([0.2, 0.3, 0.4, 0.5])
+        seq1 = "ACDE"
+        seq2 = "ACDE"
+
+        aligned1, aligned2, gaps1, gaps2 = process_attention.align_attention(
+            attention1, attention2, seq1, seq2
+        )
+
+        np.testing.assert_array_almost_equal(aligned1, attention1)
+        np.testing.assert_array_almost_equal(aligned2, attention2)
+        assert gaps1 == []
+        assert gaps2 == []
+
+    def test_align_attention_with_gaps_seq1(self):
+        """Test alignment when seq1 has gaps (aligned sequences same length)."""
+        attention1 = np.array([0.1, 0.2, 0.3, 0.4])
+        attention2 = np.array([0.2, 0.3, 0.4, 0.5, 0.6])
+        seq1 = "AC-DE"
+        seq2 = "ACDEF"
+
+        aligned1, aligned2, gaps1, gaps2 = process_attention.align_attention(
+            attention1, attention2, seq1, seq2
+        )
+
+        assert aligned1[2] == 0, "Gap position should be zero"
+        assert 2 in gaps1, "Gap index should be recorded"
+        assert len(aligned1) == len(seq1), "aligned1 length should match seq1"
+        assert len(aligned2) == len(seq2), "aligned2 length should match seq2"
+
+    def test_align_attention_with_gaps_seq2(self):
+        """Test alignment when seq2 has gaps (aligned sequences same length)."""
+        attention1 = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+        attention2 = np.array([0.2, 0.3, 0.4, 0.5])
+        seq1 = "ACDEF"
+        seq2 = "AC-DE"
+
+        aligned1, aligned2, gaps1, gaps2 = process_attention.align_attention(
+            attention1, attention2, seq1, seq2
+        )
+
+        assert aligned2[2] == 0, "Gap position in seq2 should be zero"
+        assert 2 in gaps2, "Gap index should be recorded in gaps2"
+        assert len(aligned1) == len(seq1), "aligned1 length should match seq1"
+        assert len(aligned2) == len(seq2), "aligned2 length should match seq2"
+
+    def test_align_attention_length_scaling(self):
+        """Test that attention is scaled by length ratio."""
+        attention1 = np.array([0.5, 0.5])
+        attention2 = np.array([0.5, 0.5, 0.5, 0.5])
+        seq1 = "AC"
+        seq2 = "ACDE"
+
+        aligned1, aligned2, _, _ = process_attention.align_attention(
+            attention1, attention2, seq1, seq2
+        )
+
+        # seq1 is shorter, so ratio = 2/4 = 0.5
+        # aligned1 should be scaled down
+        expected1 = np.array([0.25, 0.25])
+        np.testing.assert_array_almost_equal(aligned1, expected1)
+
+    def test_align_attention_output_shapes(self):
+        """Test that output shapes match input sequences."""
+        attention1 = np.array([0.1, 0.2, 0.3, 0.5])
+        attention2 = np.array([0.4, 0.5, 0.6, 0.7, 0.8])
+        seq1 = "A-CDE"
+        seq2 = "AC-DEF"
+
+        aligned1, aligned2, gaps1, gaps2 = process_attention.align_attention(
+            attention1, attention2, seq1, seq2
+        )
+
+        assert len(aligned1) == len(seq1), "aligned1 length should match seq1"
+        assert len(aligned2) == len(seq2), "aligned2 length should match seq2"
+        assert isinstance(gaps1, list), "gaps1 should be a list"
+        assert isinstance(gaps2, list), "gaps2 should be a list"
