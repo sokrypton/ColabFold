@@ -6,6 +6,8 @@
 
 The quickest way to get up and running with CAAT is to use the publicly available notebook with the GPU runtime. You can find that [here](https://colab.research.google.com/drive/11UVndoYaP5cQD7762o8rT0DRlyzSnTnn?usp=sharing).
 
+View coverage report [here](https://app.codecov.io/github/prameshsharma25/caat/tree/main).
+
 ## Quick Start with Poetry
 
 Follow these steps to set up and run your local version of ColabFold using **Poetry**.
