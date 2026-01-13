@@ -774,8 +774,6 @@ class Attention(hk.Module):
 
     # Grab the attention weights for visualization
     if attention_dir is not None:
-      module_name = self.name
-        
       result_shape = jax.ShapeDtypeStruct((), jax.numpy.int32)
 
       jax.experimental.io_callback(
