@@ -6,6 +6,8 @@
 
 The quickest way to get up and running with CAAT is to use the publicly available notebook with the GPU runtime. You can find that [here](https://colab.research.google.com/drive/11UVndoYaP5cQD7762o8rT0DRlyzSnTnn?usp=sharing).
 
+## Coverage Report
+
 View coverage report [here](https://app.codecov.io/github/prameshsharma25/caat/tree/main).
 
 ## Quick Start with Poetry
@@ -45,14 +47,10 @@ To set up the project, you must first clone the repository and then install all 
     poetry install -E alphafold
     ```
 
-    This command installs all dependencies defined in `pyproject.toml`, including your custom `alphafold-colabfold` package from PyPI.
-
-3.  **Activate Environment (Optional):**
+    **For local GPU usage or running on an HPC cluster, install additional jax[cuda] libraries**:
     ```bash
-    poetry shell
+    poetry run pip install --no-warn-conflicts 'jax[cuda12]==0.4.28' jaxlib==0.4.28
     ```
-    This prepares your terminal session for direct script execution.
-
 ---
 
 ## 2. Running the Pipeline
