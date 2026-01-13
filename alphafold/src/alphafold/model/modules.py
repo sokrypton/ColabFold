@@ -162,6 +162,8 @@ def write_array_to_file(logits: np.ndarray, filename_prefix: str = "attention_he
 
   os.makedirs(attention_dir, exist_ok=True)
 
+  logits = logits.astype(np.float16)
+
   if evoformer_loop_counter % 52 < 4:
     file_name = f"model_{model_number}_recycle_{recycle_number}_extra_msa_evoformer_loop_{evoformer_loop_counter % 52 + 1}_global_index_{attention_head_counter}.npz"
   else:
@@ -171,7 +173,6 @@ def write_array_to_file(logits: np.ndarray, filename_prefix: str = "attention_he
 
   global is_triangle
   if is_triangle:
-    # np.save(name, logits)
     np.savez_compressed(name, logits=logits)
 
   attention_head_counter += 1
