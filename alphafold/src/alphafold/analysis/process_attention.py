@@ -12,34 +12,35 @@ logger = logging.getLogger(__name__)
 
 
 def get_n(folder_path: str) -> int:
-    """Determine the sequence length `n` from attention .npy files in a folder.
+    """Determine the sequence length `n` from attention .npz files in a folder.
 
-    Scans all .npy files in folder_path, records array shapes, and returns the
+    Scans all .npz files in folder_path, records array shapes, and returns the
     first dimension of the most frequently occurring shape. This is used to
     infer the model sequence length (n) for downstream processing.
 
     Args:
-        folder_path: path to a directory containing .npy attention files.
+        folder_path: path to a directory containing .npz attention files.
 
     Returns:
         int: the inferred `n` (first dimension) from the most common array shape.
 
     Side effects:
-        Exits the process with sys.exit(1) if no .npy files could be loaded.
+        Exits the process with sys.exit(1) if no .npz files could be loaded.
     """
     shape_counts = {}
 
     for fname in os.listdir(folder_path):
-        if fname.endswith(".npy"):
+        if fname.endswith(".npz"):
             try:
-                arr = np.load(os.path.join(folder_path, fname))
-                shape = arr.shape
-                shape_counts[shape] = shape_counts.get(shape, 0) + 1
+                with np.load(os.path.join(folder_path, fname)) as archive:
+                    arr = archive['logits']
+                    shape = arr.shape
+                    shape_counts[shape] = shape_counts.get(shape, 0) + 1
             except Exception as e:
                 logger.warning("Could not load %s: %s", fname, e)
 
     if not shape_counts:
-        logger.error("No .npy files found in %s", folder_path)
+        logger.error("No .npz files found in %s", folder_path)
         sys.exit(1)
 
     sorted_shapes = sorted(shape_counts.items(), key=lambda item: item[1], reverse=True)
@@ -53,9 +54,9 @@ def get_n(folder_path: str) -> int:
 
 
 def get_attention(folder_path: str, n: int) -> np.ndarray:
-    """Load and convert attention .npy files into a per-file attention spectrum.
+    """Load and convert attention .npz files into a per-file attention spectrum.
 
-    For each .npy file the routine:
+    For each .npz file the routine:
       - loads the array,
       - views it as float16,
       - applies softmax (via jax.nn.softmax),
@@ -65,24 +66,28 @@ def get_attention(folder_path: str, n: int) -> np.ndarray:
     The function returns an array of these per-file vectors (shape: (num_files, n)).
 
     Args:
-        folder_path: directory containing attention .npy files.
+        folder_path: directory containing attention .npz files.
         n: expected sequence length (inferred by get_n).
 
     Returns:
         np.ndarray: 2D array where each row is the per-residue attention vector
-        derived from a single .npy file.
+        derived from a single .npz file.
     """
-    file_list = [fname for fname in os.listdir(folder_path) if fname.endswith(".npy")]
+    file_list = [fname for fname in os.listdir(folder_path) if fname.endswith(".npz")]
     file_roots = sorted(file_list, key=lambda x: int(x.split("_")[-1].split(".")[0]))
 
     heads_n_4_n_n = []
 
     for fname in file_roots:
-        arr1 = np.load(os.path.join(folder_path, fname))
-        arr1 = arr1.view(dtype=np.float16)
-        arr1 = jax.nn.softmax(arr1)
-        if arr1.shape == (n, 4, n, n):
-            heads_n_4_n_n.append(arr1)
+        try:
+            with np.load(os.path.join(folder_path, fname)) as archive:
+                arr1 = archive['logits']
+                arr1 = arr1.view(dtype=np.float16)
+                arr1 = jax.nn.softmax(arr1)
+            if arr1.shape == (n, 4, n, n):
+                heads_n_4_n_n.append(arr1)
+        except Exception as e:
+            logger.warning("Error processing %s: %s", fname, e)
 
     attention_spectrum = []
     for arr in heads_n_4_n_n:
