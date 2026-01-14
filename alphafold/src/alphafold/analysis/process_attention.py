@@ -1,8 +1,10 @@
 import os
 import sys
 import jax
+import h5py
 import logging
 import linecache
+import collections
 import numpy as np
 
 from typing import List, Tuple
@@ -11,90 +13,105 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def get_n(folder_path: str) -> int:
-    """Determine the sequence length `n` from attention .npz files in a folder.
+def get_n(file_path: str) -> int:
+    """Determine the sequence length `n` from an HDF5 archive.
 
-    Scans all .npz files in folder_path, records array shapes, and returns the
-    first dimension of the most frequently occurring shape. This is used to
-    infer the model sequence length (n) for downstream processing.
+    Peeks at all datasets within the HDF5 file to record shapes and returns
+    the first dimension of the most frequent shape (the inferred n).
 
     Args:
-        folder_path: path to a directory containing .npz attention files.
+        file_path: Path to the .h5 attention archive.
 
     Returns:
-        int: the inferred `n` (first dimension) from the most common array shape.
-
-    Side effects:
-        Exits the process with sys.exit(1) if no .npz files could be loaded.
+        int: the inferred `n`.
     """
-    shape_counts = {}
+    shape_counts = collections.Counter()
 
-    for fname in os.listdir(folder_path):
-        if fname.endswith(".npz"):
-            try:
-                with np.load(os.path.join(folder_path, fname)) as archive:
-                    arr = archive['logits']
-                    shape = arr.shape
-                    shape_counts[shape] = shape_counts.get(shape, 0) + 1
-            except Exception as e:
-                logger.warning("Could not load %s: %s", fname, e)
+    try:
+        with h5py.File(file_path, "r") as f:
+            def visitor_func(name, obj):
+                if isinstance(obj, h5py.Dataset):
+                    shape_counts[obj.shape] += 1
 
-    if not shape_counts:
-        logger.error("No .npz files found in %s", folder_path)
+            f.visititems(visitor_func)
+    except Exception as e:
+        logger.error("Could not open HDF5 file %s: %s", file_path, e)
         sys.exit(1)
 
-    sorted_shapes = sorted(shape_counts.items(), key=lambda item: item[1], reverse=True)
+    if not shape_counts:
+        logger.error("No datasets found inside %s", file_path)
+        sys.exit(1)
 
-    logger.info("Unique shapes found (sorted by frequency):")
+    sorted_shapes = shape_counts.most_common()
+
+    logger.info("Unique shapes found in HDF5 (sorted by frequency):")
     for shape, count in sorted_shapes:
-        logger.info("%s: %d files", shape, count)
+        logger.info("%s: %d datasets", shape, count)
 
     most_frequent_shape = sorted_shapes[0][0]
+
     return most_frequent_shape[0]
 
 
-def get_attention(folder_path: str, n: int) -> np.ndarray:
-    """Load and convert attention .npz files into a per-file attention spectrum.
+def get_attention(file_path: str, n: int) -> np.ndarray:
+    """Load and convert attention data from an HDF5 archive into a per-head spectrum.
 
-    For each .npz file the routine:
-      - loads the array,
-      - views it as float16,
-      - applies softmax (via jax.nn.softmax),
-      - filters arrays of shape (n, 4, n, n),
-      - collapses axes 0,1,2 by summation to produce a length-n vector.
-
-    The function returns an array of these per-file vectors (shape: (num_files, n)).
+    This routine migrates the legacy .npz folder-scanning logic to a single-file 
+    HDF5 access pattern. It maintains the original processing pipeline:
+      - Traverses the HDF5 hierarchy to locate all datasets.
+      - Sorts datasets by their 'global_index' attribute to maintain model sequence.
+      - Views the raw 2-byte dataset elements as float16.
+      - Applies softmax (via jax.nn.softmax) to the restored values.
+      - Filters for tensors matching the expected shape (n, 4, n, n).
+      - Collapses axes 0, 1, and 2 by summation to produce a length-n vector per head.
 
     Args:
-        folder_path: directory containing attention .npz files.
-        n: expected sequence length (inferred by get_n).
+        file_path: Path to the .h5 attention archive generated during inference.
+        n: Expected sequence length (inferred by get_n) used for shape validation.
 
     Returns:
-        np.ndarray: 2D array where each row is the per-residue attention vector
-        derived from a single .npz file.
-    """
-    file_list = [fname for fname in os.listdir(folder_path) if fname.endswith(".npz")]
-    file_roots = sorted(file_list, key=lambda x: int(x.split("_")[-1].split(".")[0]))
+        np.ndarray: A 2D array of shape (num_heads, n), where each row is the 
+            per-residue attention vector derived from a single attention head.
+            This represents the 'attention spectrum' for the entire model run.
 
+    Note:
+        Unlike the previous folder-based method, this function utilizes the 
+        internal HDF5 metadata to ensure heads are processed in the correct 
+        order, regardless of how they are stored on disk.
+    """
     heads_n_4_n_n = []
 
-    for fname in file_roots:
-        try:
-            with np.load(os.path.join(folder_path, fname)) as archive:
-                arr1 = archive['logits']
+    with h5py.File(file_path, 'r') as f:
+        index_map = []
+        def find_indices(name, obj):
+            if isinstance(obj, h5py.Dataset):
+                idx = obj.attrs.get('global_index')
+                if idx is not None:
+                    index_map.append((idx, name))
+        
+        f.visititems(find_indices)
+        
+        index_map.sort(key=lambda x: x[0])
+
+        for _, name in index_map:
+            try:
+                arr1 = f[name][:]
+                
                 arr1 = arr1.view(dtype=np.float16)
                 arr1 = jax.nn.softmax(arr1)
-            if arr1.shape == (n, 4, n, n):
-                heads_n_4_n_n.append(arr1)
-        except Exception as e:
-            logger.warning("Error processing %s: %s", fname, e)
+                
+                if arr1.shape == (n, 4, n, n):
+                    heads_n_4_n_n.append(arr1)
+                    
+            except Exception as e:
+                logger.warning("Error processing head %s: %s", name, e)
 
     attention_spectrum = []
     for arr in heads_n_4_n_n:
         attn = np.sum(arr, axis=(0, 1, 2))
         attention_spectrum.append(attn)
-    attention_spectrum = np.array(attention_spectrum)
-    return attention_spectrum
+        
+    return np.array(attention_spectrum)
 
 
 def average(attention_spectrum: np.ndarray) -> np.ndarray:

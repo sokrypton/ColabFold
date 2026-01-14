@@ -1,3 +1,4 @@
+import os
 import sys
 import logging
 import typing as T
@@ -71,11 +72,18 @@ def run_pipeline(
         logger.info("Query highlight indices provided: %s", query_pos_highlights)
 
     logger.info("Processing attention data for query: %s", query_name)
-    query_n = process_attention.get_n(folder_path=query_attn_dir)
+    try:
+        h5_files = [f for f in os.listdir(query_attn_dir) if f.endswith('.h5')]
+        query_h5_file = os.path.join(query_attn_dir, h5_files[0])
+    except (IndexError, FileNotFoundError):
+        logger.error("No HDF5 file found in %s", query_attn_dir)
+        sys.exit(1)
+
+    query_n = process_attention.get_n(file_path=query_h5_file)
     logger.info("Query attention n value: %d", query_n)
 
     query_attn_spectrum = process_attention.get_attention(
-        folder_path=query_attn_dir, n=query_n
+        file_path=query_h5_file, n=query_n
     )
     logger.info(
         "Retrieved query attention spectrum shape: %s", np.shape(query_attn_spectrum)
@@ -157,12 +165,19 @@ def run_pipeline(
         logger.info(
             "Processing attention data for target: %s, %s", target_name, target_attn_dir
         )
-        target_n = process_attention.get_n(folder_path=target_attn_dir)
+        try:
+            h5_files = [f for f in os.listdir(target_attn_dir) if f.endswith('.h5')]
+            target_h5_file = os.path.join(target_attn_dir, h5_files[0])
+        except (IndexError, FileNotFoundError):
+            logger.error("No HDF5 file found in %s", target_attn_dir)
+            sys.exit(1)
+
+        target_n = process_attention.get_n(file_path=target_h5_file)
         logger.info(f"Target attention n value: {target_n}")
 
         logger.info("Getting target attention spectrum")
         target_attn_spectrum = process_attention.get_attention(
-            folder_path=target_attn_dir, n=target_n
+            file_path=target_h5_file, n=target_n
         )
         logger.info(
             f"Retrieved target attention spectrum shape: {target_attn_spectrum.shape}"

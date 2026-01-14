@@ -31,10 +31,12 @@ import haiku as hk
 import numpy as np
 import os
 import jax
+import h5py
 import jax.numpy as jnp
 
 attention_head_counter = 0
 attention_dir = None
+attention_file = None
 _recycle_number = None
 _model_number = None
 evoformer_loop_counter = -1
@@ -145,37 +147,6 @@ def set_model_number(model_number: int):
   global _model_number
   _model_number = model_number
 
-def reset_attention_state():
-  """Reset global attention bookkeeping between separate runs."""
-  global attention_head_counter, evoformer_loop_counter, is_triangle
-  attention_head_counter = 0
-  evoformer_loop_counter = -1
-  is_triangle = None
-
-def write_array_to_file(logits: np.ndarray, filename_prefix: str = "attention_head") -> int:
-  """Save attention head array to disk in the specified directory."""
-  global attention_dir
-  global attention_head_counter
-  recycle_number = get_recycle_number()
-  model_number = get_model_number()
-  global evoformer_loop_counter
-
-  os.makedirs(attention_dir, exist_ok=True)
-
-  if evoformer_loop_counter % 52 < 4:
-    file_name = f"model_{model_number}_recycle_{recycle_number}_extra_msa_evoformer_loop_{evoformer_loop_counter % 52 + 1}_global_index_{attention_head_counter}.npz"
-  else:
-    file_name = f"model_{model_number}_recycle_{recycle_number}_main_evoformer_loop_{evoformer_loop_counter % 52 - 3}_global_index_{attention_head_counter}.npz"
-
-  name = os.path.join(attention_dir, file_name)
-
-  global is_triangle
-  if is_triangle:
-    np.savez_compressed(name, logits=logits)
-
-  attention_head_counter += 1
-  return 0
-
 def increase_evoformer_loop_counter():
   """Increase the global evoformer loop counter for this run."""
   global evoformer_loop_counter
@@ -187,6 +158,88 @@ def set_is_triangle(new_is_triangle):
   global is_triangle
   is_triangle = new_is_triangle
   return 0
+
+def reset_attention_state():
+  """Reset global attention bookkeeping between separate runs."""
+  global attention_head_counter, evoformer_loop_counter, is_triangle
+  attention_head_counter = 0
+  evoformer_loop_counter = -1
+  is_triangle = None
+  close_hdf5_file()
+
+def initialize_hdf5_file(output_dir: str, model_number: int, recycle_number: int):
+  """Initialize HDF5 file for storing attention heads."""
+  global attention_file
+  
+  os.makedirs(output_dir, exist_ok=True)
+  filename = os.path.join(
+    output_dir, 
+    f"attention_heads_model_{model_number}_recycle_{recycle_number}.h5"
+  )
+  
+  attention_file = h5py.File(filename, 'w')
+  
+  return attention_file
+
+def write_array_to_hdf5(logits: np.ndarray, filename_prefix: str = "attention_head") -> int:
+  """Save attention head array to HDF5 file."""
+  global attention_file
+  global attention_head_counter
+  global evoformer_loop_counter
+  global is_triangle
+
+  model_number = get_model_number()
+  recycle_number = get_recycle_number()
+  
+  if attention_file is None:
+    raise RuntimeError("HDF5 file not initialized. Call initialize_hdf5_file first.")
+  
+  if evoformer_loop_counter % 52 < 4:
+    loop_type = "extra_msa"
+    loop_num = evoformer_loop_counter % 52 + 1
+  else:
+    loop_type = "main"
+    loop_num = evoformer_loop_counter % 52 - 3
+  
+  dataset_name = f"{loop_type}_evoformer_loop_{loop_num}/head_{attention_head_counter}"
+  
+  if is_triangle:
+    attention_file.create_dataset(
+      dataset_name,
+      data=logits,
+      compression='gzip',
+      compression_opts=4,
+      dtype=np.float16,
+      shuffle=True,
+    )
+
+    attention_file[dataset_name].attrs['global_index'] = attention_head_counter
+    attention_file[dataset_name].attrs['model_number'] = model_number
+    attention_file[dataset_name].attrs['recycle_number'] = recycle_number
+    attention_file[dataset_name].attrs['loop_type'] = loop_type
+    attention_file[dataset_name].attrs['loop_number'] = loop_num
+  
+  attention_head_counter += 1
+  return 0
+
+def close_hdf5_file():
+  """Close the HDF5 file."""
+  global attention_file
+  if attention_file is not None:
+      attention_file.close()
+      attention_file = None
+
+def write_array_to_file(logits: np.ndarray, filename_prefix: str = "attention_head") -> int:
+  """Save attention head array to disk in the specified directory."""
+  global attention_file
+  global attention_dir
+
+  if attention_file is None and attention_dir is not None:
+    model_num = get_model_number()
+    recycle_num = get_recycle_number()
+    initialize_hdf5_file(attention_dir, model_num, recycle_num)
+
+  return write_array_to_hdf5(logits, filename_prefix)
 
 class AlphaFoldIteration_noE(hk.Module):
   """A single recycling iteration of AlphaFold architecture."""
