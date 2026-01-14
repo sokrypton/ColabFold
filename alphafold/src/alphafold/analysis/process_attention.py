@@ -55,9 +55,8 @@ def get_n(file_path: str) -> int:
 
 def get_attention(file_path: str, n: int) -> np.ndarray:
     """Load and convert attention data from an HDF5 archive into a per-head spectrum.
-
-    This routine migrates the legacy .npz folder-scanning logic to a single-file 
-    HDF5 access pattern. It maintains the original processing pipeline:
+    
+    The function performs the following steps:
       - Traverses the HDF5 hierarchy to locate all datasets.
       - Sorts datasets by their 'global_index' attribute to maintain model sequence.
       - Views the raw 2-byte dataset elements as float16.
@@ -73,11 +72,6 @@ def get_attention(file_path: str, n: int) -> np.ndarray:
         np.ndarray: A 2D array of shape (num_heads, n), where each row is the 
             per-residue attention vector derived from a single attention head.
             This represents the 'attention spectrum' for the entire model run.
-
-    Note:
-        Unlike the previous folder-based method, this function utilizes the 
-        internal HDF5 metadata to ensure heads are processed in the correct 
-        order, regardless of how they are stored on disk.
     """
     heads_n_4_n_n = []
 
