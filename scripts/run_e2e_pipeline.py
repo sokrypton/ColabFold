@@ -53,6 +53,12 @@ def main() -> None:
         default="#1f77b4",
         help="Hex color for target sequence highlights.",
     )
+    analysis.add_argument(
+        "--save-attention-heads",
+        type=bool,
+        default=False,
+        help="If set, exports individual attention heads (.npy) to local disk.",
+    )
 
     comparison = parser.add_argument_group("comparison settings (optional)")
     comparison.add_argument(
@@ -88,6 +94,7 @@ def main() -> None:
         attention_output_dir=str(query_attn_dir),
         model_type=args.model_type,
         is_complex=is_complex_query,
+        save_attention_heads=args.save_attention_heads,
     )
 
     logging.getLogger().setLevel(logging.INFO)
@@ -110,6 +117,7 @@ def main() -> None:
             attention_output_dir=str(target_attn_dir),
             model_type=args.model_type,
             is_complex=is_complex_target,
+            save_attention_heads=args.save_attention_heads,
         )
         logging.getLogger().setLevel(logging.INFO)
 

@@ -56,7 +56,6 @@ def run_pipeline(
         target_highlight_indices: Optional 1-based indices to highlight in target plots.
         query_highlight_color: Color string for query highlight bars.
         target_highlight_color: Color string for target highlight bars.
-
     Returns:
         None. Side effects include creating output directories, saving PNG plots
         and CSV files. The function may call sys.exit(1) on fatal configuration errors.
@@ -73,7 +72,7 @@ def run_pipeline(
 
     logger.info("Processing attention data for query: %s", query_name)
     try:
-        h5_files = [f for f in os.listdir(query_attn_dir) if f.endswith('.h5')]
+        h5_files = [f for f in os.listdir(query_attn_dir) if f.endswith(".h5")]
         query_h5_file = os.path.join(query_attn_dir, h5_files[0])
     except (IndexError, FileNotFoundError):
         logger.error("No HDF5 file found in %s", query_attn_dir)
@@ -166,7 +165,7 @@ def run_pipeline(
             "Processing attention data for target: %s, %s", target_name, target_attn_dir
         )
         try:
-            h5_files = [f for f in os.listdir(target_attn_dir) if f.endswith('.h5')]
+            h5_files = [f for f in os.listdir(target_attn_dir) if f.endswith(".h5")]
             target_h5_file = os.path.join(target_attn_dir, h5_files[0])
         except (IndexError, FileNotFoundError):
             logger.error("No HDF5 file found in %s", target_attn_dir)

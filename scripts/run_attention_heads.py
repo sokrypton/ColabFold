@@ -49,6 +49,12 @@ def main():
         default=5,
         help="Number of models to run for each query.\nDefault: 5",
     )
+    parser.add_argument(
+        "--save-attention-heads",
+        type=bool,
+        default=False,
+        help="If set, exports individual attention heads (.npy) to local disk.",
+    )
 
     args = parser.parse_args()
 
@@ -78,6 +84,7 @@ def main():
         attention_output_dir=args.attention_output_dir,
         model_type=args.model_type,
         is_complex=is_complex,
+        save_attention_heads=args.save_attention_heads,
     )
 
     print("-" * 30)
