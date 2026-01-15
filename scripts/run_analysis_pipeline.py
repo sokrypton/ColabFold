@@ -72,6 +72,11 @@ def main():
         default="#1f77b4",
         help="Hex color for target sequence highlights.",
     )
+    parser.add_argument(
+        "--save-attention-h5",
+        action="store_true",
+        help="If set, exports attention weights in H5 format to local disk.",
+    )
 
     args = parser.parse_args()
 
@@ -103,6 +108,7 @@ def main():
         target_highlight_indices=_parse_indices(args.target_highlight_indices),
         query_highlight_color=args.query_highlight_color,
         target_highlight_color=args.target_highlight_color,
+        save_attention_h5=args.save_attention_h5,
     )
 
 

@@ -38,6 +38,11 @@ def main():
         help="Directory to save raw attention head NumPy files.\nDefault: attention_outputs",
     )
     parser.add_argument(
+        "--query-name",
+        required=True,
+        help="ID for query protein.",
+    )
+    parser.add_argument(
         "--result-dir",
         type=str,
         default="results",
@@ -51,8 +56,7 @@ def main():
     )
     parser.add_argument(
         "--save-attention-heads",
-        type=bool,
-        default=False,
+        action="store_true",
         help="If set, exports individual attention heads (.npy) to local disk.",
     )
 
@@ -77,11 +81,14 @@ def main():
 
     setup_logging(log_file_path, verbose=False)
 
+    base_attn_dir = Path("attention_outputs")
+    query_attn_dir = base_attn_dir / args.query_name
+
     results = run(
         queries=queries,
         result_dir=args.result_dir,
         num_models=args.num_models,
-        attention_output_dir=args.attention_output_dir,
+        attention_output_dir=str(query_attn_dir),
         model_type=args.model_type,
         is_complex=is_complex,
         save_attention_heads=args.save_attention_heads,

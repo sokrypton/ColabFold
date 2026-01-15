@@ -222,17 +222,17 @@ def write_array_to_hdf5(logits: np.ndarray, filename_prefix: str = "attention_he
     attention_file[dataset_name].attrs['loop_type'] = loop_type
     attention_file[dataset_name].attrs['loop_number'] = loop_num
 
-  if _save_attention_heads:
-    file_name = (
-        f"model_{get_model_number()}_recycle_{get_recycle_number()}_"
-        f"{loop_type}_evoformer_loop_{loop_num}_"
-        f"global_index_{attention_head_counter}.npy"
-    )
-    
-    os.makedirs(attention_dir, exist_ok=True)
-    npy_path = os.path.join(attention_dir, file_name)
-    
-    np.save(npy_path, logits)
+    if _save_attention_heads:
+      file_name = (
+          f"model_{get_model_number()}_recycle_{get_recycle_number()}_"
+          f"{loop_type}_evoformer_loop_{loop_num}_"
+          f"global_index_{attention_head_counter}.npy"
+      )
+      
+      os.makedirs(attention_dir, exist_ok=True)
+      npy_path = os.path.join(attention_dir, file_name)
+      
+      np.save(npy_path, logits)
   
   attention_head_counter += 1
   return 0

@@ -28,6 +28,7 @@ def run_pipeline(
     target_highlight_indices: T.Optional[T.List[int]] = None,
     query_highlight_color: str = "#AE0639",
     target_highlight_color: str = "#1f77b4",
+    save_attention_h5: bool = False,
 ) -> None:
     """Run the end-to-end attention analysis and visualization pipeline.
 
@@ -56,6 +57,7 @@ def run_pipeline(
         target_highlight_indices: Optional 1-based indices to highlight in target plots.
         query_highlight_color: Color string for query highlight bars.
         target_highlight_color: Color string for target highlight bars.
+        save_attention_h5: If True, exports attention weights in H5 format to local disk.
     Returns:
         None. Side effects include creating output directories, saving PNG plots
         and CSV files. The function may call sys.exit(1) on fatal configuration errors.
@@ -382,3 +384,28 @@ def run_pipeline(
                 target_highlight_positions=target_aligned_pos,
                 target_highlight_color=target_highlight_color,
             )
+
+    if not save_attention_h5:
+        logger.info("Cleaning up HDF5 archives")
+
+        dirs_to_process = {
+            d for d in [query_attn_dir, target_attn_dir] if d is not None
+        }
+
+        for directory in dirs_to_process:
+            if os.path.isdir(directory):
+                h5_files = [f for f in os.listdir(directory) if f.endswith(".h5")]
+
+                if not h5_files:
+                    logger.info("No H5 files found to remove in %s", directory)
+                    continue
+
+                for h5_file in h5_files:
+                    h5_path = os.path.join(directory, h5_file)
+                    try:
+                        os.remove(h5_path)
+                        logger.info("Deleted H5 archive: %s", h5_path)
+                    except Exception as e:
+                        logger.warning("Failed to delete %s: %s", h5_path, e)
+            else:
+                logger.debug("Directory does not exist, skipping: %s", directory)

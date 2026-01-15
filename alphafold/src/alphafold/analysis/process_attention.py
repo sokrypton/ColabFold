@@ -57,14 +57,6 @@ def get_n(file_path: str) -> int:
 def get_attention(file_path: str, n: int) -> np.ndarray:
     """Load and convert attention data from an HDF5 archive into a per-head spectrum.
 
-    The function performs the following steps:
-      - Traverses the HDF5 hierarchy to locate all datasets.
-      - Sorts datasets by their 'global_index' attribute to maintain model sequence.
-      - Views the raw 2-byte dataset elements as float16.
-      - Applies softmax (via jax.nn.softmax) to the restored values.
-      - Filters for tensors matching the expected shape (n, 4, n, n).
-      - Collapses axes 0, 1, and 2 by summation to produce a length-n vector per head.
-
     Args:
         file_path: Path to the .h5 attention archive generated during inference.
         n: Expected sequence length (inferred by get_n) used for shape validation.
@@ -74,7 +66,7 @@ def get_attention(file_path: str, n: int) -> np.ndarray:
             per-residue attention vector derived from a single attention head.
             This represents the 'attention spectrum' for the entire model run.
     """
-    heads_n_4_n_n = []
+    attention_spectrum = []
 
     with h5py.File(file_path, "r") as f:
         index_map = []
@@ -91,21 +83,16 @@ def get_attention(file_path: str, n: int) -> np.ndarray:
 
         for _, name in index_map:
             try:
-                arr1 = f[name][:]
+                arr = f[name][:]
+                arr = arr.view(dtype=np.float16)
 
-                arr1 = arr1.view(dtype=np.float16)
-                arr1 = jax.nn.softmax(arr1)
+                if arr.shape == (n, 4, n, n):
+                    arr = jax.nn.softmax(arr)
+                    attn_vec = np.sum(arr, axis=(0, 1, 2))
 
-                if arr1.shape == (n, 4, n, n):
-                    heads_n_4_n_n.append(arr1)
-
+                    attention_spectrum.append(attn_vec)
             except Exception as e:
                 logger.warning("Error processing head %s: %s", name, e)
-
-    attention_spectrum = []
-    for arr in heads_n_4_n_n:
-        attn = np.sum(arr, axis=(0, 1, 2))
-        attention_spectrum.append(attn)
 
     return np.array(attention_spectrum)
 

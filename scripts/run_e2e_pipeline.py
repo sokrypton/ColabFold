@@ -29,9 +29,15 @@ def main() -> None:
     prediction.add_argument("--result-dir", type=str, default="results")
 
     analysis = parser.add_argument_group("analysis settings")
-    analysis.add_argument("--query-name", required=True, help="ID for query protein.")
     analysis.add_argument(
-        "--vis-output-dir", type=str, default="attention_visualizations"
+        "--query-name",
+        required=True,
+        help="ID for query protein.",
+    )
+    analysis.add_argument(
+        "--vis-output-dir",
+        type=str,
+        default="attention_visualizations",
     )
     analysis.add_argument(
         "--query-highlight-indices",
@@ -55,9 +61,13 @@ def main() -> None:
     )
     analysis.add_argument(
         "--save-attention-heads",
-        type=bool,
-        default=False,
-        help="If set, exports individual attention heads (.npy) to local disk.",
+        action="store_true",
+        help="If set, exports individual uncompressed attention heads (.npy) to local disk.",
+    )
+    analysis.add_argument(
+        "--save-attention-h5",
+        action="store_true",
+        help="If set, exports compressed attention weights in H5 format to local disk.",
     )
 
     comparison = parser.add_argument_group("comparison settings (optional)")
@@ -73,16 +83,16 @@ def main() -> None:
 
     args: argparse.Namespace = parser.parse_args()
 
-    base_attn_dir = Path("attention_outputs")
-    query_attn_dir = base_attn_dir / args.query_name
-    target_attn_dir = base_attn_dir / args.target_name if args.target_name else None
-
     download_alphafold_params(args.model_type, Path("."))
     res_dir = Path(args.result_dir)
     res_dir.mkdir(parents=True, exist_ok=True)
     setup_logging(res_dir / "log.txt")
 
     logging.getLogger().setLevel(logging.INFO)
+
+    base_attn_dir = Path("attention_outputs")
+    query_attn_dir = base_attn_dir / args.query_name
+    target_attn_dir = base_attn_dir / args.target_name if args.target_name else None
 
     query_data, is_complex_query = get_queries(args.query_seq_path)
     logger.info("Generating Query Attention: %s", args.query_name)
@@ -100,7 +110,6 @@ def main() -> None:
     logging.getLogger().setLevel(logging.INFO)
 
     if args.target_seq_path and args.target_name:
-        # Reset attention state before running on target
         reset_attention_state()
 
         if args.query_name == args.target_name:
@@ -136,6 +145,7 @@ def main() -> None:
         target_highlight_indices=_parse_indices(args.target_highlight_indices),
         query_highlight_color=args.query_highlight_color,
         target_highlight_color=args.target_highlight_color,
+        save_attention_h5=args.save_attention_h5,
     )
 
     logger.info("End-to-end pipeline complete. Results in %s", args.vis_output_dir)
