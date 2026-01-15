@@ -386,26 +386,32 @@ def run_pipeline(
             )
 
     if not save_attention_h5:
-        logger.info("Cleaning up HDF5 archives")
+        logger.info("Cleaning up intermediate HDF5 archives...")
 
-        dirs_to_process = {
-            d for d in [query_attn_dir, target_attn_dir] if d is not None
-        }
+        dirs_to_process = {d for d in [query_attn_dir, target_attn_dir] if d is not None}
 
         for directory in dirs_to_process:
             if os.path.isdir(directory):
                 h5_files = [f for f in os.listdir(directory) if f.endswith(".h5")]
-
-                if not h5_files:
-                    logger.info("No H5 files found to remove in %s", directory)
-                    continue
-
                 for h5_file in h5_files:
-                    h5_path = os.path.join(directory, h5_file)
                     try:
-                        os.remove(h5_path)
-                        logger.info("Deleted H5 archive: %s", h5_path)
+                        os.remove(os.path.join(directory, h5_file))
                     except Exception as e:
-                        logger.warning("Failed to delete %s: %s", h5_path, e)
-            else:
-                logger.debug("Directory does not exist, skipping: %s", directory)
+                        logger.warning("Could not delete file %s: %s", h5_file, e)
+
+                try:
+                    if not os.listdir(directory):
+                        os.rmdir(directory)
+                        logger.info("Removed empty directory: %s", directory)
+                except OSError:
+                    pass
+
+        if query_attn_dir:
+            parent_dir = os.path.dirname(query_attn_dir)
+            if os.path.isdir(parent_dir):
+                try:
+                    if not os.listdir(parent_dir):
+                        os.rmdir(parent_dir)
+                        logger.info("Removed empty parent directory: %s", parent_dir)
+                except OSError:
+                    pass
