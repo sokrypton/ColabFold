@@ -23,10 +23,20 @@ def main() -> None:
     )
 
     prediction = parser.add_argument_group("prediction settings")
-    prediction.add_argument("--query-seq-path", type=str, help="Query MSA/Fasta file.")
+    prediction.add_argument(
+        "--query-seq-path",
+        type=str,
+        help="Query MSA/Fasta file.",
+    )
     prediction.add_argument("--model-type", type=str, default="alphafold2_ptm")
     prediction.add_argument("--num-models", type=int, default=5)
     prediction.add_argument("--result-dir", type=str, default="results")
+    prediction.add_argument(
+        "--attention-output-dir",
+        type=str,
+        default="attention_outputs",
+        help="Directory to save raw attention head NumPy files.\nDefault: attention_outputs",
+    )
 
     analysis = parser.add_argument_group("analysis settings")
     analysis.add_argument(
@@ -90,7 +100,7 @@ def main() -> None:
 
     logging.getLogger().setLevel(logging.INFO)
 
-    base_attn_dir = Path("attention_outputs")
+    base_attn_dir = Path(args.attention_output_dir)
     query_attn_dir = base_attn_dir / args.query_name
     target_attn_dir = base_attn_dir / args.target_name if args.target_name else None
 

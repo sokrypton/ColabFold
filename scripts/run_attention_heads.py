@@ -17,14 +17,11 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
-    # --- Required Arguments ---
     parser.add_argument(
         "--query-seq-path",
         type=str,
         help="Path to the input MSA file (.a3m or .fasta).",
     )
-
-    # --- Optional Arguments ---
     parser.add_argument(
         "--model-type",
         type=str,
@@ -81,7 +78,7 @@ def main():
 
     setup_logging(log_file_path, verbose=False)
 
-    base_attn_dir = Path("attention_outputs")
+    base_attn_dir = Path(args.attention_output_dir)
     query_attn_dir = base_attn_dir / args.query_name
 
     results = run(

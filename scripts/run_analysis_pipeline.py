@@ -30,8 +30,6 @@ def main():
         default="attention_visualizations",
         help="Directory where output visualizations will be saved.",
     )
-
-    # Target Protein (Optional for Comparison)
     parser.add_argument(
         "--target-attn-dir",
         default=None,
@@ -50,8 +48,6 @@ def main():
         default=None,
         help="Path to the alignment file (e.g., .ali) mapping query to target.",
     )
-
-    # Highlighting Options
     parser.add_argument(
         "--query-highlight-indices",
         default=None,

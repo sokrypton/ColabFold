@@ -388,7 +388,9 @@ def run_pipeline(
     if not save_attention_h5:
         logger.info("Cleaning up intermediate HDF5 archives...")
 
-        dirs_to_process = {d for d in [query_attn_dir, target_attn_dir] if d is not None}
+        dirs_to_process = {
+            d for d in [query_attn_dir, target_attn_dir] if d is not None
+        }
 
         for directory in dirs_to_process:
             if os.path.isdir(directory):
