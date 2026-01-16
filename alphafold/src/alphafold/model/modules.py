@@ -172,14 +172,14 @@ def reset_attention_state():
     attention_file.close()
     attention_file = None
 
-def initialize_hdf5_file(output_dir: str, model_number: int, recycle_number: int):
+def initialize_hdf5_file(output_dir: str):
   """Initialize HDF5 file for storing attention heads."""
   global attention_file
   
   os.makedirs(output_dir, exist_ok=True)
   filename = os.path.join(
     output_dir, 
-    f"attention_heads_model_{model_number}_recycle_{recycle_number}.h5"
+    f"attention_heads_compressed.h5"
   )
   
   attention_file = h5py.File(filename, 'w')
@@ -210,25 +210,28 @@ def write_array_to_file(logits: np.ndarray, filename_prefix: str = "attention_he
 
   if _save_attention_compressed:
     if attention_file is None:
-      initialize_hdf5_file(attention_dir, model_number, recycle_number)
-      
+      initialize_hdf5_file(attention_dir)
+    
+    if is_triangle:
       dataset_name = f"{loop_type}_evoformer_loop_{loop_num}/head_{attention_head_counter}"
       
-      if is_triangle:
-        attention_file.create_dataset(
-          dataset_name,
-          data=logits,
-          compression='gzip',
-          compression_opts=4,
-          dtype=np.float16,
-          shuffle=True,
-        )
-        ds = attention_file[dataset_name]
-        ds.attrs['global_index'] = attention_head_counter
-        ds.attrs['model_number'] = model_number
-        ds.attrs['recycle_number'] = recycle_number
-        ds.attrs['loop_type'] = loop_type
-        ds.attrs['loop_number'] = loop_num
+      ds = attention_file.create_dataset(
+        dataset_name,
+        data=logits,
+        compression='gzip',
+        compression_opts=4,
+        dtype=np.float16,
+        shuffle=True,
+      )
+      
+      ds.attrs['global_index'] = attention_head_counter
+      ds.attrs['model_number'] = model_number
+      ds.attrs['recycle_number'] = recycle_number
+      ds.attrs['loop_type'] = loop_type
+      ds.attrs['loop_number'] = loop_num
+      ds.attrs['is_triangle'] = True
+      ds.attrs['shape'] = logits.shape
+      ds.attrs['n_res'] = logits.shape[-1]
 
   attention_head_counter += 1
   return 0
