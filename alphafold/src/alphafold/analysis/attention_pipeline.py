@@ -1,3 +1,4 @@
+import os
 import sys
 import logging
 import typing as T
@@ -27,6 +28,7 @@ def run_pipeline(
     target_highlight_indices: T.Optional[T.List[int]] = None,
     query_highlight_color: str = "#AE0639",
     target_highlight_color: str = "#1f77b4",
+    save_attention_npy: bool = False,
 ) -> None:
     """Run the end-to-end attention analysis and visualization pipeline.
 
@@ -55,7 +57,7 @@ def run_pipeline(
         target_highlight_indices: Optional 1-based indices to highlight in target plots.
         query_highlight_color: Color string for query highlight bars.
         target_highlight_color: Color string for target highlight bars.
-
+        save_attention_npy: If True, exports attention weights in .npy format to local disk.
     Returns:
         None. Side effects include creating output directories, saving PNG plots
         and CSV files. The function may call sys.exit(1) on fatal configuration errors.
@@ -71,6 +73,7 @@ def run_pipeline(
         logger.info("Query highlight indices provided: %s", query_pos_highlights)
 
     logger.info("Processing attention data for query: %s", query_name)
+
     query_n = process_attention.get_n(folder_path=query_attn_dir)
     logger.info("Query attention n value: %d", query_n)
 
@@ -157,6 +160,7 @@ def run_pipeline(
         logger.info(
             "Processing attention data for target: %s, %s", target_name, target_attn_dir
         )
+
         target_n = process_attention.get_n(folder_path=target_attn_dir)
         logger.info(f"Target attention n value: {target_n}")
 
@@ -368,3 +372,37 @@ def run_pipeline(
                 target_highlight_positions=target_aligned_pos,
                 target_highlight_color=target_highlight_color,
             )
+
+    if not save_attention_npy:
+        logger.info("Cleaning up intermediate .npy attention files...")
+
+        dirs_to_process = {
+            d for d in [query_attn_dir, target_attn_dir] if d is not None
+        }
+
+        for directory in dirs_to_process:
+            if os.path.isdir(directory):
+                npy_files = [f for f in os.listdir(directory) if f.endswith(".npy")]
+
+                for npy_file in npy_files:
+                    try:
+                        os.remove(os.path.join(directory, npy_file))
+                    except Exception as e:
+                        logger.warning("Could not delete file %s: %s", npy_file, e)
+
+                try:
+                    if not os.listdir(directory):
+                        os.rmdir(directory)
+                        logger.info("Removed empty directory: %s", directory)
+                except OSError:
+                    pass
+
+        if query_attn_dir:
+            parent_dir = os.path.dirname(query_attn_dir)
+            if os.path.isdir(parent_dir):
+                try:
+                    if not os.listdir(parent_dir):
+                        os.rmdir(parent_dir)
+                        logger.info("Removed empty parent directory: %s", parent_dir)
+                except OSError:
+                    pass

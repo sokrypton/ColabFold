@@ -30,8 +30,6 @@ def main():
         default="attention_visualizations",
         help="Directory where output visualizations will be saved.",
     )
-
-    # Target Protein (Optional for Comparison)
     parser.add_argument(
         "--target-attn-dir",
         default=None,
@@ -50,8 +48,6 @@ def main():
         default=None,
         help="Path to the alignment file (e.g., .ali) mapping query to target.",
     )
-
-    # Highlighting Options
     parser.add_argument(
         "--query-highlight-indices",
         default=None,
@@ -71,6 +67,11 @@ def main():
         "--target-highlight-color",
         default="#1f77b4",
         help="Hex color for target sequence highlights.",
+    )
+    parser.add_argument(
+        "--save-attention-npy",
+        action="store_true",
+        help="If set, exports attention weights in .npy format to local disk.",
     )
 
     args = parser.parse_args()
@@ -103,6 +104,7 @@ def main():
         target_highlight_indices=_parse_indices(args.target_highlight_indices),
         query_highlight_color=args.query_highlight_color,
         target_highlight_color=args.target_highlight_color,
+        save_attention_npy=args.save_attention_npy,
     )
 
 

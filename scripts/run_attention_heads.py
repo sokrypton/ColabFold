@@ -2,6 +2,7 @@ import os
 import argparse
 
 from pathlib import Path
+from alphafold.model.modules import reset_attention_state
 from colabfold.download import download_alphafold_params
 from colabfold.batch import run, get_queries
 from colabfold.utils import setup_logging
@@ -17,14 +18,11 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
-    # --- Required Arguments ---
     parser.add_argument(
         "--query-seq-path",
         type=str,
         help="Path to the input MSA file (.a3m or .fasta).",
     )
-
-    # --- Optional Arguments ---
     parser.add_argument(
         "--model-type",
         type=str,
@@ -38,6 +36,11 @@ def main():
         help="Directory to save raw attention head NumPy files.\nDefault: attention_outputs",
     )
     parser.add_argument(
+        "--query-name",
+        required=True,
+        help="ID for query protein.",
+    )
+    parser.add_argument(
         "--result-dir",
         type=str,
         default="results",
@@ -48,6 +51,11 @@ def main():
         type=int,
         default=5,
         help="Number of models to run for each query.\nDefault: 5",
+    )
+    parser.add_argument(
+        "--save-attention-compressed",
+        action="store_true",
+        help="If set, exports compressed attention weights in H5 format to local disk.",
     )
 
     args = parser.parse_args()
@@ -71,14 +79,20 @@ def main():
 
     setup_logging(log_file_path, verbose=False)
 
+    base_attn_dir = Path(args.attention_output_dir)
+    query_attn_dir = base_attn_dir / args.query_name
+
     results = run(
         queries=queries,
         result_dir=args.result_dir,
         num_models=args.num_models,
-        attention_output_dir=args.attention_output_dir,
+        attention_output_dir=str(query_attn_dir),
         model_type=args.model_type,
         is_complex=is_complex,
+        save_attention_compressed=args.save_attention_compressed,
     )
+
+    reset_attention_state()
 
     print("-" * 30)
     print("Prediction complete!")
