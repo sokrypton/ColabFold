@@ -2,6 +2,7 @@ import os
 import argparse
 
 from pathlib import Path
+from alphafold.model.modules import reset_attention_state
 from colabfold.download import download_alphafold_params
 from colabfold.batch import run, get_queries
 from colabfold.utils import setup_logging
@@ -52,9 +53,9 @@ def main():
         help="Number of models to run for each query.\nDefault: 5",
     )
     parser.add_argument(
-        "--save-attention-heads",
+        "--save-attention-compressed",
         action="store_true",
-        help="If set, exports individual attention heads (.npy) to local disk.",
+        help="If set, exports compressed attention weights in H5 format to local disk.",
     )
 
     args = parser.parse_args()
@@ -88,8 +89,10 @@ def main():
         attention_output_dir=str(query_attn_dir),
         model_type=args.model_type,
         is_complex=is_complex,
-        save_attention_heads=args.save_attention_heads,
+        save_attention_compressed=args.save_attention_compressed,
     )
+
+    reset_attention_state()
 
     print("-" * 30)
     print("Prediction complete!")

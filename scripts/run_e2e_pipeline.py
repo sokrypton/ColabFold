@@ -70,12 +70,12 @@ def main() -> None:
         help="Hex color for target sequence highlights.",
     )
     analysis.add_argument(
-        "--save-attention-heads",
+        "--save-attention-npy",
         action="store_true",
         help="If set, exports individual uncompressed attention heads (.npy) to local disk.",
     )
     analysis.add_argument(
-        "--save-attention-h5",
+        "--save-attention-compressed",
         action="store_true",
         help="If set, exports compressed attention weights in H5 format to local disk.",
     )
@@ -114,7 +114,7 @@ def main() -> None:
         attention_output_dir=str(query_attn_dir),
         model_type=args.model_type,
         is_complex=is_complex_query,
-        save_attention_heads=args.save_attention_heads,
+        save_attention_compressed=args.save_attention_compressed,
     )
 
     logging.getLogger().setLevel(logging.INFO)
@@ -136,7 +136,7 @@ def main() -> None:
             attention_output_dir=str(target_attn_dir),
             model_type=args.model_type,
             is_complex=is_complex_target,
-            save_attention_heads=args.save_attention_heads,
+            save_attention_compressed=args.save_attention_compressed,
         )
         logging.getLogger().setLevel(logging.INFO)
 
@@ -155,7 +155,7 @@ def main() -> None:
         target_highlight_indices=_parse_indices(args.target_highlight_indices),
         query_highlight_color=args.query_highlight_color,
         target_highlight_color=args.target_highlight_color,
-        save_attention_h5=args.save_attention_h5,
+        save_attention_npy=args.save_attention_npy,
     )
 
     logger.info("End-to-end pipeline complete. Results in %s", args.vis_output_dir)

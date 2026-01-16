@@ -28,7 +28,7 @@ def run_pipeline(
     target_highlight_indices: T.Optional[T.List[int]] = None,
     query_highlight_color: str = "#AE0639",
     target_highlight_color: str = "#1f77b4",
-    save_attention_h5: bool = False,
+    save_attention_npy: bool = False,
 ) -> None:
     """Run the end-to-end attention analysis and visualization pipeline.
 
@@ -57,7 +57,7 @@ def run_pipeline(
         target_highlight_indices: Optional 1-based indices to highlight in target plots.
         query_highlight_color: Color string for query highlight bars.
         target_highlight_color: Color string for target highlight bars.
-        save_attention_h5: If True, exports attention weights in H5 format to local disk.
+        save_attention_npy: If True, exports attention weights in .npy format to local disk.
     Returns:
         None. Side effects include creating output directories, saving PNG plots
         and CSV files. The function may call sys.exit(1) on fatal configuration errors.
@@ -73,18 +73,12 @@ def run_pipeline(
         logger.info("Query highlight indices provided: %s", query_pos_highlights)
 
     logger.info("Processing attention data for query: %s", query_name)
-    try:
-        h5_files = [f for f in os.listdir(query_attn_dir) if f.endswith(".h5")]
-        query_h5_file = os.path.join(query_attn_dir, h5_files[0])
-    except (IndexError, FileNotFoundError):
-        logger.error("No HDF5 file found in %s", query_attn_dir)
-        sys.exit(1)
 
-    query_n = process_attention.get_n(file_path=query_h5_file)
+    query_n = process_attention.get_n(folder_path=query_attn_dir)
     logger.info("Query attention n value: %d", query_n)
 
     query_attn_spectrum = process_attention.get_attention(
-        file_path=query_h5_file, n=query_n
+        folder_path=query_attn_dir, n=query_n
     )
     logger.info(
         "Retrieved query attention spectrum shape: %s", np.shape(query_attn_spectrum)
@@ -166,19 +160,13 @@ def run_pipeline(
         logger.info(
             "Processing attention data for target: %s, %s", target_name, target_attn_dir
         )
-        try:
-            h5_files = [f for f in os.listdir(target_attn_dir) if f.endswith(".h5")]
-            target_h5_file = os.path.join(target_attn_dir, h5_files[0])
-        except (IndexError, FileNotFoundError):
-            logger.error("No HDF5 file found in %s", target_attn_dir)
-            sys.exit(1)
 
-        target_n = process_attention.get_n(file_path=target_h5_file)
+        target_n = process_attention.get_n(folder_path=target_attn_dir)
         logger.info(f"Target attention n value: {target_n}")
 
         logger.info("Getting target attention spectrum")
         target_attn_spectrum = process_attention.get_attention(
-            file_path=target_h5_file, n=target_n
+            folder_path=target_attn_dir, n=target_n
         )
         logger.info(
             f"Retrieved target attention spectrum shape: {target_attn_spectrum.shape}"
@@ -385,8 +373,8 @@ def run_pipeline(
                 target_highlight_color=target_highlight_color,
             )
 
-    if not save_attention_h5:
-        logger.info("Cleaning up intermediate HDF5 archives...")
+    if not save_attention_npy:
+        logger.info("Cleaning up intermediate .npy attention files...")
 
         dirs_to_process = {
             d for d in [query_attn_dir, target_attn_dir] if d is not None
@@ -394,12 +382,13 @@ def run_pipeline(
 
         for directory in dirs_to_process:
             if os.path.isdir(directory):
-                h5_files = [f for f in os.listdir(directory) if f.endswith(".h5")]
-                for h5_file in h5_files:
+                npy_files = [f for f in os.listdir(directory) if f.endswith(".npy")]
+
+                for npy_file in npy_files:
                     try:
-                        os.remove(os.path.join(directory, h5_file))
+                        os.remove(os.path.join(directory, npy_file))
                     except Exception as e:
-                        logger.warning("Could not delete file %s: %s", h5_file, e)
+                        logger.warning("Could not delete file %s: %s", npy_file, e)
 
                 try:
                     if not os.listdir(directory):

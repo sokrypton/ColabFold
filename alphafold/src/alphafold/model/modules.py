@@ -39,7 +39,7 @@ attention_dir = None
 attention_file = None
 _recycle_number = None
 _model_number = None
-_save_attention_heads = False
+_save_attention_compressed = False
 evoformer_loop_counter = -1
 is_triangle = None
 
@@ -162,11 +162,15 @@ def set_is_triangle(new_is_triangle):
 
 def reset_attention_state():
   """Reset global attention bookkeeping between separate runs."""
-  global attention_head_counter, evoformer_loop_counter, is_triangle
+  global attention_head_counter, evoformer_loop_counter, is_triangle, attention_file
+
   attention_head_counter = 0
   evoformer_loop_counter = -1
   is_triangle = None
-  close_hdf5_file()
+
+  if attention_file is not None:
+    attention_file.close()
+    attention_file = None
 
 def initialize_hdf5_file(output_dir: str, model_number: int, recycle_number: int):
   """Initialize HDF5 file for storing attention heads."""
@@ -182,58 +186,50 @@ def initialize_hdf5_file(output_dir: str, model_number: int, recycle_number: int
   
   return attention_file
 
-def write_array_to_hdf5(logits: np.ndarray, filename_prefix: str = "attention_head") -> int:
-  """Save attention head array to HDF5 file."""
+def write_array_to_file(logits: np.ndarray, filename_prefix: str = "attention_head") -> int:
+  """Write attention logits to file in .npy and optionally HDF5 format."""
   global attention_file, attention_head_counter, evoformer_loop_counter, is_triangle
-
-  if attention_file is None and attention_dir is not None:
-    model_num = get_model_number()
-    recycle_num = get_recycle_number()
-    initialize_hdf5_file(attention_dir, model_num, recycle_num)
-
+  
   model_number = get_model_number()
   recycle_number = get_recycle_number()
-  
-  if attention_file is None:
-    raise RuntimeError("HDF5 file not initialized. Call initialize_hdf5_file first.")
-  
+
   if evoformer_loop_counter % 52 < 4:
     loop_type = "extra_msa"
     loop_num = evoformer_loop_counter % 52 + 1
   else:
     loop_type = "main"
-    loop_num = evoformer_loop_counter % 52 - 3
-  
-  dataset_name = f"{loop_type}_evoformer_loop_{loop_num}/head_{attention_head_counter}"
-  
+    loop_num = (evoformer_loop_counter % 52) - 3
+
+  file_name = f"model_{model_number}_recycle_{recycle_number}_{loop_type}_evoformer_loop_{loop_num}_global_index_{attention_head_counter}.npy"
+
+  os.makedirs(attention_dir, exist_ok=True)
+  npy_path = os.path.join(attention_dir, file_name)
+
   if is_triangle:
-    attention_file.create_dataset(
-      dataset_name,
-      data=logits,
-      compression='gzip',
-      compression_opts=4,
-      dtype=np.float16,
-      shuffle=True,
-    )
+    np.save(npy_path, logits)
 
-    attention_file[dataset_name].attrs['global_index'] = attention_head_counter
-    attention_file[dataset_name].attrs['model_number'] = model_number
-    attention_file[dataset_name].attrs['recycle_number'] = recycle_number
-    attention_file[dataset_name].attrs['loop_type'] = loop_type
-    attention_file[dataset_name].attrs['loop_number'] = loop_num
+  if _save_attention_compressed:
+    if attention_file is None:
+      initialize_hdf5_file(attention_dir, model_number, recycle_number)
+      
+      dataset_name = f"{loop_type}_evoformer_loop_{loop_num}/head_{attention_head_counter}"
+      
+      if is_triangle:
+        attention_file.create_dataset(
+          dataset_name,
+          data=logits,
+          compression='gzip',
+          compression_opts=4,
+          dtype=np.float16,
+          shuffle=True,
+        )
+        ds = attention_file[dataset_name]
+        ds.attrs['global_index'] = attention_head_counter
+        ds.attrs['model_number'] = model_number
+        ds.attrs['recycle_number'] = recycle_number
+        ds.attrs['loop_type'] = loop_type
+        ds.attrs['loop_number'] = loop_num
 
-    if _save_attention_heads:
-      file_name = (
-          f"model_{get_model_number()}_recycle_{get_recycle_number()}_"
-          f"{loop_type}_evoformer_loop_{loop_num}_"
-          f"global_index_{attention_head_counter}.npy"
-      )
-      
-      os.makedirs(attention_dir, exist_ok=True)
-      npy_path = os.path.join(attention_dir, file_name)
-      
-      np.save(npy_path, logits)
-  
   attention_head_counter += 1
   return 0
 
@@ -290,14 +286,14 @@ class AlphaFoldIteration_noE(hk.Module):
 
 class AlphaFold_noE(hk.Module):
   """AlphaFold model"""
-  def __init__(self, config, attention_output_dir=None, save_attention_heads=False, name='alphafold'):
+  def __init__(self, config, attention_output_dir=None, save_attention_compressed=False, name='alphafold'):
     super().__init__(name=name)
     self.config = config
     self.global_config = config.global_config
 
-    global attention_dir, _save_attention_heads
+    global attention_dir, _save_attention_compressed
     attention_dir = attention_output_dir
-    _save_attention_heads = save_attention_heads
+    _save_attention_compressed = save_attention_compressed
 
   def __call__(self, batch, is_training, return_representations=False, **kwargs):
     """Run the AlphaFold model"""
@@ -504,14 +500,14 @@ class AlphaFold(hk.Module):
   Jumper et al. (2021) Suppl. Alg. 2 "Inference"
   """
 
-  def __init__(self, config, attention_output_dir=None, save_attention_heads=False, name='alphafold'):
+  def __init__(self, config, attention_output_dir=None, save_attention_compressed=False, name='alphafold'):
     super().__init__(name=name)
     self.config = config
     self.global_config = config.global_config
-    
-    global attention_dir, _save_attention_heads
+
+    global attention_dir, _save_attention_compressed
     attention_dir = attention_output_dir
-    _save_attention_heads = save_attention_heads
+    _save_attention_compressed = save_attention_compressed
 
   def __call__(
       self,
@@ -833,7 +829,7 @@ class Attention(hk.Module):
       result_shape = jax.ShapeDtypeStruct((), jax.numpy.int32)
 
       jax.experimental.io_callback(
-        write_array_to_hdf5,
+        write_array_to_file,
         result_shape,
         logits,
         ordered=True
