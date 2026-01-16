@@ -78,7 +78,7 @@ def run_pipeline(
     logger.info("Query attention n value: %d", query_n)
 
     query_attn_spectrum = process_attention.get_attention(
-        folder_path=query_attn_dir, n=query_n
+        folder_path=query_attn_dir, n=query_n, save_attention_npy=save_attention_npy
     )
     logger.info(
         "Retrieved query attention spectrum shape: %s", np.shape(query_attn_spectrum)
@@ -166,7 +166,9 @@ def run_pipeline(
 
         logger.info("Getting target attention spectrum")
         target_attn_spectrum = process_attention.get_attention(
-            folder_path=target_attn_dir, n=target_n
+            folder_path=target_attn_dir,
+            n=target_n,
+            save_attention_npy=save_attention_npy,
         )
         logger.info(
             f"Retrieved target attention spectrum shape: {target_attn_spectrum.shape}"
@@ -374,7 +376,7 @@ def run_pipeline(
             )
 
     if not save_attention_npy:
-        logger.info("Cleaning up intermediate .npy attention files...")
+        logger.info("Cleaning up empty attention directories...")
 
         dirs_to_process = {
             d for d in [query_attn_dir, target_attn_dir] if d is not None
@@ -382,20 +384,12 @@ def run_pipeline(
 
         for directory in dirs_to_process:
             if os.path.isdir(directory):
-                npy_files = [f for f in os.listdir(directory) if f.endswith(".npy")]
-
-                for npy_file in npy_files:
-                    try:
-                        os.remove(os.path.join(directory, npy_file))
-                    except Exception as e:
-                        logger.warning("Could not delete file %s: %s", npy_file, e)
-
                 try:
                     if not os.listdir(directory):
                         os.rmdir(directory)
                         logger.info("Removed empty directory: %s", directory)
-                except OSError:
-                    pass
+                except OSError as e:
+                    logger.warning("Could not remove directory %s: %s", directory, e)
 
         if query_attn_dir:
             parent_dir = os.path.dirname(query_attn_dir)

@@ -1,10 +1,8 @@
 import os
 import sys
 import jax
-import h5py
 import logging
 import linecache
-import collections
 import numpy as np
 
 from typing import List, Tuple
@@ -54,7 +52,9 @@ def get_n(folder_path: str) -> int:
     return most_frequent_shape[0]
 
 
-def get_attention(folder_path: str, n: int) -> np.ndarray:
+def get_attention(
+    folder_path: str, n: int, save_attention_npy: bool = False
+) -> np.ndarray:
     """Load and convert attention .npy files into a per-file attention spectrum.
 
     For each .npy file the routine:
@@ -62,13 +62,16 @@ def get_attention(folder_path: str, n: int) -> np.ndarray:
       - views it as float16,
       - applies softmax (via jax.nn.softmax),
       - filters arrays of shape (n, 4, n, n),
-      - collapses axes 0,1,2 by summation to produce a length-n vector.
+      - collapses axes 0,1,2 by summation to produce a length-n vector,
+      - immediately deletes the loaded array to free memory,
+      - optionally deletes the .npy file from disk if save_attention_npy is False.
 
     The function returns an array of these per-file vectors (shape: (num_files, n)).
 
     Args:
         folder_path: directory containing attention .npy files.
         n: expected sequence length (inferred by get_n).
+        save_attention_npy: if False, delete .npy files from disk after processing.
 
     Returns:
         np.ndarray: 2D array where each row is the per-residue attention vector
@@ -77,21 +80,27 @@ def get_attention(folder_path: str, n: int) -> np.ndarray:
     file_list = [fname for fname in os.listdir(folder_path) if fname.endswith(".npy")]
     file_roots = sorted(file_list, key=lambda x: int(x.split("_")[-1].split(".")[0]))
 
-    heads_n_4_n_n = []
+    attention_spectrum = []
 
     for fname in file_roots:
-        arr1 = np.load(os.path.join(folder_path, fname))
-        arr1 = arr1.view(dtype=np.float16)
-        arr1 = jax.nn.softmax(arr1)
-        if arr1.shape == (n, 4, n, n):
-            heads_n_4_n_n.append(arr1)
+        file_path = os.path.join(folder_path, fname)
 
-    attention_spectrum = []
-    for arr in heads_n_4_n_n:
-        attn = np.sum(arr, axis=(0, 1, 2))
-        attention_spectrum.append(attn)
-    attention_spectrum = np.array(attention_spectrum)
-    return attention_spectrum
+        arr = np.load(file_path)
+        arr = arr.view(dtype=np.float16)
+        arr = jax.nn.softmax(arr)
+
+        if arr.shape == (n, 4, n, n):
+            attn_vector = np.sum(arr, axis=(0, 1, 2))
+            attention_spectrum.append(attn_vector)
+
+        if not save_attention_npy:
+            try:
+                os.remove(file_path)
+                logger.debug("Deleted processed file: %s", fname)
+            except Exception as e:
+                logger.warning("Could not delete file %s: %s", fname, e)
+
+    return np.array(attention_spectrum)
 
 
 def average(attention_spectrum: np.ndarray) -> np.ndarray:
