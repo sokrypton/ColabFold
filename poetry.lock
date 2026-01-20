@@ -19,6 +19,7 @@ description = "AlphaFold with attention head access for ColabFold"
 optional = false
 python-versions = "*"
 groups = ["main"]
+markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
     {file = "alphafold_attention-0.0.19-py2.py3-none-any.whl", hash = "sha256:079ab6f63d28cb8e1c659ba65dbfaed522bcacdc53cb5fa219f80866c119ac48"},
     {file = "alphafold_attention-0.0.19.tar.gz", hash = "sha256:ed82c917e625181aeffe70176f0ba209d00585dc910f000935e504ff1f72dde2"},
