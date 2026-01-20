@@ -265,7 +265,9 @@ def save_intermediate_representations(msa_act_first_row, pair_act, batch, loop_i
   import os
   import pickle
   
-  global intermediate_structures_dir, _recycle_number, _model_number
+  global intermediate_structures_dir, _recycle_number, _model_number, evoformer_loop_counter
+
+  loop_idx = evoformer_loop_counter
   
   # Only save if output directory is specified
   if intermediate_structures_dir is None:
@@ -321,8 +323,10 @@ def save_intermediate_representations(msa_act_first_row, pair_act, batch, loop_i
       'recycle_num': recycle_num,
   }
   
-  with open(filepath, 'wb') as f:
-    pickle.dump(data, f)
+  # Only save main evoformer loop
+  if loop_type == 'main':
+    with open(filepath, 'wb') as f:
+      pickle.dump(data, f)
   
   return 0  # Return value for io_callback
 
@@ -2010,6 +2014,7 @@ class EvoformerIteration(hk.Module):
       result_shape,
       ordered=True
     )
+    global evoformer_loop_counter
 
     c = self.config.embeddings_and_evoformer.evoformer
     gc = self.global_config
@@ -2145,7 +2150,7 @@ class EvoformerIteration(hk.Module):
         msa_act[0],  # First row of MSA activations
         pair_act,     # Pair activations
         batch,        # Batch data
-        get_evoformer_loop_counter(),  # Current loop index
+        evoformer_loop_counter,  # Current loop index
         ordered=True
       )
 

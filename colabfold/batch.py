@@ -572,6 +572,7 @@ def generate_intermediate_structures_from_representations(
     import jax
     import jax.numpy as jnp
     import numpy as np
+    from tqdm import tqdm
     
     structures_dir = modules.intermediate_structures_dir
     if structures_dir is None:
@@ -585,26 +586,19 @@ def generate_intermediate_structures_from_representations(
     if not repr_files:
         return
     
-    logger.info(f"Generating {len(repr_files)} intermediate structures")
-    
-    # Get the model runner - it already has trained parameters loaded
+    # Get the model runner
     model_name, model_runner, trained_params = model_runner_and_params[0]
     
-    logger.info(f"Using model: {model_name}")
+    # Get config
+    config = model_runner.config.model
+    seq_channel = config.embeddings_and_evoformer.seq_channel  # 384 (output)
     
-    # Get the expected single representation dimension from config
-    seq_channel = model_runner.config.model.embeddings_and_evoformer.seq_channel
-    
-    logger.info(f"Expected single representation dimension: {seq_channel}")
-    
-    # Create the structure function that includes the projection from msa_first_row
-    def structure_fn(msa_first_row, pair_repr, batch_dict):
-        """Structure module function that projects msa_first_row to single."""
-        # Project msa_first_row to single representation
-        # This is what happens in the full model
+    # Create structure function for main evoformer loops
+    def structure_fn_main(msa_first_row, pair_repr, batch_dict):
+        """For main evoformer loops (msa_first_row has 256 channels)."""
         single = common_modules.Linear(
             seq_channel,
-            name='single_from_msa')(msa_first_row)
+            name='single_activations')(msa_first_row)
         
         representations_dict = {
             'single': single,
@@ -612,24 +606,21 @@ def generate_intermediate_structures_from_representations(
         }
         
         sm = folding.StructureModule(
-            model_runner.config.model.heads.structure_module,
-            model_runner.config.model.global_config,
+            config.heads.structure_module,
+            config.global_config,
             compute_loss=False,
             name='structure_module'
         )
         return sm(representations_dict, batch_dict, is_training=False)
     
-    # Transform it ONCE
-    structure_transform = hk.transform(structure_fn)
+    # Transform it
+    structure_transform_main = hk.transform(structure_fn_main)
     
-    # Extract and reformat parameters
-    # We need both the single_from_msa projection AND the structure module params
-    
-    # Get single_from_msa parameters
-    single_from_msa_prefix = 'alphafold/alphafold_iteration/evoformer/single_activations'
-    single_from_msa_params = {
+    # Extract parameters for MAIN loops (256 -> 384)
+    single_activations_prefix = 'alphafold/alphafold_iteration/evoformer/single_activations'
+    single_params_main = {
         k: v for k, v in trained_params.items() 
-        if k.startswith(single_from_msa_prefix)
+        if k.startswith(single_activations_prefix)
     }
     
     # Get structure module parameters
@@ -639,145 +630,166 @@ def generate_intermediate_structures_from_representations(
         if k.startswith(structure_module_prefix)
     }
     
-    # Reformat parameters
-    # Remove 'alphafold/alphafold_iteration/evoformer/' from single_activations
-    # and rename to 'single_from_msa'
-    reformatted_params = {}
-    for k, v in single_from_msa_params.items():
-        new_key = 'single_from_msa' + k.replace(single_from_msa_prefix, '')
-        reformatted_params[new_key] = v
+    # Reformat parameters for MAIN loops
+    reformatted_params_main = {}
+    for k, v in single_params_main.items():
+        new_key = 'single_activations' + k.replace(single_activations_prefix, '')
+        reformatted_params_main[new_key] = v
     
-    # Remove 'alphafold/alphafold_iteration/' from structure_module params
     for k, v in sm_params_flat.items():
         new_key = k.replace('alphafold/alphafold_iteration/', '')
-        reformatted_params[new_key] = v
+        reformatted_params_main[new_key] = v
     
-    logger.info(f"Found {len(reformatted_params)} total parameters for structure generation")
+    # Counters for summary
+    success_count = 0
+    skipped_count = 0
+    error_count = 0
     
-    for i, repr_file in enumerate(repr_files):
-        try:
-            with open(repr_file, 'rb') as f:
-                data = pickle.load(f)
-            
-            logger.info(f"  [{i+1}/{len(repr_files)}] {repr_file.name}")
-            
-            aatype = data['batch']['aatype']
-            num_res = len(aatype)
-            residue_index = data['batch']['residue_index']
-            
-            # Build batch
-            batch = {
-                'aatype': aatype,
-                'residue_index': residue_index,
-                'seq_mask': np.ones(num_res, dtype=np.float32),
-            }
-            
-            # Add atom features
-            atom14_atom_exists = []
-            residx_atom14_to_atom37 = []
-            residx_atom37_to_atom14 = []
-            atom37_atom_exists = []
-            
-            for aa_idx in aatype:
-                if aa_idx < 20:
-                    restype_1 = residue_constants.restypes[aa_idx]
-                    restype_3 = residue_constants.restype_1to3[restype_1]
-                else:
-                    restype_3 = 'UNK'
+    # Process with progress bar
+    with tqdm(total=len(repr_files), unit="file") as pbar:
+        for repr_file in repr_files:
+            try:
+                with open(repr_file, 'rb') as f:
+                    data = pickle.load(f)
                 
-                atom_names = residue_constants.restype_name_to_atom14_names.get(restype_3, [''] * 14)
-                exists_14 = [1.0 if name else 0.0 for name in atom_names]
-                atom14_atom_exists.append(exists_14)
+                loop_type = data.get('loop_type', 'unknown')
                 
-                mapping_14_to_37 = []
-                for name in atom_names:
-                    if name and name in residue_constants.atom_order:
-                        mapping_14_to_37.append(residue_constants.atom_order[name])
+                # Skip extra MSA loops since they have different dimensions
+                if loop_type == 'extra_msa':
+                    skipped_count += 1
+                    pbar.set_postfix({
+                        'success': success_count,
+                        'errors': error_count
+                    })
+                    pbar.update(1)
+                    # Delete the pkl file after processing
+                    repr_file.unlink()
+                    continue
+                
+                aatype = data['batch']['aatype']
+                num_res = len(aatype)
+                residue_index = data['batch']['residue_index']
+                
+                # Build batch
+                batch = {
+                    'aatype': aatype,
+                    'residue_index': residue_index,
+                    'seq_mask': np.ones(num_res, dtype=np.float32),
+                }
+                
+                # Add atom features
+                atom14_atom_exists = []
+                residx_atom14_to_atom37 = []
+                residx_atom37_to_atom14 = []
+                atom37_atom_exists = []
+                
+                for aa_idx in aatype:
+                    if aa_idx < 20:
+                        restype_1 = residue_constants.restypes[aa_idx]
+                        restype_3 = residue_constants.restype_1to3[restype_1]
                     else:
-                        mapping_14_to_37.append(0)
-                residx_atom14_to_atom37.append(mapping_14_to_37)
+                        restype_3 = 'UNK'
+                    
+                    atom_names = residue_constants.restype_name_to_atom14_names.get(restype_3, [''] * 14)
+                    exists_14 = [1.0 if name else 0.0 for name in atom_names]
+                    atom14_atom_exists.append(exists_14)
+                    
+                    mapping_14_to_37 = []
+                    for name in atom_names:
+                        if name and name in residue_constants.atom_order:
+                            mapping_14_to_37.append(residue_constants.atom_order[name])
+                        else:
+                            mapping_14_to_37.append(0)
+                    residx_atom14_to_atom37.append(mapping_14_to_37)
+                    
+                    mapping_37_to_14 = [0] * 37
+                    for atom14_idx, atom37_idx in enumerate(mapping_14_to_37):
+                        if atom37_idx > 0:
+                            mapping_37_to_14[atom37_idx] = atom14_idx
+                    residx_atom37_to_atom14.append(mapping_37_to_14)
+                    
+                    if aa_idx < len(residue_constants.restype_atom37_mask):
+                        atom37_atom_exists.append(residue_constants.restype_atom37_mask[aa_idx])
+                    else:
+                        mask_37 = [0.0] * 37
+                        for backbone_atom in ['N', 'CA', 'C', 'O']:
+                            if backbone_atom in residue_constants.atom_order:
+                                idx = residue_constants.atom_order[backbone_atom]
+                                mask_37[idx] = 1.0
+                        atom37_atom_exists.append(mask_37)
                 
-                mapping_37_to_14 = [0] * 37
-                for atom14_idx, atom37_idx in enumerate(mapping_14_to_37):
-                    if atom37_idx > 0:
-                        mapping_37_to_14[atom37_idx] = atom14_idx
-                residx_atom37_to_atom14.append(mapping_37_to_14)
+                batch['atom14_atom_exists'] = np.array(atom14_atom_exists, dtype=np.float32)
+                batch['residx_atom14_to_atom37'] = np.array(residx_atom14_to_atom37, dtype=np.int32)
+                batch['residx_atom37_to_atom14'] = np.array(residx_atom37_to_atom14, dtype=np.int32)
+                batch['atom37_atom_exists'] = np.array(atom37_atom_exists, dtype=np.float32)
                 
-                if aa_idx < len(residue_constants.restype_atom37_mask):
-                    atom37_atom_exists.append(residue_constants.restype_atom37_mask[aa_idx])
-                else:
-                    mask_37 = [0.0] * 37
-                    for backbone_atom in ['N', 'CA', 'C', 'O']:
-                        if backbone_atom in residue_constants.atom_order:
-                            idx = residue_constants.atom_order[backbone_atom]
-                            mask_37[idx] = 1.0
-                    atom37_atom_exists.append(mask_37)
+                # Get saved representations
+                msa_first_row = np.array(data['msa_first_row'], dtype=np.float32)
+                pair_repr = np.array(data['pair'], dtype=np.float32)
+                
+                # Convert to JAX arrays
+                batch_jax = {k: jnp.array(v) for k, v in batch.items()}
+                msa_first_row_jax = jnp.array(msa_first_row)
+                pair_repr_jax = jnp.array(pair_repr)
+                
+                # Apply structure module with trained parameters
+                rng = jax.random.PRNGKey(42)
+                
+                structure_output = structure_transform_main.apply(
+                    reformatted_params_main,
+                    rng,
+                    msa_first_row_jax,
+                    pair_repr_jax,
+                    batch_jax
+                )
+                
+                # Extract positions
+                final_atom_positions = np.array(structure_output['final_atom_positions'])
+                final_atom_mask = np.array(structure_output['final_atom_mask'])
+                
+                # Create PDB
+                b_factors = np.ones_like(final_atom_mask) * 100.0
+                
+                pdb_protein = protein.Protein(
+                    aatype=aatype,
+                    atom_positions=final_atom_positions,
+                    atom_mask=final_atom_mask,
+                    residue_index=residue_index + 1,
+                    b_factors=b_factors,
+                    chain_index=np.zeros(len(aatype), dtype=np.int32)
+                )
+                
+                pdb_filename = repr_file.name.replace('_representations.pkl', '_structure.pdb')
+                pdb_path = structures_path / pdb_filename
+                
+                with open(pdb_path, 'w') as f:
+                    f.write(protein.to_pdb(pdb_protein))
+                
+                success_count += 1
+                pbar.set_postfix({
+                    'success': success_count,
+                    'errors': error_count
+                })
+                
+                # Delete the pkl file after successful structure generation
+                repr_file.unlink()
+                
+            except Exception as e:
+                error_count += 1
+                pbar.set_postfix({
+                    'success': success_count,
+                    'errors': error_count
+                })
+                logger.error(f"Error processing {repr_file.name}: {e}")
+                # Optionally delete the pkl file even on error to save space
+                # repr_file.unlink()
             
-            batch['atom14_atom_exists'] = np.array(atom14_atom_exists, dtype=np.float32)
-            batch['residx_atom14_to_atom37'] = np.array(residx_atom14_to_atom37, dtype=np.int32)
-            batch['residx_atom37_to_atom14'] = np.array(residx_atom37_to_atom14, dtype=np.int32)
-            batch['atom37_atom_exists'] = np.array(atom37_atom_exists, dtype=np.float32)
-            
-            # Get saved representations
-            msa_first_row = np.array(data['msa_first_row'], dtype=np.float32)
-            pair_repr = np.array(data['pair'], dtype=np.float32)
-            
-            # Convert to JAX arrays
-            batch_jax = {k: jnp.array(v) for k, v in batch.items()}
-            msa_first_row_jax = jnp.array(msa_first_row)
-            pair_repr_jax = jnp.array(pair_repr)
-            
-            # Apply structure module with trained parameters
-            rng = jax.random.PRNGKey(42)
-            
-            structure_output = structure_transform.apply(
-                reformatted_params,
-                rng,
-                msa_first_row_jax,
-                pair_repr_jax,
-                batch_jax
-            )
-            
-            # Extract positions
-            final_atom_positions = np.array(structure_output['final_atom_positions'])
-            final_atom_mask = np.array(structure_output['final_atom_mask'])
-            
-            # Debug
-            logger.info(f"    Position range: [{np.min(final_atom_positions):.2f}, {np.max(final_atom_positions):.2f}]")
-            ca_idx = residue_constants.atom_order['CA']
-            ca_positions = final_atom_positions[:, ca_idx, :]
-            ca_mask = final_atom_mask[:, ca_idx]
-            valid_ca = ca_positions[ca_mask > 0]
-            if len(valid_ca) > 0:
-                logger.info(f"    CA range: [{np.min(valid_ca):.2f}, {np.max(valid_ca):.2f}]")
-            
-            # Create PDB
-            b_factors = np.ones_like(final_atom_mask) * 100.0
-            
-            pdb_protein = protein.Protein(
-                aatype=aatype,
-                atom_positions=final_atom_positions,
-                atom_mask=final_atom_mask,
-                residue_index=residue_index + 1,
-                b_factors=b_factors,
-                chain_index=np.zeros(len(aatype), dtype=np.int32)
-            )
-            
-            pdb_filename = repr_file.name.replace('_representations.pkl', '_structure.pdb')
-            pdb_path = structures_path / pdb_filename
-            
-            with open(pdb_path, 'w') as f:
-                f.write(protein.to_pdb(pdb_protein))
-            
-            logger.info(f"    ✓ {pdb_filename}")
-            
-        except Exception as e:
-            logger.error(f"    ✗ Error: {e}")
-            import traceback
-            traceback.print_exc()
+            finally:
+                pbar.update(1)
     
-    logger.info("✓ Completed intermediate structure generation")
-    
+    # Summary
+    logger.info(f"✓ Structure generation complete")
+
 def get_msa_and_templates(
     jobname: str,
     query_sequences: Union[str, List[str]],
