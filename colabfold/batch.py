@@ -1376,6 +1376,7 @@ def run(
     save_pair_representations: bool = False,
     attention_output_dir: str = None,
     save_attention_compressed: bool = False,
+    save_intermediate_structures: str = None,
     jobname_prefix: Optional[str] = None,
     save_all: bool = False,
     save_recycles: bool = False,
@@ -1492,6 +1493,10 @@ def run(
     # initial guess
     if initial_guess is not None:
         logger.info(f'Using initial guess: {initial_guess}')
+
+    # save intermediate structures
+    if save_intermediate_structures:
+        modules.intermediate_structures_dir = save_intermediate_structures
 
     # Record the parameters of this run
     config = {
@@ -2335,9 +2340,6 @@ def main():
         )
         return
     
-    if args.save_intermediate_structures:
-        modules.intermediate_structures_dir = args.save_intermediate_structures
-
     run(
         queries=queries,
         result_dir=args.results,
@@ -2380,6 +2382,7 @@ def main():
         use_cluster_profile=not args.disable_cluster_profile,
         use_gpu_relax = args.use_gpu_relax,
         attention_output_dir=args.attention_output_dir,
+        save_intermediate_structures=args.save_intermediate_structures,
         jobname_prefix=args.jobname_prefix,
         save_all=args.save_all,
         save_recycles=args.save_recycles,

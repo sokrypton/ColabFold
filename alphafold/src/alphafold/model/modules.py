@@ -2147,7 +2147,7 @@ class EvoformerIteration(hk.Module):
       jax.experimental.io_callback(
         callback_fn,
         result_shape,
-        msa_act[0],  # First row of MSA activations
+        msa_act[0],   # First row of MSA activations
         pair_act,     # Pair activations
         batch,        # Batch data
         evoformer_loop_counter,  # Current loop index
