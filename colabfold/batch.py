@@ -567,7 +567,7 @@ def generate_intermediate_structures_from_representations(
     """Generate structures from saved representations using the model runner directly."""
     import pickle
     from alphafold.common import protein, residue_constants
-    from alphafold.model import folding, common_modules
+    from alphafold.model import folding, common_modules, modules
     import haiku as hk
     import jax
     import jax.numpy as jnp
@@ -596,6 +596,7 @@ def generate_intermediate_structures_from_representations(
     # Create structure function for main evoformer loops
     def structure_fn_main(msa_first_row, pair_repr, batch_dict):
         """For main evoformer loops (msa_first_row has 256 channels)."""
+        # Project MSA first row to single representation
         single = common_modules.Linear(
             seq_channel,
             name='single_activations')(msa_first_row)
@@ -605,13 +606,30 @@ def generate_intermediate_structures_from_representations(
             'pair': pair_repr
         }
         
+        # Run structure module
         sm = folding.StructureModule(
             config.heads.structure_module,
             config.global_config,
             compute_loss=False,
             name='structure_module'
         )
-        return sm(representations_dict, batch_dict, is_training=False)
+        structure_output = sm(representations_dict, batch_dict, is_training=False)
+        
+        # Run pLDDT head on structure module output
+        plddt_head = modules.PredictedLDDTHead(
+            config.heads.predicted_lddt,
+            config.global_config,
+            name='predicted_lddt_head'
+        )
+        
+        # Create representations dict for pLDDT head
+        plddt_representations = {
+            'structure_module': structure_output['representations']['structure_module']
+        }
+        
+        plddt_output = plddt_head(plddt_representations, batch_dict, is_training=False)
+        
+        return structure_output, plddt_output
     
     # Transform it
     structure_transform_main = hk.transform(structure_fn_main)
@@ -630,6 +648,13 @@ def generate_intermediate_structures_from_representations(
         if k.startswith(structure_module_prefix)
     }
     
+    # Get pLDDT head parameters
+    plddt_head_prefix = 'alphafold/alphafold_iteration/predicted_lddt_head/'
+    plddt_params_flat = {
+        k: v for k, v in trained_params.items() 
+        if k.startswith(plddt_head_prefix)
+    }
+    
     # Reformat parameters for MAIN loops
     reformatted_params_main = {}
     for k, v in single_params_main.items():
@@ -637,6 +662,10 @@ def generate_intermediate_structures_from_representations(
         reformatted_params_main[new_key] = v
     
     for k, v in sm_params_flat.items():
+        new_key = k.replace('alphafold/alphafold_iteration/', '')
+        reformatted_params_main[new_key] = v
+    
+    for k, v in plddt_params_flat.items():
         new_key = k.replace('alphafold/alphafold_iteration/', '')
         reformatted_params_main[new_key] = v
     
@@ -732,10 +761,10 @@ def generate_intermediate_structures_from_representations(
                 msa_first_row_jax = jnp.array(msa_first_row)
                 pair_repr_jax = jnp.array(pair_repr)
                 
-                # Apply structure module with trained parameters
+                # Apply structure module and pLDDT head with trained parameters
                 rng = jax.random.PRNGKey(42)
                 
-                structure_output = structure_transform_main.apply(
+                structure_output, plddt_output = structure_transform_main.apply(
                     reformatted_params_main,
                     rng,
                     msa_first_row_jax,
@@ -747,9 +776,26 @@ def generate_intermediate_structures_from_representations(
                 final_atom_positions = np.array(structure_output['final_atom_positions'])
                 final_atom_mask = np.array(structure_output['final_atom_mask'])
                 
-                # Create PDB
-                b_factors = np.ones_like(final_atom_mask) * 100.0
+                # Compute pLDDT from logits
+                # The logits are shape [N_res, num_bins], we need to convert to pLDDT scores
+                plddt_logits = np.array(plddt_output['logits'])
+                num_bins = plddt_logits.shape[-1]
                 
+                # Convert logits to probabilities
+                plddt_probs = jax.nn.softmax(plddt_logits, axis=-1)
+                plddt_probs = np.array(plddt_probs)
+                
+                # Compute expected pLDDT score (center of each bin)
+                bin_centers = np.arange(num_bins) + 0.5
+                bin_centers = bin_centers / num_bins
+                plddt_scores = np.sum(plddt_probs * bin_centers[np.newaxis, :], axis=-1)
+                plddt_scores = plddt_scores * 100.0  # Convert to 0-100 scale
+                
+                # Create b_factors from pLDDT scores
+                # Broadcast pLDDT scores to all atoms of each residue
+                b_factors = plddt_scores[:, np.newaxis] * final_atom_mask
+                
+                # Create PDB
                 pdb_protein = protein.Protein(
                     aatype=aatype,
                     atom_positions=final_atom_positions,
@@ -789,7 +835,7 @@ def generate_intermediate_structures_from_representations(
     
     # Summary
     logger.info(f"✓ Structure generation complete")
-
+    
 def get_msa_and_templates(
     jobname: str,
     query_sequences: Union[str, List[str]],
