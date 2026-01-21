@@ -56,6 +56,7 @@ def main():
         "--save-attention-compressed",
         action="store_true",
         help="If set, exports compressed attention weights in H5 format to local disk.",
+        default=False,
     )
     parser.add_argument(
         "--save-intermediate-structures",

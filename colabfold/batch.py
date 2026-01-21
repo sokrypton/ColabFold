@@ -1535,6 +1535,9 @@ def run(
         "version": importlib_metadata.version("colabfold"),
         "calc_extra_ptm": calc_extra_ptm,
         "use_probs_extra": use_probs_extra,
+        "attention_output_dir": attention_output_dir,
+        "save_attention_compressed": save_attention_compressed,
+        "save_intermediate_structures": save_intermediate_structures,
     }
     config_out_file = result_dir.joinpath("config.json")
     config_out_file.write_text(json.dumps(config, indent=4))

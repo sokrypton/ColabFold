@@ -112,6 +112,12 @@ def load_models_and_params(
             model_config.model.stop_at_score = float(stop_at_score)
             model_config.model.rank_by = rank_by
 
+            # set attention output dir
+            model_config.model.attention_output_dir = attention_output_dir
+
+            # set save attention compressed
+            model_config.model.save_attention_compressed = save_attention_compressed
+
             # set dropouts
             model_config.model.global_config.eval_dropout = use_dropout
 
@@ -171,8 +177,6 @@ def load_models_and_params(
             model_runner = model.RunModel(
                 model_config,
                 params,
-                attention_output_dir=attention_output_dir,
-                save_attention_compressed=save_attention_compressed,
                 extended_ptm_config={'calc_extended_ptm': calc_extra_ptm,
                                      'use_probs_extended': use_probs_extra}
             )

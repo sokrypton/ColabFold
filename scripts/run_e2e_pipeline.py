@@ -41,6 +41,7 @@ def main() -> None:
         "--save-attention-compressed",
         action="store_true",
         help="If set, exports compressed attention weights in H5 format to local disk.",
+        default=False,
     )
     prediction.add_argument(
         "--save-intermediate-structures",
@@ -84,6 +85,7 @@ def main() -> None:
         "--save-attention-npy",
         action="store_true",
         help="If set, exports individual uncompressed attention heads (.npy) to local disk.",
+        default=False,
     )
 
     comparison = parser.add_argument_group("comparison settings (optional)")

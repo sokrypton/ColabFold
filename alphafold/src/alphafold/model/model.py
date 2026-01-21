@@ -35,8 +35,6 @@ class RunModel:
   def __init__(self,
                config: ml_collections.ConfigDict,
                params: Optional[Mapping[str, Mapping[str, np.ndarray]]] = None,
-               attention_output_dir: Optional[str] = None,
-               save_attention_compressed: bool = False,
                is_training = False, extended_ptm_config=None):
     
     self.config = config
@@ -44,8 +42,6 @@ class RunModel:
     self.multimer_mode = config.model.global_config.multimer_mode
     self.config.model.calc_extended_ptm = extended_ptm_config['calc_extended_ptm'] if extended_ptm_config else False
     self.config.model.use_probs_extended = extended_ptm_config['use_probs_extended'] if extended_ptm_config else False
-    self.attention_output_dir = attention_output_dir
-    self.save_attention_compressed = save_attention_compressed
 
     if self.multimer_mode:
       def _forward_fn(batch):
@@ -54,10 +50,10 @@ class RunModel:
     else:
       def _forward_fn(batch):
         if self.config.data.eval.num_ensemble == 1:
-          model = modules.AlphaFold_noE(self.config.model, attention_output_dir=self.attention_output_dir, save_attention_compressed=self.save_attention_compressed)
+          model = modules.AlphaFold_noE(self.config.model)
           return model(batch, is_training=is_training)
         else:
-          model = modules.AlphaFold(self.config.model, attention_output_dir=self.attention_output_dir, save_attention_compressed=self.save_attention_compressed)
+          model = modules.AlphaFold(self.config.model)
           return model(
               batch,
               is_training=is_training,
