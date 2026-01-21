@@ -558,6 +558,284 @@ def predict_structure(
             "metric":metric,
             "result_files":result_files}
 
+def generate_intermediate_structures_from_representations(
+    result_dir: Path,
+    jobname: str,
+    model_type: str,
+    model_runner_and_params,
+):
+    """Generate structures from saved representations using the model runner directly."""
+    import pickle
+    from alphafold.common import protein, residue_constants
+    from alphafold.model import folding, common_modules, modules
+    import haiku as hk
+    import jax
+    import jax.numpy as jnp
+    import numpy as np
+    from tqdm import tqdm
+    
+    structures_dir = modules.intermediate_structures_dir
+    if structures_dir is None:
+        return
+    
+    structures_path = Path(structures_dir)
+    if not structures_path.exists():
+        return
+    
+    repr_files = sorted(structures_path.glob("*_representations.pkl"))
+    if not repr_files:
+        return
+    
+    # Get the model runner
+    model_name, model_runner, trained_params = model_runner_and_params[0]
+    
+    # Get config
+    config = model_runner.config.model
+    seq_channel = config.embeddings_and_evoformer.seq_channel  # 384 (output)
+    
+    # Create structure function for main evoformer loops
+    def structure_fn_main(msa_first_row, pair_repr, batch_dict):
+        """For main evoformer loops (msa_first_row has 256 channels)."""
+        # Project MSA first row to single representation
+        single = common_modules.Linear(
+            seq_channel,
+            name='single_activations')(msa_first_row)
+        
+        representations_dict = {
+            'single': single,
+            'pair': pair_repr
+        }
+        
+        # Run structure module
+        sm = folding.StructureModule(
+            config.heads.structure_module,
+            config.global_config,
+            compute_loss=False,
+            name='structure_module'
+        )
+        structure_output = sm(representations_dict, batch_dict, is_training=False)
+        
+        # Run pLDDT head on structure module output
+        plddt_head = modules.PredictedLDDTHead(
+            config.heads.predicted_lddt,
+            config.global_config,
+            name='predicted_lddt_head'
+        )
+        
+        # Create representations dict for pLDDT head
+        plddt_representations = {
+            'structure_module': structure_output['representations']['structure_module']
+        }
+        
+        plddt_output = plddt_head(plddt_representations, batch_dict, is_training=False)
+        
+        return structure_output, plddt_output
+    
+    # Transform it
+    structure_transform_main = hk.transform(structure_fn_main)
+    
+    # Extract parameters for MAIN loops (256 -> 384)
+    single_activations_prefix = 'alphafold/alphafold_iteration/evoformer/single_activations'
+    single_params_main = {
+        k: v for k, v in trained_params.items() 
+        if k.startswith(single_activations_prefix)
+    }
+    
+    # Get structure module parameters
+    structure_module_prefix = 'alphafold/alphafold_iteration/structure_module/'
+    sm_params_flat = {
+        k: v for k, v in trained_params.items() 
+        if k.startswith(structure_module_prefix)
+    }
+    
+    # Get pLDDT head parameters
+    plddt_head_prefix = 'alphafold/alphafold_iteration/predicted_lddt_head/'
+    plddt_params_flat = {
+        k: v for k, v in trained_params.items() 
+        if k.startswith(plddt_head_prefix)
+    }
+    
+    # Reformat parameters for MAIN loops
+    reformatted_params_main = {}
+    for k, v in single_params_main.items():
+        new_key = 'single_activations' + k.replace(single_activations_prefix, '')
+        reformatted_params_main[new_key] = v
+    
+    for k, v in sm_params_flat.items():
+        new_key = k.replace('alphafold/alphafold_iteration/', '')
+        reformatted_params_main[new_key] = v
+    
+    for k, v in plddt_params_flat.items():
+        new_key = k.replace('alphafold/alphafold_iteration/', '')
+        reformatted_params_main[new_key] = v
+    
+    # Counters for summary
+    success_count = 0
+    skipped_count = 0
+    error_count = 0
+    
+    # Process with progress bar
+    with tqdm(total=len(repr_files), unit="file") as pbar:
+        for repr_file in repr_files:
+            try:
+                with open(repr_file, 'rb') as f:
+                    data = pickle.load(f)
+                
+                loop_type = data.get('loop_type', 'unknown')
+                
+                # Skip extra MSA loops since they have different dimensions
+                if loop_type == 'extra_msa':
+                    skipped_count += 1
+                    pbar.set_postfix({
+                        'success': success_count,
+                        'errors': error_count
+                    })
+                    pbar.update(1)
+                    # Delete the pkl file after processing
+                    repr_file.unlink()
+                    continue
+                
+                aatype = data['batch']['aatype']
+                num_res = len(aatype)
+                residue_index = data['batch']['residue_index']
+                
+                # Build batch
+                batch = {
+                    'aatype': aatype,
+                    'residue_index': residue_index,
+                    'seq_mask': np.ones(num_res, dtype=np.float32),
+                }
+                
+                # Add atom features
+                atom14_atom_exists = []
+                residx_atom14_to_atom37 = []
+                residx_atom37_to_atom14 = []
+                atom37_atom_exists = []
+                
+                for aa_idx in aatype:
+                    if aa_idx < 20:
+                        restype_1 = residue_constants.restypes[aa_idx]
+                        restype_3 = residue_constants.restype_1to3[restype_1]
+                    else:
+                        restype_3 = 'UNK'
+                    
+                    atom_names = residue_constants.restype_name_to_atom14_names.get(restype_3, [''] * 14)
+                    exists_14 = [1.0 if name else 0.0 for name in atom_names]
+                    atom14_atom_exists.append(exists_14)
+                    
+                    mapping_14_to_37 = []
+                    for name in atom_names:
+                        if name and name in residue_constants.atom_order:
+                            mapping_14_to_37.append(residue_constants.atom_order[name])
+                        else:
+                            mapping_14_to_37.append(0)
+                    residx_atom14_to_atom37.append(mapping_14_to_37)
+                    
+                    mapping_37_to_14 = [0] * 37
+                    for atom14_idx, atom37_idx in enumerate(mapping_14_to_37):
+                        if atom37_idx > 0:
+                            mapping_37_to_14[atom37_idx] = atom14_idx
+                    residx_atom37_to_atom14.append(mapping_37_to_14)
+                    
+                    if aa_idx < len(residue_constants.restype_atom37_mask):
+                        atom37_atom_exists.append(residue_constants.restype_atom37_mask[aa_idx])
+                    else:
+                        mask_37 = [0.0] * 37
+                        for backbone_atom in ['N', 'CA', 'C', 'O']:
+                            if backbone_atom in residue_constants.atom_order:
+                                idx = residue_constants.atom_order[backbone_atom]
+                                mask_37[idx] = 1.0
+                        atom37_atom_exists.append(mask_37)
+                
+                batch['atom14_atom_exists'] = np.array(atom14_atom_exists, dtype=np.float32)
+                batch['residx_atom14_to_atom37'] = np.array(residx_atom14_to_atom37, dtype=np.int32)
+                batch['residx_atom37_to_atom14'] = np.array(residx_atom37_to_atom14, dtype=np.int32)
+                batch['atom37_atom_exists'] = np.array(atom37_atom_exists, dtype=np.float32)
+                
+                # Get saved representations
+                msa_first_row = np.array(data['msa_first_row'], dtype=np.float32)
+                pair_repr = np.array(data['pair'], dtype=np.float32)
+                
+                # Convert to JAX arrays
+                batch_jax = {k: jnp.array(v) for k, v in batch.items()}
+                msa_first_row_jax = jnp.array(msa_first_row)
+                pair_repr_jax = jnp.array(pair_repr)
+                
+                # Apply structure module and pLDDT head with trained parameters
+                rng = jax.random.PRNGKey(42)
+                
+                structure_output, plddt_output = structure_transform_main.apply(
+                    reformatted_params_main,
+                    rng,
+                    msa_first_row_jax,
+                    pair_repr_jax,
+                    batch_jax
+                )
+                
+                # Extract positions
+                final_atom_positions = np.array(structure_output['final_atom_positions'])
+                final_atom_mask = np.array(structure_output['final_atom_mask'])
+                
+                # Compute pLDDT from logits
+                # The logits are shape [N_res, num_bins], we need to convert to pLDDT scores
+                plddt_logits = np.array(plddt_output['logits'])
+                num_bins = plddt_logits.shape[-1]
+                
+                # Convert logits to probabilities
+                plddt_probs = jax.nn.softmax(plddt_logits, axis=-1)
+                plddt_probs = np.array(plddt_probs)
+                
+                # Compute expected pLDDT score (center of each bin)
+                bin_centers = np.arange(num_bins) + 0.5
+                bin_centers = bin_centers / num_bins
+                plddt_scores = np.sum(plddt_probs * bin_centers[np.newaxis, :], axis=-1)
+                plddt_scores = plddt_scores * 100.0  # Convert to 0-100 scale
+                
+                # Create b_factors from pLDDT scores
+                # Broadcast pLDDT scores to all atoms of each residue
+                b_factors = plddt_scores[:, np.newaxis] * final_atom_mask
+                
+                # Create PDB
+                pdb_protein = protein.Protein(
+                    aatype=aatype,
+                    atom_positions=final_atom_positions,
+                    atom_mask=final_atom_mask,
+                    residue_index=residue_index + 1,
+                    b_factors=b_factors,
+                    chain_index=np.zeros(len(aatype), dtype=np.int32)
+                )
+                
+                pdb_filename = repr_file.name.replace('_representations.pkl', '_structure.pdb')
+                pdb_path = structures_path / pdb_filename
+                
+                with open(pdb_path, 'w') as f:
+                    f.write(protein.to_pdb(pdb_protein))
+                
+                success_count += 1
+                pbar.set_postfix({
+                    'success': success_count,
+                    'errors': error_count
+                })
+                
+                # Delete the pkl file after successful structure generation
+                repr_file.unlink()
+                
+            except Exception as e:
+                error_count += 1
+                pbar.set_postfix({
+                    'success': success_count,
+                    'errors': error_count
+                })
+                logger.error(f"Error processing {repr_file.name}: {e}")
+                # Optionally delete the pkl file even on error to save space
+                # repr_file.unlink()
+            
+            finally:
+                pbar.update(1)
+    
+    # Summary
+    logger.info(f"✓ Structure generation complete")
+    
 def get_msa_and_templates(
     jobname: str,
     query_sequences: Union[str, List[str]],
@@ -1098,6 +1376,7 @@ def run(
     save_pair_representations: bool = False,
     attention_output_dir: str = None,
     save_attention_compressed: bool = False,
+    save_intermediate_structures: str = None,
     jobname_prefix: Optional[str] = None,
     save_all: bool = False,
     save_recycles: bool = False,
@@ -1214,6 +1493,10 @@ def run(
     # initial guess
     if initial_guess is not None:
         logger.info(f'Using initial guess: {initial_guess}')
+
+    # save intermediate structures
+    if save_intermediate_structures:
+        modules.intermediate_structures_dir = save_intermediate_structures
 
     # Record the parameters of this run
     config = {
@@ -1468,6 +1751,20 @@ def run(
                 result_files += results["result_files"]
                 ranks.append(results["rank"])
                 metrics.append(results["metric"])
+
+                if modules.intermediate_structures_dir is not None:
+                    try:
+                        logger.info("Generating intermediate structures...")
+                        generate_intermediate_structures_from_representations(
+                            result_dir=result_dir,
+                            jobname=jobname,
+                            model_type=model_type,
+                            model_runner_and_params=model_runner_and_params
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to generate intermediate structures: {e}")
+                        import traceback
+                        traceback.print_exc()
 
             except RuntimeError as e:
                 # This normally happens on OOM. TODO: Filter for the specific OOM error message
@@ -1858,10 +2155,16 @@ def main():
         choices=["auto", "plddt", "ptm", "iptm", "multimer"],
     )
     output_group.add_argument(
-    "--attention-output-dir",
-    help='Directory where attention head matrices will be saved. Attention heads are not saved if this is omitted.',
-    type=str,
-    default=None,
+        "--attention-output-dir",
+        help='Directory where attention head matrices will be saved. Attention heads are not saved if this is omitted.',
+        type=str,
+        default=None,
+    )
+    output_group.add_argument(
+        "--save-intermediate-structures",
+        default=None,
+        type=str,
+        help="Directory to save intermediate structures from each evoformer loop.",
     )
     output_group.add_argument(
         "--stop-at-score",
@@ -2079,6 +2382,7 @@ def main():
         use_cluster_profile=not args.disable_cluster_profile,
         use_gpu_relax = args.use_gpu_relax,
         attention_output_dir=args.attention_output_dir,
+        save_intermediate_structures=args.save_intermediate_structures,
         jobname_prefix=args.jobname_prefix,
         save_all=args.save_all,
         save_recycles=args.save_recycles,

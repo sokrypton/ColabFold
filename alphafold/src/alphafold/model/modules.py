@@ -42,6 +42,7 @@ _model_number = None
 _save_attention_compressed = False
 evoformer_loop_counter = -1
 is_triangle = None
+intermediate_structures_dir = None
 
 def softmax_cross_entropy(logits, labels):
   """Computes softmax cross entropy given logits and one-hot class labels."""
@@ -154,6 +155,11 @@ def increase_evoformer_loop_counter():
   evoformer_loop_counter += 1
   return 0
 
+def get_evoformer_loop_counter():
+  """Get the current evoformer loop count."""
+  global evoformer_loop_counter
+  return evoformer_loop_counter
+
 def set_is_triangle(new_is_triangle):
   """Update is_triangle"""
   global is_triangle
@@ -243,6 +249,87 @@ def close_hdf5_file():
       attention_file.close()
       attention_file = None
 
+def save_intermediate_representations(msa_act_first_row, pair_act, batch, loop_idx):
+  """Save intermediate representations to disk for later structure generation.
+  
+  This function runs OUTSIDE the JAX computation graph via io_callback.
+  Instead of generating structures on-the-fly (which causes JAX conflicts),
+  we save the representations and batch data to disk.
+  
+  Arguments:
+    msa_act_first_row: First row of MSA activations, shape [N_res, c_m]
+    pair_act: Pair activations, shape [N_res, N_res, c_z]
+    batch: Dictionary containing sequence information
+    loop_idx: Current evoformer loop iteration number
+  """
+  import os
+  import pickle
+  
+  global intermediate_structures_dir, _recycle_number, _model_number, evoformer_loop_counter
+
+  loop_idx = evoformer_loop_counter
+  
+  # Only save if output directory is specified
+  if intermediate_structures_dir is None:
+    return 0
+  
+  # Convert to numpy arrays (coming from JAX via callback)
+  # CRITICAL FIX: Explicitly convert to float32 to avoid bfloat16 issues
+  msa_act_first_row = np.array(msa_act_first_row, dtype=np.float32)
+  pair_act = np.array(pair_act, dtype=np.float32)
+  
+  # Determine which type of evoformer loop this is
+  if loop_idx % 52 < 4:
+    loop_type = "extra_msa"
+    loop_num = loop_idx % 52 + 1
+  else:
+    loop_type = "main"
+    loop_num = (loop_idx % 52) - 3
+  
+  # Extract minimal batch information needed for structure generation
+  def squeeze_to_numpy(arr):
+    """Convert to numpy and squeeze to remove batch dimensions."""
+    arr = np.array(arr)
+    while arr.ndim > 1 and arr.shape[0] == 1:
+      arr = arr[0]
+    return arr
+  
+  batch_info = {
+      'aatype': squeeze_to_numpy(batch['aatype']),
+      'residue_index': squeeze_to_numpy(batch.get('residue_index', 
+                                                   np.arange(len(batch['aatype'])))),
+  }
+  
+  # Construct filename
+  model_num = get_model_number() if get_model_number() is not None else 0
+  recycle_num = get_recycle_number() if get_recycle_number() is not None else 0
+  
+  filename = f"model_{model_num}_recycle_{recycle_num}_{loop_type}_loop_{loop_num}_representations.pkl"
+  
+  # Create output directory
+  os.makedirs(intermediate_structures_dir, exist_ok=True)
+  filepath = os.path.join(intermediate_structures_dir, filename)
+  
+  # Save representations and batch info
+  # Store as float32 to ensure compatibility with structure module
+  data = {
+      'msa_first_row': msa_act_first_row,  # Already converted to float32 above
+      'pair': pair_act,  # Already converted to float32 above
+      'batch': batch_info,
+      'loop_idx': loop_idx,
+      'loop_type': loop_type,
+      'loop_num': loop_num,
+      'model_num': model_num,
+      'recycle_num': recycle_num,
+  }
+  
+  # Only save main evoformer loop
+  if loop_type == 'main':
+    with open(filepath, 'wb') as f:
+      pickle.dump(data, f)
+  
+  return 0  # Return value for io_callback
+
 class AlphaFoldIteration_noE(hk.Module):
   """A single recycling iteration of AlphaFold architecture."""
   def __init__(self, config, global_config, name='alphafold_iteration'):
@@ -253,7 +340,7 @@ class AlphaFoldIteration_noE(hk.Module):
   def __call__(self, batch, is_training, **kwargs):
 
     # Compute representations for each batch element and average.
-    evoformer_module = EmbeddingsAndEvoformer(self.config.embeddings_and_evoformer, self.global_config)
+    evoformer_module = EmbeddingsAndEvoformer(self.config, self.global_config)
     representations = evoformer_module(batch, is_training)    
     
     head_factory = {
@@ -384,7 +471,7 @@ class AlphaFoldIteration(hk.Module):
 
     # Compute representations for each batch element and average.
     evoformer_module = EmbeddingsAndEvoformer(
-        self.config.embeddings_and_evoformer, self.global_config)
+        self.config, self.global_config)
 
     batch0 = slice_batch(0)
     representations = evoformer_module(batch0, is_training)
@@ -1902,7 +1989,8 @@ class EvoformerIteration(hk.Module):
     self.global_config = global_config
     self.is_extra_msa = is_extra_msa
 
-  def __call__(self, activations, masks, is_training=True, safe_key=None):
+  def __call__(self, activations, masks, is_training=True, safe_key=None,
+               batch=None):  # MODIFIED: Added batch parameter
     """Builds EvoformerIteration module.
 
     Arguments:
@@ -1914,6 +2002,7 @@ class EvoformerIteration(hk.Module):
         * 'pair': pair mask, shape [N_res, N_res].
       is_training: Whether the module is in training mode.
       safe_key: prng.SafeKey encapsulating rng key.
+      batch: Batch data needed for structure generation (NEW)
 
     Returns:
       Outputs, same shape/type as act.
@@ -1925,8 +2014,9 @@ class EvoformerIteration(hk.Module):
       result_shape,
       ordered=True
     )
+    global evoformer_loop_counter
 
-    c = self.config
+    c = self.config.embeddings_and_evoformer.evoformer
     gc = self.global_config
 
     msa_act, pair_act = activations['msa'], activations['pair']
@@ -2043,8 +2133,28 @@ class EvoformerIteration(hk.Module):
         pair_mask,
         safe_key=next(sub_keys))
 
-    return {'msa': msa_act, 'pair': pair_act}
+    # NEW: Generate and save intermediate structure if requested
+    global intermediate_structures_dir
+    if intermediate_structures_dir is not None and batch is not None:
+      # Use io_callback to generate structure outside JAX computation graph
+      # This allows us to create new Haiku modules without breaking the transform
+      result_shape = jax.ShapeDtypeStruct((), jax.numpy.int32)
+      
+      # We need to pass the configuration objects through
+      # Store them in a way that io_callback can access
+      callback_fn = save_intermediate_representations
+      
+      jax.experimental.io_callback(
+        callback_fn,
+        result_shape,
+        msa_act[0],   # First row of MSA activations
+        pair_act,     # Pair activations
+        batch,        # Batch data
+        evoformer_loop_counter,  # Current loop index
+        ordered=True
+      )
 
+    return {'msa': msa_act, 'pair': pair_act}
 
 class EmbeddingsAndEvoformer(hk.Module):
   """Embeds the input data and runs Evoformer.
@@ -2060,7 +2170,7 @@ class EmbeddingsAndEvoformer(hk.Module):
 
   def __call__(self, batch, is_training, safe_key=None):
 
-    c = self.config
+    c = self.config.embeddings_and_evoformer
     gc = self.global_config
     dtype = jnp.bfloat16 if gc.bfloat16 else jnp.float32
 
@@ -2095,7 +2205,7 @@ class EmbeddingsAndEvoformer(hk.Module):
       if c.recycle_pos:
         prev_pseudo_beta = pseudo_beta_fn(
             batch['aatype'], batch['prev_pos'], None)
-        dgram = dgram_from_positions(prev_pseudo_beta, **self.config.prev_pos)
+        dgram = dgram_from_positions(prev_pseudo_beta, **c.prev_pos)
         dgram = dgram.astype(dtype) 
         pair_activations += common_modules.Linear(
             c.pair_channel, name='prev_pos_linear')(dgram)
@@ -2156,7 +2266,7 @@ class EmbeddingsAndEvoformer(hk.Module):
       }
 
       extra_msa_stack_iteration = EvoformerIteration(
-          c.evoformer, gc, is_extra_msa=True, name='extra_msa_stack')
+          self.config, gc, is_extra_msa=True, name='extra_msa_stack')
 
       def extra_msa_stack_fn(x):
         act, safe_key = x
@@ -2168,7 +2278,8 @@ class EmbeddingsAndEvoformer(hk.Module):
                 'pair': mask_2d
             },
             is_training=is_training,
-            safe_key=safe_subkey)
+            safe_key=safe_subkey,
+            batch=batch)
         return (extra_evoformer_output, safe_key)
 
       if gc.use_remat:
@@ -2240,7 +2351,7 @@ class EmbeddingsAndEvoformer(hk.Module):
       # Main trunk of the network
       # Jumper et al. (2021) Suppl. Alg. 2 "Inference" lines 17-18
       evoformer_iteration = EvoformerIteration(
-          c.evoformer, gc, is_extra_msa=False, name='evoformer_iteration')
+          self.config, gc, is_extra_msa=False, name='evoformer_iteration')
 
       def evoformer_fn(x):
         act, safe_key = x
@@ -2249,7 +2360,8 @@ class EmbeddingsAndEvoformer(hk.Module):
             activations=act,
             masks=evoformer_masks,
             is_training=is_training,
-            safe_key=safe_subkey)
+            safe_key=safe_subkey,
+            batch=batch)
         return (evoformer_output, safe_key)
 
       if gc.use_remat:

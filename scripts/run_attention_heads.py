@@ -57,6 +57,12 @@ def main():
         action="store_true",
         help="If set, exports compressed attention weights in H5 format to local disk.",
     )
+    parser.add_argument(
+        "--save-intermediate-structures",
+        default=None,
+        type=str,
+        help="Directory to save intermediate structures from each evoformer loop.",
+    )
 
     args = parser.parse_args()
 
@@ -90,6 +96,7 @@ def main():
         model_type=args.model_type,
         is_complex=is_complex,
         save_attention_compressed=args.save_attention_compressed,
+        save_intermediate_structures=args.save_intermediate_structures,
     )
 
     reset_attention_state()

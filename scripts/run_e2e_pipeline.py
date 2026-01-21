@@ -37,6 +37,17 @@ def main() -> None:
         default="attention_outputs",
         help="Directory to save raw attention head NumPy files.\nDefault: attention_outputs",
     )
+    prediction.add_argument(
+        "--save-attention-compressed",
+        action="store_true",
+        help="If set, exports compressed attention weights in H5 format to local disk.",
+    )
+    prediction.add_argument(
+        "--save-intermediate-structures",
+        default=None,
+        type=str,
+        help="Directory to save intermediate structures from each evoformer loop.",
+    )
 
     analysis = parser.add_argument_group("analysis settings")
     analysis.add_argument(
@@ -74,11 +85,6 @@ def main() -> None:
         action="store_true",
         help="If set, exports individual uncompressed attention heads (.npy) to local disk.",
     )
-    analysis.add_argument(
-        "--save-attention-compressed",
-        action="store_true",
-        help="If set, exports compressed attention weights in H5 format to local disk.",
-    )
 
     comparison = parser.add_argument_group("comparison settings (optional)")
     comparison.add_argument(
@@ -115,6 +121,7 @@ def main() -> None:
         model_type=args.model_type,
         is_complex=is_complex_query,
         save_attention_compressed=args.save_attention_compressed,
+        save_intermediate_structures=args.save_intermediate_structures,
     )
 
     logging.getLogger().setLevel(logging.INFO)
