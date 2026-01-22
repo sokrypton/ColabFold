@@ -450,7 +450,7 @@ def main():
         args.mmseqs,
         ["createdb", query_file, args.base.joinpath("qdb"), "--shuffle", "0", "--dbtype", "1"],
     )
-    with args.base.joinpath("qdb.lookup").open("w") as f:
+    with args.base.joinpath("query.lookup").open("w") as f:
         id = 0
         file_number = 0
         for job_number, (
