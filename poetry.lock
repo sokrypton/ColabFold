@@ -452,15 +452,15 @@ tests = ["pytest", "pytest-cov", "pytest-xdist"]
 
 [[package]]
 name = "dm-haiku"
-version = "0.0.14"
+version = "0.0.16"
 description = "Haiku is a library for building neural networks in JAX."
 optional = true
-python-versions = "*"
+python-versions = ">=3.10"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
-    {file = "dm_haiku-0.0.14-py3-none-any.whl", hash = "sha256:79f2fc2bf2985f99687209b72a193769ba2bcfde471ce7746cd36a64ea9ce74a"},
-    {file = "dm_haiku-0.0.14.tar.gz", hash = "sha256:0c1d56ef20e1e04d8551f788ff8964167092c5d8051b7c17ed3f9ce60c0b0a59"},
+    {file = "dm_haiku-0.0.16-py3-none-any.whl", hash = "sha256:cc355d4d5aaa85af20e5a23ccd278bc751232ac8e5971261bed39318c07d744f"},
+    {file = "dm_haiku-0.0.16.tar.gz", hash = "sha256:1830b0ce63c5cef2fb3a63a13033c9d8f612ee7f896f2b0b25a6ba484f5fad28"},
 ]
 
 [package.dependencies]
@@ -471,7 +471,7 @@ tabulate = ">=0.8.9"
 
 [package.extras]
 flax = ["flax (>=0.7.1)"]
-jax = ["jax (>=0.4.28)", "jaxlib (>=0.4.28)"]
+jax = ["jax (>=0.8.1)", "jaxlib (>=0.8.1)"]
 
 [[package]]
 name = "dm-tree"
@@ -1012,6 +1012,19 @@ files = [
 ]
 
 [[package]]
+name = "legacy-cgi"
+version = "2.6.4"
+description = "Fork of the standard library cgi and cgitb modules removed in Python 3.13"
+optional = true
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "python_version >= \"3.13\" and extra == \"openmm\""
+files = [
+    {file = "legacy_cgi-2.6.4-py3-none-any.whl", hash = "sha256:7e235ce58bf1e25d1fc9b2d299015e4e2cd37305eccafec1e6bac3fc04b878cd"},
+    {file = "legacy_cgi-2.6.4.tar.gz", hash = "sha256:abb9dfc7835772f7c9317977c63253fd22a7484b5c9bbcdca60a29dcce97c577"},
+]
+
+[[package]]
 name = "libclang"
 version = "16.0.6"
 description = "Clang Python Bindings, mirrored from the official LLVM repo: https://github.com/llvm/llvm-project/tree/main/clang/bindings/python, to make the installation process easier."
@@ -1405,6 +1418,40 @@ files = [
 ]
 
 [[package]]
+name = "openmm"
+version = "8.4.0.post2"
+description = "Python wrapper for OpenMM (a C++ MD package)"
+optional = true
+python-versions = "*"
+groups = ["main"]
+markers = "extra == \"openmm\""
+files = [
+    {file = "openmm-8.4.0.post2-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:f5466e34b1201ac26a0bd41c8239a7a1849735bcba3c953e4524c1dd0e0015b6"},
+    {file = "openmm-8.4.0.post2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:4b918707cbdcf517a18d1122e45e5721e9d6ad57005dba5183334cb18765803a"},
+    {file = "openmm-8.4.0.post2-cp310-cp310-manylinux_2_34_x86_64.whl", hash = "sha256:eaadcafd6839e7f61153808de66ef47b56c2f909193d86e2b107d77c64017494"},
+    {file = "openmm-8.4.0.post2-cp310-cp310-win_amd64.whl", hash = "sha256:2eed655113d0e78ae9fb539e63b15dd38270c116e96bf1785037fef35e3acc3c"},
+    {file = "openmm-8.4.0.post2-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:9399dd46cf7bf345ad28e77e3457a11298874d2e2e407860cc0e46cceb6d3d11"},
+    {file = "openmm-8.4.0.post2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:49d0e5a0c41ff471f5a24cb73de71ee517b59cc34beaa17aad429892f57e3962"},
+    {file = "openmm-8.4.0.post2-cp311-cp311-manylinux_2_34_x86_64.whl", hash = "sha256:12ffcd82d596bded1382e30af55907754ee481aafc0fc4a921a97de2ea7a8c55"},
+    {file = "openmm-8.4.0.post2-cp311-cp311-win_amd64.whl", hash = "sha256:b18fb1fb3128df8f2cedb23af33c484701a6fa51da8204824a445f800581be13"},
+    {file = "openmm-8.4.0.post2-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:f3c8a012810928b1c0ae91a755d3197e81e7d03d2058d92dd4924d283edeae44"},
+    {file = "openmm-8.4.0.post2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:1bde30736f7b4b595041caf083bb4e4e79a794ab164faedd0664eda0348a299f"},
+    {file = "openmm-8.4.0.post2-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:168544c0b388ae71cc3f85e27c36c4f393854a313c4203f9e9957d6214836c13"},
+    {file = "openmm-8.4.0.post2-cp312-cp312-win_amd64.whl", hash = "sha256:6e9fd826aedf34b4c27a4dcda83da93e90f3e81305c58bcc07dafee22460a469"},
+    {file = "openmm-8.4.0.post2-cp313-cp313-macosx_10_12_x86_64.whl", hash = "sha256:07dfe965a205e57eff525edad4a65f5b426daa068e491536019bc9b3957bc1f3"},
+    {file = "openmm-8.4.0.post2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:4fdfae1f8c7612520f3bd2f7c0dccb9d9df5f085e219272ca43617574b88c3a6"},
+    {file = "openmm-8.4.0.post2-cp313-cp313-manylinux_2_34_x86_64.whl", hash = "sha256:70cdd3309064b95bd304af1f195377e54b6f7060b15b37af725d15764b756b09"},
+    {file = "openmm-8.4.0.post2-cp313-cp313-win_amd64.whl", hash = "sha256:e2912d803e7473048351cddb59176df191db3cbe21d0ab1a6f83e7020b92f01f"},
+    {file = "openmm-8.4.0.post2-cp314-cp314-macosx_10_12_x86_64.whl", hash = "sha256:1aad58ba4cf27eec18061fa8dcef5a22666905f8f0edca0108214cd5a1f8109e"},
+    {file = "openmm-8.4.0.post2-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:951e92fb72f031406f5beb876ea87c4ad00a6759cb7675fb6f6c5f81ecf89ab0"},
+    {file = "openmm-8.4.0.post2-cp314-cp314-manylinux_2_34_x86_64.whl", hash = "sha256:e175a64050d17b571fae66f095abfa9ebf7224ce7bb502e714450925adaa1e98"},
+    {file = "openmm-8.4.0.post2-cp314-cp314-win_amd64.whl", hash = "sha256:25872ca6f1a9140df918af71f879aad457a2a2a45c752265c3a753e25fe028df"},
+]
+
+[package.dependencies]
+numpy = "*"
+
+[[package]]
 name = "opt-einsum"
 version = "3.3.0"
 description = "Optimizing numpys einsum function"
@@ -1639,6 +1686,23 @@ files = [
     {file = "pathspec-0.12.1-py3-none-any.whl", hash = "sha256:a0d503e138a4c123b27490a4f7beda6a01c6f288df0e4a8b79c7eb0dc7b4cc08"},
     {file = "pathspec-0.12.1.tar.gz", hash = "sha256:a482d51503a1ab33b1c67a6c3813a26953dbdc71c31dacaef9a838c4e29f5712"},
 ]
+
+[[package]]
+name = "pdbfixer"
+version = "1.12.0"
+description = "pdbfixer: Fixes problems in PDB files"
+optional = true
+python-versions = "*"
+groups = ["main"]
+markers = "extra == \"openmm\""
+files = [
+    {file = "pdbfixer-1.12.0.tar.gz", hash = "sha256:82e54074b33eb00270e9a439c8633fcf82cd3ab7a36561b01425a260c0fc4143"},
+]
+
+[package.dependencies]
+legacy-cgi = {version = "*", markers = "python_version >= \"3.13\""}
+numpy = "*"
+openmm = ">=8.2"
 
 [[package]]
 name = "pillow"
@@ -2487,8 +2551,9 @@ type = ["pytest-mypy"]
 [extras]
 alphafold = ["absl-py", "alphafold-colabfold", "dm-haiku", "dm-tree", "jax", "py3Dmol", "tensorflow", "tensorflow-cpu"]
 alphafold-minus-jax = ["absl-py", "alphafold-colabfold", "dm-haiku", "dm-tree", "py3Dmol", "tensorflow", "tensorflow-cpu"]
+openmm = ["openmm", "pdbfixer"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "d2adc6c735f5a1784d255e811f2c3d89452e1a2dcb8fd40a9236ef00c56929be"
+content-hash = "e9f1de0a0a654a54140b5f6cc824b1075c8a7ae522be9f7853f62296198f98d7"
