@@ -58,8 +58,30 @@ Check the wiki page [old retired notebooks](https://github.com/sokrypton/ColabFo
 - Where can I find the history of MSA Server Databases used in ColabFold?
   - You can view the database version history on the [MSA Server Database History](https://github.com/sokrypton/ColabFold/wiki/MSA-Server-Database-History) wiki page.
 
-### Running locally
-For instructions on how to install ColabFold locally refer to [localcolabfold](https://github.com/YoshitakaMo/localcolabfold) or see our [wiki](https://github.com/sokrypton/ColabFold/wiki/Running-ColabFold-in-Docker) on how to run ColabFold within Docker.
+### Installation
+
+For a one-step installer script that supports Linux, macOS, and Windows (WSL2), see [LocalColabFold](https://github.com/YoshitakaMo/localcolabfold).
+
+Alternatively, ColabFold can be installed directly with `conda` and `pip`:
+
+```shell
+conda create -n colabfold -c conda-forge -c bioconda python=3.13 kalign2=2.04 hhsuite=3.3.0 mmseqs2=18.8cc5c
+conda activate colabfold
+# With CUDA GPU support
+pip install colabfold[alphafold,openmm] jax[cuda] openmm[cuda12]
+# CPU only
+pip install colabfold[alphafold,openmm]
+# For colabfold_search only (no structure prediction)
+pip install colabfold
+```
+
+A Docker image is also available:
+
+```shell
+docker pull ghcr.io/sokrypton/colabfold:1.6.0-cuda12
+```
+
+See our [wiki](https://github.com/sokrypton/ColabFold/wiki/Running-ColabFold-in-Docker) for more details on running ColabFold in Docker.
 
 ### Generating MSAs for small scale local structure/complex predictions using the MSA server
 
