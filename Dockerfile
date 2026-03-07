@@ -50,9 +50,7 @@ COPY --from=builder /opt/build/binaries/* /usr/local/bin/
 WORKDIR /app
 COPY . /app
 RUN pip install --no-cache-dir \
-        ".[alphafold-minus-jax]" \
+        ".[alphafold,openmm]" \
         "jax[cuda]<0.8" \
-        "dm-haiku[flax]==0.0.14" \
-        "OpenMM[cuda12]==8.2.0" \
-        'pdbfixer @ git+https://github.com/openmm/pdbfixer#94cfa4c0ca551cdc5f13320f9a658efd59f2b881'; \
+        "openmm[cuda12]"; \
     rm -rf /root/.cache/pip
