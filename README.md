@@ -1,6 +1,6 @@
-# ColabFold - v1.5.5
+# ColabFold - v1.6.0
 
-For details of what was changed in v1.5, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.5.0)!
+For details of what was changed in v1.6.0, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.6.0)!
 
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
