@@ -118,7 +118,12 @@ GPU_PAR=""
 GPU_INDEX_PAR=""
 if [ -n "${GPU}" ]; then
   GPU_PAR="--gpu 1"
-  GPU_INDEX_PAR=" --split 1 --index-subset 2"
+  SUBSET=2
+  # recent mmseqs versions also allow dropping the sequence lookup, which is not used in GPU
+  if mmseqs indexdb --help | grep -q "8: no sequence lookup"; then
+    SUBSET=10
+  fi
+  GPU_INDEX_PAR=" --split 1 --index-subset $SUBSET"
 
   if ! mmseqs --help | grep -q 'gpuserver'; then
     echo "The installed MMseqs2 has no GPU support, update to at least release 16"
