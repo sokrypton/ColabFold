@@ -269,7 +269,7 @@ def mmseqs_search_pair(
     run_mmseqs(mmseqs, ["mvdb", base.joinpath("tmp/latest/profile_1"), base.joinpath("prof_res")])
     run_mmseqs(mmseqs, ["lndb", base.joinpath("qdb_h"), base.joinpath("prof_res_h")])    
     run_mmseqs(mmseqs, ["expandaln", base.joinpath("qdb"), dbbase.joinpath(f"{db}{dbSuffix1}"), base.joinpath("res"), dbbase.joinpath(f"{db}{dbSuffix2}"), base.joinpath("res_exp"), "--db-load-mode", str(db_load_mode), "--threads", str(threads),] + expand_param,)
-    run_mmseqs(mmseqs, ["align", base.joinpath("prof_res"), dbbase.joinpath(f"{db}{dbSuffix1}"), base.joinpath("res_exp"), base.joinpath("res_exp_realign"), "--db-load-mode", str(db_load_mode), "--alignment-mode", "1", "-e", "0.001", "--max-accept", "1000000", "--threads", str(threads),],)  # hack
+    run_mmseqs(mmseqs, ["align", base.joinpath("prof_res"), dbbase.joinpath(f"{db}{dbSuffix1}"), base.joinpath("res_exp"), base.joinpath("res_exp_realign"), "--db-load-mode", str(db_load_mode), "--alignment-mode", "1", "-e", "0.001", "--max-accept", "1000000", "--threads", str(threads),],)
     run_mmseqs(mmseqs, ["pairaln", base.joinpath("qdb"), dbbase.joinpath(f"{db}"), base.joinpath("res_exp_realign"), base.joinpath("res_exp_realign_pair"), "--db-load-mode", str(db_load_mode), "--pairing-mode", str(pairing_strategy), "--pairing-dummy-mode", "0", "--threads", str(threads), ],)
     run_mmseqs(mmseqs, ["align", base.joinpath("prof_res"), dbbase.joinpath(f"{db}{dbSuffix1}"), base.joinpath("res_exp_realign_pair"), base.joinpath("res_exp_realign_pair_bt"), "--db-load-mode", str(db_load_mode), "-e", "inf", "-a", "--threads", str(threads), ],)
     run_mmseqs(mmseqs, ["pairaln", base.joinpath("qdb"), dbbase.joinpath(f"{db}"), base.joinpath("res_exp_realign_pair_bt"), base.joinpath("res_final"), "--db-load-mode", str(db_load_mode), "--pairing-mode", str(pairing_strategy), "--pairing-dummy-mode", "1", "--threads", str(threads),],)
@@ -424,7 +424,6 @@ def main():
     logging.basicConfig(level = logging.INFO)
 
     queries, is_complex = get_queries(args.query, None)
-    is_complex = True # hack
     queries_unique = []
     for job_number, (raw_jobname, query_sequences, _, other_molecules) in enumerate(queries):
         # remove duplicates before searching
@@ -556,7 +555,7 @@ def main():
             ) in enumerate(queries_unique):
                 unpaired_msa = []
                 paired_msa = None
-                if len(query_seqs_cardinality) >= 1: # hack
+                if len(query_seqs_cardinality) > 1:
                     paired_msa = []
                 for seq in query_sequences:
                     if keep_unpaired:

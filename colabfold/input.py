@@ -279,14 +279,18 @@ def get_queries(
             sep = "\t" if input_path.suffix == ".tsv" else ","
             import pandas
             df = pandas.read_csv(input_path, sep=sep, dtype=str)
-            assert "id" in df.columns and "sequence" and "a3mpath" and "templatepath" in df.columns
-            queries = [
-                (seq_id, sequence.upper().split(":"), Path(a3mpath), Path(templatepath))
-                for seq_id, sequence, a3mpath, templatepath in df[["id", "sequence", "a3mpath", "templatepath"]].itertuples(index=False)
-            ]
-            for i in range(len(queries)):
-                if len(queries[i][1]) == 1:
-                    queries[i] = (queries[i][0], queries[i][1][0], queries[i][2], queries[i][3])
+            assert "id" in df.columns and "sequence" in df.columns
+            has_a3m = "a3mpath" in df.columns
+            has_template = "templatepath" in df.columns
+            queries = []
+            for row in df.itertuples(index=False):
+                seq_id = row.id
+                sequence = row.sequence.upper().split(":")
+                a3m = Path(row.a3mpath) if has_a3m else None
+                template = Path(row.templatepath) if has_template else None
+                if len(sequence) == 1:
+                    sequence = sequence[0]
+                queries.append((seq_id, sequence, a3m, template))
         elif input_path.suffix == ".a3m":
             (seqs, header) = parse_fasta(input_path.read_text())
             if len(seqs) == 0:
@@ -346,7 +350,7 @@ def get_queries(
                     logger.error(f"{file} is empty")
                     continue
 
-                queries.append((header, sequences, None))
+                queries.append((header, sequences, None, None))
             else:  # file.suffix.lower() in [".a3m", ".fasta", ".faa"]
                 (seqs, header) = parse_fasta(file.read_text())
             if len(seqs) == 0:

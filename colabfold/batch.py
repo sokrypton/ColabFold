@@ -1377,14 +1377,17 @@ def run(
             put_mmciffiles_into_resultdir(pdb_hit_file, local_pdb_path, custom_template_path)
 
 
+    if custom_template_path is not None:
+        mk_hhsearch_db(custom_template_path)
+
     pad_len = 0
     ranks, metrics = [],[]
     first_job = True
     job_number = 0
-    for job_number, (raw_jobname, query_sequence, a3m_lines, custom_template_path) in enumerate(queries):
+    for job_number, (raw_jobname, query_sequence, a3m_lines, custom_template_path_per_entry) in enumerate(queries):
 
-        if use_templates and custom_template_path is not None and isinstance(custom_template_path, Path):
-            mk_hhsearch_single_entry_db(custom_template_path, custom_template_cache_path)
+        if use_templates and custom_template_path_per_entry is not None and isinstance(custom_template_path_per_entry, Path):
+            mk_hhsearch_single_entry_db(custom_template_path_per_entry, custom_template_cache_path)
             custom_template_path = custom_template_cache_path
 
         if jobname_prefix is not None:
@@ -1627,15 +1630,15 @@ def run(
                         ext_metric_png = result_dir.joinpath(f"{jobname}_ext_metrics.png")
                         extra_ptm.plot_chain_pairwise_analysis(scores, fig_path=ext_metric_png)
 
-            # make pLDDT plot
-            if not 'plots' in skip_output:
-                from colabfold.colabfold import plot_plddts
-                plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
-                    Ls=query_sequence_len_array, dpi=dpi)
-                plddt_png = result_dir.joinpath(f"{jobname}_plddt.png")
-                plddt_plot.savefig(str(plddt_png), bbox_inches='tight')
-                plddt_plot.close()
-                result_files.append(plddt_png)
+                # make pLDDT plot
+                if not 'plots' in skip_output:
+                    from colabfold.colabfold import plot_plddts
+                    plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
+                        Ls=query_sequence_len_array, dpi=dpi)
+                    plddt_png = result_dir.joinpath(f"{jobname}_plddt.png")
+                    plddt_plot.savefig(str(plddt_png), bbox_inches='tight')
+                    plddt_plot.close()
+                    result_files.append(plddt_png)
 
         if zip_results:
             with zipfile.ZipFile(result_zip, "w") as result_zip:
@@ -2134,6 +2137,12 @@ def main():
     data_dir = Path(args.data or default_data_dir)
 
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
+
+    has_per_entry_templates = any(isinstance(q[3], Path) for q in queries)
+    if has_per_entry_templates and args.custom_template_cache_path is None:
+        raise ValueError("--custom-template-cache-path must be set when using per-entry template paths in CSV input")
+    if has_per_entry_templates and args.custom_template_path is not None:
+        raise ValueError("--custom-template-path and per-entry template paths in CSV input cannot be used simultaneously")
 
     model_type = set_model_type(is_complex, args.model_type)
 
