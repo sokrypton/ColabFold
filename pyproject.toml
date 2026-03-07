@@ -3,7 +3,7 @@ name = "colabfold"
 version = "1.5.5"
 description = "Making protein folding accessible to all. Predict proteins structures both in google colab and on your machine"
 authors = [
-    "Milot Mirdita <mmirdit@snu.ac.kr>",
+    "Milot Mirdita <milot@skku.edu>",
     "Sergey Ovchinnikov <so@fas.harvard.edu>",
     "Martin Steinegger <martin.steinegger@snu.ac.kr>",
     "Kostantin Schütze <schuetze@in.tum.de>",
