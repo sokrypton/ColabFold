@@ -4,9 +4,6 @@ For details of what was changed in v1.5, see [change log](https://github.com/sok
 
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
-> [!NOTE]
-> 04Aug2025: We changed the taxonomy/pairing files for the UniRef100 database. This might affect multimer predictions. Check [the wiki entry](https://github.com/sokrypton/ColabFold/wiki/MSA-Server-Database-History) for details. 
-
 ### Making Protein folding accessible to all via Google Colab!
 
 | Notebooks                                                                                                                                        | monomers | complexes | mmseqs2 | jackhmmer | templates |
@@ -32,9 +29,8 @@ Check the wiki page [old retired notebooks](https://github.com/sokrypton/ColabFo
 - Can I use the models for **Molecular Replacement**?
   - Yes, but be **CAREFUL**, the bfactor column is populated with pLDDT confidence values (higher = better). Phenix.phaser expects a "real" bfactor, where (lower = better). See [post](https://twitter.com/cheshireminima/status/1423929241675120643) from Claudia Millán.
 - What is the maximum length?
-  - Limits depends on free GPU provided by Google-Colab `fingers-crossed`
-  - For GPU: `Tesla T4` with ~16G the max length is ~2000
-  - To check what GPU you got, open a new code cell and type `!nvidia-smi`
+  - Limits depends on free GPU provided by Google Colab `fingers-crossed`
+  - For GPUs with ~16G the max length is ~2000
 - Is it okay to use the MMseqs2 MSA server on a local computer?
   - You can access the server from a local computer if you queries are serial from a single IP. Please do not use multiple computers to query the server.
 - Where can I download the databases used by ColabFold?
@@ -228,6 +224,9 @@ For more details, see [GPU-accelerated search](https://github.com/soedinglab/MMs
 
 - Mirdita M, Schütze K, Moriwaki Y, Heo L, Ovchinnikov S and Steinegger M. ColabFold: Making protein folding accessible to all. <br />
   Nature Methods (2022) doi: [10.1038/s41592-022-01488-1](https://www.nature.com/articles/s41592-022-01488-1)
+- For a step-by-step protocol on how to use ColabFold, please refer to: <br />
+  Kim G & Lee S et al. Easy and accurate protein structure prediction using ColabFold. <br />
+  Nature Protocols (2025) doi: [10.1038/s41596-024-01060-5](https://www.nature.com/articles/s41596-024-01060-5)
 - If you’re using **AlphaFold**, please also cite: <br />
   Jumper et al. "Highly accurate protein structure prediction with AlphaFold." <br />
   Nature (2021) doi: [10.1038/s41586-021-03819-2](https://doi.org/10.1038/s41586-021-03819-2)
