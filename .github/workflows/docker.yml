@@ -10,7 +10,7 @@ on:
         description: 'ColabFold version'
         required: true
         type: string
-        default: '1.6.0'
+        default: '1.6.1'
 
 env:
   REGISTRY: ghcr.io

@@ -1,6 +1,6 @@
-# ColabFold - v1.6.0
+# ColabFold - v1.6.1
 
-For details of what was changed in v1.6.0, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.6.0)!
+For details of what was changed in v1.6.1, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.6.1)!
 
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
@@ -78,7 +78,7 @@ pip install colabfold
 A Docker image is also available:
 
 ```shell
-docker pull ghcr.io/sokrypton/colabfold:1.6.0-cuda12
+docker pull ghcr.io/sokrypton/colabfold:1.6.1-cuda12
 ```
 
 See our [wiki](https://github.com/sokrypton/ColabFold/wiki/Running-ColabFold-in-Docker) for more details on running ColabFold in Docker.
