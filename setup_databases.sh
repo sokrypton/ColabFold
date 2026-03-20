@@ -121,7 +121,7 @@ if [ -n "${GPU}" ]; then
   SUBSET=2
   # recent mmseqs versions also allow dropping the sequence lookup, which is not used in GPU
   if mmseqs indexdb --help | grep -q "8: no sequence lookup"; then
-    SUBSET=10
+    SUBSET=1010
   fi
   GPU_INDEX_PAR=" --split 1 --index-subset $SUBSET"
 
