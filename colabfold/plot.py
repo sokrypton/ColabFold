@@ -5,6 +5,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+
 def plot_predicted_alignment_error(
     jobname: str, num_models: int, outs: dict, result_dir: Path, show: bool = False
 ):
