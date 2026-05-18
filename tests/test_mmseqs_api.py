@@ -60,7 +60,7 @@ def test_status_retries_are_bounded(monkeypatch, tmp_path):
             user_agent="colabfold/test",
         )
 
-    assert calls["get"] == 6
+    assert calls["get"] == 5
 
 
 def test_download_retries_are_bounded(monkeypatch, tmp_path):
@@ -84,7 +84,7 @@ def test_download_retries_are_bounded(monkeypatch, tmp_path):
             user_agent="colabfold/test",
         )
 
-    assert calls["get"] == 6
+    assert calls["get"] == 5
 
 
 def test_templates_retries_are_bounded(monkeypatch, tmp_path):
@@ -115,4 +115,4 @@ def test_templates_retries_are_bounded(monkeypatch, tmp_path):
             user_agent="colabfold/test",
         )
 
-    assert calls["get"] == 6
+    assert calls["get"] == 5
