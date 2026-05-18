@@ -110,8 +110,8 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
     return out
 
   def status(ID):
+    error_count = 0
     while True:
-      error_count = 0
       try:
         res = requests.get(f'{host_url}/ticket/{ID}', timeout=6.02, headers=headers)
       except requests.exceptions.Timeout:
@@ -272,8 +272,8 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
         os.mkdir(TMPL_PATH)
         TMPL_LINE = ",".join(TMPL[:20])
         response = None
+        error_count = 0
         while True:
-          error_count = 0
           try:
             # https://requests.readthedocs.io/en/latest/user/advanced/#advanced
             # "good practice to set connect timeouts to slightly larger than a multiple of 3"
