@@ -120,7 +120,7 @@ def mmseqs_search_monomer(
         if s is not None: # sensitivy can only be set for non-gpu version, gpu version runs at max sensitivity
             search_param += ["-s", "{:.1f}".format(s)]
         else:
-            search_param += ["--k-score", "'seq:96,prof:80'"]
+            search_param += ["--k-score", "seq:96,prof:80"]
     if gpu_server:
         search_param += ["--gpu-server", str(gpu_server)]
 
@@ -260,7 +260,7 @@ def mmseqs_search_pair(
         if s is not None: # sensitivy can only be set for non-gpu version, gpu version runs at max sensitivity
             search_param += ["-s", "{:.1f}".format(s)]
         else:
-            search_param += ["--k-score", "'seq:96,prof:80'"]
+            search_param += ["--k-score", "seq:96,prof:80"]
     if gpu_server:
         search_param += ["--gpu-server", str(gpu_server)]
     expand_param = ["--expansion-mode", "0", "-e", "inf", "--expand-filter-clusters", "0", "--max-seq-id", "0.95",]
