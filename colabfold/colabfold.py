@@ -89,9 +89,6 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
         # https://requests.readthedocs.io/en/latest/user/advanced/#advanced
         # "good practice to set connect timeouts to slightly larger than a multiple of 3"
         res = requests.post(f'{host_url}/{submission_endpoint}', data={ 'q': query, 'mode': mode }, timeout=6.02, headers=headers)
-      except requests.exceptions.Timeout:
-        logger.warning("Timeout while submitting to MSA server. Retrying...")
-        continue
       except Exception as e:
         error_count += 1
         logger.warning(f"Error while fetching result from MSA server. Retrying... ({error_count}/5)")
@@ -114,9 +111,6 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
     while True:
       try:
         res = requests.get(f'{host_url}/ticket/{ID}', timeout=6.02, headers=headers)
-      except requests.exceptions.Timeout:
-        logger.warning("Timeout while fetching status from MSA server. Retrying...")
-        continue
       except Exception as e:
         error_count += 1
         logger.warning(f"Error while fetching result from MSA server. Retrying... ({error_count}/5)")
@@ -138,9 +132,6 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
     while True:
       try:
         res = requests.get(f'{host_url}/result/download/{ID}', timeout=6.02, headers=headers)
-      except requests.exceptions.Timeout:
-        logger.warning("Timeout while fetching result from MSA server. Retrying...")
-        continue
       except Exception as e:
         error_count += 1
         logger.warning(f"Error while fetching result from MSA server. Retrying... ({error_count}/5)")
@@ -278,9 +269,6 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
             # https://requests.readthedocs.io/en/latest/user/advanced/#advanced
             # "good practice to set connect timeouts to slightly larger than a multiple of 3"
             response = requests.get(f"{host_url}/template/{TMPL_LINE}", stream=True, timeout=6.02, headers=headers)
-          except requests.exceptions.Timeout:
-            logger.warning("Timeout while submitting to template server. Retrying...")
-            continue
           except Exception as e:
             error_count += 1
             logger.warning(f"Error while fetching result from template server. Retrying... ({error_count}/5)")

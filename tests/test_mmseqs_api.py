@@ -3,7 +3,9 @@
 Each of the four retry loops in run_mmseqs2 (submit, status, download, templates)
 caps at a fixed number of attempts. status() and the templates loop used to
 reset their counter inside the loop, which silently turned them into
-unbounded retries — these tests pin the bounded behavior.
+unbounded retries; the Timeout branch used to retry without sleeping or
+counting, also unbounded. These tests pin the bounded behavior across both
+failure modes.
 """
 
 import pytest
@@ -14,6 +16,11 @@ from colabfold.colabfold import run_mmseqs2
 # Safety bound so a regression to unbounded retries fails fast instead of
 # spinning forever (time.sleep is monkeypatched to a no-op below).
 MAX_RETRY_CALLS = 50
+
+FAILURE_MODES = [
+    pytest.param(requests.exceptions.ConnectionError, id="connection-error"),
+    pytest.param(requests.exceptions.Timeout, id="timeout"),
+]
 
 
 class JsonResponse:
@@ -26,7 +33,7 @@ class JsonResponse:
         return self.payload
 
 
-def _failing_get(calls, message):
+def _failing_get(calls, exc_cls, message):
     def get(*args, **kwargs):
         calls["get"] += 1
         if calls["get"] > MAX_RETRY_CALLS:
@@ -34,12 +41,40 @@ def _failing_get(calls, message):
                 f"retry loop exceeded {MAX_RETRY_CALLS} calls — "
                 "the bound on retries has regressed"
             )
-        raise requests.exceptions.ConnectionError(message)
+        raise exc_cls(message)
 
     return get
 
 
-def test_status_retries_are_bounded(monkeypatch, tmp_path):
+@pytest.mark.parametrize("exc_cls", FAILURE_MODES)
+def test_submit_retries_are_bounded(monkeypatch, tmp_path, exc_cls):
+    calls = {"post": 0}
+
+    def post(*args, **kwargs):
+        calls["post"] += 1
+        if calls["post"] > MAX_RETRY_CALLS:
+            raise AssertionError(
+                f"retry loop exceeded {MAX_RETRY_CALLS} calls — "
+                "the bound on retries has regressed"
+            )
+        raise exc_cls("submit failed")
+
+    monkeypatch.setattr("colabfold.colabfold.requests.post", post)
+    monkeypatch.setattr("colabfold.colabfold.time.sleep", lambda _s: None)
+
+    with pytest.raises(exc_cls, match="submit failed"):
+        run_mmseqs2(
+            "ACDE",
+            str(tmp_path / "msa"),
+            use_env=False,
+            user_agent="colabfold/test",
+        )
+
+    assert calls["post"] == 5
+
+
+@pytest.mark.parametrize("exc_cls", FAILURE_MODES)
+def test_status_retries_are_bounded(monkeypatch, tmp_path, exc_cls):
     calls = {"get": 0}
 
     monkeypatch.setattr(
@@ -48,11 +83,11 @@ def test_status_retries_are_bounded(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(
         "colabfold.colabfold.requests.get",
-        _failing_get(calls, "status failed"),
+        _failing_get(calls, exc_cls, "status failed"),
     )
     monkeypatch.setattr("colabfold.colabfold.time.sleep", lambda _s: None)
 
-    with pytest.raises(requests.exceptions.ConnectionError, match="status failed"):
+    with pytest.raises(exc_cls, match="status failed"):
         run_mmseqs2(
             "ACDE",
             str(tmp_path / "msa"),
@@ -63,7 +98,8 @@ def test_status_retries_are_bounded(monkeypatch, tmp_path):
     assert calls["get"] == 5
 
 
-def test_download_retries_are_bounded(monkeypatch, tmp_path):
+@pytest.mark.parametrize("exc_cls", FAILURE_MODES)
+def test_download_retries_are_bounded(monkeypatch, tmp_path, exc_cls):
     calls = {"get": 0}
 
     monkeypatch.setattr(
@@ -72,11 +108,11 @@ def test_download_retries_are_bounded(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(
         "colabfold.colabfold.requests.get",
-        _failing_get(calls, "download failed"),
+        _failing_get(calls, exc_cls, "download failed"),
     )
     monkeypatch.setattr("colabfold.colabfold.time.sleep", lambda _s: None)
 
-    with pytest.raises(requests.exceptions.ConnectionError, match="download failed"):
+    with pytest.raises(exc_cls, match="download failed"):
         run_mmseqs2(
             "ACDE",
             str(tmp_path / "msa"),
@@ -87,7 +123,8 @@ def test_download_retries_are_bounded(monkeypatch, tmp_path):
     assert calls["get"] == 5
 
 
-def test_templates_retries_are_bounded(monkeypatch, tmp_path):
+@pytest.mark.parametrize("exc_cls", FAILURE_MODES)
+def test_templates_retries_are_bounded(monkeypatch, tmp_path, exc_cls):
     # Pre-create the MSA-stage artifacts so run_mmseqs2 skips submit/status/
     # download (tar_gz_file exists) and a3m extraction (uniref.a3m exists),
     # going straight to the templates fetch we want to exercise.
@@ -102,11 +139,11 @@ def test_templates_retries_are_bounded(monkeypatch, tmp_path):
     calls = {"get": 0}
     monkeypatch.setattr(
         "colabfold.colabfold.requests.get",
-        _failing_get(calls, "template failed"),
+        _failing_get(calls, exc_cls, "template failed"),
     )
     monkeypatch.setattr("colabfold.colabfold.time.sleep", lambda _s: None)
 
-    with pytest.raises(requests.exceptions.ConnectionError, match="template failed"):
+    with pytest.raises(exc_cls, match="template failed"):
         run_mmseqs2(
             "ACDE",
             str(tmp_path / "msa"),
