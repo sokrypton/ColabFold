@@ -86,6 +86,40 @@ from Bio.PDB.PDBIO import Select
 
 # logging settings
 logger = logging.getLogger(__name__)
+
+def _str2bool(v):
+    """argparse type for an optional-value bool flag (--flag / --flag true/false)."""
+    if isinstance(v, bool):
+        return v
+    s = str(v).lower()
+    if s in ("1", "true", "yes", "on", "t"):
+        return True
+    if s in ("0", "false", "no", "off", "f"):
+        return False
+    from argparse import ArgumentTypeError
+    raise ArgumentTypeError(f"expected true/false, got {v!r}")
+
+def _cueq_on_cli(argv):
+    """Resolve --use-cueq early so we can load triton before jax."""
+    for i, a in enumerate(argv):
+        if a == "--use-cueq":
+            nxt = argv[i + 1] if i + 1 < len(argv) else ""
+            return _str2bool(nxt) if nxt and not nxt.startswith("-") else True
+        if a.startswith("--use-cueq="):
+            return _str2bool(a.split("=", 1)[1])
+    return False
+
+# load triton before tf or model-compile to avoid a LLVM clash
+try:
+    _preload_cueq = _cueq_on_cli(sys.argv)
+except Exception:
+    _preload_cueq = False
+if _preload_cueq:
+    try:
+        import triton  # noqa: F401
+    except Exception:
+        pass
+
 from jax import local_devices
 
 # from jax 0.4.6, jax._src.lib.xla_bridge moved to jax._src.xla_bridge
@@ -1260,6 +1294,9 @@ def run(
     use_dropout           = kwargs.pop("training", use_dropout)
     use_fuse              = kwargs.pop("use_fuse", True)
     use_bfloat16          = kwargs.pop("use_bfloat16", True)
+    use_cueq              = kwargs.pop("use_cueq", False)
+    if use_cueq and not use_bfloat16:
+        raise ValueError("use_cueq requires bfloat16")
     max_msa               = kwargs.pop("max_msa",None)
     if max_msa is not None:
         max_seq, max_extra_seq = [int(x) for x in max_msa.split(":")]
@@ -1552,7 +1589,8 @@ def run(
                         use_fuse=use_fuse,
                         use_bfloat16=use_bfloat16,
                         save_all=save_all,
-                        calc_extra_ptm=calc_extra_ptm
+                        calc_extra_ptm=calc_extra_ptm,
+                        use_cueq=use_cueq
                     )
                     first_job = False
 
@@ -2101,6 +2139,15 @@ def main():
         "Set to 0 to disable.",
     )
     adv_group.add_argument(
+        "--use-cueq",
+        nargs="?",
+        const=True,
+        default=False,
+        type=_str2bool,
+        metavar="BOOL",
+        help="Use cuEquivariance fused triangle kernels for a faster Evoformer",
+    )
+    adv_group.add_argument(
         "--debug-logging",
         default=False,
         action="store_true",
@@ -2249,6 +2296,7 @@ def main():
         use_probs_extra=use_probs_extra,
         max_template_date=args.max_template_date,
         max_template_hits=args.max_template_hits,
+        use_cueq=args.use_cueq,
     )
 
 if __name__ == "__main__":

@@ -68,7 +68,12 @@ Alternatively, ColabFold can be installed directly with `conda` and `pip`:
 conda create -n colabfold -c conda-forge -c bioconda python=3.13 kalign2=2.04 hhsuite=3.3.0 mmseqs2=18.8cc5c
 conda activate colabfold
 # With CUDA GPU support
-pip install colabfold[alphafold,openmm] jax[cuda] openmm[cuda12]
+pip install colabfold[alphafold,openmm] jax[cuda12] openmm[cuda12]
+# CUDA 13 is recommended if you have a Blackwell GPU or newer
+pip install colabfold[alphafold,openmm] jax[cuda13] openmm[cuda13]
+# Install cuEquivariance fused kernels for faster predictions (run with `--use-cueq`).
+# Use either cueq-cu12 or cueq-cu13 depending on the CUDA version
+pip install colabfold[alphafold,openmm,cueq-cu13] jax[cuda13] openmm[cuda13]
 # CPU only
 pip install colabfold[alphafold,openmm]
 # For colabfold_search only (no structure prediction)
