@@ -50,7 +50,7 @@ COPY --from=builder /opt/build/binaries/* /usr/local/bin/
 WORKDIR /app
 COPY . /app
 RUN pip install --no-cache-dir \
-        ".[alphafold,openmm,cueq-cu12]" \
+        ".[alphafold,openmm,pallas]" \
         "jax[cuda12]<0.11" \
         "openmm[cuda12]"; \
     rm -rf /root/.cache/pip

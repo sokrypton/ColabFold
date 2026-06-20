@@ -99,27 +99,6 @@ def _str2bool(v):
     from argparse import ArgumentTypeError
     raise ArgumentTypeError(f"expected true/false, got {v!r}")
 
-def _cueq_on_cli(argv):
-    """Resolve --use-cueq early so we can load triton before jax."""
-    for i, a in enumerate(argv):
-        if a == "--use-cueq":
-            nxt = argv[i + 1] if i + 1 < len(argv) else ""
-            return _str2bool(nxt) if nxt and not nxt.startswith("-") else True
-        if a.startswith("--use-cueq="):
-            return _str2bool(a.split("=", 1)[1])
-    return False
-
-# load triton before tf or model-compile to avoid a LLVM clash
-try:
-    _preload_cueq = _cueq_on_cli(sys.argv)
-except Exception:
-    _preload_cueq = False
-if _preload_cueq:
-    try:
-        import triton  # noqa: F401
-    except Exception:
-        pass
-
 from jax import local_devices
 
 # from jax 0.4.6, jax._src.lib.xla_bridge moved to jax._src.xla_bridge
@@ -423,6 +402,7 @@ def predict_structure(
     model_type: str,
     model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
     initial_guess: str = None,
+    msa_pad_depth: int = 0,
     num_relax: int = 0,
     relax_max_iterations: int = 0,
     relax_tolerance: float = 2.39,
@@ -467,6 +447,10 @@ def predict_structure(
                     # TODO: add pad_input_mulitmer()
                     input_features = feature_dict
                     input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
+                    # Pad MSA depth up to msa_pad_depth to share one compiled shape
+                    # Padded rows are masked (msa_mask=0), so the prediction is unchanged
+                    if msa_pad_depth > input_features["msa"].shape[0]:
+                        input_features = pipeline_multimer.pad_msa(input_features, min_num_seq=msa_pad_depth)
             else:
                 if model_num == 0:
                     input_features = model_runner.process_features(feature_dict, random_seed=seed)
@@ -1294,9 +1278,9 @@ def run(
     use_dropout           = kwargs.pop("training", use_dropout)
     use_fuse              = kwargs.pop("use_fuse", True)
     use_bfloat16          = kwargs.pop("use_bfloat16", True)
-    use_cueq              = kwargs.pop("use_cueq", False)
-    if use_cueq and not use_bfloat16:
-        raise ValueError("use_cueq requires bfloat16")
+    use_pallas            = kwargs.pop("use_pallas", False)
+    if use_pallas and not use_bfloat16:
+        raise ValueError("use_pallas requires bfloat16")
     max_msa               = kwargs.pop("max_msa",None)
     if max_msa is not None:
         max_seq, max_extra_seq = [int(x) for x in max_msa.split(":")]
@@ -1418,6 +1402,7 @@ def run(
         mk_hhsearch_db(custom_template_path)
 
     pad_len = 0
+    msa_pad_depth = 0
     ranks, metrics = [],[]
     first_job = True
     job_number = 0
@@ -1590,14 +1575,19 @@ def run(
                         use_bfloat16=use_bfloat16,
                         save_all=save_all,
                         calc_extra_ptm=calc_extra_ptm,
-                        use_cueq=use_cueq
+                        use_pallas=use_pallas
                     )
                     first_job = False
+
+                # Track the deepest multimer MSA seen so far
+                if "multimer" in model_type and "msa" in feature_dict:
+                    msa_pad_depth = max(msa_pad_depth, len(feature_dict["msa"]))
 
                 results = predict_structure(
                     prefix=jobname,
                     result_dir=result_dir,
                     feature_dict=feature_dict,
+                    msa_pad_depth=msa_pad_depth,
                     is_complex=is_complex,
                     use_templates=use_templates,
                     sequences_lengths=query_sequence_len_array,
@@ -2107,11 +2097,11 @@ def main():
     )
     output_group.add_argument(
         "--sort-queries-by",
-        help="Sort input queries by: none, length, random. "
-        "Sorting by length speeds up prediction as models are recompiled less often.",
+        help="Sort input queries by: none, length, msa_depth, random. "
+        "Sorting by length or depth speeds up monomer or multimer prediction as models are recompiled less often.",
         type=str,
         default="length",
-        choices=["none", "length", "random"],
+        choices=["none", "length", "msa_depth", "random"],
     )
 
     adv_group = parser.add_argument_group(
@@ -2139,13 +2129,13 @@ def main():
         "Set to 0 to disable.",
     )
     adv_group.add_argument(
-        "--use-cueq",
+        "--use-pallas",
         nargs="?",
         const=True,
         default=False,
         type=_str2bool,
         metavar="BOOL",
-        help="Use cuEquivariance fused triangle kernels for a faster Evoformer",
+        help="Use Pallas/Triton kernels for faster prediction",
     )
     adv_group.add_argument(
         "--debug-logging",
@@ -2296,7 +2286,7 @@ def main():
         use_probs_extra=use_probs_extra,
         max_template_date=args.max_template_date,
         max_template_hits=args.max_template_hits,
-        use_cueq=args.use_cueq,
+        use_pallas=args.use_pallas,
     )
 
 if __name__ == "__main__":

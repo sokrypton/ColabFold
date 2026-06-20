@@ -71,9 +71,6 @@ conda activate colabfold
 pip install colabfold[alphafold,openmm] jax[cuda12] openmm[cuda12]
 # CUDA 13 is recommended if you have a Blackwell GPU or newer
 pip install colabfold[alphafold,openmm] jax[cuda13] openmm[cuda13]
-# Install cuEquivariance fused kernels for faster predictions (run with `--use-cueq`).
-# Use either cueq-cu12 or cueq-cu13 depending on the CUDA version
-pip install colabfold[alphafold,openmm,cueq-cu13] jax[cuda13] openmm[cuda13]
 # CPU only
 pip install colabfold[alphafold,openmm]
 # For colabfold_search only (no structure prediction)
@@ -228,6 +225,10 @@ kill $PID1
 kill $PID2
 ```
 For more details, see [GPU-accelerated search](https://github.com/soedinglab/MMseqs2/wiki#gpu-accelerated-search).
+
+### Faster predictions on Ampere or newer GPUs
+
+On NVIDIA GPUs with compute capability >=8.0 (Ampere or newer), add `--use-pallas` to `colabfold_batch` for ~2.5x faster and slightly lower-memory predictions. It runs the Evoformer with fast fused Pallas/Triton kernels.
 
 ### Tutorials & Presentations
 - ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI).

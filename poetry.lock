@@ -15,15 +15,15 @@ files = [
 
 [[package]]
 name = "alphafold-colabfold"
-version = "2.3.14"
+version = "2.3.15"
 description = "An implementation of the inference pipeline of AlphaFold v2.3.1. This is a completely new model that was entered as AlphaFold2 in CASP14 and published in Nature. This package contains patches for colabfold."
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
-    {file = "alphafold_colabfold-2.3.14-py3-none-any.whl", hash = "sha256:53c33e460e249913619677611c4d449c756f3ca245b59c682cdd87d959d13ca9"},
-    {file = "alphafold_colabfold-2.3.14.tar.gz", hash = "sha256:d819a7243fafe7b91f61dbefa7051a0423dd58e84c0c6984eebffdeb3b99e483"},
+    {file = "alphafold_colabfold-2.3.15-py3-none-any.whl", hash = "sha256:09dc7a1fdc1f7800e65d8ce4da24466542bfd59fa1ea00411b7728f28892b0be"},
+    {file = "alphafold_colabfold-2.3.15.tar.gz", hash = "sha256:20bf91fbc612ef54c083737e711cb9bc2e54b1b31ce60a61f3208ed67e39bde3"},
 ]
 
 [package.dependencies]
@@ -435,130 +435,6 @@ test = ["Pillow", "contourpy[test-no-images]", "matplotlib"]
 test-no-images = ["pytest", "pytest-cov", "pytest-rerunfailures", "pytest-xdist", "wurlitzer"]
 
 [[package]]
-name = "cuequivariance"
-version = "0.10.0"
-description = "CUDA accelerated equivariant operations"
-optional = true
-python-versions = ">=3.10"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\")"
-files = [
-    {file = "cuequivariance-0.10.0-py3-none-any.whl", hash = "sha256:340f5160b99efe57f8a220db75747e59b8a0f9f3bbced7ec527c46f8cc615e87"},
-    {file = "cuequivariance-0.10.0.tar.gz", hash = "sha256:8be785f84a0c25b6b3e927e551078be261f0900c583a7c8c95744bcd5fa1967d"},
-]
-
-[package.dependencies]
-networkx = "*"
-numpy = "*"
-opt-einsum = "*"
-scipy = "*"
-sympy = "*"
-
-[package.extras]
-dev = ["graphviz", "pytest"]
-
-[[package]]
-name = "cuequivariance-jax"
-version = "0.10.0"
-description = "CUDA accelerated equivariant operations"
-optional = true
-python-versions = ">=3.10"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\")"
-files = [
-    {file = "cuequivariance_jax-0.10.0-py3-none-any.whl", hash = "sha256:bd49a9404a69e62fcc062e39b200c37bc26aa25baebfb8abbe19a4a89a0183ce"},
-    {file = "cuequivariance_jax-0.10.0.tar.gz", hash = "sha256:42b4f8e65790c9bbf9d9c3a1480da4aac3b93f94e0181116d547576d61970c8e"},
-]
-
-[package.dependencies]
-cuequivariance = "*"
-einops = "*"
-jax = ">=0.8.1"
-packaging = "*"
-
-[[package]]
-name = "cuequivariance-ops-cu12"
-version = "0.10.0"
-description = "cuequivariance-ops - GPU Accelerated Extensions for Equivariant Primitives"
-optional = true
-python-versions = ">=3.10"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and extra == \"cueq-cu12\""
-files = [
-    {file = "cuequivariance_ops_cu12-0.10.0-py3-none-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:446516fa0f576eefb453339d174227b7743ff806e882a14b72ff81282cd87c83"},
-    {file = "cuequivariance_ops_cu12-0.10.0-py3-none-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ca09836949cd86dd64fe7ef224b6212531049b94b9b5b4c1d928985eff0cf0b3"},
-]
-
-[package.dependencies]
-nvidia-cublas-cu12 = ">=12.5.0"
-nvidia-ml-py = "*"
-platformdirs = "*"
-tqdm = "*"
-
-[package.extras]
-test = ["numpy", "pytest"]
-
-[[package]]
-name = "cuequivariance-ops-cu13"
-version = "0.10.0"
-description = "cuequivariance-ops - GPU Accelerated Extensions for Equivariant Primitives"
-optional = true
-python-versions = ">=3.10"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and extra == \"cueq-cu13\""
-files = [
-    {file = "cuequivariance_ops_cu13-0.10.0-py3-none-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:839b6df3f5e8353d6fb7ed5e68da021b4c011a0627f25cd9ede7b77aaf545123"},
-    {file = "cuequivariance_ops_cu13-0.10.0-py3-none-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ebd13ab08fa6e4f9f22890cd9742cdda0b6018064ce568d8c2dea1b51c1b3990"},
-]
-
-[package.dependencies]
-nvidia-cublas = ">=12.5.0"
-nvidia-ml-py = "*"
-platformdirs = "*"
-tqdm = "*"
-
-[package.extras]
-test = ["numpy", "pytest"]
-
-[[package]]
-name = "cuequivariance-ops-jax-cu12"
-version = "0.10.0"
-description = "cuequivariance-ops-jax - GPU Accelerated JAX Extensions for Equivariant Primitives"
-optional = true
-python-versions = ">=3.10"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and extra == \"cueq-cu12\""
-files = [
-    {file = "cuequivariance_ops_jax_cu12-0.10.0-py3-none-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:05c3e447341764ba07f4353afbc620a093d09068b720547b8ddd9576805d4989"},
-    {file = "cuequivariance_ops_jax_cu12-0.10.0-py3-none-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:10ea7183a6935f329d4950c8f1b03020b9c5a89f20b35ef884d1f5a2798a7124"},
-]
-
-[package.dependencies]
-cuequivariance-ops-cu12 = "0.10.0"
-
-[package.extras]
-test = ["absl-py", "pytest"]
-
-[[package]]
-name = "cuequivariance-ops-jax-cu13"
-version = "0.10.0"
-description = "cuequivariance-ops-jax - GPU Accelerated JAX Extensions for Equivariant Primitives"
-optional = true
-python-versions = ">=3.10"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and extra == \"cueq-cu13\""
-files = [
-    {file = "cuequivariance_ops_jax_cu13-0.10.0-py3-none-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:b57fb24796bbd372cb94fa702e4abe0a13b96ffed34121bf131d9d3ab9f32dd1"},
-    {file = "cuequivariance_ops_jax_cu13-0.10.0-py3-none-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d8e9b83c169b8feedb629afcdc4d96f3e560c80fcbcb7dacc57c19be48d30cba"},
-]
-
-[package.dependencies]
-cuequivariance-ops-cu13 = "0.10.0"
-
-[package.extras]
-test = ["absl-py", "pytest"]
-
-[[package]]
 name = "cycler"
 version = "0.12.1"
 description = "Composable style cycles"
@@ -638,19 +514,6 @@ numpy = [
     {version = ">=1.21.2", markers = "python_version == \"3.10\""},
 ]
 wrapt = ">=1.11.2"
-
-[[package]]
-name = "einops"
-version = "0.8.2"
-description = "A new flavour of deep learning operations"
-optional = true
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\")"
-files = [
-    {file = "einops-0.8.2-py3-none-any.whl", hash = "sha256:54058201ac7087911181bfec4af6091bb59380360f069276601256a76af08193"},
-    {file = "einops-0.8.2.tar.gz", hash = "sha256:609da665570e5e265e27283aab09e7f279ade90c4f01bcfca111f3d3e13f2827"},
-]
 
 [[package]]
 name = "flatbuffers"
@@ -968,7 +831,7 @@ description = "Differentiate, compile, and transform Numpy code."
 optional = true
 python-versions = ">=3.11"
 groups = ["main"]
-markers = "python_version >= \"3.11\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\" or extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
+markers = "python_version >= \"3.11\" and (extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
 files = [
     {file = "jax-0.10.2-py3-none-any.whl", hash = "sha256:724d73c4678d8b06f6a6ab4db1b8a2fea8cd4f1e2c2564f99601634ec7b8d1c6"},
     {file = "jax-0.10.2.tar.gz", hash = "sha256:bf77428a8c2e6904c4f46d5ab12aa5cfc6cad2179f07f7e4c0fc75ac86ef0639"},
@@ -1034,7 +897,7 @@ description = "XLA library for JAX"
 optional = true
 python-versions = ">=3.11"
 groups = ["main"]
-markers = "python_version >= \"3.11\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\" or extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
+markers = "python_version >= \"3.11\" and (extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
 files = [
     {file = "jaxlib-0.10.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:5a98873fc867623b81f2bee15d554b8edd6588a183d01fa50d21b1e3db96ff2b"},
     {file = "jaxlib-0.10.2-cp311-cp311-manylinux_2_27_aarch64.whl", hash = "sha256:d44565dcfd1b4f60f76d911c6512118a8a4fc764bdef92663fecb8bfccd54f23"},
@@ -1487,7 +1350,7 @@ description = "ml_dtypes is a stand-alone implementation of several NumPy dtype 
 optional = true
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "python_version >= \"3.11\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\" or extra == \"alphafold\" or extra == \"alphafold-minus-jax\") or extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
+markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
     {file = "ml_dtypes-0.5.3-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:0a1d68a7cb53e3f640b2b6a34d12c0542da3dd935e560fdf463c0c77f339fc20"},
     {file = "ml_dtypes-0.5.3-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:0cd5a6c711b5350f3cbc2ac28def81cd1c580075ccb7955e61e9d8f4bfd40d24"},
@@ -1538,25 +1401,6 @@ numpy = [
 dev = ["absl-py", "pyink", "pylint (>=2.6.0)", "pytest", "pytest-xdist"]
 
 [[package]]
-name = "mpmath"
-version = "1.3.0"
-description = "Python library for arbitrary-precision floating-point arithmetic"
-optional = true
-python-versions = "*"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\")"
-files = [
-    {file = "mpmath-1.3.0-py3-none-any.whl", hash = "sha256:a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c"},
-    {file = "mpmath-1.3.0.tar.gz", hash = "sha256:7a28eb2a9774d00c7bc92411c19a89209d5da7c4c9a9e227be8330a23a25b91f"},
-]
-
-[package.extras]
-develop = ["codecov", "pycodestyle", "pytest (>=4.6)", "pytest-cov", "wheel"]
-docs = ["sphinx"]
-gmpy = ["gmpy2 (>=2.1.0a4) ; platform_python_implementation != \"PyPy\""]
-tests = ["pytest (>=4.6)"]
-
-[[package]]
 name = "mypy-extensions"
 version = "1.0.0"
 description = "Type system extensions for programs checked with the mypy type checker."
@@ -1580,54 +1424,6 @@ files = [
     {file = "namex-0.1.0-py3-none-any.whl", hash = "sha256:e2012a474502f1e2251267062aae3114611f07df4224b6e06334c57b0f2ce87c"},
     {file = "namex-0.1.0.tar.gz", hash = "sha256:117f03ccd302cc48e3f5c58a296838f6b89c83455ab8683a1e85f2a430aa4306"},
 ]
-
-[[package]]
-name = "networkx"
-version = "3.6"
-description = "Python package for creating and manipulating graphs and networks"
-optional = true
-python-versions = ">=3.11"
-groups = ["main"]
-markers = "python_version >= \"3.13\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\")"
-files = [
-    {file = "networkx-3.6-py3-none-any.whl", hash = "sha256:cdb395b105806062473d3be36458d8f1459a4e4b98e236a66c3a48996e07684f"},
-    {file = "networkx-3.6.tar.gz", hash = "sha256:285276002ad1f7f7da0f7b42f004bcba70d381e936559166363707fdad3d72ad"},
-]
-
-[package.extras]
-benchmarking = ["asv", "virtualenv"]
-default = ["matplotlib (>=3.8)", "numpy (>=1.25)", "pandas (>=2.0)", "scipy (>=1.11.2)"]
-developer = ["mypy (>=1.15)", "pre-commit (>=4.1)"]
-doc = ["intersphinx-registry", "myst-nb (>=1.1)", "numpydoc (>=1.8.0)", "pillow (>=10)", "pydata-sphinx-theme (>=0.16)", "sphinx (>=8.0)", "sphinx-gallery (>=0.18)", "texext (>=0.6.7)"]
-example = ["cairocffi (>=1.7)", "contextily (>=1.6)", "igraph (>=0.11)", "iplotx (>=0.9.0)", "momepy (>=0.7.2)", "osmnx (>=2.0.0)", "scikit-learn (>=1.5)", "seaborn (>=0.13)"]
-extra = ["lxml (>=4.6)", "pydot (>=3.0.1)", "pygraphviz (>=1.14)", "sympy (>=1.10)"]
-release = ["build (>=0.10)", "changelist (==0.5)", "twine (>=4.0)", "wheel (>=0.40)"]
-test = ["pytest (>=7.2)", "pytest-cov (>=4.0)", "pytest-xdist (>=3.0)"]
-test-extras = ["pytest-mpl", "pytest-randomly"]
-
-[[package]]
-name = "networkx"
-version = "3.6.1"
-description = "Python package for creating and manipulating graphs and networks"
-optional = true
-python-versions = "!=3.14.1,>=3.11"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and python_version < \"3.13\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\")"
-files = [
-    {file = "networkx-3.6.1-py3-none-any.whl", hash = "sha256:d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762"},
-    {file = "networkx-3.6.1.tar.gz", hash = "sha256:26b7c357accc0c8cde558ad486283728b65b6a95d85ee1cd66bafab4c8168509"},
-]
-
-[package.extras]
-benchmarking = ["asv", "virtualenv"]
-default = ["matplotlib (>=3.8)", "numpy (>=1.25)", "pandas (>=2.0)", "scipy (>=1.11.2)"]
-developer = ["mypy (>=1.15)", "pre-commit (>=4.1)"]
-doc = ["intersphinx-registry", "myst-nb (>=1.1)", "numpydoc (>=1.8.0)", "pillow (>=10)", "pydata-sphinx-theme (>=0.16)", "sphinx (>=8.0)", "sphinx-gallery (>=0.18)", "texext (>=0.6.7)"]
-example = ["cairocffi (>=1.7)", "contextily (>=1.6)", "igraph (>=0.11)", "iplotx (>=0.9.0)", "momepy (>=0.7.2)", "osmnx (>=2.0.0)", "scikit-learn (>=1.5)", "seaborn (>=0.13)"]
-extra = ["lxml (>=4.6)", "pydot (>=3.0.1)", "pygraphviz (>=1.14)", "sympy (>=1.10)"]
-release = ["build (>=0.10)", "changelist (==0.5)", "twine (>=4.0)", "wheel (>=0.40)"]
-test = ["pytest (>=7.2)", "pytest-cov (>=4.0)", "pytest-xdist (>=3.0)"]
-test-extras = ["pytest-mpl", "pytest-randomly"]
 
 [[package]]
 name = "numpy"
@@ -1695,81 +1491,6 @@ files = [
 ]
 
 [[package]]
-name = "nvidia-cublas"
-version = "13.5.1.27"
-description = "CUBLAS native runtime libraries"
-optional = true
-python-versions = ">=3"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and extra == \"cueq-cu13\""
-files = [
-    {file = "nvidia_cublas-13.5.1.27-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:bc355b10e35b01cf88e8dcc0fbe0fd1ef86a05fddae78a44dc133d7e63eaf973"},
-    {file = "nvidia_cublas-13.5.1.27-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:db3a1f0c8bc24945a4d195ba199d83f27e650ffdfc0c32e6b8362c314f14d553"},
-    {file = "nvidia_cublas-13.5.1.27-py3-none-win_amd64.whl", hash = "sha256:234a2e89682080421431d2f2ea422fc2ad7d0b462336ccdfde76c559c906c670"},
-]
-
-[package.dependencies]
-nvidia-cuda-nvrtc = "*"
-
-[[package]]
-name = "nvidia-cublas-cu12"
-version = "12.9.2.10"
-description = "CUBLAS native runtime libraries"
-optional = true
-python-versions = ">=3"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and extra == \"cueq-cu12\""
-files = [
-    {file = "nvidia_cublas_cu12-12.9.2.10-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:5572131a59c3eebeeb1c4c8144f772d49372c20124916e072a0e3fc30df421d5"},
-    {file = "nvidia_cublas_cu12-12.9.2.10-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:e4f53a8ca8c5d6e8c492d0d0a3d565ecb59a751b19cfdaa4f6da0ab2104c1702"},
-    {file = "nvidia_cublas_cu12-12.9.2.10-py3-none-win_amd64.whl", hash = "sha256:623f43027d40d44ceadf0043f002bd25cf353e8f13ce90b9a87057019f560661"},
-]
-
-[package.dependencies]
-nvidia-cuda-nvrtc-cu12 = "*"
-
-[[package]]
-name = "nvidia-cuda-nvrtc"
-version = "13.3.33"
-description = "NVRTC native runtime libraries"
-optional = true
-python-versions = ">=3"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and extra == \"cueq-cu13\""
-files = [
-    {file = "nvidia_cuda_nvrtc-13.3.33-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:82530788b8c6164a54d3fd9ae8bcca8893d397c4aeb998861982a03bbe41e204"},
-    {file = "nvidia_cuda_nvrtc-13.3.33-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:7b05ecda494c6dabc44231a608b060a71008a730d9dfda932cc508e6d29159e0"},
-    {file = "nvidia_cuda_nvrtc-13.3.33-py3-none-win_amd64.whl", hash = "sha256:7d2af818851c0c224d5f92221e9226e51ee23c236df4b51f9194563979c888be"},
-]
-
-[[package]]
-name = "nvidia-cuda-nvrtc-cu12"
-version = "12.9.86"
-description = "NVRTC native runtime libraries"
-optional = true
-python-versions = ">=3"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and extra == \"cueq-cu12\""
-files = [
-    {file = "nvidia_cuda_nvrtc_cu12-12.9.86-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:210cf05005a447e29214e9ce50851e83fc5f4358df8b453155d5e1918094dcb4"},
-    {file = "nvidia_cuda_nvrtc_cu12-12.9.86-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:096d4de6bda726415dfaf3198d4f5c522b8e70139c97feef5cd2ca6d4cd9cead"},
-    {file = "nvidia_cuda_nvrtc_cu12-12.9.86-py3-none-win_amd64.whl", hash = "sha256:72972ebdcf504d69462d3bcd67e7b81edd25d0fb85a2c46d3ea3517666636349"},
-]
-
-[[package]]
-name = "nvidia-ml-py"
-version = "13.610.43"
-description = "Python Bindings for the NVIDIA Management Library"
-optional = true
-python-versions = "*"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\")"
-files = [
-    {file = "nvidia_ml_py-13.610.43-py3-none-any.whl", hash = "sha256:f13c72698edef492f985cc225f14faafe68ae065a2e407f45bdf6f4b9b43fde8"},
-    {file = "nvidia_ml_py-13.610.43.tar.gz", hash = "sha256:65437eb73d68d0c62c931ca4d45038472faff03bd0b8729abba4b899f70d60f2"},
-]
-
-[[package]]
 name = "openmm"
 version = "8.4.0.post2"
 description = "Python wrapper for OpenMM (a C++ MD package)"
@@ -1810,7 +1531,7 @@ description = "Optimizing numpys einsum function"
 optional = true
 python-versions = ">=3.5"
 groups = ["main"]
-markers = "python_version >= \"3.11\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\" or extra == \"alphafold\" or extra == \"alphafold-minus-jax\") or extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
+markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
     {file = "opt_einsum-3.3.0-py3-none-any.whl", hash = "sha256:2455e59e3947d3c275477df7f5205b30635e266fe6dc300e3d9f9646bfcea147"},
     {file = "opt_einsum-3.3.0.tar.gz", hash = "sha256:59f6475f77bbc37dcf7cd748519c0ec60722e91e63ca114e68821c0c54a46549"},
@@ -2214,12 +1935,11 @@ version = "4.1.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 optional = false
 python-versions = ">=3.8"
-groups = ["main", "dev"]
+groups = ["dev"]
 files = [
     {file = "platformdirs-4.1.0-py3-none-any.whl", hash = "sha256:11c8f37bcca40db96d8144522d925583bdb7a31f7b0e37e3ed4318400a8e2380"},
     {file = "platformdirs-4.1.0.tar.gz", hash = "sha256:906d548203468492d432bcb294d4bc2fff751bf84971fbb2c10918cc206ee420"},
 ]
-markers = {main = "python_version >= \"3.11\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\")"}
 
 [package.extras]
 docs = ["furo (>=2023.7.26)", "proselint (>=0.13)", "sphinx (>=7.1.1)", "sphinx-autodoc-typehints (>=1.24)"]
@@ -2484,7 +2204,7 @@ description = "Fundamental algorithms for scientific computing in Python"
 optional = true
 python-versions = ">=3.10"
 groups = ["main"]
-markers = "python_version >= \"3.11\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\" or extra == \"alphafold\" or extra == \"alphafold-minus-jax\") or extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
+markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
     {file = "scipy-1.15.3-cp310-cp310-macosx_10_13_x86_64.whl", hash = "sha256:a345928c86d535060c9c2b25e71e87c39ab2f22fc96e9636bd74d1dbf9de448c"},
     {file = "scipy-1.15.3-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:ad3432cb0f9ed87477a8d97f03b763fd1d57709f1bbde3c9369b1dff5503b253"},
@@ -2549,7 +2269,7 @@ description = "Easily download, build, install, upgrade, and uninstall Python pa
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\" or sys_platform == \"linux\" and python_version >= \"3.13\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\" or extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
+markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
     {file = "setuptools-69.0.3-py3-none-any.whl", hash = "sha256:385eb4edd9c9d5c17540511303e39a147ce2fc04bc55289c322b9e5904fe2c05"},
     {file = "setuptools-69.0.3.tar.gz", hash = "sha256:be1af57fc409f93647f2e8e4573a142ed38724b8cdd389706a867bb4efcf1e78"},
@@ -2571,25 +2291,6 @@ files = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
 ]
-
-[[package]]
-name = "sympy"
-version = "1.14.0"
-description = "Computer algebra system (CAS) in Python"
-optional = true
-python-versions = ">=3.9"
-groups = ["main"]
-markers = "python_version >= \"3.11\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\")"
-files = [
-    {file = "sympy-1.14.0-py3-none-any.whl", hash = "sha256:e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5"},
-    {file = "sympy-1.14.0.tar.gz", hash = "sha256:d3d3fe8df1e5a0b42f0e7bdf50541697dbe7d23746e894990c030e2b05e72517"},
-]
-
-[package.dependencies]
-mpmath = ">=1.1.0,<1.4"
-
-[package.extras]
-dev = ["hypothesis (>=6.70.0)", "pytest (>=7.1.0)"]
 
 [[package]]
 name = "tabulate"
@@ -2827,59 +2528,6 @@ slack = ["slack-sdk"]
 telegram = ["requests"]
 
 [[package]]
-name = "triton"
-version = "3.3.1"
-description = "A language and compiler for custom Deep Learning operations"
-optional = true
-python-versions = "*"
-groups = ["main"]
-markers = "sys_platform == \"linux\" and python_version >= \"3.13\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\")"
-files = [
-    {file = "triton-3.3.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b74db445b1c562844d3cfad6e9679c72e93fdfb1a90a24052b03bb5c49d1242e"},
-    {file = "triton-3.3.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b31e3aa26f8cb3cc5bf4e187bf737cbacf17311e1112b781d4a059353dfd731b"},
-    {file = "triton-3.3.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9999e83aba21e1a78c1f36f21bce621b77bcaa530277a50484a7cb4a822f6e43"},
-    {file = "triton-3.3.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b89d846b5a4198317fec27a5d3a609ea96b6d557ff44b56c23176546023c4240"},
-    {file = "triton-3.3.1-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a3198adb9d78b77818a5388bff89fa72ff36f9da0bc689db2f0a651a67ce6a42"},
-    {file = "triton-3.3.1-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f6139aeb04a146b0b8e0fbbd89ad1e65861c57cfed881f21d62d3cb94a36bab7"},
-]
-
-[package.dependencies]
-setuptools = ">=40.8.0"
-
-[package.extras]
-build = ["cmake (>=3.20)", "lit"]
-tests = ["autopep8", "isort", "llnl-hatchet", "numpy", "pytest", "pytest-forked", "pytest-xdist", "scipy (>=1.7.1)"]
-tutorials = ["matplotlib", "pandas", "tabulate"]
-
-[[package]]
-name = "triton"
-version = "3.7.1"
-description = "A language and compiler for custom Deep Learning operations"
-optional = true
-python-versions = "<3.15,>=3.10"
-groups = ["main"]
-markers = "sys_platform == \"linux\" and python_version >= \"3.11\" and python_version < \"3.13\" and (extra == \"cueq-cu12\" or extra == \"cueq-cu13\")"
-files = [
-    {file = "triton-3.7.1-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:3daf64305d6cea88d3334c65ebc9bcd0c64c9564a977084366aa768d57cbcf64"},
-    {file = "triton-3.7.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ee89fbf782ec2ad50391dd1cf26cbea4f4467154c37f4773026da8fc31c0f58e"},
-    {file = "triton-3.7.1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:d4a0e1cd4c4a76370ed74a8432a53cea28716827d19e40ffc732233e35ceb3f6"},
-    {file = "triton-3.7.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6744957e9fd610a29680ec2346057d0c86948ed3812468670719f391e94b44a5"},
-    {file = "triton-3.7.1-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:9497f2e696ee368862a181a90b2dcc03ca978cc4f602abd67c7d81022a6988e1"},
-    {file = "triton-3.7.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:7e40869937a68206ec70d7f25bb7ec6433cb083f9135e1f36dbd318dc449a728"},
-    {file = "triton-3.7.1-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:cdbfc09d9ec58bc5e68321525653220de7515c199e7a8097a97c85e62b52cd0a"},
-    {file = "triton-3.7.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:58c0e131da05134a2a4788ccbcc0c1105cf0f54c8e98f19e34cd465396dc15eb"},
-    {file = "triton-3.7.1-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:fe4ea396a06171f1f1f58cbd39c70b09294398f7dd7c620939bab54ad6f934fa"},
-    {file = "triton-3.7.1-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:2020153b08280415ec0da6607834e79166442147e78e144df06b508c75b186d2"},
-    {file = "triton-3.7.1-cp314-cp314t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c58e4c61f0c73b5dba3b5d19b4a7093c32f90dc18b2a7f121a7c16ccd31107b7"},
-    {file = "triton-3.7.1-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:10ba85fa2cca4a2fbdeb36bf1cb082f2c252bda55bf9fccd74f65ec5bc647e68"},
-]
-
-[package.extras]
-build = ["cmake (>=3.20,<4.0)", "lit"]
-tests = ["autopep8", "isort", "llnl-hatchet", "numpy", "pytest", "pytest-forked", "pytest-xdist", "scipy (>=1.7.1)"]
-tutorials = ["matplotlib", "pandas", "tabulate"]
-
-[[package]]
 name = "typing-extensions"
 version = "4.15.0"
 description = "Backported and Experimental Type Hints for Python 3.9+"
@@ -3060,11 +2708,9 @@ type = ["pytest-mypy"]
 [extras]
 alphafold = ["absl-py", "alphafold-colabfold", "dm-haiku", "dm-tree", "jax", "py3Dmol", "tensorflow", "tensorflow-cpu"]
 alphafold-minus-jax = ["absl-py", "alphafold-colabfold", "dm-haiku", "dm-tree", "py3Dmol", "tensorflow", "tensorflow-cpu"]
-cueq-cu12 = ["cuequivariance-jax", "cuequivariance-ops-jax-cu12", "triton"]
-cueq-cu13 = ["cuequivariance-jax", "cuequivariance-ops-jax-cu13", "triton"]
 openmm = ["openmm", "pdbfixer"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "07f3caf3daa9ea0a463019a5e21ba32553633baa39688950d35b6398f0a2d817"
+content-hash = "cb735df781665bdebdd22aab50a911fce2fe7fe17bd573827ac7add96fdb7a58"

@@ -378,6 +378,15 @@ def get_queries(
     if sort_queries_by == "length":
         queries.sort(key=lambda t: len("".join(t[1])))
 
+    elif sort_queries_by == "msa_depth":
+        # Deepest MSA first
+        def _a3m_depth(a3m_lines):
+            if not a3m_lines:
+                return 0
+            text = a3m_lines[0] if isinstance(a3m_lines, list) else a3m_lines
+            return sum(1 for ln in text.splitlines() if ln.startswith(">"))
+        queries.sort(key=lambda t: _a3m_depth(t[2]), reverse=True)
+
     elif sort_queries_by == "random":
         random.shuffle(queries)
 

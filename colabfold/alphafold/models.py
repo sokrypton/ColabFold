@@ -78,7 +78,7 @@ def load_models_and_params(
     save_all: bool = False,
     calc_extra_ptm: bool = False,
     use_probs_extra: bool = True,
-    use_cueq: bool = False
+    use_pallas: bool = False
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -118,7 +118,7 @@ def load_models_and_params(
             model_config.model.global_config.bfloat16 = use_bfloat16
 
             # cuEquivariance fused kernels
-            model_config.model.global_config.use_cueq = use_cueq
+            model_config.model.global_config.use_pallas = use_pallas
 
             # set fuse options
             model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights = use_fuse
