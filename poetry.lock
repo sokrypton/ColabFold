@@ -15,15 +15,15 @@ files = [
 
 [[package]]
 name = "alphafold-colabfold"
-version = "2.3.15"
+version = "2.3.16"
 description = "An implementation of the inference pipeline of AlphaFold v2.3.1. This is a completely new model that was entered as AlphaFold2 in CASP14 and published in Nature. This package contains patches for colabfold."
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
-    {file = "alphafold_colabfold-2.3.15-py3-none-any.whl", hash = "sha256:09dc7a1fdc1f7800e65d8ce4da24466542bfd59fa1ea00411b7728f28892b0be"},
-    {file = "alphafold_colabfold-2.3.15.tar.gz", hash = "sha256:20bf91fbc612ef54c083737e711cb9bc2e54b1b31ce60a61f3208ed67e39bde3"},
+    {file = "alphafold_colabfold-2.3.16-py3-none-any.whl", hash = "sha256:a9b5a37b97134272521a32ff4f720bfe931abe5f387badb21efcc92fb28dcd42"},
+    {file = "alphafold_colabfold-2.3.16.tar.gz", hash = "sha256:a06e634f2d73180b19b990d9e839e45df686a382772e7e051cc0b2c5084709d8"},
 ]
 
 [package.dependencies]
@@ -2713,4 +2713,4 @@ openmm = ["openmm", "pdbfixer"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "cb735df781665bdebdd22aab50a911fce2fe7fe17bd573827ac7add96fdb7a58"
+content-hash = "77808da13510e36db8672e506e3f0883d6befabc701addd79e6e5110defeb10d"
