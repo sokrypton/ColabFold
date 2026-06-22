@@ -42,7 +42,7 @@ except ModuleNotFoundError:
 
 from alphafold.common import protein, residue_constants
 
-# delay imports of tensorflow, jax and numpy
+# delay imports of jax and numpy
 # loading these for type checking only can take around 10 seconds just to show a CLI usage message
 if TYPE_CHECKING:
     import haiku
@@ -1254,11 +1254,7 @@ def run(
             logger.info("WARNING: no GPU detected, will be using CPU")
             use_gpu_relax = False
         else:
-            import tensorflow as tf
-            tf.get_logger().setLevel(logging.ERROR)
             logger.info('Running on GPU')
-            # disable GPU on tensorflow
-            tf.config.set_visible_devices([], 'GPU')
 
     from colabfold.alphafold.models import load_models_and_params
 
