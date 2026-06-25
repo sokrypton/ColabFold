@@ -40,10 +40,11 @@ RUN apt-get update; \
     rm -rf /var/lib/apt/lists/*;
 
 SHELL ["/bin/bash", "--login", "-x", "-c"]
-RUN wget -qnc https://github.com/conda-forge/miniforge/releases/download/${CONDA_VERSION}/Miniforge3-${CONDA_VERSION}-Linux-x86_64.sh; \
-    bash Miniforge3-${CONDA_VERSION}-Linux-x86_64.sh -bfp /usr/local; \
+RUN MINIFORGE="Miniforge3-${CONDA_VERSION}-Linux-$(uname -m).sh"; \
+    wget -qnc https://github.com/conda-forge/miniforge/releases/download/${CONDA_VERSION}/${MINIFORGE}; \
+    bash ${MINIFORGE} -bfp /usr/local; \
     conda config --set auto_update_conda false; \
-    rm -f Miniforge3-${CONDA_VERSION}-Linux-x86_64.sh; \
+    rm -f ${MINIFORGE}; \
     conda install -y -c conda-forge -c bioconda kalign2=2.04 hhsuite=3.3.0; \
     conda clean -afy; \
     conda shell.bash hook;
