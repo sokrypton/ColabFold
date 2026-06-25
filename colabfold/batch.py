@@ -1275,6 +1275,7 @@ def run(
     use_fuse              = kwargs.pop("use_fuse", True)
     use_bfloat16          = kwargs.pop("use_bfloat16", True)
     use_pallas            = kwargs.pop("use_pallas", False)
+    compile_mode          = kwargs.pop("compile_mode", "tuned")
     if use_pallas and not use_bfloat16:
         raise ValueError("use_pallas requires bfloat16")
     max_msa               = kwargs.pop("max_msa",None)
@@ -1371,6 +1372,7 @@ def run(
         "use_fuse": use_fuse,
         "use_bfloat16": use_bfloat16,
         "use_pallas": use_pallas,
+        "compile_mode": compile_mode,
         "version": importlib_metadata.version("colabfold"),
         "calc_extra_ptm": calc_extra_ptm,
         "use_probs_extra": use_probs_extra,
@@ -1572,7 +1574,8 @@ def run(
                         use_bfloat16=use_bfloat16,
                         save_all=save_all,
                         calc_extra_ptm=calc_extra_ptm,
-                        use_pallas=use_pallas
+                        use_pallas=use_pallas,
+                        compile_mode=compile_mode
                     )
                     first_job = False
 
@@ -2135,6 +2138,15 @@ def main():
         help="Use Pallas/Triton kernels for faster prediction",
     )
     adv_group.add_argument(
+        "--compile-mode",
+        choices=["fast", "tuned", "full"],
+        default="tuned",
+        help="Kernel autotuning effort, trading compile time for inference speed: "
+        "'fast': cuBLAS only, fastest compile, ~4%% slower inference, single/one-off predictions. "
+        "'tuned': fixed, tuned kernel shape compiled with cuBLAS and Pallas, fast compile and ~1%% off optimal. "
+        "'full': unbounded Kernel autotune, can take tens of minutes to compile for longsequences  but optimal inference, can be worth it for large batches."
+    )
+    adv_group.add_argument(
         "--debug-logging",
         default=False,
         action="store_true",
@@ -2284,6 +2296,7 @@ def main():
         max_template_date=args.max_template_date,
         max_template_hits=args.max_template_hits,
         use_pallas=args.use_pallas,
+        compile_mode=args.compile_mode,
     )
 
 if __name__ == "__main__":

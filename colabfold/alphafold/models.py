@@ -6,6 +6,22 @@ from alphafold.model import model, config, data
 from alphafold.model.modules import AlphaFold
 from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
 
+def _compile_jit_kwargs(compile_mode: str) -> dict:
+    import jaxlib
+    # These params won across GB10/L40S/A100, however exact tile is not very important anyway
+    if tuple(int(x) for x in jaxlib.__version__.split(".")[:2]) < (0, 10):
+        # jaxlib < 0.10 checks for split_k, now deprecated
+        tuned = "block_m: 64 block_n: 64 block_k: 16 split_k: 1 num_stages: 3 num_warps: 4 num_ctas: 1"
+    else:
+        tuned = "block_m: 64 block_n: 64 block_k: 16 num_stages: 3 num_warps: 4 num_ctas: 1"
+    copts = {
+        "fast":  {"xla_gpu_enable_triton_gemm": False},
+        "tuned": {"xla_gpu_override_gemm_autotuner": tuned},
+        "full":  None,
+    }.get(compile_mode)
+    return {"compiler_options": copts} if copts else {}
+
+
 def get_model_haiku_params(
     data_dir: str,
     model_type: str,
@@ -78,7 +94,8 @@ def load_models_and_params(
     save_all: bool = False,
     calc_extra_ptm: bool = False,
     use_probs_extra: bool = True,
-    use_pallas: bool = False
+    use_pallas: bool = False,
+    compile_mode: str = "tuned"
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -174,7 +191,8 @@ def load_models_and_params(
                 model_config,
                 params,
                 extended_ptm_config={'calc_extended_ptm': calc_extra_ptm,
-                                     'use_probs_extended': use_probs_extra}
+                                     'use_probs_extended': use_probs_extra},
+                jit_kwargs=_compile_jit_kwargs(compile_mode)
             )
         
         params = get_model_haiku_params(

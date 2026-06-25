@@ -226,9 +226,28 @@ kill $PID2
 ```
 For more details, see [GPU-accelerated search](https://github.com/soedinglab/MMseqs2/wiki#gpu-accelerated-search).
 
+## Model compile time and the compilation cache
+
+ColabFold builds an optimized version of the model the first time it sees a new sequence length or MSA depth. That one-time setup can take minutes. For repeated predictions, you can set up a persistent cache so the compile time is paid once and reused:
+
+```bash
+export JAX_COMPILATION_CACHE_DIR=$HOME/.cache/colabfold_jax
+colabfold_batch ...
+```
+
+The saved model is reused only when the next run matches the previous one, including the GPU, driver, and JAX versions, and the same sequence length and MSA depth.
+
+- The cache speeds up repeated predictions on the same machine. The cache can only be reused across machines with identical specs and software versions.
+- Every new sequence length or MSA depth triggers a fresh compile. ColabFold reduces this by grouping similar lengths together (`--recompile-padding`) and sorting each batch so similar shapes run back to back (`--sort-queries-by`). Use `length` for monomers (default) and `msa_depth` for repeated multimers of the same length. This way compilation can be reused across multiple predictions.
+- If anything changes (drivers or dependencies), the next prediction compiles again and the old cache is ignored.
+
 ### Faster predictions on Ampere or newer GPUs
 
-On NVIDIA GPUs with compute capability >=8.0 (Ampere or newer), add `--use-pallas` to `colabfold_batch` for ~2.5x faster and slightly lower-memory predictions. It runs the Evoformer with fast fused Pallas/Triton kernels.
+On NVIDIA GPUs with compute capability >=8.0 (Ampere or newer), add `--use-pallas` to `colabfold_batch` for ~2.5x faster, slightly lower-memory predictions. It runs the Evoformer with fast fused Pallas/Triton kernels.
+
+### Trading compile time for folding speed
+
+The `--compile-mode` flag trades compile time against folding speed. The difference is small (1-5%), but can matter for very large batches or very long sequences. `fast` and `tuned` (default) skip or reduce the compile optimization effort. `full` is unbounded and can take tens of minutes, but that cost can amortize over hundreds of predictions.
 
 ### Tutorials & Presentations
 - ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI).
