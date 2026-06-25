@@ -27,6 +27,8 @@ RUN mkdir binaries; \
 
 FROM debian:trixie-slim
 
+ARG CUDA=cuda12
+
 VOLUME cache
 ENV MPLBACKEND=Agg
 ENV MPLCONFIGDIR=/cache
@@ -50,7 +52,7 @@ COPY --from=builder /opt/build/binaries/* /usr/local/bin/
 WORKDIR /app
 COPY . /app
 RUN pip install --no-cache-dir \
-        ".[alphafold,openmm,pallas]" \
-        "jax[cuda12]<0.11" \
-        "openmm[cuda12]"; \
+        ".[alphafold,openmm]" \
+        "jax[${CUDA}]<0.11" \
+        "openmm[${CUDA}]"; \
     rm -rf /root/.cache/pip

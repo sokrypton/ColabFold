@@ -19,6 +19,9 @@ env:
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cuda: [cuda12, cuda13]
     permissions:
       contents: read
       packages: write
@@ -51,7 +54,9 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:${{ env.COLABFOLD_VERSION }}-cuda12
+          build-args: |
+            CUDA=${{ matrix.cuda }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:${{ env.COLABFOLD_VERSION }}-${{ matrix.cuda }}
           platforms: linux/amd64 # ,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.cuda }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.cuda }}
