@@ -1,3 +1,4 @@
+import contextlib
 import json
 import lzma
 import os
@@ -12,6 +13,21 @@ import numpy as np
 from alphafold.model.features import FeatureDict
 from alphafold.model.model import RunModel
 from colabfold.colabfold import run_mmseqs2
+
+
+@contextlib.contextmanager
+def _pickle_compat():
+  import jax._src.core
+  orig = jax._src.core.ShapedArray.update
+  def patched(self, *args, **kwargs):
+    for k in ("named_shape",):
+      kwargs.pop(k, None)
+    return orig(self, *args, **kwargs)
+  jax._src.core.ShapedArray.update = patched
+  try:
+    yield
+  finally:
+    jax._src.core.ShapedArray.update = orig
 
 def jnp_to_np(output: Dict[str, Any]) -> Dict[str, Any]:
   """Recursively changes jax arrays to numpy arrays."""
@@ -68,10 +84,11 @@ class MockRunModel:
         pickle.dump(prev_pred, fp)
     
     else:
-      with lzma.open(feat_file) as handle:
-        prev_feat = pickle.load(handle)
-      with lzma.open(pred_file) as handle:
-        prev_pred = pickle.load(handle)
+      with _pickle_compat():
+        with lzma.open(feat_file) as handle:
+          prev_feat = pickle.load(handle)
+        with lzma.open(pred_file) as handle:
+          prev_pred = pickle.load(handle)
     
     def cmp_dict(x,y):
       ''' check if two dictionaries are "allclose" '''
