@@ -26,8 +26,8 @@ matplotlib = "^3.8.4"
 biopython = "<1.86"
 numpy = "^2.0.2"
 pandas = "^2.2.2"
-alphafold-colabfold = { version = "2.3.17", optional = true }
-#alphafold-colabfold = { path = "../alphafold", develop = true, optional = true }
+alphafold-colabfold = { version = "2.3.18", optional = true }
+#alphafold-colabfold = { path = "..", develop = true, optional = true }
 requests = "^2.26.0"
 tqdm = "^4.62.2"
 appdirs = "^1.4.4"
