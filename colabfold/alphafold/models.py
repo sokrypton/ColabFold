@@ -8,8 +8,9 @@ from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
 
 def _compile_jit_kwargs(compile_mode: str) -> dict:
     import jaxlib
+    from packaging.version import Version
     # These params won across GB10/L40S/A100, however exact tile is not very important anyway
-    if tuple(int(x) for x in jaxlib.__version__.split(".")[:2]) < (0, 10):
+    if Version(jaxlib.__version__) < Version("0.10.1"):
         # jaxlib < 0.10 checks for split_k, now deprecated
         tuned = "block_m: 64 block_n: 64 block_k: 16 split_k: 1 num_stages: 3 num_warps: 4 num_ctas: 1"
     else:
