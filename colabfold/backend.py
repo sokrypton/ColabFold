@@ -1,0 +1,107 @@
+"""
+Folding backend interface.
+
+``colabfold.batch`` drives prediction through a :class:`FoldingBackend` chosen
+once per run by :func:`get_backend` from the ``model_type`` string.
+
+- ``RunOptions`` carries the run knobs plus an opaque ``backend_opts`` dict for
+  backend-private settings (e.g. use_pallas / compile_mode).
+- ``backend.predict(...)`` returns ``{"rank", "metric", "result_files"}``:
+  ranked tags, scalar score dicts, and file paths.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+
+
+@dataclass
+class RunOptions:
+    model_type: str
+    num_models: int = 1
+    num_seeds: int = 1
+    num_recycles: Optional[int] = None
+    recycle_early_stop_tolerance: Optional[float] = None
+    use_templates: bool = False
+    max_template_date: str = "2100-01-01"
+    max_template_hits: int = 20
+    rank_by: str = "auto"
+    stop_at_score: float = 100.0
+    random_seed: int = 0
+    initial_guess: Optional[str] = None
+    # relaxation
+    num_relax: int = 0
+    relax_max_iterations: int = 0
+    relax_tolerance: float = 2.39
+    relax_stiffness: float = 10.0
+    relax_max_outer_iterations: int = 3
+    use_gpu_relax: bool = False
+    # outputs
+    save_all: bool = False
+    save_single_representations: bool = False
+    save_pair_representations: bool = False
+    save_recycles: bool = False
+    # resources / sizing
+    data_dir: Path = Path(".")
+    max_seq: Optional[int] = None
+    max_extra_seq: Optional[int] = None
+    # opaque, backend-private
+    backend_opts: Dict[str, Any] = field(default_factory=dict)
+
+    def opt(self, key: str, default: Any = None) -> Any:
+        return self.backend_opts.get(key, default)
+
+
+@runtime_checkable
+class FoldingBackend(Protocol):
+    def configure(self, opts: RunOptions, *, max_len, max_num, num_queries,
+                  msa_mode, is_complex, use_templates) -> None:
+        ...
+
+    def featurize(
+        self,
+        query_seqs_unique: List[str],
+        query_seqs_cardinality: List[int],
+        unpaired_msa,
+        paired_msa,
+        template_results,
+        is_complex: bool,
+        opts: RunOptions,
+    ):
+        ...
+
+    def predict(
+        self,
+        prefix: str,
+        result_dir: Path,
+        model_input: Dict[str, Any],
+        is_complex: bool,
+        sequences_lengths: List[int],
+        opts: RunOptions,
+        prediction_callback=None,
+    ) -> Dict[str, Any]:
+        ...
+
+    def config_dict(self, opts: RunOptions) -> Dict[str, Any]:
+        ...
+
+    def plot_extra_metrics(self, scores, fig_path) -> None:
+        ...
+
+
+_current_backend = None
+
+def get_backend(model_type: str) -> FoldingBackend:
+    global _current_backend
+    if model_type.startswith("alphafold2") or model_type.startswith("deepfold"):
+        from colabfold.alphafold.backend import AF2Backend
+        _current_backend = AF2Backend(model_type)
+        return _current_backend
+    raise NotImplementedError(
+        f"model_type {model_type!r} is not implemented yet"
+    )
+
+
+def get_current_backend() -> FoldingBackend | None:
+    return _current_backend

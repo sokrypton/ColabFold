@@ -10,15 +10,14 @@ def relax_me(
     stiffness=10.0,
     max_outer_iterations=3
 ):
-    from alphafold.common import protein
-    from alphafold.relax import relax
+    from colabfold.alphafold import structure
 
     if pdb_obj is None:
         if pdb_lines is None:
             pdb_lines = Path(pdb_filename).read_text()
-        pdb_obj = protein.from_pdb_string(pdb_lines)
+        pdb_obj = structure.from_pdb_string(pdb_lines)
 
-    amber_relaxer = relax.AmberRelaxation(
+    amber_relaxer = structure.amber_relaxation(
         max_iterations=max_iterations,
         tolerance=tolerance,
         stiffness=stiffness,

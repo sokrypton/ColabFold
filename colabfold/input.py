@@ -312,7 +312,7 @@ def get_queries(
                     protein_queries, other_queries = classify_molecules(sequence)
                     queries.append((header, protein_queries, None, other_queries))
         elif input_path.suffix in [".pdb", ".cif"]:
-            from alphafold.common import protein
+            from colabfold.alphafold.structure import protein
             if input_path.suffix == ".pdb":
                 pdb_string = pdb_to_string(input_path.read_text())
                 prot = protein.from_pdb_string(pdb_string)
