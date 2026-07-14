@@ -553,10 +553,14 @@ def main():
                 query_seqs_cardinality,
                 other_molecules,
             ) in enumerate(queries_unique):
-                unpaired_msa = []
+                # Only build MSAs that we fill
                 paired_msa = None
-                if len(query_seqs_cardinality) > 1:
+                unpaired_msa = None
+                # sum > 1 allows homomer pairing
+                if keep_paired and sum(query_seqs_cardinality) > 1:
                     paired_msa = []
+                if keep_unpaired:
+                    unpaired_msa = []
                 for seq in query_sequences:
                     if keep_unpaired:
                         with args.base.joinpath(f"{id}.a3m").open("r") as f:
