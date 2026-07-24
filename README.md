@@ -8,6 +8,7 @@ For details of what was changed in v1.6.2, see [change log](https://github.com/s
 
 | Notebooks                                                                                                                                        | monomers | complexes | mmseqs2 | jackhmmer | templates |
 | :----------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------- | ------- | --------- | --------- |
+| [AlphaFold3 (OpenFold3)](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold3_of3.ipynb)                            | Yes      | Yes       | Yes     | No        | No        |
 | [AlphaFold2_mmseqs2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb)                                    | Yes      | Yes       | Yes     | No        | Yes       |
 | [AlphaFold2_batch](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/batch/AlphaFold2_batch.ipynb)                          | Yes      | Yes       | Yes     | No        | Yes       |
 | [AlphaFold2](https://colab.research.google.com/github/deepmind/alphafold/blob/main/notebooks/AlphaFold.ipynb) (from Deepmind)                    | Yes      | Yes       | No      | Yes       | No        |
