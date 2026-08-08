@@ -221,7 +221,7 @@ def test_complex(pytestconfig, caplog, tmp_path, prediction_test):
       'Setting max_seq=252, max_extra_seq=1152',
       'alphafold2_multimer_v1_model_1_seed_000 took 0.0s (3 recycles)',
       "reranking models by 'multimer' metric",
-      'rank_001_alphafold2_multimer_v1_model_1_seed_000 pLDDT=94.4 pTM=0.884 ipTM=0.878',
+      'rank_001_alphafold2_multimer_v1_model_1_seed_000 pLDDT=94.4 pTM=0.884 ipTM=0.878 ipSAE=0.787 pDockQ2=0.905',
       'Done'
     ]
     for x in expected:
@@ -260,7 +260,7 @@ def test_complex_ptm(pytestconfig, caplog, tmp_path, prediction_test):
       'Setting max_seq=512, max_extra_seq=5120',
       'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
       "reranking models by 'multimer' metric",
-      'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=92 pTM=0.846 ipTM=0.849',
+      'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=92 pTM=0.846 ipTM=0.849 ipSAE=0.741 pDockQ2=0.863',
       'Done'
     ]
     for x in expected:
@@ -300,7 +300,7 @@ def test_complex_monomer_ptm(pytestconfig, caplog, tmp_path, prediction_test):
       'Setting max_seq=512, max_extra_seq=5120', 
       'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)', 
       "reranking models by 'multimer' metric", 
-      'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=95.6 pTM=0.867 ipTM=0.864', 
+      'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=95.6 pTM=0.867 ipTM=0.864 ipSAE=0.739 pDockQ2=0.934',
       'Done'
     ]
     for x in expected:
@@ -340,7 +340,7 @@ def test_complex_monomer(pytestconfig, caplog, tmp_path, prediction_test):
       'Setting max_seq=252, max_extra_seq=1152', 
       'alphafold2_multimer_v1_model_1_seed_000 took 0.0s (3 recycles)', 
       "reranking models by 'multimer' metric", 
-      'rank_001_alphafold2_multimer_v1_model_1_seed_000 pLDDT=95.3 pTM=0.866 ipTM=0.861', 
+      'rank_001_alphafold2_multimer_v1_model_1_seed_000 pLDDT=95.3 pTM=0.866 ipTM=0.861 ipSAE=0.714 pDockQ2=0.932',
       'Done'
     ]
     for x in expected:
