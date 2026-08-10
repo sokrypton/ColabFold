@@ -79,7 +79,7 @@ from colabfold.input import (
     pdb_to_string,
 )
 from colabfold.relax import relax_me
-from colabfold.alphafold import extra_ptm
+from colabfold.alphafold import extra_ptm, ipsae
 
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 from Bio.PDB.PDBIO import Select
@@ -587,6 +587,24 @@ def predict_structure(
                 for k in ["ptm", "iptm"]:
                     if k in conf[-1]:
                         scores[k] = np.around(conf[-1][k], 2).item()
+                if is_complex:
+                    try:
+                        asym_id = input_features["asym_id"]
+                        if asym_id.ndim > 1: asym_id = asym_id[0]
+                        interface_scores = ipsae.get_interface_scores(
+                            pae=pae,
+                            plddt=plddt,
+                            asym_id=asym_id[:seq_len],
+                            atom_positions=result["structure_module"]["final_atom_positions"][:seq_len],
+                            atom_mask=result["structure_module"]["final_atom_mask"][:seq_len])
+                        scores.update(interface_scores)
+                        if interface_scores:
+                            conf[-1]["print_line"] += (
+                                f" ipSAE={ipsae.format_ipsae(interface_scores['ipsae'])}"
+                                f" pDockQ2={ipsae.format_ipsae(interface_scores['pdockq2'])}"
+                            )
+                    except Exception as e:
+                        logger.warning(f"Could not compute ipSAE/pDockQ interface scores: {e}")
                 del pae
             del plddt
             file = files.get("scores", "json")
