@@ -315,6 +315,20 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "colabfold-binaries"
+version = "0.1.0"
+description = "Prebuilt kalign and hhsearch binaries for ColabFold."
+optional = true
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "(sys_platform == \"linux\" or sys_platform == \"darwin\") and (sys_platform == \"linux\" or platform_machine == \"arm64\") and (extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
+files = [
+    {file = "colabfold_binaries-0.1.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:c8adc36504c5a1969008a444fe2ec3174d25b92d8a97f5e3606c41df51324c12"},
+    {file = "colabfold_binaries-0.1.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:7daf652c175ecdcd222c0b77c03afe989c07cc5cb5bc7cd5946d2cf73e68970b"},
+    {file = "colabfold_binaries-0.1.0-py3-none-manylinux2014_x86_64.whl", hash = "sha256:188bdfe8237b10f463c59f52b7b6b17ae86f7567d5a9ea486eb9f1e064abeb26"},
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -1996,11 +2010,11 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more_it
 type = ["pytest-mypy"]
 
 [extras]
-alphafold = ["absl-py", "alphafold-colabfold", "dm-haiku", "dm-tree", "jax", "py3Dmol"]
-alphafold-minus-jax = ["absl-py", "alphafold-colabfold", "dm-haiku", "dm-tree", "py3Dmol"]
+alphafold = ["absl-py", "alphafold-colabfold", "colabfold-binaries", "dm-haiku", "dm-tree", "jax", "py3Dmol"]
+alphafold-minus-jax = ["absl-py", "alphafold-colabfold", "colabfold-binaries", "dm-haiku", "dm-tree", "py3Dmol"]
 openmm = ["openmm", "pdbfixer"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "757540633ffa41bc9416ef1ac4a7a5c091ec31988647b251273e81ee0d254e5f"
+content-hash = "26d93da966803be8c7e329cfa1963b52f05c26306c9de3ef2376a5d85ba36cc5"

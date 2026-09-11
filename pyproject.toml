@@ -28,6 +28,7 @@ numpy = "^2.0.2"
 pandas = "^2.2.2"
 alphafold-colabfold = { version = "2.3.18", optional = true }
 #alphafold-colabfold = { path = "..", develop = true, optional = true }
+colabfold-binaries = { version = "^0.1.0", optional = true, markers = "sys_platform == 'linux' or (sys_platform == 'darwin' and platform_machine == 'arm64')" }
 requests = "^2.26.0"
 tqdm = "^4.62.2"
 appdirs = "^1.4.4"
@@ -45,8 +46,8 @@ black = "^23.1.0"
 pytest = "^6.2.5"
 
 [tool.poetry.extras]
-alphafold = ["alphafold-colabfold", "jax", "absl-py", "dm-tree", "dm-haiku",  "py3Dmol"]
-alphafold-minus-jax = ["alphafold-colabfold", "absl-py", "dm-tree", "dm-haiku", "py3Dmol"]
+alphafold = ["alphafold-colabfold", "colabfold-binaries", "jax", "absl-py", "dm-tree", "dm-haiku",  "py3Dmol"]
+alphafold-minus-jax = ["alphafold-colabfold", "colabfold-binaries", "absl-py", "dm-tree", "dm-haiku", "py3Dmol"]
 openmm = ["openmm", "pdbfixer"]
 
 [tool.pytest.ini_options]
