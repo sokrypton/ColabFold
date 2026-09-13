@@ -26,7 +26,8 @@ import shutil
 import pickle
 import gzip
 
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from argparse import (ArgumentParser, ArgumentDefaultsHelpFormatter,
+                      BooleanOptionalAction, SUPPRESS)
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 from io import StringIO
@@ -2168,6 +2169,13 @@ def main():
     )
     adv_group.add_argument(
         "--use-fast-kernels",
+        dest="use_fast_kernels",
+        default=False,
+        action=BooleanOptionalAction,
+        help="Use fused kernels for faster prediction",
+    )
+    adv_group.add_argument(
+        # old name: takes an optional value, so it must not precede the paths
         "--use-pallas",
         dest="use_fast_kernels",
         nargs="?",
@@ -2175,7 +2183,7 @@ def main():
         default=False,
         type=_str2bool,
         metavar="BOOL",
-        help="Use fused kernels for faster prediction",
+        help=SUPPRESS,
     )
     adv_group.add_argument(
         "--kernel-backend",
