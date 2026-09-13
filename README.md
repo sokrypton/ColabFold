@@ -66,7 +66,7 @@ For a one-step installer script that supports Linux, macOS, and Windows (WSL2), 
 Alternatively, ColabFold can be installed directly with `conda` and `pip`:
 
 ```shell
-conda create -n colabfold -c conda-forge -c bioconda python=3.13 kalign2=2.04 hhsuite=3.3.0 mmseqs2=18.8cc5c
+conda create -n colabfold -c conda-forge -c bioconda python=3.13 mmseqs2=18.8cc5c
 conda activate colabfold
 # With CUDA GPU support
 pip install colabfold[alphafold,openmm] jax[cuda12] openmm[cuda12]

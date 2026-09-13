@@ -1153,37 +1153,42 @@ files = [
 
 [[package]]
 name = "openmm"
-version = "8.4.0.post2"
+version = "8.6.1"
 description = "Python wrapper for OpenMM (a C++ MD package)"
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"openmm\""
 files = [
-    {file = "openmm-8.4.0.post2-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:f5466e34b1201ac26a0bd41c8239a7a1849735bcba3c953e4524c1dd0e0015b6"},
-    {file = "openmm-8.4.0.post2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:4b918707cbdcf517a18d1122e45e5721e9d6ad57005dba5183334cb18765803a"},
-    {file = "openmm-8.4.0.post2-cp310-cp310-manylinux_2_34_x86_64.whl", hash = "sha256:eaadcafd6839e7f61153808de66ef47b56c2f909193d86e2b107d77c64017494"},
-    {file = "openmm-8.4.0.post2-cp310-cp310-win_amd64.whl", hash = "sha256:2eed655113d0e78ae9fb539e63b15dd38270c116e96bf1785037fef35e3acc3c"},
-    {file = "openmm-8.4.0.post2-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:9399dd46cf7bf345ad28e77e3457a11298874d2e2e407860cc0e46cceb6d3d11"},
-    {file = "openmm-8.4.0.post2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:49d0e5a0c41ff471f5a24cb73de71ee517b59cc34beaa17aad429892f57e3962"},
-    {file = "openmm-8.4.0.post2-cp311-cp311-manylinux_2_34_x86_64.whl", hash = "sha256:12ffcd82d596bded1382e30af55907754ee481aafc0fc4a921a97de2ea7a8c55"},
-    {file = "openmm-8.4.0.post2-cp311-cp311-win_amd64.whl", hash = "sha256:b18fb1fb3128df8f2cedb23af33c484701a6fa51da8204824a445f800581be13"},
-    {file = "openmm-8.4.0.post2-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:f3c8a012810928b1c0ae91a755d3197e81e7d03d2058d92dd4924d283edeae44"},
-    {file = "openmm-8.4.0.post2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:1bde30736f7b4b595041caf083bb4e4e79a794ab164faedd0664eda0348a299f"},
-    {file = "openmm-8.4.0.post2-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:168544c0b388ae71cc3f85e27c36c4f393854a313c4203f9e9957d6214836c13"},
-    {file = "openmm-8.4.0.post2-cp312-cp312-win_amd64.whl", hash = "sha256:6e9fd826aedf34b4c27a4dcda83da93e90f3e81305c58bcc07dafee22460a469"},
-    {file = "openmm-8.4.0.post2-cp313-cp313-macosx_10_12_x86_64.whl", hash = "sha256:07dfe965a205e57eff525edad4a65f5b426daa068e491536019bc9b3957bc1f3"},
-    {file = "openmm-8.4.0.post2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:4fdfae1f8c7612520f3bd2f7c0dccb9d9df5f085e219272ca43617574b88c3a6"},
-    {file = "openmm-8.4.0.post2-cp313-cp313-manylinux_2_34_x86_64.whl", hash = "sha256:70cdd3309064b95bd304af1f195377e54b6f7060b15b37af725d15764b756b09"},
-    {file = "openmm-8.4.0.post2-cp313-cp313-win_amd64.whl", hash = "sha256:e2912d803e7473048351cddb59176df191db3cbe21d0ab1a6f83e7020b92f01f"},
-    {file = "openmm-8.4.0.post2-cp314-cp314-macosx_10_12_x86_64.whl", hash = "sha256:1aad58ba4cf27eec18061fa8dcef5a22666905f8f0edca0108214cd5a1f8109e"},
-    {file = "openmm-8.4.0.post2-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:951e92fb72f031406f5beb876ea87c4ad00a6759cb7675fb6f6c5f81ecf89ab0"},
-    {file = "openmm-8.4.0.post2-cp314-cp314-manylinux_2_34_x86_64.whl", hash = "sha256:e175a64050d17b571fae66f095abfa9ebf7224ce7bb502e714450925adaa1e98"},
-    {file = "openmm-8.4.0.post2-cp314-cp314-win_amd64.whl", hash = "sha256:25872ca6f1a9140df918af71f879aad457a2a2a45c752265c3a753e25fe028df"},
+    {file = "openmm-8.6.1-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:40486d34776c22f1fa21f495901429d79ede67bde37899610847c0e8afb8d412"},
+    {file = "openmm-8.6.1-cp310-cp310-manylinux_2_34_aarch64.whl", hash = "sha256:6e9f62b1dc5a52fc4089540ef2203d72ddb8ba3c502965de36c967d4a3136b4f"},
+    {file = "openmm-8.6.1-cp310-cp310-manylinux_2_34_x86_64.whl", hash = "sha256:213d830042252d1bf939f8093de30363611d9e4ed061cbe6191f37dbec4c32f7"},
+    {file = "openmm-8.6.1-cp310-cp310-win_amd64.whl", hash = "sha256:648f43e9b9c414efb1a2010d06fa008aee7de65dd1c3bb0b8f669418a02760de"},
+    {file = "openmm-8.6.1-cp311-cp311-manylinux_2_34_aarch64.whl", hash = "sha256:cfe4b2e8fb5d43f88de03fefb86f2668102f9609fc0162d22e2e79617d949646"},
+    {file = "openmm-8.6.1-cp311-cp311-manylinux_2_34_x86_64.whl", hash = "sha256:e0a6ec580be31d4afba35f290c27c069aaeea9a168b0cf959a0dac0df1d9fd5d"},
+    {file = "openmm-8.6.1-cp311-cp311-win_amd64.whl", hash = "sha256:176a4d1c65a43ce02087e72fdb056437636689aff9f9cab6027b9516934bc87d"},
+    {file = "openmm-8.6.1-cp312-cp312-macosx_10_12_universal2.whl", hash = "sha256:1ab4a634ae3d0b0784dc5731ae5efb658ec92baf0e4a139c72f6510309791d22"},
+    {file = "openmm-8.6.1-cp312-cp312-manylinux_2_34_aarch64.whl", hash = "sha256:cbf75e64bc1350857c07c67bad71264fb270a15ed8ee7fa59ba0bd106af32589"},
+    {file = "openmm-8.6.1-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:c198fa3a0cb236ab2e8c6405b59ee8acc4ffb6b1a54d001e29c4afb8419e959b"},
+    {file = "openmm-8.6.1-cp312-cp312-win_amd64.whl", hash = "sha256:81d2db56d6cfc9d7ade0adc0039020cb995d3606915087fab3563499981e739a"},
+    {file = "openmm-8.6.1-cp313-cp313-macosx_10_12_universal2.whl", hash = "sha256:91139fb502ccf27055ce8cd7de2c240d75bc0b78fb4342b86a63412aa3380e2e"},
+    {file = "openmm-8.6.1-cp313-cp313-manylinux_2_34_aarch64.whl", hash = "sha256:683a8961635826f9746174e717f11085a6f07c3cbc53024358d3849032f02565"},
+    {file = "openmm-8.6.1-cp313-cp313-manylinux_2_34_x86_64.whl", hash = "sha256:b6295b1cfe63eac11c013cda90b9988fd74a1ec863522a1480affdaed3f20d7a"},
+    {file = "openmm-8.6.1-cp313-cp313-win_amd64.whl", hash = "sha256:fe4d1acfb0278c9591f1f4c247b1b7d3d236b49e7a7d6d464e1c547f406d8af9"},
+    {file = "openmm-8.6.1-cp314-cp314-macosx_10_12_universal2.whl", hash = "sha256:b32f55a3f2c3285208c3b360b7fd3dd5dbb23a6c7fc8688bc6d6e250e1a60999"},
+    {file = "openmm-8.6.1-cp314-cp314-manylinux_2_34_aarch64.whl", hash = "sha256:1bb475c7e9c371b2d786804d0e89ba2f22dce720bd374522d2d1e7ef80845fd8"},
+    {file = "openmm-8.6.1-cp314-cp314-manylinux_2_34_x86_64.whl", hash = "sha256:85fa5b75a16f57b3a6d98341653071f0fce1ae7b0864d99e4b0b6daf36aa1ae2"},
+    {file = "openmm-8.6.1-cp314-cp314-win_amd64.whl", hash = "sha256:291e40e9977e4c02c116d91d6dae586a8668135f3dece50a682c47b129b2cc8c"},
 ]
 
 [package.dependencies]
 numpy = "*"
+
+[package.extras]
+cuda12 = ["OpenMM-CUDA-12 (==8.6.1) ; platform_system != \"Darwin\""]
+cuda13 = ["OpenMM-CUDA-13 (==8.6.1) ; platform_system != \"Darwin\""]
+hip6 = ["OpenMM-HIP-6 (==8.6.1) ; platform_system != \"Darwin\" and platform_machine == \"x86_64\""]
+hip7 = ["OpenMM-HIP-7 (==8.6.1) ; platform_system != \"Darwin\" and platform_machine == \"x86_64\""]
 
 [[package]]
 name = "opt-einsum"
@@ -2017,4 +2022,4 @@ openmm = ["openmm", "pdbfixer"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "26d93da966803be8c7e329cfa1963b52f05c26306c9de3ef2376a5d85ba36cc5"
+content-hash = "5892adffb8c7ec9cee28367c22dbf54278dd9f0a826d5854f87ef4f32f6eb9a4"

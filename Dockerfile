@@ -33,27 +33,17 @@ VOLUME cache
 ENV MPLBACKEND=Agg
 ENV MPLCONFIGDIR=/cache
 ENV XDG_CACHE_HOME=/cache
-ENV CONDA_VERSION=25.9.1-0
 
 RUN apt-get update; \
-    apt-get install -y wget git --no-install-suggests; \
-    rm -rf /var/lib/apt/lists/*;
-
-SHELL ["/bin/bash", "--login", "-x", "-c"]
-RUN MINIFORGE="Miniforge3-${CONDA_VERSION}-Linux-$(uname -m).sh"; \
-    wget -qnc https://github.com/conda-forge/miniforge/releases/download/${CONDA_VERSION}/${MINIFORGE}; \
-    bash ${MINIFORGE} -bfp /usr/local; \
-    conda config --set auto_update_conda false; \
-    rm -f ${MINIFORGE}; \
-    conda install -y -c conda-forge -c bioconda kalign2=2.04 hhsuite=3.3.0; \
-    conda clean -afy; \
-    conda shell.bash hook;
+    apt-get install -y wget git python3 python3-venv --no-install-suggests; \
+    rm -rf /var/lib/apt/lists/*; \
+    python3 -m venv /usr/local;
 COPY --from=builder /opt/build/binaries/* /usr/local/bin/
 
 WORKDIR /app
 COPY . /app
 RUN pip install --no-cache-dir \
         ".[alphafold,openmm]" \
-        "jax[${CUDA}]<0.11" \
+        "jax[${CUDA}]<0.12" \
         "openmm[${CUDA}]"; \
     rm -rf /root/.cache/pip
