@@ -15,15 +15,15 @@ files = [
 
 [[package]]
 name = "alphafold-colabfold"
-version = "2.3.18"
+version = "2.3.20"
 description = "An implementation of the inference pipeline of AlphaFold v2.3.1. This is a completely new model that was entered as AlphaFold2 in CASP14 and published in Nature. This package contains patches for colabfold."
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
-    {file = "alphafold_colabfold-2.3.18-py3-none-any.whl", hash = "sha256:5711464c031f73758291fdc0ac3bc52861a27d3ea3881e88687eb0f4c1cf345f"},
-    {file = "alphafold_colabfold-2.3.18.tar.gz", hash = "sha256:0ad91633f1dd47c22a96fe3c29eb07e537bf6457ff21a38460e0aa9a7c5a4eeb"},
+    {file = "alphafold_colabfold-2.3.20-py3-none-any.whl", hash = "sha256:da9cfd96e1acbb0aaca8b4f83f676b7fd688547f01f1528e373da5fac42ee02d"},
+    {file = "alphafold_colabfold-2.3.20.tar.gz", hash = "sha256:c5081d6ffa8d24ab489e67087acce93fbfa53535cf818eea6492e9fa6c70c3d3"},
 ]
 
 [package.dependencies]
@@ -330,14 +330,14 @@ files = [
 
 [[package]]
 name = "colabfold-legacy-kernels"
-version = "0.1.0"
+version = "0.2.0"
 description = "Prebuilt pre-Ampere (sm_70 / sm_75) CUDA kernels for ColabFold."
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
 markers = "sys_platform == \"linux\" and platform_machine == \"x86_64\" and (extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
 files = [
-    {file = "colabfold_legacy_kernels-0.1.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:76c5b8973256fe3be9190872379e99bbd1a5fb0e824687901c3a88f7132d0f78"},
+    {file = "colabfold_legacy_kernels-0.2.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:d125c58d87c5a90f230d65b32e00fccdb35ba8d9ba13de7256cd7edb3a8634bc"},
 ]
 
 [[package]]
@@ -2034,4 +2034,4 @@ openmm = ["openmm", "pdbfixer"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "2b76fa2ec0f664504adb14ac0708547e4623214483d88fe25bb00d5131d23c13"
+content-hash = "cb152ed32f87eaa8af7b9fbc8d0a3cfdaade63e21a53d72c92b64af4e0a91475"
