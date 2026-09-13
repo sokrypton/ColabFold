@@ -329,6 +329,18 @@ files = [
 ]
 
 [[package]]
+name = "colabfold-legacy-kernels"
+version = "0.1.0"
+description = "Prebuilt pre-Ampere (sm_70 / sm_75) CUDA kernels for ColabFold."
+optional = true
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "sys_platform == \"linux\" and platform_machine == \"x86_64\" and (extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
+files = [
+    {file = "colabfold_legacy_kernels-0.1.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:76c5b8973256fe3be9190872379e99bbd1a5fb0e824687901c3a88f7132d0f78"},
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -2015,11 +2027,11 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more_it
 type = ["pytest-mypy"]
 
 [extras]
-alphafold = ["absl-py", "alphafold-colabfold", "colabfold-binaries", "dm-haiku", "dm-tree", "jax", "py3Dmol"]
-alphafold-minus-jax = ["absl-py", "alphafold-colabfold", "colabfold-binaries", "dm-haiku", "dm-tree", "py3Dmol"]
+alphafold = ["absl-py", "alphafold-colabfold", "colabfold-binaries", "colabfold-legacy-kernels", "dm-haiku", "dm-tree", "jax", "py3Dmol"]
+alphafold-minus-jax = ["absl-py", "alphafold-colabfold", "colabfold-binaries", "colabfold-legacy-kernels", "dm-haiku", "dm-tree", "py3Dmol"]
 openmm = ["openmm", "pdbfixer"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "5892adffb8c7ec9cee28367c22dbf54278dd9f0a826d5854f87ef4f32f6eb9a4"
+content-hash = "2b76fa2ec0f664504adb14ac0708547e4623214483d88fe25bb00d5131d23c13"

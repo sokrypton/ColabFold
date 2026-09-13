@@ -1308,10 +1308,12 @@ def run(
     use_dropout           = kwargs.pop("training", use_dropout)
     use_fuse              = kwargs.pop("use_fuse", True)
     use_bfloat16          = kwargs.pop("use_bfloat16", True)
-    use_pallas            = kwargs.pop("use_pallas", False)
+    use_pallas            = kwargs.pop("use_pallas", False)  # old name
+    use_fast_kernels      = kwargs.pop("use_fast_kernels", use_pallas)
+    kernel_backend        = kwargs.pop("kernel_backend", "auto")
     compile_mode          = kwargs.pop("compile_mode", "tuned")
-    if use_pallas and not use_bfloat16:
-        raise ValueError("use_pallas requires bfloat16")
+    if use_fast_kernels and not use_bfloat16:
+        raise ValueError("--use-fast-kernels needs half precision, not use_bfloat16=False")
     max_msa               = kwargs.pop("max_msa",None)
     if max_msa is not None:
         max_seq, max_extra_seq = [int(x) for x in max_msa.split(":")]
@@ -1405,7 +1407,8 @@ def run(
         "use_cluster_profile": use_cluster_profile,
         "use_fuse": use_fuse,
         "use_bfloat16": use_bfloat16,
-        "use_pallas": use_pallas,
+        "use_fast_kernels": use_fast_kernels,
+        "kernel_backend": kernel_backend,
         "compile_mode": compile_mode,
         "version": importlib_metadata.version("colabfold"),
         "calc_extra_ptm": calc_extra_ptm,
@@ -1608,7 +1611,8 @@ def run(
                         use_bfloat16=use_bfloat16,
                         save_all=save_all,
                         calc_extra_ptm=calc_extra_ptm,
-                        use_pallas=use_pallas,
+                        use_fast_kernels=use_fast_kernels,
+                        kernel_backend=kernel_backend,
                         compile_mode=compile_mode
                     )
                     first_job = False
@@ -2163,13 +2167,22 @@ def main():
         "Set to 0 to disable.",
     )
     adv_group.add_argument(
+        "--use-fast-kernels",
         "--use-pallas",
+        dest="use_fast_kernels",
         nargs="?",
         const=True,
         default=False,
         type=_str2bool,
         metavar="BOOL",
-        help="Use Pallas/Triton kernels for faster prediction",
+        help="Use fused kernels for faster prediction",
+    )
+    adv_group.add_argument(
+        "--kernel-backend",
+        choices=["auto", "pallas", "cuda_legacy"],
+        default="auto",
+        help="Fused kernels: auto (pallas on sm_80+, cuda_legacy below), pallas, "
+             "or cuda_legacy (float16).",
     )
     adv_group.add_argument(
         "--compile-mode",
@@ -2329,7 +2342,8 @@ def main():
         use_probs_extra=use_probs_extra,
         max_template_date=args.max_template_date,
         max_template_hits=args.max_template_hits,
-        use_pallas=args.use_pallas,
+        use_fast_kernels=args.use_fast_kernels,
+        kernel_backend=args.kernel_backend,
         compile_mode=args.compile_mode,
     )
 

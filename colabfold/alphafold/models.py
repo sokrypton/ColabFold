@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from functools import wraps, partialmethod
 from typing import Tuple, List, Optional
@@ -5,6 +6,8 @@ import haiku
 from alphafold.model import model, config, data
 from alphafold.model.modules import AlphaFold
 from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
+
+logger = logging.getLogger(__name__)
 
 def _compile_jit_kwargs(compile_mode: str) -> dict:
     import jaxlib
@@ -75,6 +78,26 @@ def model_to_config_name(model_type: str, model_number: str) -> str:
         raise ValueError(f"Unknown model_type {model_type}")
 
 
+def _warn_if_kernels_missing(cc) -> None:
+    try:
+        from alphafold.model import volta_attn
+        if cc is not None and volta_attn.available(cc) and volta_attn.ops_available(cc):
+            return
+    except Exception:
+        pass
+    logger.warning("no colabfold-legacy-kernels for sm_%s; falling back to XLA", cc or "unknown")
+
+
+def _compute_capability():
+    """Give the GPU compute capability as an integer, e.g. 75, or None."""
+    try:
+        import jax
+        cc = str(jax.devices()[0].compute_capability)
+        return int(round(float(cc) * 10)) if "." in cc else int(cc)
+    except Exception:
+        return None
+
+
 def load_models_and_params(
     num_models: int,
     use_templates: bool,
@@ -95,7 +118,8 @@ def load_models_and_params(
     save_all: bool = False,
     calc_extra_ptm: bool = False,
     use_probs_extra: bool = True,
-    use_pallas: bool = False,
+    use_fast_kernels: bool = False,
+    kernel_backend: str = "auto",
     compile_mode: str = "tuned"
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
@@ -135,8 +159,18 @@ def load_models_and_params(
             # set bfloat options
             model_config.model.global_config.bfloat16 = use_bfloat16
 
-            # cuEquivariance fused kernels
-            model_config.model.global_config.use_pallas = use_pallas
+            cc = _compute_capability()
+            backend = kernel_backend
+            if backend == "auto":
+                # XLA gates Pallas/Triton to sm_80+.
+                backend = "cuda_legacy" if cc is not None and cc < 80 else "pallas"
+            model_config.model.global_config.use_pallas = use_fast_kernels
+            model_config.model.global_config.kernel_backend = backend
+            model_config.model.global_config.compute_capability = cc
+            # Volta/Turing tensor cores have no bfloat16
+            if use_fast_kernels and backend == "cuda_legacy":
+                model_config.model.global_config.half_dtype = "float16"
+                _warn_if_kernels_missing(cc)
 
             # set fuse options
             model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights = use_fuse

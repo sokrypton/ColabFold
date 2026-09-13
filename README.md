@@ -242,9 +242,14 @@ The saved model is reused only when the next run matches the previous one, inclu
 - Every new sequence length or MSA depth triggers a fresh compile. ColabFold reduces this by grouping similar lengths together (`--recompile-padding`) and sorting each batch so similar shapes run back to back (`--sort-queries-by`). Use `length` for monomers (default) and `msa_depth` for repeated multimers of the same length. This way compilation can be reused across multiple predictions.
 - If anything changes (drivers or dependencies), the next prediction compiles again and the old cache is ignored.
 
-### Faster predictions on Ampere or newer GPUs
+### Faster predictions with fused kernels
 
-On NVIDIA GPUs with compute capability >=8.0 (Ampere or newer), add `--use-pallas` to `colabfold_batch` for ~2.5x faster, slightly lower-memory predictions. It runs the Evoformer with fast fused Pallas/Triton kernels.
+Add `--use-fast-kernels` to `colabfold_batch` to run AlphaFold2 with accelerated kernels, about 2.5x faster and with slightly lower memory. `--kernel-backend` picks the implementation based on the available GPU and defaults to `auto`:
+
+- `pallas` on Ampere or newer generation GPUs, using Pallas/Triton kernels.
+- `cuda_legacy` on older Volta and Turing GPUs.
+
+The previously introduced `--use-pallas` parameter is accepted as an alias for `--use-fast-kernels`.
 
 ### Trading compile time for folding speed
 
