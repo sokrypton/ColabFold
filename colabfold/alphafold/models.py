@@ -88,6 +88,15 @@ def _warn_if_kernels_missing(cc) -> None:
     logger.warning("no colabfold-legacy-kernels for sm_%s; falling back to XLA", cc or "unknown")
 
 
+def _on_gpu():
+    """True if jax has a GPU (CUDA or ROCm); Pallas and the CUDA kernels need one."""
+    try:
+        import jax
+        return jax.devices()[0].platform == "gpu"
+    except Exception:
+        return False
+
+
 def _compute_capability():
     """Give the GPU compute capability as an integer, e.g. 75, or None."""
     try:
@@ -131,6 +140,13 @@ def load_models_and_params(
     # Use only two model and later swap params to avoid recompiling
     model_runner_and_params: [Tuple[str, model.RunModel, haiku.Params]] = []
 
+    if kernel_backend != "auto" and not use_fast_kernels:
+        logger.warning("kernel_backend has no effect without use_fast_kernels")
+
+    if use_fast_kernels and not _on_gpu():
+        logger.warning("fused kernels need a GPU; ignoring use_fast_kernels")
+        use_fast_kernels = False
+
     if model_order is None:
         model_order = [1, 2, 3, 4, 5]
     else:
@@ -164,6 +180,10 @@ def load_models_and_params(
             if backend == "auto":
                 # XLA gates Pallas/Triton to sm_80+.
                 backend = "cuda_legacy" if cc is not None and cc < 80 else "pallas"
+            if use_fast_kernels and backend == "pallas" and cc is not None and cc < 80:
+                raise ValueError(
+                    f"--kernel-backend pallas needs sm_80+, this GPU is sm_{cc}; "
+                    "use auto or cuda_legacy")
             model_config.model.global_config.use_pallas = use_fast_kernels
             model_config.model.global_config.kernel_backend = backend
             model_config.model.global_config.compute_capability = cc
