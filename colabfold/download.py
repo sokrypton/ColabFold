@@ -25,11 +25,13 @@ def download(url, params_dir, size_queue, progress_queue):
             progress_queue.put(file_size)
             return
 
-        with open(output, "wb") as output:
+        with open(output, "wb") as handle:
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
-                    output.write(chunk)
+                    handle.write(chunk)
                     progress_queue.put(len(chunk))
+        if file_size and output.stat().st_size != file_size:
+            raise IOError(f"{filename}: got {output.stat().st_size} of {file_size} bytes")
     except Exception as e:
         size_queue.put("error")
         progress_queue.put("error")
