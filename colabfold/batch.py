@@ -1511,6 +1511,11 @@ def run(
                         pickle.dump((unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features), f)
                     logger.info(f"Saved {pickled_msa_and_templates}")
 
+            # a3m input and pickles bypass get_msa_and_templates, and num_extra_msa=1 would then sample a random homolog per seed
+            if msa_mode == "single_sequence" and unpaired_msa is not None:
+                unpaired_msa = [f">{101 + i}\n{seq}" for i, seq in enumerate(query_seqs_unique)]
+                paired_msa = None
+
             # save a3m
             if not 'msa' in skip_output:
                 msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
