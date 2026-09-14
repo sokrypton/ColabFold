@@ -295,6 +295,7 @@ class MolType(Enum):
 
     @classmethod
     def get_moltype(cls, moltype: str):
+        moltype = moltype.upper()
         if moltype == "RNA":
             return cls.RNA
         elif moltype == "DNA":

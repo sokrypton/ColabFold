@@ -122,18 +122,21 @@ def classify_molecules(query_sequence: str) -> Tuple[List[str], Optional[List[Tu
     * A list of protein sequences.
     * A list of tuples, each containing a molecule type, a sequence, and number of copies.
     """
-    sequences = query_sequence.upper().split(":")
+    sequences = query_sequence.split(":")
     protein_queries = []
     other_queries = []
     for seq in sequences:
         if seq.count("|") == 0:
-            protein_queries.append(seq)
+            protein_queries.append(seq.upper())
         else:
             parts = seq.split("|")
             moltype, sequence, *rest = parts
             moltype = MolType.get_moltype(moltype)
+            # lower case in SMILES means an aromatic atom, so this one must keep its case
             if moltype == MolType.SMILES:
                 sequence = sequence.replace(";", ":")
+            else:
+                sequence = sequence.upper()
             copies = int(rest[0]) if rest else 1
             other_queries.append((moltype, sequence, copies))  # (molecule type, sequence, copies)
 
