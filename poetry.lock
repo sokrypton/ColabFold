@@ -2035,4 +2035,4 @@ openmm = ["openmm", "pdbfixer"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "613c68aff8f7cbef917ea55ce9573eeed4be020ada55c5aee9dd66cbc64cd6b6"
+content-hash = "962d5b7b10e7d413a715a272d7440c8a929634d8736a01e56883222f3b675f0f"

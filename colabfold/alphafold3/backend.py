@@ -1,0 +1,130 @@
+"""
+AlphaFold3 backend: implements :class:`colabfold.backend.FoldingBackend`.
+"""
+import logging
+from datetime import date
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from colabfold.backend import RunOptions
+
+logger = logging.getLogger(__name__)
+
+_CONFIG_KEYS = ("num_diffusion_samples", "use_dropout", "buckets", "download_weights",
+                "af3_pairing", "use_fast_kernels")
+
+_DEFAULTS = {
+    "num_diffusion_samples": 5,
+    "use_dropout": False,
+    "buckets": None,
+    "download_weights": True,
+    "af3_pairing": "colabfold",
+    "use_fast_kernels": False,
+}
+
+
+class AF3Backend:
+    """AlphaFold3 and the other models alphafold3-open's registry can run."""
+
+    def __init__(self, model_type: str):
+        from colabfold.alphafold3 import require
+
+        require()
+        self.model_type = model_type
+        self.model_runner = None
+        self._fold_input = None
+        self._num_seeds = 1
+        self._random_seed = 0
+
+    def _opt(self, opts: RunOptions, key: str):
+        return opts.opt(key, _DEFAULTS[key])
+
+    def configure(self, opts, *, max_len, max_num, num_queries, msa_mode,
+                  is_complex, use_templates) -> None:
+        self._num_seeds = opts.num_seeds
+        self._random_seed = opts.random_seed
+        if use_templates:
+            logger.warning("templates are not wired up for alphafold3 yet, folding without them")
+
+    def featurize(self, query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa,
+                  template_results, is_complex: bool, opts: RunOptions, extras=None):
+        import dataclasses
+
+        from colabfold.alphafold3.input import build_fold_input, with_msas
+
+        seeds = [self._random_seed + i for i in range(self._num_seeds)]
+        pairing = self._opt(opts, "af3_pairing")
+        given = getattr(extras, "fold_input", None)
+        if given is not None:
+            fold_input = with_msas(given, unpaired_msa, paired_msa, pairing)
+            fold_input = dataclasses.replace(fold_input, rng_seeds=seeds)
+        else:
+            fold_input = build_fold_input(
+                name="colabfold",
+                query_seqs_unique=query_seqs_unique,
+                query_seqs_cardinality=query_seqs_cardinality,
+                unpaired_msa=unpaired_msa,
+                paired_msa=paired_msa,
+                molecules=extras if isinstance(extras, (list, tuple)) else None,
+                seeds=seeds,
+                pairing=pairing,
+            )
+        self._fold_input = fold_input
+        return fold_input, {}
+
+    def _ensure_loaded(self, opts: RunOptions) -> None:
+        if self.model_runner is not None:
+            return
+        from colabfold.alphafold3.models import load_model
+
+        if self._opt(opts, "use_fast_kernels"):
+            from colabfold.alphafold3.attention import install
+
+            install()
+        model_dir = opts.opt("model_dir")
+        self.model_runner = load_model(
+            self.model_type,
+            num_recycles=opts.num_recycles,
+            num_diffusion_samples=self._opt(opts, "num_diffusion_samples"),
+            model_dir=Path(model_dir) if model_dir else None,
+            use_dropout=self._opt(opts, "use_dropout"),
+            download=self._opt(opts, "download_weights"),
+        )
+
+    def predict(self, prefix: str, result_dir: Path, model_input, is_complex: bool,
+                sequences_lengths: List[int], opts: RunOptions,
+                prediction_callback=None) -> Dict[str, Any]:
+        from colabfold.alphafold3.models import featurise
+        from colabfold.alphafold3.predict import predict_structure
+
+        self._ensure_loaded(opts)
+        import dataclasses
+
+        fold_input = dataclasses.replace(model_input, name=prefix)
+        examples = featurise(fold_input, self.model_runner.model_name,
+                             self.model_runner.model_dir, buckets=self._opt(opts, "buckets"),
+                             ref_max_modified_date=date.fromisoformat(opts.max_template_date))
+        return predict_structure(
+            prefix=prefix,
+            result_dir=result_dir,
+            fold_input=fold_input,
+            model_runner=self.model_runner,
+            model_type=self.model_type,
+            featurised_examples=examples,
+            save_all=opts.save_all,
+            prediction_callback=prediction_callback,
+        )
+
+    def config_dict(self, opts: RunOptions) -> Dict[str, Any]:
+        cfg = {k: self._opt(opts, k) for k in _CONFIG_KEYS}
+        if opts.num_recycles is None:
+            cfg["num_recycles"] = 10
+        return cfg
+
+    def plot_msa(self, model_input, dpi: int = 200):
+        from colabfold.alphafold3.plot import plot_msa_coverage
+
+        return plot_msa_coverage(model_input, dpi=dpi)
+
+    def plot_extra_metrics(self, scores, fig_path) -> None:
+        return None

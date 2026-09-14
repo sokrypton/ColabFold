@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Union, Dict
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 from pathlib import Path
 import random
 import logging
@@ -267,6 +267,25 @@ def decode_structure_sequences(
 
     return decoded_sequences
 
+class FoldInputExtras(NamedTuple):
+    """The fourth query slot when the input was an alphafold3 JSON."""
+    fold_input: Any
+
+
+def queries_from_af3_json(input_path: Path) -> List[Tuple[str, Any, None, Any]]:
+    from colabfold.alphafold3.input import load_fold_inputs, sequences_of
+
+    queries = []
+    for fold_input in load_fold_inputs(input_path):
+        sequences, cardinality = sequences_of(fold_input)
+        if not sequences:
+            raise ValueError(f"{input_path}: {fold_input.name} has no protein chain")
+        expanded = [seq for seq, n in zip(sequences, cardinality) for _ in range(n)]
+        queries.append((fold_input.name, expanded if len(expanded) > 1 else expanded[0],
+                        None, FoldInputExtras(fold_input)))
+    return queries
+
+
 def get_queries(
     input_path: Union[str, Path], sort_queries_by: str = "length"
 ) -> Tuple[List[Tuple[str, str, Optional[List[str]], Optional[List[Tuple[MolType, str, int]]]]], bool]:
@@ -314,6 +333,8 @@ def get_queries(
                     # Complex mode
                     protein_queries, other_queries = classify_molecules(sequence)
                     queries.append((header, protein_queries, None, other_queries))
+        elif input_path.suffix == ".json":
+            queries = queries_from_af3_json(input_path)
         elif input_path.suffix in [".pdb", ".cif"]:
             from colabfold.alphafold.structure import protein
             if input_path.suffix == ".pdb":
@@ -337,8 +358,11 @@ def get_queries(
         for file in sorted(input_path.iterdir()):
             if not file.is_file():
                 continue
-            if file.suffix.lower() not in [".a3m", ".fasta", ".faa", ".fa", ".pdb", ".cif"]:
-                logger.warning(f"non-fasta/a3m/pdb/cif file in input directory: {file}")
+            if file.suffix.lower() not in [".a3m", ".fasta", ".faa", ".fa", ".pdb", ".cif", ".json"]:
+                logger.warning(f"non-fasta/a3m/pdb/cif/json file in input directory: {file}")
+                continue
+            if file.suffix.lower() == ".json":
+                queries.extend(queries_from_af3_json(file))
                 continue
             if file.suffix.lower() in [".pdb", ".cif"]:
                 header = file.stem

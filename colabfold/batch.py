@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     import haiku
     from numpy import ndarray
 
+from colabfold.backend import AF3_MODELS, is_af3_model
 from colabfold.citations import write_bibtex
 from colabfold.download import default_data_dir, download_alphafold_params
 from colabfold.utils import (
@@ -717,6 +718,9 @@ def run(
     use_fast_kernels      = kwargs.pop("use_fast_kernels", use_pallas)
     kernel_backend        = kwargs.pop("kernel_backend", "auto")
     compile_mode          = kwargs.pop("compile_mode", "tuned")
+    num_diffusion_samples = kwargs.pop("num_diffusion_samples", 5)
+    model_dir             = kwargs.pop("model_dir", None)
+    af3_pairing           = kwargs.pop("af3_pairing", "colabfold")
     if use_fast_kernels and not use_bfloat16:
         raise ValueError("--use-fast-kernels needs half precision, not use_bfloat16=False")
     max_msa               = kwargs.pop("max_msa",None)
@@ -796,6 +800,9 @@ def run(
             "recompile_padding": recompile_padding,
             "calc_extra_ptm": calc_extra_ptm,
             "use_probs_extra": use_probs_extra,
+            "num_diffusion_samples": num_diffusion_samples,
+            "model_dir": model_dir,
+            "af3_pairing": af3_pairing,
         },
     )
     backend.configure(
@@ -831,6 +838,10 @@ def run(
         "max_template_date": max_template_date,
         "max_template_hits": max_template_hits,
     }
+    dropped = dropped_entities(queries, model_type)
+    warn_about_dropped_entities(dropped, model_type)
+    if dropped:
+        config["dropped_entities"] = dropped
     config.update(backend.config_dict(opts))
     config_out_file = result_dir.joinpath("config.json")
     config_out_file.write_text(json.dumps(config, indent=4))
@@ -943,7 +954,8 @@ def run(
         try:
             (feature_dict, domain_names) \
             = backend.featurize(query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa,
-                                template_results, is_complex, opts)
+                                template_results, is_complex, opts,
+                                extras=custom_template_path_per_entry)
 
             # to allow display of MSA info during colab/chimera run (thanks tomgoddard)
             if feature_dict_callback is not None:
@@ -961,12 +973,12 @@ def run(
 
         # make msa plot
         if not 'plots' in skip_output:
-            from colabfold.plot import plot_msa_v2
-            msa_plot = plot_msa_v2(feature_dict, dpi=dpi)
-            coverage_png = result_dir.joinpath(f"{jobname}_coverage.png")
-            msa_plot.savefig(str(coverage_png), bbox_inches='tight')
-            msa_plot.close()
-            result_files.append(coverage_png)
+            msa_plot = backend.plot_msa(feature_dict, dpi=dpi)
+            if msa_plot is not None:
+                coverage_png = result_dir.joinpath(f"{jobname}_coverage.png")
+                msa_plot.savefig(str(coverage_png), bbox_inches='tight')
+                msa_plot.close()
+                result_files.append(coverage_png)
 
         if use_templates:
             templates_file = result_dir.joinpath(f"{jobname}_template_domain_names.json")
@@ -1063,6 +1075,37 @@ def run(
 
     logger.info("Done")
     return {"rank":ranks,"metric":metrics}
+
+def dropped_entities(queries, model_type: str) -> Dict[str, Dict[str, int]]:
+    """Per job, the non-protein entities an AlphaFold2 model cannot represent."""
+    if is_af3_model(model_type):
+        return {}
+    dropped = {}
+    for query in queries:
+        extras = query[3] if len(query) > 3 else None
+        counts: Dict[str, int] = {}
+        if isinstance(extras, (list, tuple)):
+            for moltype, _payload, copies in extras:
+                counts[moltype.name] = counts.get(moltype.name, 0) + int(copies or 1)
+        fold_input = getattr(extras, "fold_input", None)
+        if fold_input is not None:
+            for chain in fold_input.chains:
+                kind = type(chain).__name__.replace("Chain", "").upper()
+                if kind != "PROTEIN":
+                    counts[kind] = counts.get(kind, 0) + 1
+        if counts:
+            dropped[query[0]] = counts
+    return dropped
+
+
+def warn_about_dropped_entities(dropped, model_type: str) -> None:
+    for name, counts in dropped.items():
+        what = ", ".join(f"{n} {kind}" for kind, n in sorted(counts.items()))
+        logger.warning(
+            f"{name}: {model_type} folds protein chains only, dropping {what}. "
+            f"Use --model-type alphafold3 (or another model in that family) to fold them."
+        )
+
 
 def set_model_type(is_complex: bool, model_type: str) -> str:
     # backward-compatibility with old options
@@ -1301,9 +1344,29 @@ def main():
             "alphafold2_multimer_v2",
             "alphafold2_multimer_v3",
             "deepfold_v1",
+            *AF3_MODELS,
         ],
     )
     pred_group.add_argument("--model-order", default="1,2,3,4,5", type=str)
+    pred_group.add_argument(
+        "--num-diffusion-samples",
+        help="Structures per seed, for the alphafold3 models only.",
+        type=int,
+        default=5,
+    )
+    pred_group.add_argument(
+        "--af3-pairing",
+        help="How the alphafold3 models pair a complex MSA: keep ColabFold's row pairing, "
+        "or let them pair by UniProt species id.",
+        choices=["colabfold", "uniprot"],
+        default="colabfold",
+    )
+    pred_group.add_argument(
+        "--model-dir",
+        help="Where the alphafold3 weights live. Downloaded on first use if unset.",
+        type=Path,
+        default=None,
+    )
     pred_group.add_argument(
         "--initial-guess",
         nargs="?",
@@ -1694,6 +1757,9 @@ def main():
         use_fast_kernels=args.use_fast_kernels,
         kernel_backend=args.kernel_backend,
         compile_mode=args.compile_mode,
+        num_diffusion_samples=args.num_diffusion_samples,
+        model_dir=args.model_dir,
+        af3_pairing=args.af3_pairing,
     )
 
 if __name__ == "__main__":

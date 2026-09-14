@@ -68,6 +68,7 @@ class FoldingBackend(Protocol):
         template_results,
         is_complex: bool,
         opts: RunOptions,
+        extras=None,
     ):
         ...
 
@@ -86,14 +87,35 @@ class FoldingBackend(Protocol):
     def config_dict(self, opts: RunOptions) -> Dict[str, Any]:
         ...
 
+    def plot_msa(self, model_input, dpi: int = 200):
+        ...
+
     def plot_extra_metrics(self, scores, fig_path) -> None:
         ...
 
 
 _current_backend = None
 
+AF3_MODELS = (
+    "alphafold3", "af3", "openfold3", "of3", "openbind", "openbind0",
+    "protenix", "protenix1", "protenix2", "boltz2", "chai1", "chai",
+    "intellifold2", "if2", "opendde", "rosettafold3", "rf3",
+)
+
+
+def is_af3_model(model_type: str) -> bool:
+    """True for anything alphafold3-open's registry runs on its AF3 graph."""
+    if model_type.startswith("alphafold2") or model_type.startswith("deepfold"):
+        return False
+    return model_type.startswith("alphafold3") or model_type in AF3_MODELS
+
+
 def get_backend(model_type: str) -> FoldingBackend:
     global _current_backend
+    if is_af3_model(model_type):
+        from colabfold.alphafold3.backend import AF3Backend
+        _current_backend = AF3Backend(model_type)
+        return _current_backend
     if model_type.startswith("alphafold2") or model_type.startswith("deepfold"):
         from colabfold.alphafold.backend import AF2Backend
         _current_backend = AF2Backend(model_type)

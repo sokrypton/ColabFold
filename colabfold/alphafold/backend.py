@@ -147,6 +147,7 @@ class AF2Backend:
         template_results,
         is_complex: bool,
         opts: RunOptions,
+        extras=None,
     ):
         from colabfold.alphafold.features import (
             build_template_features,
@@ -169,6 +170,11 @@ class AF2Backend:
             self.model_type,
             max_seq=self.max_seq,
         )
+
+    def plot_msa(self, model_input, dpi: int = 200):
+        from colabfold.plot import plot_msa_v2
+
+        return plot_msa_v2(model_input, dpi=dpi)
 
     def plot_extra_metrics(self, scores, fig_path):
         from colabfold.alphafold import extra_ptm
