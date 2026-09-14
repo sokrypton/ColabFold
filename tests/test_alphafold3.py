@@ -229,3 +229,153 @@ def test_a_ccd_ligand_without_ideal_coordinates_featurises():
                          ref_max_modified_date=date.fromisoformat("2100-01-01"))
     assert examples[0]["token_index"].shape[0] > 6
 
+
+def test_template_indices_compose_onto_the_seqres():
+    """query -> hit -> SEQRES, checked by reading the residue letters back."""
+    import dataclasses
+
+    from colabfold.alphafold3.templates import map_hit_to_seqres, query_to_hit_map
+
+    seqres = "MTTASPSQVRQNYHQDAEAAINRQINLELYASYVYLSMSYYFDRDDVALKNFAKYFLHQSHEE"
+    template_part = seqres[20:30]
+    query = "AAAAA" + template_part[:4] + "X" + template_part[4:] + "AAAAA"
+
+    @dataclasses.dataclass
+    class Hit:
+        query: str
+        hit_sequence: str
+        indices_query: list
+        indices_hit: list
+
+    aligned_q = query[5:16]
+    aligned_t = template_part[:4] + "-" + template_part[4:]
+    indices_query, indices_hit, qi, hi = [], [], 5, 20
+    for _, t in zip(aligned_q, aligned_t):
+        indices_query.append(qi)
+        qi += 1
+        indices_hit.append(-1 if t == "-" else hi)
+        hi += t != "-"
+    hit = Hit(aligned_q, aligned_t, indices_query, indices_hit)
+
+    hit_to_seqres = map_hit_to_seqres(hit.hit_sequence, seqres)
+    mapping = {q: hit_to_seqres[h] for q, h in query_to_hit_map(hit, query).items()
+               if h in hit_to_seqres}
+
+    assert mapping == {5: 20, 6: 21, 7: 22, 8: 23, 10: 24, 11: 25, 12: 26, 13: 27, 14: 28, 15: 29}
+    assert 9 not in mapping, "the query insertion has no template residue"
+    assert all(query[q] == seqres[s] for q, s in mapping.items())
+
+
+def test_attention_on_the_real_kernel_matches_fp32():
+    jax = pytest.importorskip("jax")
+    pytest.importorskip("alphafold.model.tri_flash")
+    if jax.devices()[0].platform == "cpu":
+        pytest.skip("needs a GPU")
+    import jax.numpy as jnp
+
+    from colabfold.alphafold3.attention import colabfold_attention
+
+    rng = np.random.default_rng(0)
+    seq, heads, dim = 64, 4, 32
+    mk = lambda s: jnp.asarray(rng.normal(size=s) * 0.5, jnp.bfloat16)
+    q, k, v = mk((1, seq, heads, dim)), mk((1, seq, heads, dim)), mk((1, seq, heads, dim))
+    bias = jnp.asarray(rng.normal(size=(heads, seq, seq)) * 0.3, jnp.bfloat16)
+    keep = rng.random((seq,)) > 0.25
+    keep[0] = True
+    mask = jnp.asarray(keep)[None, None, None, :]
+    scale = dim ** -0.5
+
+    logits = jnp.einsum("...qhd,...khd->...hqk", q.astype(jnp.float32), k.astype(jnp.float32))
+    logits = jnp.where(mask, logits * scale + bias.astype(jnp.float32), -1e9)
+    want = jnp.einsum("...hqk,...khd->...qhd", jax.nn.softmax(logits, -1), v.astype(jnp.float32))
+
+    got = colabfold_attention(q, k, v, mask=mask, bias=bias, scale=scale)
+    assert float(jnp.max(jnp.abs(got.astype(jnp.float32) - want))) < 5e-2
+
+
+def test_af3_models_cite_their_weights():
+    from colabfold.citations import af3_citations, citations
+
+    assert af3_citations("alphafold2_ptm") == []
+    assert af3_citations("openfold3") == ["Abramson2024", "OpenFold3"]
+    assert af3_citations("protenix2") == ["Abramson2024", "Protenix"]
+    # every key must resolve, or write_bibtex raises at the end of a fold
+    for model in ("alphafold3", "openfold3", "protenix2", "boltz2", "chai1", "intellifold2"):
+        assert all(key in citations for key in af3_citations(model))
+
+
+def test_a_json_input_keeps_the_msa_it_came_with():
+    folding_input = pytest.importorskip("alphafold3.common.folding_input")
+    from colabfold.alphafold3.input import msa_state, with_msas
+
+    theirs = ">user\nMKV\n>hit\nMKA\n"
+    chains = [
+        folding_input.ProteinChain(id="A", sequence="MKV", ptms=[], unpaired_msa=theirs,
+                                   paired_msa=""),
+        folding_input.ProteinChain(id="B", sequence="MKV", ptms=[], unpaired_msa=None,
+                                   paired_msa=None),
+    ]
+    fold_input = folding_input.Input(name="t", chains=chains, rng_seeds=[1])
+    assert msa_state(fold_input) == "mixed"
+
+    out = with_msas(fold_input, [">cf\nMKV\n", ">cf\nMKV\n"], None)
+    assert out.protein_chains[0].unpaired_msa == theirs, "the file's own MSA must survive"
+    assert out.protein_chains[1].unpaired_msa.startswith(">cf")
+
+
+def test_af3_names_the_options_it_cannot_honour(caplog):
+    pytest.importorskip("alphafold3")
+    from colabfold.alphafold3.backend import AF3Backend
+    from colabfold.backend import RunOptions
+
+    backend = AF3Backend("openfold3")
+    opts = RunOptions(model_type="openfold3", num_relax=1, rank_by="plddt")
+    with caplog.at_level("WARNING"):
+        backend.configure(opts, max_len=100, max_num=1, num_queries=1,
+                          msa_mode="mmseqs2_uniref_env", is_complex=False, use_templates=False)
+    assert "--amber" in caplog.text and "--rank-by" in caplog.text
+
+    caplog.clear()
+    with caplog.at_level("WARNING"):
+        backend.configure(RunOptions(model_type="openfold3"), max_len=100, max_num=1,
+                          num_queries=1, msa_mode="mmseqs2_uniref_env", is_complex=False,
+                          use_templates=False)
+    assert "ignores" not in caplog.text, "defaults must not warn"
+
+
+def test_multi_chain_coverage_plot_draws():
+    pytest.importorskip("alphafold3.common.folding_input")
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg")
+    from alphafold3.common import folding_input
+
+    from colabfold.alphafold3.plot import plot_msa_coverage
+
+    a3m = ">q\nMKVLLA\n>h1\nMKVLLG\n>h2\nMKVAAA\n"
+    chains = [folding_input.ProteinChain(id=c, sequence="MKVLLA", ptms=[], unpaired_msa=a3m,
+                                         paired_msa="") for c in ("A", "B")]
+    fold_input = folding_input.Input(name="t", chains=chains, rng_seeds=[1])
+    assert plot_msa_coverage(fold_input) is not None
+
+
+def test_templates_reach_the_featurised_batch():
+    pytest.importorskip("alphafold3.data.featurisation")
+    pytest.importorskip("haiku")
+    import numpy as np
+
+    from alphafold3.common import folding_input
+
+    from colabfold.alphafold3.input import build_fold_input
+    from colabfold.alphafold3.models import featurise, mark_absl_flags_parsed
+
+    mark_absl_flags_parsed()
+    sequence = "MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG"
+    a3m = f">101\n{sequence}\n"
+
+    def non_gap(templates):
+        fold_input = build_fold_input("t", [sequence], [1], [a3m], None, seeds=[1],
+                                      templates=templates)
+        example = featurise(fold_input, "alphafold3", model_dir="/tmp/none")[0]
+        return int(np.sum(example["template_aatype"] > 0))
+
+    assert non_gap(None) == 0

@@ -34,7 +34,8 @@ def paired_for_af3(paired_msa, num_chains: int, pairing: str = "colabfold"):
         return paired_msa
 
 
-def _protein_chains(query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa, start=0):
+def _protein_chains(query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa,
+                    start=0, templates=None):
     from alphafold3.common import folding_input
 
     chains, index = [], start
@@ -49,7 +50,7 @@ def _protein_chains(query_seqs_unique, query_seqs_cardinality, unpaired_msa, pai
                 ptms=[],
                 unpaired_msa=unpaired,
                 paired_msa=paired,
-                templates=[],
+                templates=list(templates[i]) if templates else [],
             ))
             index += 1
     return chains, index
@@ -86,12 +87,13 @@ def build_fold_input(
     molecules: Optional[Sequence[Tuple[MolType, str, int]]] = None,
     seeds: Sequence[int] = (1,),
     pairing: str = "colabfold",
+    templates=None,
 ):
     from alphafold3.common import folding_input
 
     paired_msa = paired_for_af3(paired_msa, len(query_seqs_unique), pairing)
     chains, index = _protein_chains(
-        query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa
+        query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa, templates=templates
     )
     extra, _ = _molecule_chains(molecules, start=index)
     return no_af3_search(

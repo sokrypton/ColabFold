@@ -35,6 +35,8 @@ class AF3Backend:
         self._fold_input = None
         self._num_seeds = 1
         self._random_seed = 0
+        self._use_templates = False
+        self._max_template_hits = 20
 
     def _opt(self, opts: RunOptions, key: str):
         return opts.opt(key, _DEFAULTS[key])
@@ -43,8 +45,8 @@ class AF3Backend:
                   is_complex, use_templates) -> None:
         self._num_seeds = opts.num_seeds
         self._random_seed = opts.random_seed
-        if use_templates:
-            logger.warning("templates are not wired up for alphafold3 yet, folding without them")
+        self._use_templates = use_templates
+        self._max_template_hits = opts.max_template_hits
 
     def featurize(self, query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa,
                   template_results, is_complex: bool, opts: RunOptions, extras=None):
@@ -54,6 +56,7 @@ class AF3Backend:
 
         seeds = [self._random_seed + i for i in range(self._num_seeds)]
         pairing = self._opt(opts, "af3_pairing")
+        templates = self._templates_for(query_seqs_unique, template_results)
         given = getattr(extras, "fold_input", None)
         if given is not None:
             fold_input = with_msas(given, unpaired_msa, paired_msa, pairing)
@@ -68,9 +71,33 @@ class AF3Backend:
                 molecules=extras if isinstance(extras, (list, tuple)) else None,
                 seeds=seeds,
                 pairing=pairing,
+                templates=templates,
             )
         self._fold_input = fold_input
         return fold_input, {}
+
+    def _templates_for(self, query_seqs_unique, template_results):
+        """One alphafold3 Template list per unique sequence, from ColabFold's hits."""
+        if not self._use_templates or not template_results:
+            return None
+        from colabfold.alphafold.features import search_templates
+        from colabfold.alphafold3.templates import build_templates
+
+        out = []
+        for sequence, result in zip(query_seqs_unique, template_results):
+            if result is None:
+                out.append([])
+                continue
+            a3m_lines, template_path = result
+            try:
+                hits = search_templates(a3m_lines, template_path)
+                out.append(build_templates(hits, sequence, template_path,
+                                           max_templates=self._max_template_hits))
+            except Exception as e:
+                logger.warning(f"no templates for this chain: {e}")
+                out.append([])
+        logger.info(f"templates per chain: {[len(t) for t in out]}")
+        return out
 
     def _ensure_loaded(self, opts: RunOptions) -> None:
         if self.model_runner is not None:

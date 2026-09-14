@@ -80,6 +80,13 @@ def mk_mock_template(
     return template_features
 
 
+def search_templates(a3m_lines: str, template_path: str):
+    """hhsearch hits against the pdb70 beside the downloaded mmCIFs."""
+    runner = hhsearch.HHSearch(binary_path=_tool_path("hhsearch"),
+                               databases=[f"{template_path}/pdb70"])
+    return pipeline.parsers.parse_hhr(runner.query(a3m_lines))
+
+
 def mk_template(
     a3m_lines: str,
     template_path: str,
@@ -96,12 +103,7 @@ def mk_template(
         obsolete_pdbs_path=None,
     )
 
-    hhsearch_pdb70_runner = hhsearch.HHSearch(
-        binary_path=_tool_path("hhsearch"), databases=[f"{template_path}/pdb70"]
-    )
-
-    hhsearch_result = hhsearch_pdb70_runner.query(a3m_lines)
-    hhsearch_hits = pipeline.parsers.parse_hhr(hhsearch_result)
+    hhsearch_hits = search_templates(a3m_lines, template_path)
     templates_result = template_featurizer.get_templates(
         query_sequence=query_sequence, hits=hhsearch_hits
     )
