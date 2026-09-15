@@ -477,6 +477,22 @@ def test_af3_weights_come_from_hugging_face(tmp_path):
     assert model_dir_for("protenix2", tmp_path, "int8") == tmp_path / "params/af3/protenix2-int8"
 
 
+def test_alphafold3s_own_weights_are_gated_and_never_mirrored(tmp_path, monkeypatch):
+    pytest.importorskip("alphafold3")
+    from colabfold.alphafold3 import weights
+
+    with pytest.raises(RuntimeError, match="--accept-alphafold3-terms"):
+        weights.ensure_weights("alphafold3", data_dir=tmp_path)
+
+    asked = []
+    monkeypatch.setattr(weights, "fetch_file",
+                        lambda urls, dest, desc: asked.append(urls) or dest.touch())
+    weights.ensure_weights("alphafold3", data_dir=tmp_path, accept_terms=True)
+
+    # Google's own URL, and only that: these are not ours to redistribute
+    assert asked == [["https://storage.googleapis.com/alphafold3/af3.bin.zst"]]
+
+
 def test_a_dead_mirror_falls_back_to_the_next_url(tmp_path, monkeypatch):
     import colabfold.download as download
 

@@ -37,11 +37,12 @@ def known_models() -> List[str]:
 
 
 def ensure_weights(model_name: str, model_dir: Optional[Path] = None, download: bool = True,
-                   data_dir: Optional[Path] = None, precision: str = "fp32") -> Path:
+                   data_dir: Optional[Path] = None, precision: str = "fp32",
+                   accept_terms: bool = False) -> Path:
     from colabfold.alphafold3.weights import ensure_weights as fetch
 
     return fetch(model_name, data_dir=data_dir, model_dir=model_dir, download=download,
-                 precision=precision)
+                 precision=precision, accept_terms=accept_terms)
 
 
 def make_config(model_name: str, num_recycles: Optional[int], num_diffusion_samples: int,
@@ -183,11 +184,12 @@ def load_model(model_type: str, *, num_recycles: Optional[int], num_diffusion_sa
                model_dir: Optional[Path] = None, use_dropout: bool = False,
                download: bool = True, num_msa: Optional[int] = None,
                return_embeddings: bool = False,
-               data_dir: Optional[Path] = None, precision: str = "fp32") -> "ModelRunner":
+               data_dir: Optional[Path] = None, precision: str = "fp32",
+               accept_terms: bool = False) -> "ModelRunner":
     mark_absl_flags_parsed()
     model_name = resolve_model_name(model_type)
     weights_dir = ensure_weights(model_name, model_dir, download=download, data_dir=data_dir,
-                                 precision=precision)
+                                 precision=precision, accept_terms=accept_terms)
     config = make_config(model_name, num_recycles, num_diffusion_samples,
                          num_msa=num_msa, return_embeddings=return_embeddings)
     logger.info(f"Running {model_name} from {weights_dir}")

@@ -11,7 +11,8 @@ from colabfold.backend import RunOptions
 logger = logging.getLogger(__name__)
 
 _CONFIG_KEYS = ("num_diffusion_samples", "use_dropout", "buckets", "download_weights",
-                "af3_pairing", "use_fast_kernels", "weights_precision")
+                "af3_pairing", "use_fast_kernels", "weights_precision",
+                "accept_alphafold3_terms")
 
 _DEFAULTS = {
     "num_diffusion_samples": 5,
@@ -21,6 +22,7 @@ _DEFAULTS = {
     "af3_pairing": "colabfold",
     "use_fast_kernels": False,
     "weights_precision": "int8",
+    "accept_alphafold3_terms": False,
 }
 
 
@@ -137,6 +139,7 @@ class AF3Backend:
             download=self._opt(opts, "download_weights"),
             data_dir=opts.data_dir,
             precision=self._opt(opts, "weights_precision"),
+            accept_terms=self._opt(opts, "accept_alphafold3_terms"),
             num_msa=opts.max_seq,
             return_embeddings=opts.save_single_representations or opts.save_pair_representations,
         )
