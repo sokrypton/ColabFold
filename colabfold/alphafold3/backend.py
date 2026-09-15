@@ -47,6 +47,23 @@ class AF3Backend:
         self._random_seed = opts.random_seed
         self._use_templates = use_templates
         self._max_template_hits = opts.max_template_hits
+        if use_templates:
+            logger.warning("templates are not wired up for alphafold3 yet, folding without them")
+        self._warn_about_ignored(opts)
+
+    def _warn_about_ignored(self, opts: RunOptions) -> None:
+        """Say which AlphaFold2 options this backend does not honour."""
+        ignored = []
+        if opts.num_relax:
+            ignored.append(("--amber", "alphafold3 results are not relaxed"))
+        if opts.initial_guess:
+            ignored.append(("--initial-guess", "diffusion takes no starting structure"))
+        if opts.max_extra_seq is not None:
+            ignored.append(("--max-msa", "only the first number is used"))
+        if opts.save_recycles:
+            ignored.append(("--save-recycles", "there is no per-recycle output"))
+        for flag, reason in ignored:
+            logger.warning(f"{self.model_type} ignores {flag}: {reason}")
 
     def featurize(self, query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa,
                   template_results, is_complex: bool, opts: RunOptions, extras=None):
@@ -116,6 +133,8 @@ class AF3Backend:
             model_dir=Path(model_dir) if model_dir else None,
             use_dropout=self._opt(opts, "use_dropout"),
             download=self._opt(opts, "download_weights"),
+            num_msa=opts.max_seq,
+            return_embeddings=opts.save_single_representations or opts.save_pair_representations,
         )
 
     def predict(self, prefix: str, result_dir: Path, model_input, is_complex: bool,
@@ -139,6 +158,8 @@ class AF3Backend:
             model_type=self.model_type,
             featurised_examples=examples,
             save_all=opts.save_all,
+            rank_by=opts.rank_by,
+            stop_at_score=opts.stop_at_score,
             prediction_callback=prediction_callback,
         )
 

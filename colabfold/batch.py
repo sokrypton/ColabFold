@@ -734,10 +734,14 @@ def run(
         print(f"WARNING: the following options are not being used: {kwargs}")
 
     # decide how to rank outputs
-    if rank_by == "auto":
-        rank_by = "multimer" if is_complex else "plddt"
-    if "ptm" not in model_type and "multimer" not in model_type:
-        rank_by = "plddt"
+    if is_af3_model(model_type):
+        if rank_by == "auto":
+            rank_by = "ranking_score"
+    else:
+        if rank_by == "auto":
+            rank_by = "multimer" if is_complex else "plddt"
+        if "ptm" not in model_type and "multimer" not in model_type:
+            rank_by = "plddt"
 
     # added for actifptm calculation
     if not is_complex and calc_extra_ptm:

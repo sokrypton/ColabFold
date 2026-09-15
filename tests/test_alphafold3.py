@@ -353,7 +353,8 @@ def test_af3_names_the_options_it_cannot_honour(caplog):
     with caplog.at_level("WARNING"):
         backend.configure(opts, max_len=100, max_num=1, num_queries=1,
                           msa_mode="mmseqs2_uniref_env", is_complex=False, use_templates=False)
-    assert "--amber" in caplog.text and "--rank-by" in caplog.text
+    assert "--amber" in caplog.text
+    assert "--rank-by" not in caplog.text, "ranking is honoured now"
 
     caplog.clear()
     with caplog.at_level("WARNING"):
@@ -399,3 +400,47 @@ def test_templates_reach_the_featurised_batch():
         return int(np.sum(example["template_aatype"] > 0))
 
     assert non_gap(None) == 0
+
+
+def test_rank_key_picks_the_requested_metric():
+    from colabfold.alphafold3.predict import rank_key
+
+    scores = {"plddt": [80.0, 90.0], "ptm": 0.7, "iptm": 0.4, "ranking_score": 0.6}
+    assert rank_key("auto", scores) == 0.6
+    assert rank_key("ranking_score", scores) == 0.6
+    assert rank_key("plddt", scores) == 85.0
+    assert rank_key("ptm", scores) == 0.7
+    assert rank_key("iptm", scores) == 0.4
+    assert rank_key("multimer", scores) == 0.4  # iptm when there is one
+    assert rank_key("multimer", {k: v for k, v in scores.items() if k != "iptm"}) == 0.7
+
+
+def test_af3_only_warns_about_what_it_still_cannot_do(caplog):
+    pytest.importorskip("alphafold3")
+    from colabfold.alphafold3.backend import AF3Backend
+    from colabfold.backend import RunOptions
+
+    backend = AF3Backend("openfold3")
+    # these are honoured now, so they must not be named
+    opts = RunOptions(model_type="openfold3", rank_by="ptm", stop_at_score=90,
+                      max_seq=256, save_pair_representations=True)
+    with caplog.at_level("WARNING"):
+        backend.configure(opts, max_len=100, max_num=1, num_queries=1,
+                          msa_mode="mmseqs2_uniref_env", is_complex=False, use_templates=False)
+    assert "ignores" not in caplog.text
+
+    caplog.clear()
+    with caplog.at_level("WARNING"):
+        backend.configure(RunOptions(model_type="openfold3", initial_guess="x.pdb"),
+                          max_len=100, max_num=1, num_queries=1,
+                          msa_mode="mmseqs2_uniref_env", is_complex=False, use_templates=False)
+    assert "--initial-guess" in caplog.text
+
+
+def test_af3_ranking_is_not_forced_to_plddt():
+    """The AlphaFold2 rule keys on the model name, which no alphafold3 model matches."""
+    from colabfold.backend import is_af3_model
+
+    for model_type in ("openfold3", "protenix2", "boltz2"):
+        assert is_af3_model(model_type)
+        assert "ptm" not in model_type and "multimer" not in model_type

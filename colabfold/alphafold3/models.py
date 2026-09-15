@@ -43,13 +43,17 @@ def ensure_weights(model_name: str, model_dir: Optional[Path] = None, download: 
                                        log=logger.info))
 
 
-def make_config(model_name: str, num_recycles: Optional[int], num_diffusion_samples: int):
+def make_config(model_name: str, num_recycles: Optional[int], num_diffusion_samples: int,
+                num_msa: Optional[int] = None, return_embeddings: bool = False):
     from alphafold3.model import model, model_registry
 
     config = model.Model.Config()
     config.heads.diffusion.eval.num_samples = num_diffusion_samples
     if num_recycles is not None:
         config.num_recycles = num_recycles
+    if num_msa is not None:
+        config.evoformer.num_msa = num_msa
+    config.return_embeddings = return_embeddings
     model_registry.get(model_name).configure(config)
     return config
 
@@ -125,6 +129,15 @@ class ModelRunner:
                                     else self.model_name.encode())
         return result
 
+    def extract_embeddings(self, result, num_tokens: int):
+        out = {}
+        for key in ("single_embeddings", "pair_embeddings"):
+            if key in result:
+                value = result[key]
+                out[key] = (value[:num_tokens] if key == "single_embeddings"
+                            else value[:num_tokens, :num_tokens]).astype(np.float16)
+        return out or None
+
     def extract_inference_results(self, batch, result, target_name: str):
         from alphafold3.model import model
 
@@ -167,10 +180,12 @@ def featurise(fold_input, model_name: str, model_dir: Path, buckets: Optional[Se
 
 def load_model(model_type: str, *, num_recycles: Optional[int], num_diffusion_samples: int,
                model_dir: Optional[Path] = None, use_dropout: bool = False,
-               download: bool = True) -> "ModelRunner":
+               download: bool = True, num_msa: Optional[int] = None,
+               return_embeddings: bool = False) -> "ModelRunner":
     mark_absl_flags_parsed()
     model_name = resolve_model_name(model_type)
     weights_dir = ensure_weights(model_name, model_dir, download=download)
-    config = make_config(model_name, num_recycles, num_diffusion_samples)
+    config = make_config(model_name, num_recycles, num_diffusion_samples,
+                         num_msa=num_msa, return_embeddings=return_embeddings)
     logger.info(f"Running {model_name} from {weights_dir}")
     return ModelRunner(config, weights_dir, use_dropout=use_dropout)
