@@ -47,9 +47,10 @@ class AF3Backend:
         self._random_seed = opts.random_seed
         self._use_templates = use_templates
         self._max_template_hits = opts.max_template_hits
-        if use_templates:
-            logger.warning("templates are not wired up for alphafold3 yet, folding without them")
         self._warn_about_ignored(opts)
+        samples = self._opt(opts, "num_diffusion_samples")
+        logger.info(f"{self.model_type}: {opts.num_seeds} seed(s) x {samples} diffusion "
+                    f"sample(s) = {opts.num_seeds * samples} structure(s)")
 
     def _warn_about_ignored(self, opts: RunOptions) -> None:
         """Say which AlphaFold2 options this backend does not honour."""

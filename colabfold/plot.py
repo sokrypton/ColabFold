@@ -112,7 +112,8 @@ def plot_msa(msa, query_sequence, seq_len_list, total_seq_len, dpi=100):
             lines_to_sort.append(np.array(line))
         else:
             lines_to_sort = np.array(lines_to_sort)
-            lines_to_sort = lines_to_sort[np.argsort(-np.nanmax(lines_to_sort, axis=1))]
+            if lines_to_sort.ndim == 2:  # a chain's block can start a new run empty
+                lines_to_sort = lines_to_sort[np.argsort(-np.nanmax(lines_to_sort, axis=1))]
             lines += lines_to_sort.tolist()
             lines_to_sort = []
             line = []
@@ -121,7 +122,8 @@ def plot_msa(msa, query_sequence, seq_len_list, total_seq_len, dpi=100):
             lines_to_sort.append(line)
         prev_has_seq = has_seq
     lines_to_sort = np.array(lines_to_sort)
-    lines_to_sort = lines_to_sort[np.argsort(-np.nanmax(lines_to_sort, axis=1))]
+    if lines_to_sort.ndim == 2:
+        lines_to_sort = lines_to_sort[np.argsort(-np.nanmax(lines_to_sort, axis=1))]
     lines += lines_to_sort.tolist()
 
     # Nn = np.cumsum(np.append(0, Nn))
