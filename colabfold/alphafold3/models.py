@@ -14,6 +14,13 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
+def mark_absl_flags_parsed() -> None:
+    """Stop alphafold3 reading ColabFold's argv as absl flags."""
+    from absl import flags
+
+    flags.FLAGS([""])  # absl wants the program name, and nothing after it
+
+
 def resolve_model_name(model_type: str) -> str:
     """ColabFold's ``--model-type`` to an alphafold3-open registry name."""
     from alphafold3.model import model_registry
@@ -154,6 +161,7 @@ def featurise(fold_input, model_name: str, model_dir: Path, buckets: Optional[Se
 def load_model(model_type: str, *, num_recycles: Optional[int], num_diffusion_samples: int,
                model_dir: Optional[Path] = None, use_dropout: bool = False,
                download: bool = True) -> "ModelRunner":
+    mark_absl_flags_parsed()
     model_name = resolve_model_name(model_type)
     weights_dir = ensure_weights(model_name, model_dir, download=download)
     config = make_config(model_name, num_recycles, num_diffusion_samples)
