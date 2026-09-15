@@ -290,6 +290,10 @@ def get_msa_and_templates(
     use_envpair = msa_mode == "mmseqs2_uniref_env_envpair"
     if isinstance(query_sequences, str): query_sequences = [query_sequences]
 
+    # an alphafold3 job of nucleic acids and ligands only has nothing to search for
+    if not query_sequences:
+        return None, None, [], [], []
+
     # remove duplicates before searching
     query_seqs_unique = []
     for x in query_sequences:
@@ -844,6 +848,9 @@ def run(
     }
     dropped = dropped_entities(queries, model_type)
     warn_about_dropped_entities(dropped, model_type)
+    protein_free = [name for name, sequence, _, _ in queries if not sequence]
+    if protein_free and not is_af3_model(model_type):
+        raise ValueError(f"{model_type} folds protein chains only, and {', '.join(protein_free)} has none")
     if dropped:
         config["dropped_entities"] = dropped
     config.update(backend.config_dict(opts))
@@ -898,7 +905,13 @@ def run(
             logger.info(f"Skipping {jobname} (already done)")
             continue
 
-        seq_len = len("".join(query_sequence))
+        # an alphafold3 JSON knows its own chains, and its nucleic acids count too
+        fold_input = getattr(custom_template_path_per_entry, "fold_input", None)
+        chain_lengths = None
+        if fold_input is not None and is_af3_model(model_type):
+            from colabfold.alphafold3.input import polymer_lengths
+            chain_lengths = polymer_lengths(fold_input)
+        seq_len = sum(chain_lengths) if chain_lengths is not None else len("".join(query_sequence))
         logger.info(f"Query {job_number + 1}/{len(queries)}: {jobname} (length {seq_len})")
 
         ###########################################
@@ -944,7 +957,7 @@ def run(
                 paired_msa = None
 
             # save a3m
-            if not 'msa' in skip_output:
+            if not 'msa' in skip_output and query_seqs_unique:
                 msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
                 result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
 
@@ -989,7 +1002,8 @@ def run(
             templates_file.write_text(json.dumps(domain_names))
             result_files.append(templates_file)
 
-        result_files.append(result_dir.joinpath(jobname + ".a3m"))
+        if query_seqs_unique:
+            result_files.append(result_dir.joinpath(jobname + ".a3m"))
         result_files += [bibtex_file, config_out_file]
 
         ######################
@@ -998,8 +1012,8 @@ def run(
         if num_models > 0:
             try:
                 # get list of lengths
-                query_sequence_len_array = sum([[len(x)] * y
-                    for x,y in zip(query_seqs_unique, query_seqs_cardinality)],[])
+                query_sequence_len_array = chain_lengths if chain_lengths is not None else sum(
+                    [[len(x)] * y for x,y in zip(query_seqs_unique, query_seqs_cardinality)],[])
 
                 results = backend.predict(
                     prefix=jobname,

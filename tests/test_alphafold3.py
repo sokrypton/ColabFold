@@ -343,6 +343,24 @@ def test_copies_of_a_chain_share_one_msa():
         ">cf\nMKV\n", ">cf\nMKV\n", ">cf\nAAW\n"]
 
 
+def test_a_json_without_a_protein_still_makes_a_query(tmp_path):
+    pytest.importorskip("alphafold3")
+    from colabfold.alphafold3.input import polymer_lengths
+    from colabfold.input import queries_from_af3_json
+
+    path = tmp_path / "dna.json"
+    path.write_text(json.dumps({
+        "name": "dsDNA", "modelSeeds": [1], "dialect": "alphafold3", "version": 1,
+        "sequences": [{"dna": {"id": "A", "sequence": "ACGTACGT"}},
+                      {"dna": {"id": "B", "sequence": "ACGTACGT"}}],
+    }))
+
+    (name, sequence, _, extras), = queries_from_af3_json(path)
+    assert name == "dsDNA"
+    assert sequence == [], "nothing for the MSA search, but still a job"
+    assert polymer_lengths(extras.fold_input) == [8, 8]
+
+
 def test_af3_names_the_options_it_cannot_honour(caplog):
     pytest.importorskip("alphafold3")
     from colabfold.alphafold3.backend import AF3Backend

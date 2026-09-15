@@ -278,10 +278,8 @@ def queries_from_af3_json(input_path: Path) -> List[Tuple[str, Any, None, Any]]:
     queries = []
     for fold_input in load_fold_inputs(input_path):
         sequences, cardinality = sequences_of(fold_input)
-        if not sequences:
-            raise ValueError(f"{input_path}: {fold_input.name} has no protein chain")
         expanded = [seq for seq, n in zip(sequences, cardinality) for _ in range(n)]
-        queries.append((fold_input.name, expanded if len(expanded) > 1 else expanded[0],
+        queries.append((fold_input.name, expanded if len(expanded) != 1 else expanded[0],
                         None, FoldInputExtras(fold_input)))
     return queries
 

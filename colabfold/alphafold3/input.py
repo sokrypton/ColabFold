@@ -158,6 +158,14 @@ def no_af3_search(fold_input):
     return fold_input.fill_missing_fields()
 
 
+def polymer_lengths(fold_input) -> List[int]:
+    """Residues per protein, RNA and DNA chain, in chain order, for the plots."""
+    from alphafold3.common import folding_input
+
+    polymers = (folding_input.ProteinChain, folding_input.RnaChain, folding_input.DnaChain)
+    return [len(c.sequence) for c in fold_input.chains if isinstance(c, polymers)]
+
+
 def sequences_of(fold_input) -> Tuple[List[str], List[int]]:
     """Unique protein sequences and their copy counts, for the MSA search."""
     unique, counts = [], []
