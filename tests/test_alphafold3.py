@@ -297,11 +297,17 @@ def test_af3_models_cite_their_weights():
     from colabfold.citations import af3_citations, citations
 
     assert af3_citations("alphafold2_ptm") == []
-    assert af3_citations("openfold3") == ["Abramson2024", "OpenFold3"]
-    assert af3_citations("protenix2") == ["Abramson2024", "Protenix"]
-    # every key must resolve, or write_bibtex raises at the end of a fold
-    for model in ("alphafold3", "openfold3", "protenix2", "boltz2", "chai1", "intellifold2"):
-        assert all(key in citations for key in af3_citations(model))
+    assert af3_citations("openfold3") == ["Abramson2024", "OpenFold3", "OpenBind"]
+    # the two Protenix releases have their own papers
+    assert af3_citations("protenix1") == ["Abramson2024", "ProtenixV1"]
+    assert af3_citations("protenix2") == ["Abramson2024", "ProtenixV2"]
+    # every model must name the weights it runs on, and every key must resolve
+    for model in ("openfold3", "openbind0", "protenix1", "protenix2", "boltz2", "chai1",
+                  "intellifold2", "rosettafold3", "opendde", "esmfold2", "esmfold2_fast"):
+        keys = af3_citations(model)
+        assert len(keys) >= 2, f"{model} cites no weights"
+        assert all(key in citations for key in keys)
+    assert af3_citations("openbind0") == ["Abramson2024", "OpenFold3", "OpenBind"]
 
 
 def test_a_json_input_keeps_the_msa_it_came_with():
