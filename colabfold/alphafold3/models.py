@@ -107,8 +107,7 @@ class ModelRunner:
     def run_inference(self, featurised_example, rng_key):
         import jax
         import jax.numpy as jnp
-        from alphafold3.model import features  # noqa: F401
-        from alphafold3.jax import utils
+        from alphafold3.model.components import utils
 
         featurised_example = jax.device_put(
             jax.tree_util.tree_map(jnp.asarray, utils.remove_invalidly_typed_feats(featurised_example)),
@@ -116,6 +115,14 @@ class ModelRunner:
         )
         result = self._model()(rng_key, featurised_example)
         result = jax.tree.map(np.asarray, result)
+        result = jax.tree.map(
+            lambda x: x.astype(jnp.float32) if x.dtype == jnp.bfloat16 else x, result)
+        result = dict(result)
+        # alphafold3 writes this into the output mmCIF and refuses to build a result
+        # without it; converted weights carry one, a hand-made blob may not
+        meta = self.model_params.get("__meta__", {}).get("__identifier__")
+        result["__identifier__"] = (np.asarray(meta).tobytes() if meta is not None
+                                    else self.model_name.encode())
         return result
 
     def extract_inference_results(self, batch, result, target_name: str):

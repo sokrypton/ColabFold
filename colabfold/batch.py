@@ -1665,7 +1665,8 @@ def main():
     if args.msa_only:
         args.num_models = 0
 
-    if args.num_models > 0:
+    if args.num_models > 0 and not is_af3_model(model_type):
+        # the alphafold3 models fetch their own weights, from a different place
         download_alphafold_params(model_type, data_dir)
 
     if args.msa_mode != "single_sequence" and not args.templates:
