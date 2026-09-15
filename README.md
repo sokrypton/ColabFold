@@ -282,7 +282,7 @@ The `--compile-mode` flag trades compile time against folding speed. The differe
   Nature Protocols (2025) doi: [10.1038/s41596-024-01060-5](https://www.nature.com/articles/s41596-024-01060-5)
 - If you’re using **AlphaFold**, please also cite: <br />
   Jumper et al. "Highly accurate protein structure prediction with AlphaFold." <br />
-  Nature (2021) doi: [10.1038/s41586-021-03819-2](https://doi.org/10.1038/s41586-021-03819-2)
+  Nature (2021) doi: [10.1038/s41586-021-03819-2](https://doi.org/10.1038/s41586-021-03819-2) · [Read online](https://webeditions.page/works/highly-accurate-protein-structure-prediction-with-alphafold/?via=placement:ac66b1b3b26c0a52f136)
 - If you’re using **AlphaFold-multimer**, please also cite: <br />
   Evans et al. "Protein complex prediction with AlphaFold-Multimer." <br />
   biorxiv (2021) doi: [10.1101/2021.10.04.463034v1](https://www.biorxiv.org/content/10.1101/2021.10.04.463034v1)
