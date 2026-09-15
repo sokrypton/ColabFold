@@ -11,6 +11,16 @@ def test_get_queries_fasta_dir(pytestconfig, caplog):
     assert caplog.messages == [f"{dir_path}/empty.fasta is empty"]
 
 
+def test_a_structure_in_an_input_directory_is_read(tmp_path, pytestconfig):
+    pytest.importorskip("colabfold.alphafold.structure")
+    fixture = pytestconfig.rootpath.joinpath("test-data/ERR550519_2213899_unrelaxed_model_1.pdb")
+    (tmp_path / fixture.name).write_bytes(fixture.read_bytes())
+
+    # the import this needs used to sit in the single-file branch only
+    queries, _ = get_queries(tmp_path)
+    assert queries and queries[0][1]
+
+
 def test_get_queries_empty_a3m(pytestconfig, caplog):
     with pytest.raises(ValueError, match="a3m/empty.a3m is empty"):
         get_queries(pytestconfig.rootpath.joinpath("test-data/a3m/empty.a3m"))
