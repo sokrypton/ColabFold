@@ -130,21 +130,25 @@ def with_msas(fold_input, unpaired_msa, paired_msa, pairing: str = "colabfold"):
 
     from alphafold3.common import folding_input
 
-    paired_msa = paired_for_af3(paired_msa, len(fold_input.protein_chains), pairing)
+    unique, _ = sequences_of(fold_input)
+    paired_msa = paired_for_af3(paired_msa, len(unique), pairing)
 
-    chains, i = [], 0
+    chains = []
     for chain in fold_input.chains:
         if isinstance(chain, folding_input.ProteinChain):
-            chain = folding_input.ProteinChain(
-                id=chain.id,
-                sequence=chain.sequence,
-                ptms=chain.ptms,
-                description=chain.description,
-                unpaired_msa=unpaired_msa[i] if unpaired_msa else "",
-                paired_msa=paired_msa[i] if paired_msa else "",
-                templates=chain.templates or [],
-            )
-            i += 1
+            # an MSA already in the file is the user's; only fill in what is missing
+            if not (chain.unpaired_msa or chain.paired_msa):
+                # one MSA per unique sequence, so copies of a chain share one
+                i = unique.index(chain.sequence)
+                chain = folding_input.ProteinChain(
+                    id=chain.id,
+                    sequence=chain.sequence,
+                    ptms=chain.ptms,
+                    description=chain.description,
+                    unpaired_msa=unpaired_msa[i] if unpaired_msa else "",
+                    paired_msa=paired_msa[i] if paired_msa else "",
+                    templates=chain.templates or [],
+                )
         chains.append(chain)
     return no_af3_search(dataclasses.replace(fold_input, chains=chains))
 

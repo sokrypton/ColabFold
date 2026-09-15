@@ -324,9 +324,23 @@ def test_a_json_input_keeps_the_msa_it_came_with():
     fold_input = folding_input.Input(name="t", chains=chains, rng_seeds=[1])
     assert msa_state(fold_input) == "mixed"
 
-    out = with_msas(fold_input, [">cf\nMKV\n", ">cf\nMKV\n"], None)
+    out = with_msas(fold_input, [">cf\nMKV\n"], None)
     assert out.protein_chains[0].unpaired_msa == theirs, "the file's own MSA must survive"
     assert out.protein_chains[1].unpaired_msa.startswith(">cf")
+
+
+def test_copies_of_a_chain_share_one_msa():
+    folding_input = pytest.importorskip("alphafold3.common.folding_input")
+    from colabfold.alphafold3.input import with_msas
+
+    chains = [folding_input.ProteinChain(id=i, sequence=s, ptms=[])
+              for i, s in (("A", "MKV"), ("B", "MKV"), ("C", "AAW"))]
+    fold_input = folding_input.Input(name="t", chains=chains, rng_seeds=[1])
+
+    # the search returns one MSA per unique sequence, not one per chain
+    out = with_msas(fold_input, [">cf\nMKV\n", ">cf\nAAW\n"], None)
+    assert [c.unpaired_msa for c in out.protein_chains] == [
+        ">cf\nMKV\n", ">cf\nMKV\n", ">cf\nAAW\n"]
 
 
 def test_af3_names_the_options_it_cannot_honour(caplog):
