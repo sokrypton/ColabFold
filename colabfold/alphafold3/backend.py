@@ -14,10 +14,16 @@ _CONFIG_KEYS = ("num_diffusion_samples", "use_dropout", "buckets", "download_wei
                 "af3_pairing", "use_fast_kernels", "weights_precision",
                 "accept_alphafold3_terms")
 
+# Token counts to pad to, so a batch of mixed lengths compiles once per bucket
+# rather than once per length. Copied from run_alphafold.py's --buckets, which
+# is not installed and so cannot be imported.
+BUCKETS = (32, 64, 128, 256, 384, 512, 768, 1024, 1280, 1536, 2048, 2560, 3072, 3584,
+           4096, 4608, 5120)
+
 _DEFAULTS = {
     "num_diffusion_samples": 5,
     "use_dropout": False,
-    "buckets": None,
+    "buckets": BUCKETS,
     "download_weights": True,
     "af3_pairing": "colabfold",
     "use_fast_kernels": False,
@@ -42,7 +48,8 @@ class AF3Backend:
         self._max_template_hits = 20
 
     def _opt(self, opts: RunOptions, key: str):
-        return opts.opt(key, _DEFAULTS[key])
+        value = opts.opt(key, _DEFAULTS[key])
+        return _DEFAULTS[key] if value is None else value  # unset, not "no value"
 
     def configure(self, opts, *, max_len, max_num, num_queries, msa_mode,
                   is_complex, use_templates) -> None:

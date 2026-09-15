@@ -726,6 +726,7 @@ def run(
     model_dir             = kwargs.pop("model_dir", None)
     af3_pairing           = kwargs.pop("af3_pairing", "colabfold")
     weights_precision     = kwargs.pop("weights_precision", "int8")
+    buckets               = kwargs.pop("buckets", None)
     accept_alphafold3_terms = kwargs.pop("accept_alphafold3_terms", False)
     if use_fast_kernels and not use_bfloat16:
         raise ValueError("--use-fast-kernels needs half precision, not use_bfloat16=False")
@@ -814,6 +815,7 @@ def run(
             "model_dir": model_dir,
             "af3_pairing": af3_pairing,
             "weights_precision": weights_precision,
+            "buckets": buckets,
             "accept_alphafold3_terms": accept_alphafold3_terms,
         },
     )
@@ -1396,6 +1398,12 @@ def main():
         action="store_true",
     )
     pred_group.add_argument(
+        "--buckets",
+        help="Token counts the alphafold3 models pad to, so queries of mixed length compile "
+        "once per bucket instead of once per length. Comma separated, increasing.",
+        default=None,
+    )
+    pred_group.add_argument(
         "--weights-precision",
         help="Which published form of the alphafold3 weights to fetch. int8 is the same "
         "weights stored smaller and expanded on load, which leaves inference unchanged.",
@@ -1797,6 +1805,7 @@ def main():
         model_dir=args.model_dir,
         af3_pairing=args.af3_pairing,
         weights_precision=args.weights_precision,
+        buckets=[int(b) for b in args.buckets.split(",")] if args.buckets else None,
         accept_alphafold3_terms=args.accept_alphafold3_terms,
     )
 

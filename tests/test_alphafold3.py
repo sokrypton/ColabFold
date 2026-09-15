@@ -464,6 +464,22 @@ def test_af3_ranking_is_not_forced_to_plddt():
         assert "ptm" not in model_type and "multimer" not in model_type
 
 
+def test_alphafold3_pads_to_buckets_by_default():
+    pytest.importorskip("alphafold3")
+    from colabfold.alphafold3.backend import BUCKETS, AF3Backend
+    from colabfold.backend import RunOptions
+
+    assert all(a < b for a, b in zip(BUCKETS, BUCKETS[1:])), "alphafold3 requires increasing"
+
+    backend = AF3Backend("protenix2")
+    assert backend._opt(RunOptions(model_type="protenix2"), "buckets") == BUCKETS
+    # an unset option arrives as None, which must not mean "pad to nothing"
+    unset = RunOptions(model_type="protenix2", backend_opts={"buckets": None})
+    assert backend._opt(unset, "buckets") == BUCKETS
+    given = RunOptions(model_type="protenix2", backend_opts={"buckets": [128, 256]})
+    assert backend._opt(given, "buckets") == [128, 256]
+
+
 def test_af3_weights_come_from_hugging_face(tmp_path):
     from colabfold.alphafold3.weights import model_dir_for, urls_for
 
