@@ -11,7 +11,12 @@ def safe_filename(file: str) -> str:
 def pair_sequences(
     a3m_lines: List[str], query_sequences: List[str], query_cardinality: List[int]
 ) -> str:
-    a3m_line_paired = [""] * len(a3m_lines[0].splitlines())
+    depths = [len(a3m.splitlines()) for a3m in a3m_lines]
+    if len(set(depths)) != 1:
+        # rows are paired by position, so a block of another depth would pair
+        # each row with a different hit, or with nothing at all
+        raise ValueError(f"cannot pair MSA blocks of unequal depth: {depths}")
+    a3m_line_paired = [""] * depths[0]
     for n, seq in enumerate(query_sequences):
         lines = a3m_lines[n].splitlines()
         for i, line in enumerate(lines):
@@ -111,6 +116,8 @@ def parse_fasta(fasta_string: str) -> Tuple[List[str], List[str]]:
             continue
         elif not line:
             continue  # Skip blank lines.
+        if index < 0:
+            raise ValueError("sequence before the first '>' description")
         sequences[index] += line
 
     return sequences, descriptions
@@ -417,6 +424,11 @@ def get_queries(
 
     elif sort_queries_by == "random":
         random.shuffle(queries)
+
+    for name, query_sequence, _, extras in queries:
+        # an alphafold3 JSON may hold nucleic acids and ligands only; a FASTA or a3m may not
+        if not query_sequence and getattr(extras, "fold_input", None) is None:
+            raise ValueError(f"{name} has no sequence")
 
     is_complex = False
     for job_number, (_, query_sequence, a3m_lines, _) in enumerate(queries):

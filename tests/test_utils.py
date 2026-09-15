@@ -11,6 +11,35 @@ def test_get_queries_fasta_dir(pytestconfig, caplog):
     assert caplog.messages == [f"{dir_path}/empty.fasta is empty"]
 
 
+def test_a_sequence_before_the_first_header_is_refused():
+    from colabfold.input import parse_fasta
+
+    with pytest.raises(ValueError, match="sequence before the first"):
+        parse_fasta("MKVLLA\n")
+    assert parse_fasta(">q\nMKVLLA\n") == (["MKVLLA"], ["q"])
+
+
+def test_a_description_without_a_sequence_is_refused(tmp_path):
+    (tmp_path / "x.a3m").write_text(">q\n")
+    with pytest.raises(ValueError, match="has no sequence"):
+        get_queries(tmp_path / "x.a3m")
+
+
+def test_msa_blocks_of_unequal_depth_are_refused():
+    from colabfold.input import pair_sequences
+
+    shallow = ">101\nAAAA\n>h1\nAAAA\n"
+    deep = ">102\nCCCC\n>h1\nCCCC\n>h2\nCCCC\n"
+    # pairing is by row position, so a mismatched depth cannot be paired at all
+    with pytest.raises(ValueError, match="unequal depth"):
+        pair_sequences([shallow, deep], ["AAAA", "CCCC"], [1, 1])
+    with pytest.raises(ValueError, match="unequal depth"):
+        pair_sequences([deep, shallow], ["CCCC", "AAAA"], [1, 1])
+
+    paired = pair_sequences([shallow, shallow], ["AAAA", "AAAA"], [1, 1])
+    assert paired.splitlines() == [">101\t101", "AAAAAAAA", ">h1\th1", "AAAAAAAA"]
+
+
 def test_a_structure_in_an_input_directory_is_read(tmp_path, pytestconfig):
     pytest.importorskip("colabfold.alphafold.structure")
     fixture = pytestconfig.rootpath.joinpath("test-data/ERR550519_2213899_unrelaxed_model_1.pdb")
