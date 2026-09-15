@@ -89,25 +89,31 @@ def mmseqs_search_monomer(
     if use_env:
         used_dbs.append(metagenomic_db)
 
+    ignore_index = bool(os.environ.get("MMSEQS_IGNORE_INDEX", False))
+    indexed = {}
     for db in used_dbs:
         if not dbbase.joinpath(f"{db}.dbtype").is_file():
             raise FileNotFoundError(f"Database {db} does not exist")
-        if (
-            (
-                not dbbase.joinpath(f"{db}.idx").is_file()
-                and not dbbase.joinpath(f"{db}.idx.index").is_file()
-            )
-            or os.environ.get("MMSEQS_IGNORE_INDEX", False)
-        ):
-            logger.info("Search does not use index")
-            db_load_mode = 0
-            dbSuffix1 = "_seq"
-            dbSuffix2 = "_aln"
-            dbSuffix3 = ""
-        else:
-            dbSuffix1 = ".idx"
-            dbSuffix2 = ".idx"
-            dbSuffix3 = ".idx"
+        indexed[str(db)] = not ignore_index and (
+            dbbase.joinpath(f"{db}.idx").is_file()
+            or dbbase.joinpath(f"{db}.idx.index").is_file()
+        )
+
+    # one suffix set is used for every database, so a mix would search some of them
+    # through the wrong files and with the wrong --db-load-mode
+    if len(set(indexed.values())) > 1:
+        have = sorted(d for d, ok in indexed.items() if ok)
+        lack = sorted(d for d, ok in indexed.items() if not ok)
+        raise ValueError(
+            f"{have} are indexed and {lack} are not; index the rest or set MMSEQS_IGNORE_INDEX=1"
+        )
+
+    if not all(indexed.values()):
+        logger.info("Search does not use index")
+        db_load_mode = 0
+        dbSuffix1, dbSuffix2, dbSuffix3 = "_seq", "_aln", ""
+    else:
+        dbSuffix1 = dbSuffix2 = dbSuffix3 = ".idx"
 
     search_param = ["--num-iterations", "3", "--db-load-mode", str(db_load_mode), "-a", "-e", "0.1", "--max-seqs", "10000"]
     template_search_param = []
