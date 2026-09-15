@@ -462,3 +462,44 @@ def test_af3_ranking_is_not_forced_to_plddt():
     for model_type in ("openfold3", "protenix2", "boltz2"):
         assert is_af3_model(model_type)
         assert "ptm" not in model_type and "multimer" not in model_type
+
+
+def test_af3_weights_come_from_hugging_face(tmp_path):
+    from colabfold.alphafold3.weights import model_dir_for, urls_for
+
+    assert urls_for("protenix/protenix2.bin.zst", "sokrypton/af3-any-model") == [
+        "https://huggingface.co/sokrypton/af3-any-model/resolve/main/"
+        "protenix/protenix2.bin.zst"
+    ]
+
+    # beside AlphaFold2's params, and one directory per precision
+    assert model_dir_for("protenix2", tmp_path) == tmp_path / "params/af3/protenix2"
+    assert model_dir_for("protenix2", tmp_path, "int8") == tmp_path / "params/af3/protenix2-int8"
+
+
+def test_a_dead_mirror_falls_back_to_the_next_url(tmp_path, monkeypatch):
+    import colabfold.download as download
+
+    tried = []
+
+    class Response:
+        headers = {"Content-Length": "5"}
+
+        def raise_for_status(self):
+            if "mirror" in tried[-1]:
+                raise OSError("502 Bad Gateway")
+
+        def iter_content(self, chunk_size):
+            yield b"bytes"
+
+    def get(url, **kwargs):
+        tried.append(url)
+        return Response()
+
+    monkeypatch.setattr(download.requests, "get", get)
+    dest = tmp_path / "weights.bin.zst"
+    download.fetch_file(["https://mirror/x", "https://fallback/x"], dest, "test")
+
+    assert tried == ["https://mirror/x", "https://fallback/x"]
+    assert dest.read_bytes() == b"bytes"
+    assert not list(tmp_path.glob("*.part")), "the partial file must not be left behind"

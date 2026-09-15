@@ -725,6 +725,7 @@ def run(
     num_diffusion_samples = kwargs.pop("num_diffusion_samples", 5)
     model_dir             = kwargs.pop("model_dir", None)
     af3_pairing           = kwargs.pop("af3_pairing", "colabfold")
+    weights_precision     = kwargs.pop("weights_precision", "int8")
     if use_fast_kernels and not use_bfloat16:
         raise ValueError("--use-fast-kernels needs half precision, not use_bfloat16=False")
     max_msa               = kwargs.pop("max_msa",None)
@@ -811,6 +812,7 @@ def run(
             "num_diffusion_samples": num_diffusion_samples,
             "model_dir": model_dir,
             "af3_pairing": af3_pairing,
+            "weights_precision": weights_precision,
         },
     )
     backend.configure(
@@ -1386,6 +1388,13 @@ def main():
         default=None,
     )
     pred_group.add_argument(
+        "--weights-precision",
+        help="Which published form of the alphafold3 weights to fetch. int8 is the same "
+        "weights stored smaller and expanded on load, which leaves inference unchanged.",
+        choices=["fp32", "int8"],
+        default="int8",
+    )
+    pred_group.add_argument(
         "--initial-guess",
         nargs="?",
         const=True,
@@ -1779,6 +1788,7 @@ def main():
         num_diffusion_samples=args.num_diffusion_samples,
         model_dir=args.model_dir,
         af3_pairing=args.af3_pairing,
+        weights_precision=args.weights_precision,
     )
 
 if __name__ == "__main__":

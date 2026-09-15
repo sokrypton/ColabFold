@@ -37,6 +37,31 @@ def download(url, params_dir, size_queue, progress_queue):
         progress_queue.put("error")
 
 
+def fetch_file(urls, dest: Path, desc: str) -> None:
+    """Download to ``dest``, trying each URL in turn until one works."""
+    errors = []
+    part = dest.parent.joinpath(dest.name + ".part")
+    for url in urls:
+        try:
+            response = requests.get(url, stream=True, timeout=6.02)
+            response.raise_for_status()
+            file_size = int(response.headers.get("Content-Length", 0))
+            with open(part, "wb") as handle, tqdm.tqdm(
+                total=file_size or None, desc=desc, unit="B", unit_scale=True, unit_divisor=1024
+            ) as pbar:
+                for chunk in response.iter_content(chunk_size=1 << 20):
+                    handle.write(chunk)
+                    pbar.update(len(chunk))
+            if file_size and part.stat().st_size != file_size:
+                raise IOError(f"got {part.stat().st_size} of {file_size} bytes")
+            part.replace(dest)
+            return
+        except Exception as e:
+            errors.append(f"{url}: {e}")
+            part.unlink(missing_ok=True)
+    raise RuntimeError(f"could not download {dest.name}\n  " + "\n  ".join(errors))
+
+
 def download_alphafold_params(model_type: str, data_dir: Path = default_data_dir):
     params_dir = data_dir.joinpath("params")
     if model_type == "alphafold2_multimer_v3":
