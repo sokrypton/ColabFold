@@ -48,13 +48,12 @@ def scores_of(inference_result, ranking_score: float) -> Dict[str, Any]:
 
 
 def _print_line(tag: str, scores: Dict[str, Any], took: float) -> str:
-    line = f"{tag} took {took:.1f}s"
-    mean_plddt = float(np.mean(scores["plddt"])) if scores["plddt"] else float("nan")
-    line += f" pLDDT={mean_plddt:.1f}"
-    for key in ("ptm", "iptm", "ranking_score"):
-        if key in scores:
-            line += f" {key}={scores[key]:.3f}"
-    return line
+    from colabfold.backend import metrics_line
+
+    summary = {k: scores[k] for k in ("ptm", "iptm", "ranking_score") if k in scores}
+    if scores["plddt"]:
+        summary["mean_plddt"] = float(np.mean(scores["plddt"]))
+    return f"{tag} took {took:.1f}s" + metrics_line(summary)
 
 
 def predict_structure(
@@ -82,8 +81,7 @@ def predict_structure(
             processed = post_processing.post_process_inference_result(inference_result)
             tag = f"{model_type}_seed_{seed:03d}_sample_{sample}"
             scores = scores_of(inference_result, processed.ranking_score)
-            logger.info(_print_line(tag, scores, took))
-            ranked.append((processed.ranking_score, tag, processed, scores))
+            ranked.append((processed.ranking_score, tag, processed, scores, took))
             if prediction_callback is not None:
                 prediction_callback(inference_result.predicted_structure, None,
                                     scores, example, (tag, False))
@@ -92,10 +90,11 @@ def predict_structure(
     ranked.sort(key=lambda row: row[0], reverse=True)
 
     rank, metric, result_files = [], [], []
-    for n, (_, tag, processed, scores) in enumerate(ranked):
+    for n, (_, tag, processed, scores, took) in enumerate(ranked):
         new_tag = f"rank_{(n + 1):03d}_{tag}"
         rank.append(new_tag)
         metric.append(scores)
+        logger.info(_print_line(new_tag, scores, took))
         cif = result_dir.joinpath(f"{prefix}_{new_tag}.cif")
         cif.write_bytes(processed.cif)
         result_files.append(cif)

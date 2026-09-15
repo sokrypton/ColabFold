@@ -16,6 +16,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 
 
+# the metrics a prediction may report, in the order they are printed
+_METRIC_LABELS = (("mean_plddt", "pLDDT"), ("ptm", "pTM"), ("iptm", "ipTM"),
+                  ("actifptm", "actifpTM"), ("ranking_score", "ranking_score"))
+
+
+def metrics_line(scores) -> str:
+    """The ` pLDDT=95.4 pTM=0.826` tail both backends put after a tag."""
+    return "".join(f" {label}={float(scores[key]):.3g}"
+                   for key, label in _METRIC_LABELS if key in scores)
+
+
 @dataclass
 class RunOptions:
     model_type: str

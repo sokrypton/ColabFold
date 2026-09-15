@@ -14,6 +14,7 @@ from alphafold.data import pipeline_multimer
 
 from colabfold.alphafold import extra_ptm, ipsae
 from colabfold.input import pdb_to_string
+from colabfold.backend import metrics_line
 from colabfold.relax import relax_me
 
 if TYPE_CHECKING:
@@ -226,13 +227,9 @@ def predict_structure(
             mean_scores.append(result["ranking_confidence"])
             if recycles == 0: result.pop("tol",None)
             if not is_complex: result.pop("iptm",None)
-            print_line = ""
-            conf.append({})
-            for x,y in [["mean_plddt","pLDDT"],["ptm","pTM"],["iptm","ipTM"], ['actifptm', 'actifpTM']]:
-              if x in result:
-                print_line += f" {y}={result[x]:.3g}"
-                conf[-1][x] = float(result[x])
-            conf[-1]["print_line"] = print_line
+            conf.append({x: float(result[x])
+                         for x in ("mean_plddt", "ptm", "iptm", "actifptm") if x in result})
+            conf[-1]["print_line"] = metrics_line(result)
             logger.info(f"{tag} took {prediction_times[-1]:.1f}s ({recycles} recycles)")
 
             # create protein object
