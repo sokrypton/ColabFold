@@ -449,8 +449,12 @@ def unserialize_msa(
     List[int],
     List[Dict[str, Any]],
 ]:
+    if not a3m_lines:
+        raise ValueError("no a3m to unserialize")
     a3m_lines = a3m_lines[0].replace("\x00", "").splitlines()
     a3m_lines = normalize_a3m(a3m_lines)
+    if not a3m_lines:
+        raise ValueError("this a3m has no lines; it needs at least a query and its sequence")
     if not a3m_lines[0].startswith("#") or len(a3m_lines[0][1:].split("\t")) != 2:
         assert isinstance(query_sequence, str)
         return (
