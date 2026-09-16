@@ -280,6 +280,10 @@ class FoldInputExtras(NamedTuple):
 
 
 def queries_from_af3_json(input_path: Path) -> List[Tuple[str, Any, None, Any]]:
+    from colabfold.alphafold3 import require
+
+    # parsing the JSON imports alphafold3, which needs its chemical components
+    require()
     from colabfold.alphafold3.input import load_fold_inputs, sequences_of
 
     queries = []

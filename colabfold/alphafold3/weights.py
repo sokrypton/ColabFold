@@ -51,6 +51,23 @@ def ensure_ccd(data_dir: Optional[Path] = None) -> None:
         part.replace(cif)
         archive.unlink()
     os.environ["LIBCIFPP_DATA_DIR"] = str(target)
+    _build_ccd_pickles()
+
+
+def _build_ccd_pickles() -> None:
+    """Run alphafold3's own build_data, whose output the wheel does not ship."""
+    import importlib.util
+
+    spec = importlib.util.find_spec("alphafold3")
+    if spec is None or spec.origin is None:
+        return
+    converters = Path(spec.origin).parent.joinpath("constants", "converters")
+    if converters.joinpath("ccd.pickle").is_file():
+        return
+    logger.info(f"Building the chemical component tables in {converters}, this takes a minute")
+    from alphafold3.build_data import build_data
+
+    build_data()
 
 
 def urls_for(path: str, repo: str) -> List[str]:

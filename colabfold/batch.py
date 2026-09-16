@@ -1688,6 +1688,18 @@ def main():
 
     data_dir = Path(args.data or default_data_dir)
 
+    if args.msa_only:
+        args.num_models = 0
+
+    if args.num_models > 0 and is_af3_model(args.model_type):
+        from colabfold.alphafold3.models import resolve_model_name
+        from colabfold.alphafold3.weights import ensure_ccd, ensure_weights
+
+        ensure_ccd(data_dir)
+        ensure_weights(resolve_model_name(args.model_type), data_dir=data_dir,
+                       model_dir=args.model_dir, precision=args.weights_precision,
+                       accept_terms=args.accept_alphafold3_terms)
+
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
 
     has_per_entry_templates = any(isinstance(q[3], Path) for q in queries)
@@ -1709,11 +1721,7 @@ def main():
     else:
         initial_guess = None
 
-    if args.msa_only:
-        args.num_models = 0
-
     if args.num_models > 0 and not is_af3_model(model_type):
-        # the alphafold3 models fetch their own weights, from a different place
         download_alphafold_params(model_type, data_dir)
 
     if args.msa_mode != "single_sequence" and not args.templates:
