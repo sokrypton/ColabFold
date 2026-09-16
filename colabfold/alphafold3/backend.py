@@ -56,6 +56,8 @@ class AF3Backend:
         self._num_seeds = opts.num_seeds
         self._random_seed = opts.random_seed
         self._use_templates = use_templates
+        if use_templates:
+            self._require_template_search()
         self._max_template_hits = opts.max_template_hits
         from colabfold.alphafold3.tokamax_patch import install as patch_tokamax
 
@@ -64,6 +66,13 @@ class AF3Backend:
         samples = self._opt(opts, "num_diffusion_samples")
         logger.info(f"{self.model_type}: {opts.num_seeds} seed(s) x {samples} diffusion "
                     f"sample(s) = {opts.num_seeds * samples} structure(s)")
+
+    @staticmethod
+    def _require_template_search() -> None:
+        import importlib.util
+
+        if importlib.util.find_spec("alphafold") is None:
+            raise RuntimeError("--templates needs pip install 'colabfold[alphafold,alphafold3]'")
 
     def _warn_about_ignored(self, opts: RunOptions) -> None:
         """Say which AlphaFold2 options this backend does not honour."""
