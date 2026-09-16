@@ -360,54 +360,63 @@ def get_queries(
     else:
         assert input_path.is_dir(), "Expected either an input file or a input directory"
         queries = []
+        unreadable = []
         for file in sorted(input_path.iterdir()):
             if not file.is_file():
                 continue
             if file.suffix.lower() not in [".a3m", ".fasta", ".faa", ".fa", ".pdb", ".cif", ".json"]:
                 logger.warning(f"non-fasta/a3m/pdb/cif/json file in input directory: {file}")
                 continue
-            if file.suffix.lower() == ".json":
-                queries.extend(queries_from_af3_json(file))
-                continue
-            if file.suffix.lower() in [".pdb", ".cif"]:
-                from colabfold.alphafold.structure import protein
+            try:
+                if file.suffix.lower() == ".json":
+                    queries.extend(queries_from_af3_json(file))
+                    continue
+                if file.suffix.lower() in [".pdb", ".cif"]:
+                    from colabfold.alphafold.structure import protein
 
-                header = file.stem
-                if file.suffix.lower() == ".pdb":
-                    pdb_string = pdb_to_string(file.read_text())
-                    prot = protein.from_pdb_string(pdb_string)
-                else:  # file.suffix.lower() == ".cif"
-                    prot = protein.from_mmcif_string(file.read_text())
-                sequences = decode_structure_sequences(prot.aatype, prot.chain_index)
+                    header = file.stem
+                    if file.suffix.lower() == ".pdb":
+                        pdb_string = pdb_to_string(file.read_text())
+                        prot = protein.from_pdb_string(pdb_string)
+                    else:  # file.suffix.lower() == ".cif"
+                        prot = protein.from_mmcif_string(file.read_text())
+                    sequences = decode_structure_sequences(prot.aatype, prot.chain_index)
 
-                if len(sequences) == 0:
+                    if len(sequences) == 0:
+                        logger.error(f"{file} is empty")
+                        continue
+
+                    queries.append((header, sequences, None, None))
+                    continue
+                else:  # file.suffix.lower() in [".a3m", ".fasta", ".faa"]
+                    (seqs, header) = parse_fasta(file.read_text())
+                if len(seqs) == 0:
                     logger.error(f"{file} is empty")
                     continue
+                query_sequence = seqs[0]
+                if len(seqs) > 1 and file.suffix in [".fasta", ".faa", ".fa"]:
+                    logger.warning(
+                        f"More than one sequence in {file}, ignoring all but the first sequence"
+                    )
 
-                queries.append((header, sequences, None, None))
-                continue
-            else:  # file.suffix.lower() in [".a3m", ".fasta", ".faa"]
-                (seqs, header) = parse_fasta(file.read_text())
-            if len(seqs) == 0:
-                logger.error(f"{file} is empty")
-                continue
-            query_sequence = seqs[0]
-            if len(seqs) > 1 and file.suffix in [".fasta", ".faa", ".fa"]:
-                logger.warning(
-                    f"More than one sequence in {file}, ignoring all but the first sequence"
-                )
-
-            if file.suffix.lower() == ".a3m":
-                a3m_lines = [file.read_text()]
-                queries.append((file.stem, query_sequence.upper(), a3m_lines, None))
-            else:
-                if query_sequence.count(":") == 0:
-                    # Single sequence
-                    queries.append((file.stem, query_sequence, None, None))
+                if file.suffix.lower() == ".a3m":
+                    a3m_lines = [file.read_text()]
+                    queries.append((file.stem, query_sequence.upper(), a3m_lines, None))
                 else:
-                    # Complex mode
-                    protein_queries, other_queries = classify_molecules(query_sequence)
-                    queries.append((file.stem, protein_queries, None, other_queries))
+                    if query_sequence.count(":") == 0:
+                        # Single sequence
+                        queries.append((file.stem, query_sequence, None, None))
+                    else:
+                        # Complex mode
+                        protein_queries, other_queries = classify_molecules(query_sequence)
+                        queries.append((file.stem, protein_queries, None, other_queries))
+            except Exception as e:
+                unreadable.append(file.name)
+                logger.error(f"could not read {file.name}, skipping it: {type(e).__name__}: {e}")
+        if unreadable and not queries:
+            raise ValueError(f"every input file in {input_path} was unreadable: {', '.join(unreadable)}")
+        if unreadable:
+            logger.warning(f"skipped {len(unreadable)} unreadable input file(s): {', '.join(unreadable)}")
 
     # sort by seq. len
     if sort_queries_by == "length":

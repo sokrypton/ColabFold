@@ -178,3 +178,27 @@ def test_convert_pdb_to_mmcif_parse_with_alphafold(pytestconfig, tmp_path):
     )
 
     assert len(parsing_result.errors) == 0
+
+
+def test_one_unreadable_file_does_not_discard_the_directory(tmp_path, caplog):
+    (tmp_path / "good.fasta").write_text(">a\nMKVLLA\n")
+    (tmp_path / "bad.fasta").write_text("MKVLLA\n")  # no description line
+
+    queries, _ = get_queries(tmp_path)
+    assert [q[0] for q in queries] == ["good"]
+    assert "bad.fasta" in caplog.text
+
+
+def test_a_directory_of_only_unreadable_files_is_refused(tmp_path):
+    (tmp_path / "bad.fasta").write_text("MKVLLA\n")
+    with pytest.raises(ValueError, match="every input file"):
+        get_queries(tmp_path)
+
+
+def test_unserialize_msa_refuses_an_empty_a3m():
+    from colabfold.batch import unserialize_msa
+
+    with pytest.raises(ValueError, match="no a3m"):
+        unserialize_msa([], "MKVLLA")
+    with pytest.raises(ValueError, match="no lines"):
+        unserialize_msa([""], "MKVLLA")
