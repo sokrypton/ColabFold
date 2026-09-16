@@ -57,6 +57,9 @@ class AF3Backend:
         self._random_seed = opts.random_seed
         self._use_templates = use_templates
         self._max_template_hits = opts.max_template_hits
+        from colabfold.alphafold3.tokamax_patch import install as patch_tokamax
+
+        patch_tokamax()
         self._warn_about_ignored(opts)
         samples = self._opt(opts, "num_diffusion_samples")
         logger.info(f"{self.model_type}: {opts.num_seeds} seed(s) x {samples} diffusion "
