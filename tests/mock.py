@@ -154,7 +154,7 @@ class MMseqs2Mock:
 
   def mock_run_mmseqs2(
     self,
-    query,
+    x,
     prefix,
     use_env=True,
     use_filter=True,
@@ -167,7 +167,7 @@ class MMseqs2Mock:
   ):
     assert prefix
     config = {
-      "query": query,
+      "query": x,
       "use_env": use_env,
       "use_filter": use_filter,
       "use_templates": use_templates,
@@ -178,7 +178,7 @@ class MMseqs2Mock:
 
     # make pre env-pair test work again, this was always true previously
     # however didn't do anything
-    if len(query) > 1:
+    if len(x) > 1:
       config["use_env"] = True
 
     for saved_response in self.saved_responses:
