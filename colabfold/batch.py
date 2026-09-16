@@ -709,7 +709,7 @@ def run(
     result_dir = Path(result_dir)
     result_dir.mkdir(exist_ok=True)
     model_type = set_model_type(is_complex, model_type)
-    backend = get_backend(model_type)
+    backend = get_backend(model_type, data_dir)
 
     # backward-compatibility with old options
     old_names = {"MMseqs2 (UniRef+Environmental)":"mmseqs2_uniref_env",

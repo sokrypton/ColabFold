@@ -29,7 +29,7 @@ def test_af3_backend_says_how_to_install_itself():
     try:
         import alphafold3  # noqa: F401
     except ModuleNotFoundError:
-        with pytest.raises(RuntimeError, match="git\\+https://github.com/sokrypton/alphafold3"):
+        with pytest.raises(RuntimeError, match="pip install alphafold3-colabfold"):
             get_backend("alphafold3")
 
 

@@ -5,6 +5,7 @@ They come from Hugging Face, where alphafold3-open itself fetches them. Once the
 open data bucket carries them, put MIRROR back in front in ``urls_for``.
 """
 import logging
+import os
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -15,10 +16,41 @@ logger = logging.getLogger(__name__)
 MIRROR = "https://opendata.mmseqs.org/colabfold/af3/models"
 HUGGINGFACE = "https://huggingface.co/{repo}/resolve/main/{path}"
 
+# The chemical component dictionary libcifpp reads.
+CCD_URLS = [
+    "https://s3.rcsb.org/pub/pdb/data/monomers/components.cif.gz",
+    "https://files.wwpdb.org/pub/pdb/data/monomers/components.cif.gz",
+]
+
 # Google DeepMind publishes AlphaFold 3's own parameters. They are not ours to
 # redistribute, so they are neither mirrored nor fetched without --accept-alphafold3-terms.
 OFFICIAL_URLS = {"alphafold3": "https://storage.googleapis.com/alphafold3/af3.bin.zst"}
 TERMS = "https://github.com/google-deepmind/alphafold3/blob/main/WEIGHTS_TERMS_OF_USE.md"
+
+
+def ensure_ccd(data_dir: Optional[Path] = None) -> None:
+    """Put components.cif where libcifpp looks, before alphafold3 is imported.
+
+    alphafold3.cpp raises on import without it, so this has to run first.
+    """
+    import gzip
+    import shutil
+
+    if os.environ.get("LIBCIFPP_DATA_DIR"):
+        return
+
+    target = Path(data_dir or default_data_dir).joinpath("params", "af3", "libcifpp")
+    cif = target.joinpath("components.cif")
+    if not cif.is_file():
+        target.mkdir(parents=True, exist_ok=True)
+        archive = target.joinpath("components.cif.gz")
+        fetch_file(CCD_URLS, archive, f"Downloading the chemical components to {target}")
+        part = target.joinpath("components.cif.part")
+        with gzip.open(archive, "rb") as src, open(part, "wb") as out:
+            shutil.copyfileobj(src, out)
+        part.replace(cif)
+        archive.unlink()
+    os.environ["LIBCIFPP_DATA_DIR"] = str(target)
 
 
 def urls_for(path: str, repo: str) -> List[str]:

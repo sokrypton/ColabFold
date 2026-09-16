@@ -122,11 +122,11 @@ def is_af3_model(model_type: str) -> bool:
     return model_type.startswith("alphafold3") or model_type in AF3_MODELS
 
 
-def get_backend(model_type: str) -> FoldingBackend:
+def get_backend(model_type: str, data_dir=None) -> FoldingBackend:
     global _current_backend
     if is_af3_model(model_type):
         from colabfold.alphafold3.backend import AF3Backend
-        _current_backend = AF3Backend(model_type)
+        _current_backend = AF3Backend(model_type, data_dir)
         return _current_backend
     if model_type.startswith("alphafold2") or model_type.startswith("deepfold"):
         from colabfold.alphafold.backend import AF2Backend

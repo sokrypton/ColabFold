@@ -35,10 +35,10 @@ _DEFAULTS = {
 class AF3Backend:
     """AlphaFold3 and the other models alphafold3-open's registry can run."""
 
-    def __init__(self, model_type: str):
+    def __init__(self, model_type: str, data_dir=None):
         from colabfold.alphafold3 import require
 
-        require()
+        require(data_dir)
         self.model_type = model_type
         self.model_runner = None
         self._fold_input = None
