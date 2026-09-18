@@ -38,6 +38,14 @@ import numpy as np
 try:
     import alphafold
 except ModuleNotFoundError:
+    if "--version" in sys.argv[1:]:
+        # `colabfold_batch --version` must still answer in a base install
+        # (without the `alphafold` extra). argparse would handle the flag, but
+        # main() is never reached because the imports below fail first.
+        from colabfold.utils import get_version
+
+        print(f"{os.path.basename(sys.argv[0])} {get_version()}")
+        sys.exit(0)
     raise RuntimeError(
         "\n\nalphafold is not installed. Please run `pip install colabfold[alphafold]`\n"
     )
