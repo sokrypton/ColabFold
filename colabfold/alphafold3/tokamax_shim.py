@@ -2,9 +2,10 @@
 Stand in for tokamax so alphafold3 runs on ColabFold's kernels.
 
 Routing only: each name alphafold3 imports is mapped onto a ColabFold kernel
-through ``alphafold.model.fused_ops``, then onto tokamax, then onto jax's own,
-for the shapes each one declines. No maths lives here.
+through ``colabfold_kernels.fused_ops``, then onto tokamax where it runs, then
+onto jax's own, for the shapes each one declines. No maths lives here.
 """
+import functools
 import logging
 import sys
 
@@ -28,10 +29,21 @@ def _gdp_fits(channels: int, out_dim: int, itemsize: int, block_m: int = 64) -> 
     return limit is None or need <= limit
 
 
+@functools.lru_cache(maxsize=None)
+def _tokamax_runs_here() -> bool:
+    """tokamax serves sm_80+ NVIDIA only: ROCm and sm_70/sm_75 have no implementation."""
+    import jax
+
+    try:
+        return float(jax.devices()[0].compute_capability) >= 8.0
+    except Exception:
+        return False
+
+
 def _next(name: str, why: str):
-    """Hand on what ColabFold's kernels decline: tokamax if it is there, else jax."""
+    """Hand on what ColabFold's kernels decline: tokamax if it runs here, else jax."""
     logger.debug(f"{name}: {why}, routing on")
-    if _REAL is not None:
+    if _REAL is not None and _tokamax_runs_here():
         return getattr(_REAL, name)
     return _XLA[name]
 
@@ -122,7 +134,7 @@ def install(force: bool = False) -> str:
             _REAL = tokamax
     except ImportError:
         _REAL = None
-    if not force and _REAL is not None:
+    if not force and _REAL is not None and _tokamax_runs_here():
         return "tokamax"
     sys.modules["tokamax"] = here
     return "colabfold"
