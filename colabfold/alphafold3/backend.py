@@ -20,6 +20,10 @@ _CONFIG_KEYS = ("num_diffusion_samples", "use_dropout", "buckets", "download_wei
 BUCKETS = (32, 64, 128, 256, 384, 512, 768, 1024, 1280, 1536, 2048, 2560, 3072, 3584,
            4096, 4608, 5120)
 
+# The attention kernel steps queries in tiles this size; a ragged bucket costs ~2%
+KERNEL_TILE = 64
+assert all(b % KERNEL_TILE == 0 for b in BUCKETS if b > KERNEL_TILE), BUCKETS
+
 _DEFAULTS = {
     "num_diffusion_samples": 5,
     "use_dropout": False,
