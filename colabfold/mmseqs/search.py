@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import List, Union
 
 from colabfold.input import get_queries, msa_to_str, safe_filename
-from colabfold.utils import AF3Utils
+from colabfold.utils import AF3Utils, get_version
 
 logger = logging.getLogger(__name__)
 
@@ -291,6 +291,7 @@ def mmseqs_search_pair(
 
 def main():
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--version", action="version", version=f"%(prog)s {get_version()}")
     parser.add_argument(
         "query",
         type=Path,

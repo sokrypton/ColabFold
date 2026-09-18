@@ -77,6 +77,15 @@ def get_commit() -> Optional[str]:
     return direct_url["vcs_info"]["commit_id"]
 
 
+def get_version() -> str:
+    """Installed colabfold version, with the git commit appended when installed from VCS."""
+    version = distribution("colabfold").version
+    commit = get_commit()
+    if commit:
+        version += f" ({commit})"
+    return version
+
+
 # Copied from Bio.PDB to override _save_dict method
 # https://github.com/biopython/biopython/blob/biopython-179/Bio/PDB/mmcifio.py
 # We add poly_seq and revision_date so that AF2 can read these cif files
