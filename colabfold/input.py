@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Dict
 from pathlib import Path
 import random
 import logging
@@ -142,6 +142,128 @@ def classify_molecules(query_sequence: str) -> Tuple[List[str], Optional[List[Tu
 
     return protein_queries, other_queries
 
+modified_mapping = {
+    "MSE" : "MET", "MLY" : "LYS", "FME" : "MET", "HYP" : "PRO",
+    "TPO" : "THR", "CSO" : "CYS", "SEP" : "SER", "M3L" : "LYS",
+    "HSK" : "HIS", "SAC" : "SER", "PCA" : "GLU", "DAL" : "ALA",
+    "CME" : "CYS", "CSD" : "CYS", "OCS" : "CYS", "DPR" : "PRO",
+    "B3K" : "LYS", "ALY" : "LYS", "YCM" : "CYS", "MLZ" : "LYS",
+    "4BF" : "TYR", "KCX" : "LYS", "B3E" : "GLU", "B3D" : "ASP",
+    "HZP" : "PRO", "CSX" : "CYS", "BAL" : "ALA", "HIC" : "HIS",
+    "DBZ" : "ALA", "DCY" : "CYS", "DVA" : "VAL", "NLE" : "LEU",
+    "SMC" : "CYS", "AGM" : "ARG", "B3A" : "ALA", "DAS" : "ASP",
+    "DLY" : "LYS", "DSN" : "SER", "DTH" : "THR", "GL3" : "GLY",
+    "HY3" : "PRO", "LLP" : "LYS", "MGN" : "GLN", "MHS" : "HIS",
+    "TRQ" : "TRP", "B3Y" : "TYR", "PHI" : "PHE", "PTR" : "TYR",
+    "TYS" : "TYR", "IAS" : "ASP", "GPL" : "LYS", "KYN" : "TRP",
+    "CSD" : "CYS", "SEC" : "CYS"
+}
+
+restype_1to3 = {
+    'A': 'ALA',
+    'R': 'ARG',
+    'N': 'ASN',
+    'D': 'ASP',
+    'C': 'CYS',
+    'Q': 'GLN',
+    'E': 'GLU',
+    'G': 'GLY',
+    'H': 'HIS',
+    'I': 'ILE',
+    'L': 'LEU',
+    'K': 'LYS',
+    'M': 'MET',
+    'F': 'PHE',
+    'P': 'PRO',
+    'S': 'SER',
+    'T': 'THR',
+    'W': 'TRP',
+    'Y': 'TYR',
+    'V': 'VAL',
+}
+restype_3to1 = {v: k for k, v in restype_1to3.items()}
+
+def pdb_to_string(
+        pdb_file: str,
+        chains: Optional[str] = None,
+        models: Optional[list] = None,
+    ) -> str:
+    '''read pdb file and return as string'''
+
+    if chains is not None:
+        if "," in chains: chains = chains.split(",")
+        if not isinstance(chains,list): chains = [chains]
+    if models is not None:
+        if not isinstance(models,list): models = [models]
+
+    modres = {**modified_mapping}
+    lines = []
+    seen = []
+    model = 1
+
+    if "\n" in pdb_file:
+        old_lines = pdb_file.split("\n")
+    else:
+        with open(pdb_file,"rb") as f:
+          old_lines = [line.decode("utf-8","ignore").rstrip() for line in f]
+    for line in old_lines:
+        if line[:5] == "MODEL":
+            model = int(line[5:])
+        if models is None or model in models:
+            if line[:6] == "MODRES":
+                k = line[12:15]
+                v = line[24:27]
+                if k not in modres and v in restype_3to1:
+                    modres[k] = v
+            if line[:6] == "HETATM":
+                k = line[17:20]
+                if k in modres:
+                    line = "ATOM  "+line[6:17]+modres[k]+line[20:]
+            if line[:4] == "ATOM":
+                chain = line[21:22]
+                if chains is None or chain in chains:
+                    atom = line[12:12+4].strip()
+                    resi = line[17:17+3]
+                    resn = line[22:22+5].strip()
+                    if resn[-1].isalpha(): # alternative atom
+                        resn = resn[:-1]
+                        line = line[:26]+" "+line[27:]
+                    key = f"{model}_{chain}_{resn}_{resi}_{atom}"
+                    if key not in seen: # skip alternative placements
+                        lines.append(line)
+                        seen.append(key)
+            if line[:5] == "MODEL" or line[:3] == "TER" or line[:6] == "ENDMDL":
+                lines.append(line)
+    return "\n".join(lines)
+
+restypes = [
+    'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P',
+    'S', 'T', 'W', 'Y', 'V'
+]
+restypes_with_x = restypes + ['X']
+restype_order_with_x = {restype: i for i, restype in enumerate(restypes_with_x)}
+order_to_restype = {v: k for k, v in restype_order_with_x.items()}
+def decode_structure_sequences(
+    aatype_array: List[int],
+    chain_index_array: List[int],
+    order_dict: Dict[int, str] = order_to_restype
+) -> List[str]:
+    decoded_sequences = []
+    current_sequence = []
+
+    for i in range(len(aatype_array)):
+        amino_acid = order_dict[aatype_array[i]]
+        if i == 0 or chain_index_array[i] == chain_index_array[i - 1]:
+            current_sequence.append(amino_acid)
+        else:
+            decoded_sequences.append("".join(current_sequence))
+            current_sequence = [amino_acid]
+
+    # Append the last sequence
+    decoded_sequences.append("".join(current_sequence))
+
+    return decoded_sequences
+
 def get_queries(
     input_path: Union[str, Path], sort_queries_by: str = "length"
 ) -> Tuple[List[Tuple[str, str, Optional[List[str]], Optional[List[Tuple[MolType, str, int]]]]], bool]:
@@ -158,13 +280,17 @@ def get_queries(
             import pandas
             df = pandas.read_csv(input_path, sep=sep, dtype=str)
             assert "id" in df.columns and "sequence" in df.columns
-            queries = [
-                (seq_id, sequence.upper().split(":"), None, None)
-                for seq_id, sequence in df[["id", "sequence"]].itertuples(index=False)
-            ]
-            for i in range(len(queries)):
-                if len(queries[i][1]) == 1:
-                    queries[i] = (queries[i][0], queries[i][1][0], None, None)
+            has_a3m = "a3mpath" in df.columns
+            has_template = "templatepath" in df.columns
+            queries = []
+            for row in df.itertuples(index=False):
+                seq_id = row.id
+                sequence = row.sequence.upper().split(":")
+                a3m = Path(row.a3mpath) if has_a3m else None
+                template = Path(row.templatepath) if has_template else None
+                if len(sequence) == 1:
+                    sequence = sequence[0]
+                queries.append((seq_id, sequence, a3m, template))
         elif input_path.suffix == ".a3m":
             (seqs, header) = parse_fasta(input_path.read_text())
             if len(seqs) == 0:
@@ -185,6 +311,21 @@ def get_queries(
                     # Complex mode
                     protein_queries, other_queries = classify_molecules(sequence)
                     queries.append((header, protein_queries, None, other_queries))
+        elif input_path.suffix in [".pdb", ".cif"]:
+            from alphafold.common import protein
+            if input_path.suffix == ".pdb":
+                pdb_string = pdb_to_string(input_path.read_text())
+                prot = protein.from_pdb_string(pdb_string)
+            elif input_path.suffix == ".cif":
+                prot = protein.from_mmcif_string(input_path.read_text())
+            header = input_path.stem
+            sequences = decode_structure_sequences(prot.aatype, prot.chain_index)
+
+            if len(sequences) == 0:
+                raise ValueError(f"{input_path} is empty")
+
+            queries = [(header, sequences, None, None)]
+
         else:
             raise ValueError(f"Unknown file format {input_path.suffix}")
     else:
@@ -193,10 +334,25 @@ def get_queries(
         for file in sorted(input_path.iterdir()):
             if not file.is_file():
                 continue
-            if file.suffix.lower() not in [".a3m", ".fasta", ".faa"]:
-                logger.warning(f"non-fasta/a3m file in input directory: {file}")
+            if file.suffix.lower() not in [".a3m", ".fasta", ".faa", ".fa", ".pdb", ".cif"]:
+                logger.warning(f"non-fasta/a3m/pdb/cif file in input directory: {file}")
                 continue
-            (seqs, header) = parse_fasta(file.read_text())
+            if file.suffix.lower() in [".pdb", ".cif"]:
+                header = file.stem
+                if file.suffix.lower() == ".pdb":
+                    pdb_string = pdb_to_string(file.read_text())
+                    prot = protein.from_pdb_string(pdb_string)
+                else:  # file.suffix.lower() == ".cif"
+                    prot = protein.from_mmcif_string(file.read_text())
+                sequences = decode_structure_sequences(prot.aatype, prot.chain_index)
+
+                if len(sequences) == 0:
+                    logger.error(f"{file} is empty")
+                    continue
+
+                queries.append((header, sequences, None, None))
+            else:  # file.suffix.lower() in [".a3m", ".fasta", ".faa"]
+                (seqs, header) = parse_fasta(file.read_text())
             if len(seqs) == 0:
                 logger.error(f"{file} is empty")
                 continue
@@ -221,6 +377,15 @@ def get_queries(
     # sort by seq. len
     if sort_queries_by == "length":
         queries.sort(key=lambda t: len("".join(t[1])))
+
+    elif sort_queries_by == "msa_depth":
+        # Deepest MSA first
+        def _a3m_depth(a3m_lines):
+            if not a3m_lines:
+                return 0
+            text = a3m_lines[0] if isinstance(a3m_lines, list) else a3m_lines
+            return sum(1 for ln in text.splitlines() if ln.startswith(">"))
+        queries.sort(key=lambda t: _a3m_depth(t[2]), reverse=True)
 
     elif sort_queries_by == "random":
         random.shuffle(queries)

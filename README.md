@@ -1,6 +1,6 @@
-# ColabFold - v1.5.5
+# ColabFold - v1.6.3
 
-For details of what was changed in v1.5, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.5.0)!
+For details of what was changed in v1.6.3, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.6.3)!
 
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
@@ -9,6 +9,7 @@ For details of what was changed in v1.5, see [change log](https://github.com/sok
 | Notebooks                                                                                                                                        | monomers | complexes | mmseqs2 | jackhmmer | templates |
 | :----------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------- | ------- | --------- | --------- |
 | [AlphaFold2_mmseqs2](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb)                                    | Yes      | Yes       | Yes     | No        | Yes       |
+| [AlphaFold3 (OpenFold3)](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold3_of3.ipynb)                            | Yes      | Yes       | Yes     | No        | No        |
 | [AlphaFold2_batch](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/batch/AlphaFold2_batch.ipynb)                          | Yes      | Yes       | Yes     | No        | Yes       |
 | [AlphaFold2](https://colab.research.google.com/github/deepmind/alphafold/blob/main/notebooks/AlphaFold.ipynb) (from Deepmind)                    | Yes      | Yes       | No      | Yes       | No        |
 | [relax_amber](https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/beta/relax_amber.ipynb) (relax input structure)             |          |           |         |           |           |
@@ -29,11 +30,9 @@ Check the wiki page [old retired notebooks](https://github.com/sokrypton/ColabFo
 - Can I use the models for **Molecular Replacement**?
   - Yes, but be **CAREFUL**, the bfactor column is populated with pLDDT confidence values (higher = better). Phenix.phaser expects a "real" bfactor, where (lower = better). See [post](https://twitter.com/cheshireminima/status/1423929241675120643) from Claudia Millán.
 - What is the maximum length?
-  - Limits depends on free GPU provided by Google-Colab `fingers-crossed`
-  - For GPU: `Tesla T4` or `Tesla P100` with ~16G the max length is ~2000
-  - For GPU: `Tesla K80` with ~12G the max length is ~1000
-  - To check what GPU you got, open a new code cell and type `!nvidia-smi`
-- Is it okay to use the MMseqs2 MSA server (`cf.run_mmseqs2`) on a local computer?
+  - Limits depends on free GPU provided by Google Colab `fingers-crossed`
+  - For GPUs with ~16G the max length is ~2000
+- Is it okay to use the MMseqs2 MSA server on a local computer?
   - You can access the server from a local computer if you queries are serial from a single IP. Please do not use multiple computers to query the server.
 - Where can I download the databases used by ColabFold?
   - The databases are available at [colabfold.mmseqs.com](https://colabfold.mmseqs.com)
@@ -60,8 +59,32 @@ Check the wiki page [old retired notebooks](https://github.com/sokrypton/ColabFo
 - Where can I find the history of MSA Server Databases used in ColabFold?
   - You can view the database version history on the [MSA Server Database History](https://github.com/sokrypton/ColabFold/wiki/MSA-Server-Database-History) wiki page.
 
-### Running locally
-For instructions on how to install ColabFold locally refer to [localcolabfold](https://github.com/YoshitakaMo/localcolabfold) or see our [wiki](https://github.com/sokrypton/ColabFold/wiki/Running-ColabFold-in-Docker) on how to run ColabFold within Docker.
+### Installation
+
+For a one-step installer script that supports Linux, macOS, and Windows (WSL2), see [LocalColabFold](https://github.com/YoshitakaMo/localcolabfold).
+
+Alternatively, ColabFold can be installed directly with `conda` and `pip`:
+
+```shell
+conda create -n colabfold -c conda-forge -c bioconda python=3.13 mmseqs2=18.8cc5c
+conda activate colabfold
+# With CUDA GPU support
+pip install colabfold[alphafold,openmm] jax[cuda12] openmm[cuda12]
+# CUDA 13 is recommended if you have a Blackwell GPU or newer
+pip install colabfold[alphafold,openmm] jax[cuda13] openmm[cuda13]
+# CPU only
+pip install colabfold[alphafold,openmm]
+# For colabfold_search only (no structure prediction)
+pip install colabfold
+```
+
+A Docker image is also available:
+
+```shell
+docker pull ghcr.io/sokrypton/colabfold:1.6.3-cuda12
+```
+
+See our [wiki](https://github.com/sokrypton/ColabFold/wiki/Running-ColabFold-in-Docker) for more details on running ColabFold in Docker.
 
 ### Generating MSAs for small scale local structure/complex predictions using the MSA server
 
@@ -80,7 +103,7 @@ colabfold_batch input_sequences.fasta out_dir
 
 First create a directory for the databases on a disk with sufficient storage (940GB (!)). Depending on where you are, this will take a couple of hours:
 
-Note: [MMseqs2 `71dd32ec43e3ac4dabf111bbc4b124f1c66a85f1` (May 28, 2023)](https://github.com/soedinglab/MMseqs2/archive/71dd32ec43e3ac4dabf111bbc4b124f1c66a85f1.zip) is used to create the databases and perform sequece search in the ColabFold MSA server. Please use this version if you want to obtain the same MSAs as the server.
+Note: [MMseqs2 Release 18](https://github.com/soedinglab/MMseqs2/releases/tag/18-8cc5c) is used to create the databases and perform sequece search in the ColabFold MSA server. Please use this version if you want to obtain the same MSAs as the server.
 
 ```shell
 MMSEQS_NO_INDEX=1 ./setup_databases.sh /path/to/db_folder
@@ -192,14 +215,45 @@ Important: Ensure that the `CUDA_VISIBLE_DEVICES` environment variable is set co
 
 Run searches using the GPU server:
 ```
-colabfold_search /path/to/bin/mmseqs input_sequences.fasta /path/to/db_folder msas --gpu 1 --gpu-server 1
+colabfold_search --mmseqs /path/to/bin/mmseqs input_sequences.fasta /path/to/db_folder msas \
+    --gpu 1 --gpu-server 1 --db-load-mode 2
 ```
+Here, `--db-load-mode 2` is **criical** for fast single query performance. The parameter can be omitted if large batches of queries are supplied to `colabfold_search`. This parameter decides whether a database should be fully copied into RAM in each MMseqs2 module invocation (`--db-load-mode 0`; default), or if MMseqs2 can asusme that the databases are already present in RAM (`--db-load-mode 2`). For ideal performance, the database should still be preloaded into RAM (e.g. with `vmtouch`; see above), before the first `colabfold_search` invocation.
+
 To stop the server(s) when done:
 ```
 kill $PID1
 kill $PID2
 ```
 For more details, see [GPU-accelerated search](https://github.com/soedinglab/MMseqs2/wiki#gpu-accelerated-search).
+
+## Model compile time and the compilation cache
+
+ColabFold builds an optimized version of the model the first time it sees a new sequence length or MSA depth. That one-time setup can take minutes. For repeated predictions, you can set up a persistent cache so the compile time is paid once and reused:
+
+```bash
+export JAX_COMPILATION_CACHE_DIR=$HOME/.cache/colabfold_jax
+colabfold_batch ...
+```
+
+The saved model is reused only when the next run matches the previous one, including the GPU, driver, and JAX versions, and the same sequence length and MSA depth.
+
+- The cache speeds up repeated predictions on the same machine. The cache can only be reused across machines with identical specs and software versions.
+- Every new sequence length or MSA depth triggers a fresh compile. ColabFold reduces this by grouping similar lengths together (`--recompile-padding`) and sorting each batch so similar shapes run back to back (`--sort-queries-by`). Use `length` for monomers (default) and `msa_depth` for repeated multimers of the same length. This way compilation can be reused across multiple predictions.
+- If anything changes (drivers or dependencies), the next prediction compiles again and the old cache is ignored.
+
+### Faster predictions with fused kernels
+
+Add `--use-fast-kernels` to `colabfold_batch` to run AlphaFold2 with accelerated kernels, about 2.5x faster and with slightly lower memory. `--kernel-backend` picks the implementation based on the available GPU and defaults to `auto`:
+
+- `pallas` on Ampere or newer generation GPUs, using Pallas/Triton kernels.
+- `cuda_legacy` on older Volta and Turing GPUs.
+
+The previously introduced `--use-pallas` parameter is accepted as an alias for `--use-fast-kernels`.
+
+### Trading compile time for folding speed
+
+The `--compile-mode` flag trades compile time against folding speed. The difference is small (1-5%), but can matter for very large batches or very long sequences. `fast` and `tuned` (default) skip or reduce the compile optimization effort. `full` is unbounded and can take tens of minutes, but that cost can amortize over hundreds of predictions.
 
 ### Tutorials & Presentations
 - ColabFold Tutorial presented at the Boston Protein Design and Modeling Club. [[video]](https://www.youtube.com/watch?v=Rfw7thgGTwI) [[slides]](https://docs.google.com/presentation/d/1mnffk23ev2QMDzGZ5w1skXEadTe54l8-Uei6ACce8eI).
@@ -223,6 +277,9 @@ For more details, see [GPU-accelerated search](https://github.com/soedinglab/MMs
 
 - Mirdita M, Schütze K, Moriwaki Y, Heo L, Ovchinnikov S and Steinegger M. ColabFold: Making protein folding accessible to all. <br />
   Nature Methods (2022) doi: [10.1038/s41592-022-01488-1](https://www.nature.com/articles/s41592-022-01488-1)
+- For a step-by-step protocol on how to use ColabFold, please refer to: <br />
+  Kim G & Lee S et al. Easy and accurate protein structure prediction using ColabFold. <br />
+  Nature Protocols (2025) doi: [10.1038/s41596-024-01060-5](https://www.nature.com/articles/s41596-024-01060-5)
 - If you’re using **AlphaFold**, please also cite: <br />
   Jumper et al. "Highly accurate protein structure prediction with AlphaFold." <br />
   Nature (2021) doi: [10.1038/s41586-021-03819-2](https://doi.org/10.1038/s41586-021-03819-2)
@@ -234,72 +291,3 @@ For more details, see [GPU-accelerated search](https://github.com/soedinglab/MMs
   Science (2021) doi: [10.1126/science.abj8754](https://doi.org/10.1126/science.abj8754)
 
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.5123296.svg)](https://doi.org/10.5281/zenodo.5123296)
-
------------------
-**OLD Updates**
-```diff
-  31Jul2023: 2023/07/31: The ColabFold MSA server is back to normal
-             It was using older DB (UniRef30 2202/PDB70 220313) from 27th ~8:30 AM CEST to 31st ~11:10 AM CEST.
-  27Jul2023: ColabFold MSA server issue:
-             We are using the backup server with old databases
-             (UniRef30 2202/PDB70 220313) starting from ~8:30 AM CEST until we resolve the issue.
-             Resolved on 31Jul2023 ~11:10 CEST.
-  12Jun2023: New databases! UniRef30 updated to 2302 and PDB to 230517.
-             We now use PDB100 instead of PDB70 (see notes in the [main](https://colabfold.com) notebook).
-  12Jun2023: We introduced a new default pairing strategy:
-             Previously, for multimer predictions with more than 2 chains,
-             we only pair if all sequences taxonomically match ("complete" pairing).
-             The new default "greedy" strategy pairs any taxonomically matching subsets.
-  30Apr2023: Amber is working again in our ColabFold Notebook
-  29Apr2023: Amber is not working in our Notebook due to Colab update
-  18Feb2023: v1.5.2 - fixing: fixing memory leak for large proteins
-                    - fixing: --use_dropout (random seed was not changing between recycles)
-  06Feb2023: v1.5.1 - fixing: --save-all/--save-recycles
-  04Feb2023: v1.5.0 - ColabFold updated to use AlphaFold v2.3.1!
-  03Jan2023: The MSA server's faulty hardware from 12/26 was replaced.
-             There were intermittent failures on 12/26 and 1/3. Currently,
-             there are no known issues. Let us know if you experience any.
-  10Oct2022: Bugfix: random_seed was not being used for alphafold-multimer.
-             Same structure was returned regardless of defined seed. This
-             has been fixed!
-  13Jul2022: We have set up a new ColabFold MSA server provided by Korean
-             Bioinformation Center. It provides accelerated MSA generation,
-             we updated the UniRef30 to 2022_02 and PDB/PDB70 to 220313.
-  11Mar2022: We use in default AlphaFold-multimer-v2 weights for complex modeling.
-             We also offer the old complex modes "AlphaFold-ptm" or "AlphaFold-multimer-v1"
-  04Mar2022: ColabFold now uses a much more powerful server for MSAs and searches through the ColabFoldDB instead of BFD/MGnify.
-             Please let us know if you observe any issues.
-  26Jan2022: AlphaFold2_mmseqs2, AlphaFold2_batch and colabfold_batch's multimer complexes predictions are
-             now in default reranked by iptmscore*0.8+ptmscore*0.2 instead of ptmscore
-  16Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
-  17Aug2021: If you see any errors, please report them.
-  17Aug2021: We are still debugging the MSA generation procedure...
-  20Aug2021: WARNING - MMseqs2 API is undergoing upgrade, you may see error messages.
-             To avoid Google Colab from crashing, for large MSA we did -diff 1000 to get
-             1K most diverse sequences. This caused some large MSA to degrade in quality,
-             as sequences close to query were being merged to single representive.
-             We are working on updating the server (today) to fix this, by making sure
-             that both diverse and sequences close to query are included in the final MSA.
-             We'll post update here when update is complete.
-  21Aug2021  The MSA issues should now be resolved! Please report any errors you see.
-             In short, to reduce MSA size we filter (qsc > 0.8, id > 0.95) and take 3K
-             most diverse sequences at different qid (sequence identity to query) intervals
-             and merge them. More specifically 3K sequences at qid at (0→0.2),(0.2→0.4),
-             (0.4→0.6),(0.6→0.8) and (0.8→1). If you submitted your sequence between
-             16Aug2021 and 20Aug2021, we recommend submitting again for best results!
-  21Aug2021  The use_templates option in AlphaFold2_mmseqs2 is not properly working. We are
-             working on fixing this. If you are not using templates, this does not affect the
-             the results. Other notebooks that do not use_templates are unaffected.
-  21Aug2021  The templates issue is resolved!
-  11Nov2021  [AlphaFold2_mmseqs2] now uses Alphafold-multimer for complex (homo/hetero-oligomer) modeling.
-             Use [AlphaFold2_advanced] notebook for the old complex prediction logic.
-  11Nov2021  ColabFold can be installed locally using pip!
-  14Nov2021  Template based predictions works again in the Alphafold2_mmseqs2 notebook.
-  14Nov2021  WARNING "Single-sequence" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken
-             starting 11Nov2021. The MMseqs2 MSA was being used regardless of selection.
-  14Nov2021  "Single-sequence" mode is now fixed.
-  20Nov2021  WARNING "AMBER" mode in AlphaFold2_mmseqs2 and AlphaFold2_batch was broken
-             starting 11Nov2021. Unrelaxed proteins were returned instead.
-  20Nov2021  "AMBER" is fixed thanks to Kevin Pan
-```
------------------

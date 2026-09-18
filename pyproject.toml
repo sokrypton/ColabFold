@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "colabfold"
-version = "1.5.5"
+version = "1.6.3"
 description = "Making protein folding accessible to all. Predict proteins structures both in google colab and on your machine"
 authors = [
-    "Milot Mirdita <mmirdit@snu.ac.kr>",
+    "Milot Mirdita <milot@skku.edu>",
     "Sergey Ovchinnikov <so@fas.harvard.edu>",
     "Martin Steinegger <martin.steinegger@snu.ac.kr>",
     "Kostantin Schütze <schuetze@in.tum.de>",
@@ -19,34 +19,38 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9"
-absl-py = "^1.0.0"
-jax = { version = "^0.5.2", optional = true }
+python = ">=3.10"
+absl-py = { version = "^1.0.0", optional = true }
+# colabfold-legacy-kernels needs >=0.6.2, and check it still loads before raising the top.
+jax = { version = ">=0.6.2,<0.12", optional = true }
 matplotlib = "^3.8.4"
-tensorflow-cpu = { version = "^2.16.2", markers = "platform_machine != 'aarch64' and platform_machine != 'arm64'" }
-tensorflow = { version = "^2.16.2", markers = "platform_machine == 'aarch64' or platform_machine == 'arm64'" }
 biopython = "<1.86"
 numpy = "^2.0.2"
 pandas = "^2.2.2"
-alphafold-colabfold = { version = "v2.3.8", optional = true }
-#alphafold-colabfold = { path = "../alphafold", develop = true, optional = true }
+alphafold-colabfold = { version = "2.3.20", optional = true }
+#alphafold-colabfold = { path = "..", develop = true, optional = true }
+colabfold-binaries = { version = "^0.1.0", optional = true, markers = "sys_platform == 'linux' or (sys_platform == 'darwin' and platform_machine == 'arm64')" }
+colabfold-legacy-kernels = { version = "^0.2.0", optional = true, markers = "sys_platform == 'linux' and platform_machine == 'x86_64'" }
 requests = "^2.26.0"
 tqdm = "^4.62.2"
 appdirs = "^1.4.4"
-py3Dmol = "^2.0.1"
-dm-tree = "^0.1.9"
-dm-haiku = "^0.0.13"
+py3Dmol = { version = "^2.0.1", optional = true }
+dm-tree = { version = "^0.1.9", optional = true }
+dm-haiku = { version = "^0.0.17", optional = true }
 importlib-metadata = "^8.6.1"
+pdbfixer = { version = "^1.12.0", optional = true }
+openmm = { version = ">=8.5,<9", optional = true }
+orjson = "^3.11.4"
 
 [tool.poetry.dev-dependencies]
 # The latest version conflicts with tensorflow over typing-extensions
 black = "^23.1.0"
-jupyter = "^1.0.0"
 pytest = "^6.2.5"
 
 [tool.poetry.extras]
-alphafold = ["alphafold-colabfold", "jax"]
-alphafold-minus-jax = ["alphafold-colabfold"]
+alphafold = ["alphafold-colabfold", "colabfold-binaries", "colabfold-legacy-kernels", "jax", "absl-py", "dm-tree", "dm-haiku",  "py3Dmol"]
+alphafold-minus-jax = ["alphafold-colabfold", "colabfold-binaries", "colabfold-legacy-kernels", "absl-py", "dm-tree", "dm-haiku", "py3Dmol"]
+openmm = ["openmm", "pdbfixer"]
 
 [tool.pytest.ini_options]
 addopts = "--tb=short"

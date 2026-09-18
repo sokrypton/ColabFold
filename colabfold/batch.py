@@ -9,7 +9,14 @@ import warnings
 from Bio import BiopythonDeprecationWarning # what can possibly go wrong...
 warnings.simplefilter(action='ignore', category=BiopythonDeprecationWarning)
 
+import functools
 import json
+hasOrjson = False
+try:
+    import orjson
+    hasOrjson = True
+except ImportError:
+    pass
 import logging
 import math
 import sys
@@ -19,7 +26,8 @@ import shutil
 import pickle
 import gzip
 
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from argparse import (ArgumentParser, ArgumentDefaultsHelpFormatter,
+                      BooleanOptionalAction, SUPPRESS)
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 from io import StringIO
@@ -36,7 +44,7 @@ except ModuleNotFoundError:
 
 from alphafold.common import protein, residue_constants
 
-# delay imports of tensorflow, jax and numpy
+# delay imports of jax and numpy
 # loading these for type checking only can take around 10 seconds just to show a CLI usage message
 if TYPE_CHECKING:
     import haiku
@@ -68,23 +76,52 @@ from colabfold.input import (
     pair_msa,
     msa_to_str,
     get_queries,
-    safe_filename
+    safe_filename,
+    modified_mapping,
+    pdb_to_string,
 )
 from colabfold.relax import relax_me
-from colabfold.alphafold import extra_ptm
+from colabfold.alphafold import extra_ptm, ipsae
 
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
 from Bio.PDB.PDBIO import Select
 
 # logging settings
 logger = logging.getLogger(__name__)
-import jax
-import jax.numpy as jnp
+
+def _str2bool(v):
+    """argparse type for an optional-value bool flag (--flag / --flag true/false)."""
+    if isinstance(v, bool):
+        return v
+    s = str(v).lower()
+    if s in ("1", "true", "yes", "on", "t"):
+        return True
+    if s in ("0", "false", "no", "off", "f"):
+        return False
+    from argparse import ArgumentTypeError
+    raise ArgumentTypeError(f"expected true/false, got {v!r}")
+
+from jax import local_devices
 
 # from jax 0.4.6, jax._src.lib.xla_bridge moved to jax._src.xla_bridge
 # suppress warnings: Unable to initialize backend 'rocm' or 'tpu'
 logging.getLogger('jax._src.xla_bridge').addFilter(lambda _: False) # jax >=0.4.6
 logging.getLogger('jax._src.lib.xla_bridge').addFilter(lambda _: False) # jax < 0.4.5
+
+@functools.lru_cache(maxsize=None)
+def _tool_path(name: str) -> str:
+    override = os.environ.get(f"COLABFOLD_{name.upper()}")
+    if override:
+        return override
+    found = shutil.which(name)
+    if found:
+        return found
+    try:
+        import colabfold_binaries
+
+        return colabfold_binaries.binary_path(name)
+    except Exception:
+        return name
 
 def mk_mock_template(
     query_sequence: Union[List[str], str], num_temp: int = 1
@@ -123,19 +160,23 @@ def mk_mock_template(
     return template_features
 
 def mk_template(
-    a3m_lines: str, template_path: str, query_sequence: str
+    a3m_lines: str,
+    template_path: str,
+    query_sequence: str,
+    max_template_date="2100-01-01",
+    max_hits=20,
 ) -> Dict[str, Any]:
     template_featurizer = templates.HhsearchHitFeaturizer(
         mmcif_dir=template_path,
-        max_template_date="2100-01-01",
-        max_hits=20,
-        kalign_binary_path="kalign",
+        max_template_date=max_template_date,
+        max_hits=max_hits,
+        kalign_binary_path=_tool_path("kalign"),
         release_dates_path=None,
         obsolete_pdbs_path=None,
     )
 
     hhsearch_pdb70_runner = hhsearch.HHSearch(
-        binary_path="hhsearch", databases=[f"{template_path}/pdb70"]
+        binary_path=_tool_path("hhsearch"), databases=[f"{template_path}/pdb70"]
     )
 
     hhsearch_result = hhsearch_pdb70_runner.query(a3m_lines)
@@ -167,23 +208,6 @@ def validate_and_fix_mmcif(cif_file: Path):
         with open(cif_file, "a") as f:
             f.write(CIF_REVISION_DATE)
 
-modified_mapping = {
-  "MSE" : "MET", "MLY" : "LYS", "FME" : "MET", "HYP" : "PRO",
-  "TPO" : "THR", "CSO" : "CYS", "SEP" : "SER", "M3L" : "LYS",
-  "HSK" : "HIS", "SAC" : "SER", "PCA" : "GLU", "DAL" : "ALA",
-  "CME" : "CYS", "CSD" : "CYS", "OCS" : "CYS", "DPR" : "PRO",
-  "B3K" : "LYS", "ALY" : "LYS", "YCM" : "CYS", "MLZ" : "LYS",
-  "4BF" : "TYR", "KCX" : "LYS", "B3E" : "GLU", "B3D" : "ASP",
-  "HZP" : "PRO", "CSX" : "CYS", "BAL" : "ALA", "HIC" : "HIS",
-  "DBZ" : "ALA", "DCY" : "CYS", "DVA" : "VAL", "NLE" : "LEU",
-  "SMC" : "CYS", "AGM" : "ARG", "B3A" : "ALA", "DAS" : "ASP",
-  "DLY" : "LYS", "DSN" : "SER", "DTH" : "THR", "GL3" : "GLY",
-  "HY3" : "PRO", "LLP" : "LYS", "MGN" : "GLN", "MHS" : "HIS",
-  "TRQ" : "TRP", "B3Y" : "TYR", "PHI" : "PHE", "PTR" : "TYR",
-  "TYS" : "TYR", "IAS" : "ASP", "GPL" : "LYS", "KYN" : "TRP",
-  "CSD" : "CYS", "SEC" : "CYS"
-}
-
 class ReplaceOrRemoveHetatmSelect(Select):
   def accept_residue(self, residue):
     hetfield, _, _ = residue.get_id()
@@ -211,6 +235,64 @@ def convert_pdb_to_mmcif(pdb_file: Path):
     cif_io = CFMMCIFIO()
     cif_io.set_structure(structure)
     cif_io.save(str(cif_file), ReplaceOrRemoveHetatmSelect())
+
+def mk_hhsearch_single_entry_db(cif_file: Path, dbdir_cache_path: str):
+    dbdir = Path(dbdir_cache_path)
+    dbdir.mkdir(parents=True, exist_ok=True)
+    tmp_cif_path = str(dbdir_cache_path) + "/1dmy.cif"
+    shutil.copy2(cif_file, tmp_cif_path)
+    # clear internal AF2 cache of mmCIF files
+    templates._read_file.cache_clear()
+    cif_file = Path(tmp_cif_path)
+    pdb70_db_files = dbdir.glob("pdb70*")
+    for f in pdb70_db_files:
+        os.remove(f)
+
+    with open(dbdir.joinpath("pdb70_a3m.ffdata"), "w") as a3m, open(
+        dbdir.joinpath("pdb70_cs219.ffindex"), "w"
+    ) as cs219_index, open(
+        dbdir.joinpath("pdb70_a3m.ffindex"), "w"
+    ) as a3m_index, open(
+        dbdir.joinpath("pdb70_cs219.ffdata"), "w"
+    ) as cs219:
+        n = 1000000
+        index_offset = 0
+        with open(cif_file) as f:
+            cif_string = f.read()
+        cif_fh = StringIO(cif_string)
+        parser = MMCIFParser(QUIET=True)
+        structure = parser.get_structure("none", cif_fh)
+        models = list(structure.get_models())
+        if len(models) != 1:
+            logger.warning(f"WARNING: Found {len(models)} models in {cif_file}. The first model will be used as a template.", )
+            # raise ValueError(
+            #     f"Only single model PDBs are supported. Found {len(models)} models in {cif_file}."
+            # )
+        model = models[0]
+        for chain in model:
+            amino_acid_res = []
+            for res in chain:
+                if res.id[2] != " ":
+                    logger.warning(f"WARNING: Found insertion code at chain {chain.id} and residue index {res.id[1]} of {cif_file}. "
+                                    "This file cannot be used as a template.")
+                    continue
+                    # raise ValueError(
+                    #     f"PDB {cif_file} contains an insertion code at chain {chain.id} and residue "
+                    #     f"index {res.id[1]}. These are not supported."
+                    # )
+                amino_acid_res.append(
+                    residue_constants.restype_3to1.get(res.resname, "X")
+                )
+
+            protein_str = "".join(amino_acid_res)
+            a3m_str = f">{cif_file.stem}_{chain.id}\n{protein_str}\n\0"
+            a3m_str_len = len(a3m_str)
+            a3m_index.write(f"{n}\t{index_offset}\t{a3m_str_len}\n")
+            cs219_index.write(f"{n}\t{index_offset}\t{len(protein_str)}\n")
+            index_offset += a3m_str_len
+            a3m.write(a3m_str)
+            cs219.write("\n\0")
+            n += 1
 
 def mk_hhsearch_db(template_dir: str):
     template_path = Path(template_dir)
@@ -343,6 +425,8 @@ def predict_structure(
     pad_len: int,
     model_type: str,
     model_runner_and_params: List[Tuple[str, model.RunModel, haiku.Params]],
+    initial_guess: str = None,
+    msa_pad_depth: int = 0,
     num_relax: int = 0,
     relax_max_iterations: int = 0,
     relax_tolerance: float = 2.39,
@@ -388,6 +472,10 @@ def predict_structure(
                     # TODO: add pad_input_mulitmer()
                     input_features = feature_dict
                     input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
+                    # Pad MSA depth up to msa_pad_depth to share one compiled shape
+                    # Padded rows are masked (msa_mask=0), so the prediction is unchanged
+                    if msa_pad_depth > input_features["msa"].shape[0]:
+                        input_features = pipeline_multimer.pad_msa(input_features, min_num_seq=msa_pad_depth)
             else:
                 if model_num == 0:
                     input_features = model_runner.process_features(feature_dict, random_seed=seed)
@@ -402,6 +490,18 @@ def predict_structure(
             tag = f"{model_type}_{model_name}_seed_{seed:03d}"
             model_names.append(tag)
             files.set_tag(tag)
+
+            # initial guess
+            if initial_guess:
+                input_guess = Path(initial_guess)
+                if input_guess.suffix == ".pdb":
+                    pdb_string = pdb_to_string(initial_guess)
+                    input_features["all_atom_positions"] = protein.from_pdb_string(pdb_string).atom_positions
+                elif input_guess.suffix == ".cif":
+                    input_features["all_atom_positions"] = protein.from_mmcif_string(input_guess.read_text()).atom_positions
+                else:
+                    raise ValueError(f"Unsupported initial guess file format: {initial_guess}")
+                
 
             ########################
             # predict
@@ -527,20 +627,42 @@ def predict_structure(
                 np.save(files.get("pair_repr","npy"),result["representations"]["pair"])
 
             # write an easy-to-use format (pAE and pLDDT)
-            with files.get("scores","json").open("w") as handle:
-                plddt = result["plddt"][:seq_len]
-                scores = {"plddt": np.around(plddt.astype(float), 2).tolist()}
-                if "predicted_aligned_error" in result:
-                  pae = result["predicted_aligned_error"][:seq_len,:seq_len]
-                  scores.update({"max_pae": pae.max().astype(float).item(),
-                                 "pae": np.around(pae.astype(float), 2).tolist()})
-                  if calc_extra_ptm:
+            plddt = result["plddt"][:seq_len]
+            scores = {"plddt": np.around(plddt.astype(float), 2).tolist()}
+            if "predicted_aligned_error" in result:
+                pae = result["predicted_aligned_error"][:seq_len,:seq_len]
+                scores.update({"max_pae": pae.max().astype(float).item(),
+                                "pae": np.around(pae.astype(float), 2).tolist()})
+                if calc_extra_ptm:
                     scores.update(extra_ptm_output)
-                  for k in ["ptm","iptm"]:
-                    if k in conf[-1]: scores[k] = np.around(conf[-1][k], 2).item()
-                  del pae
-                del plddt
-                json.dump(scores, handle)
+                for k in ["ptm", "iptm"]:
+                    if k in conf[-1]:
+                        scores[k] = np.around(conf[-1][k], 2).item()
+                if is_complex:
+                    try:
+                        asym_id = input_features["asym_id"]
+                        if asym_id.ndim > 1: asym_id = asym_id[0]
+                        interface_scores = ipsae.get_interface_scores(
+                            pae=pae,
+                            plddt=plddt,
+                            asym_id=asym_id[:seq_len],
+                            atom_positions=result["structure_module"]["final_atom_positions"][:seq_len],
+                            atom_mask=result["structure_module"]["final_atom_mask"][:seq_len])
+                        scores.update(interface_scores)
+                        if interface_scores:
+                            conf[-1]["print_line"] += (
+                                f" ipSAE={ipsae.format_ipsae(interface_scores['ipsae'])}"
+                                f" pDockQ2={ipsae.format_ipsae(interface_scores['pdockq2'])}"
+                            )
+                    except Exception as e:
+                        logger.warning(f"Could not compute ipSAE/pDockQ interface scores: {e}")
+                del pae
+            del plddt
+            file = files.get("scores", "json")
+            if hasOrjson:
+                file.write_bytes(orjson.dumps(scores))
+            else:
+                file.write_text(json.dumps(scores))
 
             del result, unrelaxed_protein
 
@@ -607,6 +729,8 @@ def get_msa_and_templates(
     pairing_strategy: str = "greedy",
     host_url: str = DEFAULT_API_SERVER,
     user_agent: str = "",
+    max_template_date="2100-01-01",
+    max_template_hits=20,
 ) -> Tuple[
     Optional[List[str]], Optional[List[str]], List[str], List[int], List[Dict[str, Any]]
 ]:
@@ -674,6 +798,8 @@ def get_msa_and_templates(
                         a3m_lines_mmseqs2[index],
                         template_paths[index],
                         query_seqs_unique[index],
+                        max_template_date=max_template_date,
+                        max_hits=max_template_hits,
                     )
                     if len(template_feature["template_domain_names"]) == 0:
                         template_feature = mk_mock_template(query_seqs_unique[index])
@@ -913,6 +1039,37 @@ def generate_input_feature(
             }
     return (input_feature, domain_names)
 
+def normalize_a3m(lines: list[str]) -> list[str]:
+    out = []
+    i = 0
+
+    # keep meta header
+    if lines and lines[0].startswith("#"):
+        out.append(lines[0].rstrip("\n"))
+        i = 1
+
+    header = None
+    seq_chunks = []
+    while i < len(lines):
+        line = lines[i].strip()
+        i += 1
+        if not line:
+            continue
+        if line.startswith(">"):
+            if header is not None:
+                out.append(header)
+                out.append("".join(seq_chunks))
+            header = line
+            seq_chunks = []
+        else:
+            # remove all whitespace inside sequence lines
+            seq_chunks.append("".join(line.split()))
+    if header is not None:
+        out.append(header)
+        out.append("".join(seq_chunks))
+
+    return out
+
 def unserialize_msa(
     a3m_lines: List[str], query_sequence: Union[List[str], str]
 ) -> Tuple[
@@ -923,6 +1080,7 @@ def unserialize_msa(
     List[Dict[str, Any]],
 ]:
     a3m_lines = a3m_lines[0].replace("\x00", "").splitlines()
+    a3m_lines = normalize_a3m(a3m_lines)
     if not a3m_lines[0].startswith("#") or len(a3m_lines[0][1:].split("\t")) != 2:
         assert isinstance(query_sequence, str)
         return (
@@ -940,75 +1098,107 @@ def unserialize_msa(
     query_seq_len = list(map(int, query_seq_len))
     query_seqs_cardinality = tab_sep_entries[1].split(",")
     query_seqs_cardinality = list(map(int, query_seqs_cardinality))
+    num_chains = len(query_seq_len)
     is_homooligomer = (
-        True if len(query_seq_len) == 1 and query_seqs_cardinality[0] > 1 else False
+        True if num_chains == 1 and query_seqs_cardinality[0] > 1 else False
     )
     is_single_protein = (
-        True if len(query_seq_len) == 1 and query_seqs_cardinality[0] == 1 else False
+        True if num_chains == 1 and query_seqs_cardinality[0] == 1 else False
     )
+
     query_seqs_unique = []
-    prev_query_start = 0
-    # we store the a3m with cardinality of 1
-    for n, query_len in enumerate(query_seq_len):
-        query_seqs_unique.append(
-            a3m_lines[2][prev_query_start : prev_query_start + query_len]
-        )
-        prev_query_start += query_len
-    paired_msa = [""] * len(query_seq_len)
-    unpaired_msa = [""] * len(query_seq_len)
-    already_in = dict()
-    for i in range(1, len(a3m_lines), 2):
+    qcat = a3m_lines[2]
+    prev = 0
+    for qlen in query_seq_len:
+        nxt = prev + max(int(qlen), 0)
+        query_seqs_unique.append(qcat[prev:nxt])
+        prev = nxt
+
+    paired_chunks = [[] for _ in range(num_chains)]
+    unpaired_chunks = [[] for _ in range(num_chains)]
+    already_in = set()
+
+    qlens_local = query_seq_len
+    def _split_by_aln(s):
+        segments = [""] * num_chains
+        has_aa = [False] * num_chains
+        seg_idx = 0
+        aln_count = 0
+        start = 0
+        curr_has_aa = False
+
+        dash = '-'
+        A, Z = 'A', 'Z'
+        a, z = 'a', 'z'
+        n = len(s)
+        i = 0
+        while i < n and seg_idx < num_chains:
+            c = s[i]
+            # non-lowercase are aligned columns
+            if not (a <= c <= z):
+                if c != dash and (A <= c <= Z):
+                    curr_has_aa = True
+                aln_count += 1
+                if aln_count == qlens_local[seg_idx]:
+                    # close current segment
+                    segments[seg_idx] = s[start:i+1]
+                    has_aa[seg_idx] = curr_has_aa
+                    seg_idx += 1
+                    aln_count = 0
+                    start = i + 1
+                    curr_has_aa = False
+            i += 1
+        return segments, has_aa
+
+    i = 1
+    end = len(a3m_lines)
+    while i + 1 < end:
         header = a3m_lines[i]
         seq = a3m_lines[i + 1]
-        if (header, seq) in already_in:
-            continue
-        already_in[(header, seq)] = 1
-        has_amino_acid = [False] * len(query_seq_len)
-        seqs_line = []
-        prev_pos = 0
-        for n, query_len in enumerate(query_seq_len):
-            paired_seq = ""
-            curr_seq_len = 0
-            for pos in range(prev_pos, len(seq)):
-                if curr_seq_len == query_len:
-                    prev_pos = pos
-                    break
-                paired_seq += seq[pos]
-                if seq[pos].islower():
-                    continue
-                if seq[pos] != "-":
-                    has_amino_acid[n] = True
-                curr_seq_len += 1
-            seqs_line.append(paired_seq)
+        i += 2
 
-        # if sequence is paired add them to output
-        if (
-            not is_single_protein
-            and not is_homooligomer
-            and sum(has_amino_acid) > 1 # at least 2 sequences are paired
-        ):
-            header_no_faster = header.replace(">", "")
-            header_no_faster_split = header_no_faster.split("\t")
-            for j in range(0, len(seqs_line)):
-                paired_msa[j] += ">" + header_no_faster_split[j] + "\n"
-                paired_msa[j] += seqs_line[j] + "\n"
+        key = (header, seq)
+        if key in already_in:
+            continue
+        already_in.add(key)
+
+        segments, has_aa = _split_by_aln(seq)
+
+        # Paired if multi-chain (not single protein), not homo-oligomer, >=2 segments have AA
+        if (not is_single_protein) and (not is_homooligomer) and (sum(has_aa) > 1):
+            header_no_gt = header.replace(">", "")
+            header_fields = header_no_gt.split("\t")
+            for j, seg in enumerate(segments):
+                label = header_fields[j] if j < len(header_fields) else (header_fields[-1] if header_fields else "")
+                pc = paired_chunks[j]
+                pc.append(">")
+                pc.append(label)
+                pc.append("\n")
+                pc.append(seg)
+                pc.append("\n")
         else:
-            for j, seq in enumerate(seqs_line):
-                if has_amino_acid[j]:
-                    unpaired_msa[j] += header + "\n"
-                    unpaired_msa[j] += seq + "\n"
+            for j, seg in enumerate(segments):
+                if has_aa[j]:
+                    uc = unpaired_chunks[j]
+                    uc.append(header)
+                    uc.append("\n")
+                    uc.append(seg)
+                    uc.append("\n")
+
     if is_homooligomer:
-        # homooligomers
         num = 101
-        paired_msa = [""] * query_seqs_cardinality[0]
-        for i in range(0, query_seqs_cardinality[0]):
-            paired_msa[i] = ">" + str(num + i) + "\n" + query_seqs_unique[0] + "\n"
-    if is_single_protein:
-        paired_msa = None
-    template_features = []
-    for query_seq in query_seqs_unique:
-        template_feature = mk_mock_template(query_seq)
-        template_features.append(template_feature)
+        count = max(query_seqs_cardinality[0], 0)
+        q = query_seqs_unique[0] if query_seqs_unique else ""
+        paired_msa = [f">{num + k}\n{q}\n" for k in range(count)]
+    else:
+        if is_single_protein:
+            paired_msa = None
+        else:
+            paired_msa = ["".join(ch) for ch in paired_chunks]
+
+
+    unpaired_msa = ["".join(ch) for ch in unpaired_chunks]
+    template_features = [mk_mock_template(q) for q in query_seqs_unique]
 
     return (
         unpaired_msa,
@@ -1076,11 +1266,13 @@ def run(
     num_recycles: Optional[int] = None,
     recycle_early_stop_tolerance: Optional[float] = None,
     model_order: List[int] = [1,2,3,4,5],
+    initial_guess: str = None,
     num_ensemble: int = 1,
     model_type: str = "auto",
     msa_mode: str = "mmseqs2_uniref_env",
     use_templates: bool = False,
     custom_template_path: str = None,
+    custom_template_cache_path: str = None,
     num_relax: int = 0,
     relax_max_iterations: int = 0,
     relax_tolerance: float = 2.39,
@@ -1100,6 +1292,7 @@ def run(
     prediction_callback: Callable[[Any, Any, Any, Any, Any], Any] = None,
     save_single_representations: bool = False,
     save_pair_representations: bool = False,
+    skip_output: List[str] = [],
     jobname_prefix: Optional[str] = None,
     save_all: bool = False,
     save_recycles: bool = False,
@@ -1115,33 +1308,27 @@ def run(
     feature_dict_callback: Callable[[Any], Any] = None,
     calc_extra_ptm: bool = False,
     use_probs_extra: bool = True,
+    max_template_date: str = "2100-01-01",
+    max_template_hits: int = 20,
     **kwargs
 ):
     # check what device is available
     try:
         # check if TPU is available
-        import jax.tools.colab_tpu
-        jax.tools.colab_tpu.setup_tpu()
-        logger.info('Running on TPU')
-        DEVICE = "tpu"
-        use_gpu_relax = False
+        from tpu_info import device
+        if len(device.get_local_chips()) > 0:
+            import jax.tools.colab_tpu
+            jax.tools.colab_tpu.setup_tpu()
+            logger.info('Running on TPU')
+            use_gpu_relax = False
     except:
-        if jax.local_devices()[0].platform == 'cpu':
+        if local_devices()[0].platform == 'cpu':
             logger.info("WARNING: no GPU detected, will be using CPU")
-            DEVICE = "cpu"
             use_gpu_relax = False
         else:
-            import tensorflow as tf
-            tf.get_logger().setLevel(logging.ERROR)
             logger.info('Running on GPU')
-            DEVICE = "gpu"
-            # disable GPU on tensorflow
-            tf.config.set_visible_devices([], 'GPU')
 
-    from alphafold.notebooks.notebook_utils import get_pae_json
     from colabfold.alphafold.models import load_models_and_params
-    from colabfold.colabfold import plot_paes, plot_plddts
-    from colabfold.plot import plot_msa_v2
 
     data_dir = Path(data_dir)
     result_dir = Path(result_dir)
@@ -1159,6 +1346,12 @@ def run(
     use_dropout           = kwargs.pop("training", use_dropout)
     use_fuse              = kwargs.pop("use_fuse", True)
     use_bfloat16          = kwargs.pop("use_bfloat16", True)
+    use_pallas            = kwargs.pop("use_pallas", False)  # old name
+    use_fast_kernels      = kwargs.pop("use_fast_kernels", use_pallas)
+    kernel_backend        = kwargs.pop("kernel_backend", "auto")
+    compile_mode          = kwargs.pop("compile_mode", "tuned")
+    if use_fast_kernels and not use_bfloat16:
+        raise ValueError("--use-fast-kernels needs half precision, not use_bfloat16=False")
     max_msa               = kwargs.pop("max_msa",None)
     if max_msa is not None:
         max_seq, max_extra_seq = [int(x) for x in max_msa.split(":")]
@@ -1214,6 +1407,10 @@ def run(
     # sort model order
     model_order.sort()
 
+    # initial guess
+    if initial_guess is not None:
+        logger.info(f'Using initial guess: {initial_guess}')
+
     # Record the parameters of this run
     config = {
         "num_queries": len(queries),
@@ -1230,6 +1427,7 @@ def run(
         "recycle_early_stop_tolerance": recycle_early_stop_tolerance,
         "num_ensemble": num_ensemble,
         "model_order": model_order,
+        "initial_guess": initial_guess,
         "keep_existing_results": keep_existing_results,
         "rank_by": rank_by,
         "max_seq": max_seq,
@@ -1247,9 +1445,14 @@ def run(
         "use_cluster_profile": use_cluster_profile,
         "use_fuse": use_fuse,
         "use_bfloat16": use_bfloat16,
+        "use_fast_kernels": use_fast_kernels,
+        "kernel_backend": kernel_backend,
+        "compile_mode": compile_mode,
         "version": importlib_metadata.version("colabfold"),
         "calc_extra_ptm": calc_extra_ptm,
         "use_probs_extra": use_probs_extra,
+        "max_template_date": max_template_date,
+        "max_template_hits": max_template_hits,
     }
     config_out_file = result_dir.joinpath("config.json")
     config_out_file.write_text(json.dumps(config, indent=4))
@@ -1268,14 +1471,21 @@ def run(
             custom_template_path = result_dir / "templates"
             put_mmciffiles_into_resultdir(pdb_hit_file, local_pdb_path, custom_template_path)
 
+
     if custom_template_path is not None:
         mk_hhsearch_db(custom_template_path)
 
     pad_len = 0
+    msa_pad_depth = 0
     ranks, metrics = [],[]
     first_job = True
     job_number = 0
-    for job_number, (raw_jobname, query_sequence, a3m_lines, _) in enumerate(queries):
+    for job_number, (raw_jobname, query_sequence, a3m_lines, custom_template_path_per_entry) in enumerate(queries):
+
+        if use_templates and custom_template_path_per_entry is not None and isinstance(custom_template_path_per_entry, Path):
+            mk_hhsearch_single_entry_db(custom_template_path_per_entry, custom_template_cache_path)
+            custom_template_path = custom_template_cache_path
+
         if jobname_prefix is not None:
             # pad job number based on number of queries
             fill = len(str(len(queries)))
@@ -1314,25 +1524,39 @@ def run(
             else:
                 if a3m_lines is None:
                     (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
-                    = get_msa_and_templates(jobname, query_sequence, a3m_lines, result_dir, msa_mode, use_templates,
-                        custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+                    = get_msa_and_templates(
+                        jobname, query_sequence, a3m_lines, result_dir, msa_mode, use_templates,
+                        custom_template_path, pair_mode, pairing_strategy, host_url, user_agent,
+                        max_template_date=max_template_date, max_template_hits=max_template_hits,
+                    )
 
                 elif a3m_lines is not None:
+                    if(isinstance(a3m_lines, Path)):
+                        a3m_lines = [a3m_lines.read_text()]
                     (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
                     = unserialize_msa(a3m_lines, query_sequence)
                     if use_templates:
                         (_, _, _, _, template_features) \
-                            = get_msa_and_templates(jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
-                                custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+                            = get_msa_and_templates(
+                                jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
+                                custom_template_path, pair_mode, pairing_strategy, host_url, user_agent,
+                                max_template_date=max_template_date, max_template_hits=max_template_hits,
+                            )
 
                 if num_models == 0:
                     with open(pickled_msa_and_templates, 'wb') as f:
                         pickle.dump((unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features), f)
                     logger.info(f"Saved {pickled_msa_and_templates}")
 
+            # a3m input and pickles bypass get_msa_and_templates, and num_extra_msa=1 would then sample a random homolog per seed
+            if msa_mode == "single_sequence" and unpaired_msa is not None:
+                unpaired_msa = [f">{101 + i}\n{seq}" for i, seq in enumerate(query_seqs_unique)]
+                paired_msa = None
+
             # save a3m
-            msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
-            result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
+            if not 'msa' in skip_output:
+                msa = msa_to_str(unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality)
+                result_dir.joinpath(f"{jobname}.a3m").write_text(msa)
 
         except Exception as e:
             logger.exception(f"Could not get MSA/templates for {jobname}: {e}")
@@ -1361,11 +1585,13 @@ def run(
         result_files = []
 
         # make msa plot
-        msa_plot = plot_msa_v2(feature_dict, dpi=dpi)
-        coverage_png = result_dir.joinpath(f"{jobname}_coverage.png")
-        msa_plot.savefig(str(coverage_png), bbox_inches='tight')
-        msa_plot.close()
-        result_files.append(coverage_png)
+        if not 'plots' in skip_output:
+            from colabfold.plot import plot_msa_v2
+            msa_plot = plot_msa_v2(feature_dict, dpi=dpi)
+            coverage_png = result_dir.joinpath(f"{jobname}_coverage.png")
+            msa_plot.savefig(str(coverage_png), bbox_inches='tight')
+            msa_plot.close()
+            result_files.append(coverage_png)
 
         if use_templates:
             templates_file = result_dir.joinpath(f"{jobname}_template_domain_names.json")
@@ -1427,18 +1653,27 @@ def run(
                         use_fuse=use_fuse,
                         use_bfloat16=use_bfloat16,
                         save_all=save_all,
-                        calc_extra_ptm=calc_extra_ptm
+                        calc_extra_ptm=calc_extra_ptm,
+                        use_fast_kernels=use_fast_kernels,
+                        kernel_backend=kernel_backend,
+                        compile_mode=compile_mode
                     )
                     first_job = False
+
+                # Track the deepest multimer MSA seen so far
+                if "multimer" in model_type and "msa" in feature_dict:
+                    msa_pad_depth = max(msa_pad_depth, len(feature_dict["msa"]))
 
                 results = predict_structure(
                     prefix=jobname,
                     result_dir=result_dir,
                     feature_dict=feature_dict,
+                    msa_pad_depth=msa_pad_depth,
                     is_complex=is_complex,
                     use_templates=use_templates,
                     sequences_lengths=query_sequence_len_array,
                     pad_len=pad_len,
+                    initial_guess=initial_guess,
                     model_type=model_type,
                     model_runner_and_params=model_runner_and_params,
                     num_relax=num_relax,
@@ -1474,40 +1709,45 @@ def run(
             ###############
 
             # load the scores
-            scores = []
-            for r in results["rank"][:5]:
-                scores_file = result_dir.joinpath(f"{jobname}_scores_{r}.json")
-                with scores_file.open("r") as handle:
-                    scores.append(json.load(handle))
+            if not 'pae_json' in skip_output:
+                scores = []
+                for r in results["rank"][:5]:
+                    scores_file = result_dir.joinpath(f"{jobname}_scores_{r}.json")
+                    with scores_file.open("r") as handle:
+                        scores.append(json.load(handle))
 
-            # write alphafold-db format (pAE)
-            if "pae" in scores[0]:
-                af_pae_file = result_dir.joinpath(f"{jobname}_predicted_aligned_error_v1.json")
-                af_pae_file.write_text(json.dumps({
-                    "predicted_aligned_error":scores[0]["pae"],
-                    "max_predicted_aligned_error":scores[0]["max_pae"]}))
-                result_files.append(af_pae_file)
+                # write alphafold-db format (pAE)
+                if "pae" in scores[0]:
+                    af_pae_file = result_dir.joinpath(f"{jobname}_predicted_aligned_error_v1.json")
+                    af_pae_file.write_text(json.dumps({
+                        "predicted_aligned_error":scores[0]["pae"],
+                        "max_predicted_aligned_error":scores[0]["max_pae"]}))
+                    result_files.append(af_pae_file)
 
-                # make pAE plots
-                paes_plot = plot_paes([np.asarray(x["pae"]) for x in scores],
-                    Ls=query_sequence_len_array, dpi=dpi)
-                pae_png = result_dir.joinpath(f"{jobname}_pae.png")
-                paes_plot.savefig(str(pae_png), bbox_inches='tight')
-                paes_plot.close()
-                result_files.append(pae_png)
+                    # make pAE plots
+                    if not 'plots' in skip_output:
+                        from colabfold.colabfold import plot_paes
+                        paes_plot = plot_paes([np.asarray(x["pae"]) for x in scores],
+                            Ls=query_sequence_len_array, dpi=dpi)
+                        pae_png = result_dir.joinpath(f"{jobname}_pae.png")
+                        paes_plot.savefig(str(pae_png), bbox_inches='tight')
+                        paes_plot.close()
+                        result_files.append(pae_png)
 
-                # make pairwise interface metric plots and chainwise ptm plot
-                if calc_extra_ptm:
-                    ext_metric_png = result_dir.joinpath(f"{jobname}_ext_metrics.png")
-                    extra_ptm.plot_chain_pairwise_analysis(scores, fig_path=ext_metric_png)
+                    # make pairwise interface metric plots and chainwise ptm plot
+                    if calc_extra_ptm:
+                        ext_metric_png = result_dir.joinpath(f"{jobname}_ext_metrics.png")
+                        extra_ptm.plot_chain_pairwise_analysis(scores, fig_path=ext_metric_png)
 
-            # make pLDDT plot
-            plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
-                Ls=query_sequence_len_array, dpi=dpi)
-            plddt_png = result_dir.joinpath(f"{jobname}_plddt.png")
-            plddt_plot.savefig(str(plddt_png), bbox_inches='tight')
-            plddt_plot.close()
-            result_files.append(plddt_png)
+                # make pLDDT plot
+                if not 'plots' in skip_output:
+                    from colabfold.colabfold import plot_plddts
+                    plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
+                        Ls=query_sequence_len_array, dpi=dpi)
+                    plddt_png = result_dir.joinpath(f"{jobname}_plddt.png")
+                    plddt_plot.savefig(str(plddt_png), bbox_inches='tight')
+                    plddt_plot.close()
+                    result_files.append(plddt_png)
 
         if zip_results:
             with zipfile.ZipFile(result_zip, "w") as result_zip:
@@ -1552,8 +1792,10 @@ def generate_af3_input(
     use_templates: bool = False,
     custom_template_path: str = None,
     jobname_prefix: Optional[str] = None,
-    host_url: str = DEFAULT_API_SERVER, #NOTE: what is this ?
-    user_agent: str = "", #NOTE: what is this ?
+    host_url: str = DEFAULT_API_SERVER,
+    user_agent: str = "",
+    max_template_date: str = "2100-01-01",
+    max_template_hits: int = 20,
     # is_complex: bool,
     # model_type: str = "auto",
 ):
@@ -1577,16 +1819,22 @@ def generate_af3_input(
         try:
             if a3m_lines is None:
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
-                = get_msa_and_templates(jobname, query_sequences, a3m_lines, result_dir, msa_mode, use_templates,
-                    custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+                = get_msa_and_templates(
+                    jobname, query_sequences, a3m_lines, result_dir, msa_mode, use_templates,
+                    custom_template_path, pair_mode, pairing_strategy, host_url, user_agent,
+                    max_template_date=max_template_date, max_template_hits=max_template_hits,
+                )
 
             elif a3m_lines is not None:
                 (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features) \
                 = unserialize_msa(a3m_lines, query_sequences)
                 # if use_templates:
                 #     (_, _, _, _, template_features) \
-                #         = get_msa_and_templates(jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
-                #             custom_template_path, pair_mode, pairing_strategy, host_url, user_agent)
+                #         = get_msa_and_templates(
+                #               jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence', use_templates,
+                #               custom_template_path, pair_mode, pairing_strategy, host_url, user_agent,
+                #               max_template_date=max_template_date, max_template_hits=max_template_hits,
+                #           )
 
             # save json
             af3 = AF3Utils(jobname, query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa, other_molecules)
@@ -1661,6 +1909,24 @@ def main():
         help="Directory with PDB files to provide as custom templates to the predictor. "
         "No templates will be queried from the MSA server. "
         "'--templates' argument is also required to enable this.",
+    )
+    msa_group.add_argument(
+        "--custom-template-cache-path",
+        type=str,
+        default=None,
+        help="Directory to generate temporary HHsearch databases for custom templates.",
+    )
+    msa_group.add_argument(
+        "--max-template-date",
+        type=str,
+        default="2100-01-01",
+        help="Maximum release date (YYYY-MM-DD) for templates to be considered."
+    )
+    msa_group.add_argument(
+        "--max-template-hits",
+        type=int,
+        default=20,
+        help="Maximum number of template hits to consider."
     )
     msa_group.add_argument(
         "--pdb-hit-file",
@@ -1739,6 +2005,14 @@ def main():
         ],
     )
     pred_group.add_argument("--model-order", default="1,2,3,4,5", type=str)
+    pred_group.add_argument(
+        "--initial-guess",
+        nargs="?",
+        const=True,
+        help="Specify a starting model for the prediction. If the main input file is a PDB format, "
+        "it will be used as the initial guess. Otherwise, you can provide an input file with this flag, "
+        "which will override the main input."
+    )
     pred_group.add_argument(
         "--use-dropout",
         default=False,
@@ -1882,6 +2156,14 @@ def main():
         action="store_true",
         help="Save the pair representation embeddings of all models.",
     )
+    def comma_separated_list(arg_string):
+        return [item.strip() for item in arg_string.split(',') if item.strip() in ['msa', 'plots', 'pae_json']]
+    output_group.add_argument(
+        "--skip-output",
+        help="Comma-separated list of output types to skip: msa, plots, pae_json.",
+        type=comma_separated_list,
+        default="",
+    )
     output_group.add_argument(
         "--overwrite-existing-results",
         default=False,
@@ -1896,11 +2178,11 @@ def main():
     )
     output_group.add_argument(
         "--sort-queries-by",
-        help="Sort input queries by: none, length, random. "
-        "Sorting by length speeds up prediction as models are recompiled less often.",
+        help="Sort input queries by: none, length, msa_depth, random. "
+        "Sorting by length or depth speeds up monomer or multimer prediction as models are recompiled less often.",
         type=str,
         default="length",
-        choices=["none", "length", "random"],
+        choices=["none", "length", "msa_depth", "random"],
     )
 
     adv_group = parser.add_argument_group(
@@ -1927,6 +2209,46 @@ def main():
         "but overall performance increases due to not recompiling. "
         "Set to 0 to disable.",
     )
+    adv_group.add_argument(
+        "--use-fast-kernels",
+        dest="use_fast_kernels",
+        default=False,
+        action=BooleanOptionalAction,
+        help="Use fused kernels for faster prediction",
+    )
+    adv_group.add_argument(
+        # old name: takes an optional value, so it must not precede the paths
+        "--use-pallas",
+        dest="use_fast_kernels",
+        nargs="?",
+        const=True,
+        default=False,
+        type=_str2bool,
+        metavar="BOOL",
+        help=SUPPRESS,
+    )
+    adv_group.add_argument(
+        "--kernel-backend",
+        choices=["auto", "pallas", "cuda_legacy"],
+        default="auto",
+        help="Fused kernels: auto (pallas on sm_80+, cuda_legacy below), pallas, "
+             "or cuda_legacy (float16).",
+    )
+    adv_group.add_argument(
+        "--compile-mode",
+        choices=["fast", "tuned", "full"],
+        default="tuned",
+        help="Kernel autotuning effort, trading compile time for inference speed: "
+        "'fast': cuBLAS only, fastest compile, ~4%% slower inference, single/one-off predictions. "
+        "'tuned': fixed, tuned kernel shape compiled with cuBLAS and Pallas, fast compile and ~1%% off optimal. "
+        "'full': unbounded Kernel autotune, can take tens of minutes to compile for longsequences  but optimal inference, can be worth it for large batches."
+    )
+    adv_group.add_argument(
+        "--debug-logging",
+        default=False,
+        action="store_true",
+        help="Enable debug message logging.",
+    )
 
     af3_group = parser.add_argument_group(
         "AlphaFold3 arguments", ""
@@ -1946,7 +2268,7 @@ def main():
         for k in ENV.keys():
             if k in os.environ: del os.environ[k]
 
-    setup_logging(Path(args.results).joinpath("log.txt"))
+    setup_logging(Path(args.results).joinpath("log.txt"), verbose=args.debug_logging)
 
     version = importlib_metadata.version("colabfold")
     commit = get_commit()
@@ -1960,7 +2282,24 @@ def main():
 
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
 
+    has_per_entry_templates = any(isinstance(q[3], Path) for q in queries)
+    if has_per_entry_templates and args.custom_template_cache_path is None:
+        raise ValueError("--custom-template-cache-path must be set when using per-entry template paths in CSV input")
+    if has_per_entry_templates and args.custom_template_path is not None:
+        raise ValueError("--custom-template-path and per-entry template paths in CSV input cannot be used simultaneously")
+
     model_type = set_model_type(is_complex, args.model_type)
+
+    # use pdb or cif input as initial guess
+    if args.initial_guess is not None:
+        if isinstance(args.initial_guess, str) and Path(args.initial_guess).suffix in (".pdb", ".cif"):
+            initial_guess = args.initial_guess
+        elif Path(args.input).suffix in (".pdb", ".cif"):
+            initial_guess = args.input
+        else:
+            raise ValueError("Provide PDB or CIF file for initial guess.")
+    else:
+        initial_guess = None
 
     if args.msa_only:
         args.num_models = 0
@@ -1998,6 +2337,8 @@ def main():
             jobname_prefix=args.jobname_prefix,
             host_url=args.host_url,
             user_agent=user_agent,
+            max_template_date=args.max_template_date,
+            max_template_hits=args.max_template_hits,
             # extra_molecules=extra_molecules,
         )
         return
@@ -2007,6 +2348,7 @@ def main():
         result_dir=args.results,
         use_templates=args.templates,
         custom_template_path=args.custom_template_path,
+        custom_template_cache_path=args.custom_template_cache_path,
         num_relax=args.num_relax,
         relax_max_iterations=args.relax_max_iterations,
         relax_tolerance=args.relax_tolerance,
@@ -2019,6 +2361,7 @@ def main():
         recycle_early_stop_tolerance=args.recycle_early_stop_tolerance,
         num_ensemble=args.num_ensemble,
         model_order=model_order,
+        initial_guess=initial_guess,
         is_complex=is_complex,
         keep_existing_results=not args.overwrite_existing_results,
         rank_by=args.rank,
@@ -2034,6 +2377,7 @@ def main():
         zip_results=args.zip,
         save_single_representations=args.save_single_representations,
         save_pair_representations=args.save_pair_representations,
+        skip_output=args.skip_output,
         use_dropout=args.use_dropout,
         max_seq=args.max_seq,
         max_extra_seq=args.max_extra_seq,
@@ -2047,6 +2391,11 @@ def main():
         save_recycles=args.save_recycles,
         calc_extra_ptm=args.calc_extra_ptm,
         use_probs_extra=use_probs_extra,
+        max_template_date=args.max_template_date,
+        max_template_hits=args.max_template_hits,
+        use_fast_kernels=args.use_fast_kernels,
+        kernel_backend=args.kernel_backend,
+        compile_mode=args.compile_mode,
     )
 
 if __name__ == "__main__":

@@ -5,7 +5,11 @@ from pathlib import Path
 from typing import Optional, Tuple, List
 from enum import Enum
 
-from absl import logging as absl_logging
+absl_imported = True
+try:
+    from absl import logging as absl_logging
+except:
+    absl_imported = False
 from importlib_metadata import distribution
 from tqdm import TqdmExperimentalWarning
 
@@ -43,7 +47,7 @@ class TqdmHandler(logging.StreamHandler):
         tqdm.write(msg)
 
 
-def setup_logging(log_file: Path, mode: str = "w") -> None:
+def setup_logging(log_file: Path, mode: str = "w", verbose: bool = False) -> None:
     log_file.parent.mkdir(exist_ok=True, parents=True)
     root = logging.getLogger()
     if root.handlers:
@@ -51,13 +55,14 @@ def setup_logging(log_file: Path, mode: str = "w") -> None:
             handler.close()
             root.removeHandler(handler)
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG if verbose else logging.INFO,
         format="%(asctime)s %(message)s",
         handlers=[TqdmHandler(), logging.FileHandler(log_file, mode=mode)],
         force=True,
     )
-    # otherwise jax will tell us about its search for devices
-    absl_logging.set_verbosity("error")
+    if absl_imported and not verbose:
+        # otherwise jax will tell us about its search for devices
+        absl_logging.set_verbosity("error")
     warnings.simplefilter(action="ignore", category=TqdmExperimentalWarning)
 
 def get_commit() -> Optional[str]:

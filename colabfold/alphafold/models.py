@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from functools import wraps, partialmethod
 from typing import Tuple, List, Optional
@@ -5,6 +6,25 @@ import haiku
 from alphafold.model import model, config, data
 from alphafold.model.modules import AlphaFold
 from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
+
+logger = logging.getLogger(__name__)
+
+def _compile_jit_kwargs(compile_mode: str) -> dict:
+    import jaxlib
+    from packaging.version import Version
+    # These params won across GB10/L40S/A100, however exact tile is not very important anyway
+    if Version(jaxlib.__version__) < Version("0.10.1"):
+        # jaxlib < 0.10 checks for split_k, now deprecated
+        tuned = "block_m: 64 block_n: 64 block_k: 16 split_k: 1 num_stages: 3 num_warps: 4 num_ctas: 1"
+    else:
+        tuned = "block_m: 64 block_n: 64 block_k: 16 num_stages: 3 num_warps: 4 num_ctas: 1"
+    copts = {
+        "fast":  {"xla_gpu_enable_triton_gemm": False},
+        "tuned": {"xla_gpu_override_gemm_autotuner": tuned},
+        "full":  None,
+    }.get(compile_mode)
+    return {"compiler_options": copts} if copts else {}
+
 
 def get_model_haiku_params(
     data_dir: str,
@@ -58,6 +78,35 @@ def model_to_config_name(model_type: str, model_number: str) -> str:
         raise ValueError(f"Unknown model_type {model_type}")
 
 
+def _warn_if_kernels_missing(cc) -> None:
+    try:
+        from alphafold.model import volta_attn
+        if cc is not None and volta_attn.available(cc) and volta_attn.ops_available(cc):
+            return
+    except Exception:
+        pass
+    logger.warning("no colabfold-legacy-kernels for sm_%s; falling back to XLA", cc or "unknown")
+
+
+def _on_gpu():
+    """True if jax has a GPU (CUDA or ROCm); Pallas and the CUDA kernels need one."""
+    try:
+        import jax
+        return jax.devices()[0].platform == "gpu"
+    except Exception:
+        return False
+
+
+def _compute_capability():
+    """Give the GPU compute capability as an integer, e.g. 75, or None."""
+    try:
+        import jax
+        cc = str(jax.devices()[0].compute_capability)
+        return int(round(float(cc) * 10)) if "." in cc else int(cc)
+    except Exception:
+        return None
+
+
 def load_models_and_params(
     num_models: int,
     use_templates: bool,
@@ -77,7 +126,10 @@ def load_models_and_params(
     use_dropout: bool = False,
     save_all: bool = False,
     calc_extra_ptm: bool = False,
-    use_probs_extra: bool = True
+    use_probs_extra: bool = True,
+    use_fast_kernels: bool = False,
+    kernel_backend: str = "auto",
+    compile_mode: str = "tuned"
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -87,6 +139,13 @@ def load_models_and_params(
 
     # Use only two model and later swap params to avoid recompiling
     model_runner_and_params: [Tuple[str, model.RunModel, haiku.Params]] = []
+
+    if kernel_backend != "auto" and not use_fast_kernels:
+        logger.warning("kernel_backend has no effect without use_fast_kernels")
+
+    if use_fast_kernels and not _on_gpu():
+        logger.warning("fused kernels need a GPU; ignoring use_fast_kernels")
+        use_fast_kernels = False
 
     if model_order is None:
         model_order = [1, 2, 3, 4, 5]
@@ -115,7 +174,24 @@ def load_models_and_params(
 
             # set bfloat options
             model_config.model.global_config.bfloat16 = use_bfloat16
-            
+
+            cc = _compute_capability()
+            backend = kernel_backend
+            if backend == "auto":
+                # XLA gates Pallas/Triton to sm_80+.
+                backend = "cuda_legacy" if cc is not None and cc < 80 else "pallas"
+            if use_fast_kernels and backend == "pallas" and cc is not None and cc < 80:
+                raise ValueError(
+                    f"--kernel-backend pallas needs sm_80+, this GPU is sm_{cc}; "
+                    "use auto or cuda_legacy")
+            model_config.model.global_config.use_pallas = use_fast_kernels
+            model_config.model.global_config.kernel_backend = backend
+            model_config.model.global_config.compute_capability = cc
+            # Volta/Turing tensor cores have no bfloat16
+            if use_fast_kernels and backend == "cuda_legacy":
+                model_config.model.global_config.half_dtype = "float16"
+                _warn_if_kernels_missing(cc)
+
             # set fuse options
             model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights = use_fuse
             model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights = use_fuse
@@ -170,7 +246,8 @@ def load_models_and_params(
                 model_config,
                 params,
                 extended_ptm_config={'calc_extended_ptm': calc_extra_ptm,
-                                     'use_probs_extended': use_probs_extra}
+                                     'use_probs_extended': use_probs_extra},
+                jit_kwargs=_compile_jit_kwargs(compile_mode)
             )
         
         params = get_model_haiku_params(

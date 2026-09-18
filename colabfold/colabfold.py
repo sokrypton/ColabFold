@@ -4,7 +4,11 @@
 ############################################
 # imports
 ############################################
-import jax
+try:
+  import jax
+except ImportError:
+  pass
+
 import requests
 import hashlib
 import tarfile
@@ -23,11 +27,6 @@ from matplotlib import collections as mcoll
 
 import logging
 logger = logging.getLogger(__name__)
-
-try:
-  import py3Dmol
-except:
-  pass
 
 from string import ascii_uppercase,ascii_lowercase
 
@@ -84,8 +83,8 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
       query += f">{n}\n{seq}\n"
       n += 1
 
+    error_count = 0
     while True:
-      error_count = 0
       try:
         # https://requests.readthedocs.io/en/latest/user/advanced/#advanced
         # "good practice to set connect timeouts to slightly larger than a multiple of 3"
@@ -98,7 +97,7 @@ def run_mmseqs2(x, prefix, use_env=True, use_filter=True,
         logger.warning(f"Error while fetching result from MSA server. Retrying... ({error_count}/5)")
         logger.warning(f"Error: {e}")
         time.sleep(5)
-        if error_count > 5:
+        if error_count >= 5:
           raise
         continue
       break
@@ -570,7 +569,7 @@ def read_pdb_renum(pdb_filename, Ls=None):
 def show_pdb(pred_output_path, show_sidechains=False, show_mainchains=False,
              color="lDDT", chains=None, Ls=None, vmin=50, vmax=90,
              color_HP=False, size=(800,480)):
-  
+  import py3Dmol
   if chains is None:
     chains = 1 if Ls is None else len(Ls)
 

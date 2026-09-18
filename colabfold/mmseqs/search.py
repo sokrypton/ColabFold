@@ -1,5 +1,6 @@
 """
 Functionality for running mmseqs locally. Takes in a fasta file, outputs final.a3m
+Pairing for homodimer prediction, to get the best hit per species
 """
 
 import logging
@@ -109,10 +110,13 @@ def mmseqs_search_monomer(
             dbSuffix3 = ".idx"
 
     search_param = ["--num-iterations", "3", "--db-load-mode", str(db_load_mode), "-a", "-e", "0.1", "--max-seqs", "10000"]
+    template_search_param = []
     if gpu:
         search_param += ["--gpu", str(gpu), "--prefilter-mode", "1"] # gpu version only supports ungapped prefilter currently
+        template_search_param += ["--gpu", str(gpu), "--prefilter-mode", "1"]
     else:
         search_param += ["--prefilter-mode", str(prefilter_mode)]
+        template_search_param += ["-s", "7.5", "--prefilter-mode", str(prefilter_mode)]
         if s is not None: # sensitivy can only be set for non-gpu version, gpu version runs at max sensitivity
             search_param += ["-s", "{:.1f}".format(s)]
         else:
@@ -120,8 +124,8 @@ def mmseqs_search_monomer(
     if gpu_server:
         search_param += ["--gpu-server", str(gpu_server)]
 
-    filter_param = ["--filter-msa", str(filter), "--filter-min-enable", "1000", "--diff", str(diff), "--qid", "0.0,0.2,0.4,0.6,0.8,1.0", "--qsc", "0", "--max-seq-id", "0.95",]
-    expand_param = ["--expansion-mode", "0", "-e", str(expand_eval), "--expand-filter-clusters", str(filter), "--max-seq-id", "0.95",]
+    filter_param = ["--filter-msa", str(1 if filter else 0), "--filter-min-enable", "1000", "--diff", str(diff), "--qid", "0.0,0.2,0.4,0.6,0.8,1.0", "--qsc", "0", "--max-seq-id", "0.95",]
+    expand_param = ["--expansion-mode", "0", "-e", str(expand_eval), "--expand-filter-clusters", str(1 if filter else 0), "--max-seq-id", "0.95",]
 
     if not base.joinpath("uniref.a3m").with_suffix('.a3m.dbtype').exists():
         run_mmseqs(mmseqs, ["search", base.joinpath("qdb"), dbbase.joinpath(uniref_db), base.joinpath("res"), base.joinpath("tmp"), "--threads", str(threads)] + search_param)
@@ -170,7 +174,7 @@ def mmseqs_search_monomer(
 
     if use_templates and not base.joinpath(f"{template_db}.m8").with_suffix('.m8.dbtype').exists():
         run_mmseqs(mmseqs, ["search", base.joinpath("prof_res"), dbbase.joinpath(template_db), base.joinpath("res_pdb"),
-                            base.joinpath("tmp2"), "--db-load-mode", str(db_load_mode), "--threads", str(threads), "-s", "7.5", "-a", "-e", "0.1", "--prefilter-mode", str(prefilter_mode)])
+                            base.joinpath("tmp2"), "--db-load-mode", str(db_load_mode), "--threads", str(threads), "-a", "-e", "0.1"] + template_search_param)
         run_mmseqs(mmseqs, ["convertalis", base.joinpath("prof_res"), dbbase.joinpath(f"{template_db}{dbSuffix3}"), base.joinpath("res_pdb"),
                             base.joinpath(f"{template_db}"), "--format-output",
                             "query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,cigar",
@@ -212,6 +216,7 @@ def mmseqs_search_pair(
     spire_db: Path = Path("spire_ctg10_2401_db"),
     mmseqs: Path = Path("mmseqs"),
     pair_env: bool = True,
+    filter: bool = False,
     prefilter_mode: int = 0,
     s: float = 8,
     threads: int = 64,
@@ -259,13 +264,16 @@ def mmseqs_search_pair(
     if gpu_server:
         search_param += ["--gpu-server", str(gpu_server)]
     expand_param = ["--expansion-mode", "0", "-e", "inf", "--expand-filter-clusters", "0", "--max-seq-id", "0.95",]
+    filter_param = ["--filter-msa", str(1 if filter else 0), "--filter-min-enable", "1000", "--diff", "3000", "--qid", "0.2,0.4,0.6,0.8,1.0", "--qsc", "0", "--max-seq-id", "0.95",]
     run_mmseqs(mmseqs, ["search", base.joinpath("qdb"), dbbase.joinpath(db), base.joinpath("res"), base.joinpath("tmp"), "--threads", str(threads),] + search_param,)
+    run_mmseqs(mmseqs, ["mvdb", base.joinpath("tmp/latest/profile_1"), base.joinpath("prof_res")])
+    run_mmseqs(mmseqs, ["lndb", base.joinpath("qdb_h"), base.joinpath("prof_res_h")])    
     run_mmseqs(mmseqs, ["expandaln", base.joinpath("qdb"), dbbase.joinpath(f"{db}{dbSuffix1}"), base.joinpath("res"), dbbase.joinpath(f"{db}{dbSuffix2}"), base.joinpath("res_exp"), "--db-load-mode", str(db_load_mode), "--threads", str(threads),] + expand_param,)
-    run_mmseqs(mmseqs, ["align", base.joinpath("qdb"), dbbase.joinpath(f"{db}{dbSuffix1}"), base.joinpath("res_exp"), base.joinpath("res_exp_realign"), "--db-load-mode", str(db_load_mode), "-e", "0.001", "--max-accept", "1000000", "--threads", str(threads), "-c", "0.5", "--cov-mode", "1",],)
+    run_mmseqs(mmseqs, ["align", base.joinpath("prof_res"), dbbase.joinpath(f"{db}{dbSuffix1}"), base.joinpath("res_exp"), base.joinpath("res_exp_realign"), "--db-load-mode", str(db_load_mode), "--alignment-mode", "1", "-e", "0.001", "--max-accept", "1000000", "--threads", str(threads),],)
     run_mmseqs(mmseqs, ["pairaln", base.joinpath("qdb"), dbbase.joinpath(f"{db}"), base.joinpath("res_exp_realign"), base.joinpath("res_exp_realign_pair"), "--db-load-mode", str(db_load_mode), "--pairing-mode", str(pairing_strategy), "--pairing-dummy-mode", "0", "--threads", str(threads), ],)
-    run_mmseqs(mmseqs, ["align", base.joinpath("qdb"), dbbase.joinpath(f"{db}{dbSuffix1}"), base.joinpath("res_exp_realign_pair"), base.joinpath("res_exp_realign_pair_bt"), "--db-load-mode", str(db_load_mode), "-e", "inf", "-a", "--threads", str(threads), ],)
+    run_mmseqs(mmseqs, ["align", base.joinpath("prof_res"), dbbase.joinpath(f"{db}{dbSuffix1}"), base.joinpath("res_exp_realign_pair"), base.joinpath("res_exp_realign_pair_bt"), "--db-load-mode", str(db_load_mode), "-e", "inf", "-a", "--threads", str(threads), ],)
     run_mmseqs(mmseqs, ["pairaln", base.joinpath("qdb"), dbbase.joinpath(f"{db}"), base.joinpath("res_exp_realign_pair_bt"), base.joinpath("res_final"), "--db-load-mode", str(db_load_mode), "--pairing-mode", str(pairing_strategy), "--pairing-dummy-mode", "1", "--threads", str(threads),],)
-    run_mmseqs(mmseqs, ["result2msa", base.joinpath("qdb"), dbbase.joinpath(f"{db}{dbSuffix1}"), base.joinpath("res_final"), base.joinpath("pair.a3m"), "--db-load-mode", str(db_load_mode), "--msa-format-mode", "5", "--threads", str(threads),],)
+    run_mmseqs(mmseqs, ["result2msa", base.joinpath("qdb"), dbbase.joinpath(f"{db}{dbSuffix1}"), base.joinpath("res_final"), base.joinpath("pair.a3m"), "--db-load-mode", str(db_load_mode),  "--msa-format-mode", "5", "--threads", str(threads),] + filter_param,)
     if unpack:
         run_mmseqs(mmseqs, ["unpackdb", base.joinpath("pair.a3m"), base.joinpath("."), "--unpack-name-mode", "0", "--unpack-suffix", output,],)
         run_mmseqs(mmseqs, ["rmdb", base.joinpath("pair.a3m")])
@@ -275,6 +283,8 @@ def mmseqs_search_pair(
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("res_exp_realign_pair")])
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("res_exp_realign_pair_bt")])
     run_mmseqs(mmseqs, ["rmdb", base.joinpath("res_final")])
+    run_mmseqs(mmseqs, ["rmdb", base.joinpath("prof_res")])
+    run_mmseqs(mmseqs, ["rmdb", base.joinpath("prof_res_h")])
     shutil.rmtree(base.joinpath("tmp"))
     # @formatter:on
     # fmt: on
@@ -335,8 +345,8 @@ def main():
         "--filter",
         type=int,
         default=1,
-        choices=[0, 1],
-        help="Filter the MSA by pre-defined align_eval, qsc, max_accept",
+        choices=[0, 1, 2],
+        help="Filter the MSA by pre-defined align_eval, qsc, max_accept; 2: also filter paired MSA",
     )
 
     # mmseqs params
@@ -374,6 +384,13 @@ def main():
         help="align - Maximum accepted alignments before alignment calculation for a query is stopped.",
     )
     parser.add_argument(
+        "--pair-mode",
+        help="Multimer MSA pairing mode for complex prediction: unpaired MSA only, paired MSA only, both (default).",
+        type=str,
+        default="unpaired_paired",
+        choices=["unpaired", "paired", "unpaired_paired"],
+    )
+    parser.add_argument(
         "--pairing_strategy", type=int, default=0, help="pairaln - Pairing strategy."
     )
     parser.add_argument(
@@ -407,9 +424,8 @@ def main():
     logging.basicConfig(level = logging.INFO)
 
     queries, is_complex = get_queries(args.query, None)
-
     queries_unique = []
-    for job_number, (raw_jobname, query_sequences, a3m_lines, other_molecules) in enumerate(queries):
+    for job_number, (raw_jobname, query_sequences, _, other_molecules) in enumerate(queries):
         # remove duplicates before searching
         query_sequences = (
             [query_sequences] if isinstance(query_sequences, str) else query_sequences
@@ -441,7 +457,7 @@ def main():
 
     run_mmseqs(
         args.mmseqs,
-        ["createdb", query_file, args.base.joinpath("qdb"), "--shuffle", "0"],
+        ["createdb", query_file, args.base.joinpath("qdb"), "--shuffle", "0", "--dbtype", "1"],
     )
     with args.base.joinpath("qdb.lookup").open("w") as f:
         id = 0
@@ -458,35 +474,41 @@ def main():
                 id += 1
             file_number += 1
 
-    mmseqs_search_monomer(
-        mmseqs=args.mmseqs,
-        dbbase=args.dbbase,
-        base=args.base,
-        uniref_db=args.db1,
-        template_db=args.db2,
-        metagenomic_db=args.db3,
-        use_env=args.use_env,
-        use_templates=args.use_templates,
-        filter=args.filter,
-        expand_eval=args.expand_eval,
-        align_eval=args.align_eval,
-        diff=args.diff,
-        qsc=args.qsc,
-        max_accept=args.max_accept,
-        prefilter_mode=args.prefilter_mode,
-        s=args.s,
-        db_load_mode=args.db_load_mode,
-        threads=args.threads,
-        gpu=args.gpu,
-        gpu_server=args.gpu_server,
-        unpack=args.unpack,
-    )
-    if is_complex is True:
+    keep_paired = args.pair_mode == "paired" or args.pair_mode == "unpaired_paired"
+    keep_unpaired = args.pair_mode == "unpaired" or args.pair_mode == "unpaired_paired"
+
+    if keep_unpaired:
+        mmseqs_search_monomer(
+            mmseqs=args.mmseqs,
+            dbbase=args.dbbase,
+            base=args.base,
+            uniref_db=args.db1,
+            template_db=args.db2,
+            metagenomic_db=args.db3,
+            use_env=args.use_env,
+            use_templates=args.use_templates,
+            filter=args.filter > 0,
+            expand_eval=args.expand_eval,
+            align_eval=args.align_eval,
+            diff=args.diff,
+            qsc=args.qsc,
+            max_accept=args.max_accept,
+            prefilter_mode=args.prefilter_mode,
+            s=args.s,
+            db_load_mode=args.db_load_mode,
+            threads=args.threads,
+            gpu=args.gpu,
+            gpu_server=args.gpu_server,
+            unpack=args.unpack,
+        )
+
+    if is_complex is True and keep_paired:
         mmseqs_search_pair(
             mmseqs=args.mmseqs,
             dbbase=args.dbbase,
             base=args.base,
             uniref_db=args.db1,
+            filter=args.filter == 2,
             prefilter_mode=args.prefilter_mode,
             s=args.s,
             db_load_mode=args.db_load_mode,
@@ -504,6 +526,7 @@ def main():
                 base=args.base,
                 uniref_db=args.db1,
                 spire_db=args.db4,
+                filter=args.filter == 2,
                 prefilter_mode=args.prefilter_mode,
                 s=args.s,
                 db_load_mode=args.db_load_mode,
@@ -515,7 +538,8 @@ def main():
                 unpack=args.unpack,
             )
 
-        if args.unpack | args.af3_json:
+    if is_complex is True:
+        if args.unpack or args.af3_json:
             id = 0
             for job_number, (
                 raw_jobname,
@@ -523,29 +547,34 @@ def main():
                 query_seqs_cardinality,
                 other_molecules,
             ) in enumerate(queries_unique):
-                unpaired_msa = []
+                # Only build MSAs that we fill
                 paired_msa = None
-                if len(query_seqs_cardinality) > 1:
+                unpaired_msa = None
+                # sum > 1 allows homomer pairing
+                if keep_paired and sum(query_seqs_cardinality) > 1:
                     paired_msa = []
+                if keep_unpaired:
+                    unpaired_msa = []
                 for seq in query_sequences:
-                    with args.base.joinpath(f"{id}.a3m").open("r") as f:
-                        unpaired_msa.append(f.read())
-                    if args.af3_json:
-                        args.base.joinpath(f"{id}.a3m").unlink()
-
-                    if args.use_env_pairing:
-                        with open(args.base.joinpath(f"{id}.paired.a3m"), 'a') as file_pair:
-                            with open(args.base.joinpath(f"{id}.env.paired.a3m"), 'r') as file_pair_env:
-                                while chunk := file_pair_env.read(10 * 1024 * 1024):
-                                    file_pair.write(chunk)
+                    if keep_unpaired:
+                        with args.base.joinpath(f"{id}.a3m").open("r") as f:
+                            unpaired_msa.append(f.read())
                         if args.unpack:
-                            args.base.joinpath(f"{id}.env.paired.a3m").unlink()
+                            args.base.joinpath(f"{id}.a3m").unlink()
+                    if keep_paired:
+                        if args.use_env_pairing:
+                            with open(args.base.joinpath(f"{id}.paired.a3m"), 'a') as file_pair:
+                                with open(args.base.joinpath(f"{id}.env.paired.a3m"), 'r') as file_pair_env:
+                                    while chunk := file_pair_env.read(10 * 1024 * 1024):
+                                        file_pair.write(chunk)
+                            if args.unpack:
+                                args.base.joinpath(f"{id}.env.paired.a3m").unlink()
 
-                    if len(query_seqs_cardinality) > 1:
-                        with args.base.joinpath(f"{id}.paired.a3m").open("r") as f:
-                            paired_msa.append(f.read())
-                    if args.unpack:
-                        args.base.joinpath(f"{id}.paired.a3m").unlink()
+                        if paired_msa is not None:
+                            with args.base.joinpath(f"{id}.paired.a3m").open("r") as f:
+                                paired_msa.append(f.read())
+                        if args.unpack:
+                            args.base.joinpath(f"{id}.paired.a3m").unlink()
                     id += 1
 
                 if args.af3_json:
@@ -560,10 +589,18 @@ def main():
                     args.base.joinpath(f"{job_number}.a3m").write_text(msa)
     else:
         if args.af3_json:
-            af3 = AF3Utils(raw_jobname, query_sequences, query_seqs_cardinality, unpaired_msa, None, other_molecules)
-            with open(args.base.joinpath(f"{job_number}.json"), 'w') as f:
-                f.write(json.dumps(af3.content, indent=4))
-            
+            id = 0
+            for job_number, (raw_jobname, query_sequences, query_seqs_cardinality, other_molecules) in enumerate(queries_unique):
+                unpaired_msa = []
+                for seq in query_sequences:
+                    with args.base.joinpath(f"{id}.a3m").open("r") as f:
+                        unpaired_msa.append(f.read())
+                    id += 1
+
+                # Create AF3Utils object and write JSON
+                af3 = AF3Utils(raw_jobname, query_sequences, query_seqs_cardinality, unpaired_msa, None, other_molecules)
+                with open(args.base.joinpath(f"{job_number}.json"), 'w') as f:
+                    f.write(json.dumps(af3.content, indent=4))
 
     if args.unpack:
         # rename a3m files
@@ -576,7 +613,7 @@ def main():
         # rename m8 files
         if args.use_templates:
             id = 0
-            for raw_jobname, query_sequences, query_seqs_cardinality in queries_unique:
+            for raw_jobname, query_sequences, query_seqs_cardinality, _ in queries_unique:
                 with args.base.joinpath(f"{safe_filename(raw_jobname)}_{args.db2}.m8").open(
                     "w"
                 ) as f:
