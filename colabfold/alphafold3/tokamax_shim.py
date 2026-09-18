@@ -16,19 +16,6 @@ DotProductAttentionImplementation = str  # alphafold3 only uses it as an annotat
 _REAL = None  # the real tokamax, kept because importing it would find us instead
 
 
-def _pow2(n: int) -> bool:
-    return n > 0 and n & (n - 1) == 0
-
-
-def _gdp_fits(channels: int, out_dim: int, itemsize: int, block_m: int = 64) -> bool:
-    """gated_dual_proj holds both whole weights in shared memory."""
-    from colabfold_kernels import shared_memory_limit
-
-    limit = shared_memory_limit()
-    need = (block_m * channels + 2 * channels * out_dim) * itemsize
-    return limit is None or need <= limit
-
-
 @functools.lru_cache(maxsize=None)
 def _tokamax_runs_here() -> bool:
     """tokamax serves sm_80+ NVIDIA only: ROCm and sm_70/sm_75 have no implementation."""
@@ -86,9 +73,7 @@ def gated_linear_unit(x, weights, activation=None, precision=None, **kwargs):
 
     channels, two, out_dim = weights.shape
     kernel = fused_ops.gated_dual_proj(_dispatch(), x.dtype, activation)
-    if (kernel is None or two != 2 or not (_pow2(channels) and _pow2(out_dim))
-            or not _gdp_fits(channels, out_dim, x.dtype.itemsize)):
-        # Pallas Triton needs power-of-two block dims, and the weights must fit
+    if kernel is None or two != 2 or channels % 32 or out_dim % 32:
         return _next("gated_linear_unit",
                      f"no kernel for {x.dtype} at [{channels}, {two}, {out_dim}]")(
             x=x, weights=weights, activation=activation, precision=precision)
