@@ -68,6 +68,7 @@ from colabfold.utils import (
     NO_GPU_FOUND,
     CIF_REVISION_DATE,
     get_commit,
+    get_version,
     setup_logging,
     CFMMCIFIO,
     AF3Utils,
@@ -1814,6 +1815,7 @@ def generate_af3_input(
 
 def main():
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--version", action="version", version=f"%(prog)s {get_version()}")
     parser.add_argument(
         "input",
         default="input",
@@ -2233,10 +2235,7 @@ def main():
 
     setup_logging(Path(args.results).joinpath("log.txt"), verbose=args.debug_logging)
 
-    version = importlib_metadata.version("colabfold")
-    commit = get_commit()
-    if commit:
-        version += f" ({commit})"
+    version = get_version()
 
     logger.info(f"Running colabfold {version}")
 
