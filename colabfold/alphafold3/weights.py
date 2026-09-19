@@ -63,11 +63,30 @@ def _build_ccd_pickles() -> None:
         return
     converters = Path(spec.origin).parent.joinpath("constants", "converters")
     if converters.joinpath("ccd.pickle").is_file():
+        _index_ccd(converters.joinpath("ccd.pickle"))
         return
     logger.info(f"Building the chemical component tables in {converters}, this takes a minute")
     from alphafold3.build_data import build_data
 
     build_data()
+
+
+def _index_ccd(pickle_path: Path) -> None:
+    """Index a CCD pickle built before alphafold3 wrote one, so folds stop loading it whole."""
+    from alphafold3.constants import chemical_components
+
+    write = getattr(chemical_components, "write_ccd_index", None)
+    index = Path(f"{pickle_path}.index")
+    if write is None or (index.is_file() and index.stat().st_mtime >= pickle_path.stat().st_mtime):
+        return
+    logger.info(f"Indexing the chemical components in {pickle_path.parent}, once")
+    from alphafold3.common import safe_pickle
+
+    try:
+        with open(pickle_path, "rb") as f:
+            write(safe_pickle.load(f), pickle_path)
+    except OSError as e:
+        logger.warning(f"could not index the chemical components ({e}); folds load them whole")
 
 
 def urls_for(path: str, repo: str) -> List[str]:
