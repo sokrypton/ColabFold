@@ -77,54 +77,37 @@ def plot_msa_v2(feature_dict, sort_lines=True, dpi=100):
     plt.ylabel("Sequences")
     return plt
 
-def plot_msa(msa, query_sequence, seq_len_list, total_seq_len, dpi=100):
-    from matplotlib import pyplot as plt
-    # gather MSA info
-    prev_pos = 0
-    msa_parts = []
-    Ln = np.cumsum(np.append(0, [len for len in seq_len_list]))
-    for id, l in enumerate(seq_len_list):
-        chain_seq = np.array(query_sequence[prev_pos : prev_pos + l])
-        chain_msa = np.array(msa[:, prev_pos : prev_pos + l])
-        seqid = np.array(
-            [
-                np.count_nonzero(chain_seq == msa_line[prev_pos : prev_pos + l])
-                / len(chain_seq)
-                for msa_line in msa
-            ]
-        )
+def _msa_lines(msa, query_sequence, seq_len_list):
+    """Rows of per-chain identity to the query (nan at gaps), grouped and sorted for display.
+
+    Consecutive rows that cover the same set of chains form a group, and each group is
+    sorted by its best identity.
+    """
+    msa = np.asarray(msa)
+    query_sequence = np.asarray(query_sequence)
+    starts = np.cumsum(np.append(0, seq_len_list))[:-1]
+    parts, has_seq = [], []
+    for start, length in zip(starts, seq_len_list):
+        chain_msa = msa[:, start:start + length]
+        seqid = np.count_nonzero(chain_msa == query_sequence[start:start + length], axis=1) / length
         non_gaps = (chain_msa != 21).astype(float)
         non_gaps[non_gaps == 0] = np.nan
-        msa_parts.append((non_gaps[:] * seqid[:, None]).tolist())
-        prev_pos += l
-    lines = []
-    lines_to_sort = []
-    prev_has_seq = [True] * len(seq_len_list)
-    for line_num in range(len(msa_parts[0])):
-        has_seq = [True] * len(seq_len_list)
-        for id in range(len(seq_len_list)):
-            if np.sum(~np.isnan(msa_parts[id][line_num])) == 0:
-                has_seq[id] = False
-        if has_seq == prev_has_seq:
-            line = []
-            for id in range(len(seq_len_list)):
-                line += msa_parts[id][line_num]
-            lines_to_sort.append(np.array(line))
-        else:
-            lines_to_sort = np.array(lines_to_sort)
-            if lines_to_sort.ndim == 2:  # a chain's block can start a new run empty
-                lines_to_sort = lines_to_sort[np.argsort(-np.nanmax(lines_to_sort, axis=1))]
-            lines += lines_to_sort.tolist()
-            lines_to_sort = []
-            line = []
-            for id in range(len(seq_len_list)):
-                line += msa_parts[id][line_num]
-            lines_to_sort.append(line)
-        prev_has_seq = has_seq
-    lines_to_sort = np.array(lines_to_sort)
-    if lines_to_sort.ndim == 2:
-        lines_to_sort = lines_to_sort[np.argsort(-np.nanmax(lines_to_sort, axis=1))]
-    lines += lines_to_sort.tolist()
+        part = non_gaps * seqid[:, None]
+        parts.append(part)
+        has_seq.append(~np.isnan(part).all(axis=1))
+    parts = np.concatenate(parts, axis=1)
+    has_seq = np.stack(has_seq, axis=1)
+    # a group ends where the covered set changes; the first row is compared against all chains
+    previous = np.vstack([np.ones((1, has_seq.shape[1]), dtype=bool), has_seq[:-1]])
+    bounds = [i for i in np.flatnonzero((has_seq != previous).any(axis=1)) if i > 0]
+    groups = np.split(parts, bounds)
+    return np.concatenate([g[np.argsort(-np.nanmax(g, axis=1))] for g in groups if len(g)])
+
+
+def plot_msa(msa, query_sequence, seq_len_list, total_seq_len, dpi=100):
+    from matplotlib import pyplot as plt
+    Ln = np.cumsum(np.append(0, [len for len in seq_len_list]))
+    lines = _msa_lines(msa, query_sequence, seq_len_list)
 
     # Nn = np.cumsum(np.append(0, Nn))
     # lines = np.concatenate(lines, 1)

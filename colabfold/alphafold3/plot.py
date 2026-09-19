@@ -26,10 +26,30 @@ def _rows(a3m: str) -> List[str]:
     return rows
 
 
+_LOOKUP = np.full(256, 20, dtype=np.int8)
+for _c, _i in _INDEX.items():
+    _LOOKUP[ord(_c)] = _i
+
+
 def _encode(rows: List[str], length: int) -> np.ndarray:
     out = np.full((len(rows), length), 21, dtype=np.int8)
+    try:
+        codes = np.frombuffer("".join(rows).encode("ascii"), dtype=np.uint8)
+    except UnicodeEncodeError:
+        return _encode_loop(rows, length, out)
+    # a3m lower case is an insertion relative to the query
+    keep = ~((codes >= ord("a")) & (codes <= ord("z")))
+    row = np.repeat(np.arange(len(rows)), [len(r) for r in rows])[keep]
+    kept = np.flatnonzero(keep)
+    first = np.searchsorted(row, np.arange(len(rows)))
+    col = np.arange(len(kept)) - first[row]
+    inside = col < length
+    out[row[inside], col[inside]] = _LOOKUP[codes[kept[inside]]]
+    return out
+
+
+def _encode_loop(rows: List[str], length: int, out: np.ndarray) -> np.ndarray:
     for i, row in enumerate(rows):
-        # a3m lower case is an insertion relative to the query
         ungapped = [c for c in row if not c.islower()]
         for j, c in enumerate(ungapped[:length]):
             out[i, j] = _INDEX.get(c.upper(), 20)
