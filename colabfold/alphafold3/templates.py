@@ -8,7 +8,7 @@ which is not what hhsearch reports, so the hit sequence is aligned to the SEQRES
 """
 import logging
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +82,8 @@ def build_templates(hits, query_sequence: str, cif_dir: Path,
             logger.warning(f"{hit.name}: no {cif.name} beside the hits, skipping")
             continue
         try:
-            text = filter_to_chain(cif.read_text(), chain_id)
-            seqres = single_letter_sequence(text, chain_id)
+            text, label_id = filter_to_chain(cif.read_text(), chain_id)
+            seqres = single_letter_sequence(text, label_id)
             hit_to_seqres = map_hit_to_seqres(hit.hit_sequence, seqres)
             mapping = {q: hit_to_seqres[h]
                        for q, h in query_to_hit_map(hit, query_sequence).items()
@@ -96,12 +96,15 @@ def build_templates(hits, query_sequence: str, cif_dir: Path,
     return templates
 
 
-def filter_to_chain(mmcif_text: str, chain_id: str) -> str:
-    """Keep one polymer chain: alphafold3 refuses a template with more than one."""
+def filter_to_chain(mmcif_text: str, chain_id: str) -> Tuple[str, str]:
+    """Keep one polymer chain, and say which label id it is keyed by.
+
+    pdb70 names a hit by its auth chain, the sequences below are keyed by label.
+    """
     from alphafold3 import structure
 
     struc = structure.from_mmcif(mmcif_text, include_water=False, include_bonds=False)
     chains = struc.polymer_auth_asym_id_to_label_asym_id()
     label = chains.get(chain_id, chain_id)
     filtered = struc.filter(chain_id=[c for c in (chain_id, label) if c])
-    return filtered.to_mmcif()
+    return filtered.to_mmcif(), label
