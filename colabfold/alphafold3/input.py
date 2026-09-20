@@ -124,8 +124,8 @@ def msa_state(fold_input) -> str:
     return states.pop() if len(states) == 1 else "mixed"
 
 
-def with_msas(fold_input, unpaired_msa, paired_msa, pairing: str = "colabfold"):
-    """Return a copy of ``fold_input`` with ColabFold's MSAs on its protein chains."""
+def with_msas(fold_input, unpaired_msa, paired_msa, pairing: str = "colabfold", templates=None):
+    """Return a copy of ``fold_input`` with ColabFold's MSAs and templates on its protein chains."""
     import dataclasses
 
     from alphafold3.common import folding_input
@@ -136,10 +136,11 @@ def with_msas(fold_input, unpaired_msa, paired_msa, pairing: str = "colabfold"):
     chains = []
     for chain in fold_input.chains:
         if isinstance(chain, folding_input.ProteinChain):
+            # one MSA and one template list per unique sequence, so copies of a chain share them
+            i = unique.index(chain.sequence)
+            fetched = list(templates[i]) if templates else []
             # an MSA already in the file is the user's; only fill in what is missing
             if not (chain.unpaired_msa or chain.paired_msa):
-                # one MSA per unique sequence, so copies of a chain share one
-                i = unique.index(chain.sequence)
                 chain = folding_input.ProteinChain(
                     id=chain.id,
                     sequence=chain.sequence,
@@ -147,8 +148,10 @@ def with_msas(fold_input, unpaired_msa, paired_msa, pairing: str = "colabfold"):
                     description=chain.description,
                     unpaired_msa=unpaired_msa[i] if unpaired_msa else "",
                     paired_msa=paired_msa[i] if paired_msa else "",
-                    templates=chain.templates or [],
+                    templates=chain.templates or fetched,
                 )
+            elif fetched and not chain.templates:
+                chain = dataclasses.replace(chain, templates=fetched)
         chains.append(chain)
     return no_af3_search(dataclasses.replace(fold_input, chains=chains))
 

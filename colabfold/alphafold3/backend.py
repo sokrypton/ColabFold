@@ -106,7 +106,7 @@ class AF3Backend:
         templates = self._templates_for(query_seqs_unique, template_results)
         given = getattr(extras, "fold_input", None)
         if given is not None:
-            fold_input = with_msas(given, unpaired_msa, paired_msa, pairing)
+            fold_input = with_msas(given, unpaired_msa, paired_msa, pairing, templates)
             fold_input = dataclasses.replace(fold_input, rng_seeds=seeds)
         else:
             fold_input = build_fold_input(
