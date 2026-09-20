@@ -335,13 +335,13 @@ def get_queries(
             (sequences, headers) = parse_fasta(input_path.read_text())
             queries = []
             for sequence, header in zip(sequences, headers):
-                sequence = sequence.upper()
-                if sequence.count(":") == 0:
-                    # Single sequence
-                    queries.append((header, sequence, None, None))
+                # every record, not just the ones with a ":": a single non-protein entity
+                # carries none, and classify_molecules is what keeps a SMILES its case
+                protein_queries, other_queries = classify_molecules(sequence)
+                if other_queries is None and len(protein_queries) == 1:
+                    # a plain protein stays a string, which is what makes is_complex false
+                    queries.append((header, protein_queries[0], None, None))
                 else:
-                    # Complex mode
-                    protein_queries, other_queries = classify_molecules(sequence)
                     queries.append((header, protein_queries, None, other_queries))
         elif input_path.suffix == ".json":
             queries = queries_from_af3_json(input_path)
@@ -408,12 +408,10 @@ def get_queries(
                     a3m_lines = [file.read_text()]
                     queries.append((file.stem, query_sequence.upper(), a3m_lines, None))
                 else:
-                    if query_sequence.count(":") == 0:
-                        # Single sequence
-                        queries.append((file.stem, query_sequence, None, None))
+                    protein_queries, other_queries = classify_molecules(query_sequence)
+                    if other_queries is None and len(protein_queries) == 1:
+                        queries.append((file.stem, protein_queries[0], None, None))
                     else:
-                        # Complex mode
-                        protein_queries, other_queries = classify_molecules(query_sequence)
                         queries.append((file.stem, protein_queries, None, other_queries))
             except Exception as e:
                 unreadable.append(file.name)
@@ -440,8 +438,9 @@ def get_queries(
         random.shuffle(queries)
 
     for name, query_sequence, _, extras in queries:
-        # an alphafold3 JSON may hold nucleic acids and ligands only; a FASTA or a3m may not
-        if not query_sequence and getattr(extras, "fold_input", None) is None:
+        # nucleic acids or ligands alone are an input an alphafold3 model can fold, from a
+        # JSON or from a FASTA entity; nothing at all is not
+        if not query_sequence and not extras:
             raise ValueError(f"{name} has no sequence")
 
     is_complex = False
