@@ -8,6 +8,8 @@ from pathlib import Path
 
 from tqdm import tqdm
 
+from colabfold.utils import get_version
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,6 +38,7 @@ def main():
     parser = ArgumentParser(
         description="Take an a3m database from the colabdb search and turn it into a folder of a3m files"
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {get_version()}")
     parser.add_argument(
         "search_folder",
         help="The search folder in which you ran colabfold_search with the final.a3m",

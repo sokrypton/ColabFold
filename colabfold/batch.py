@@ -38,6 +38,14 @@ import numpy as np
 try:
     import alphafold
 except ModuleNotFoundError:
+    if "--version" in sys.argv[1:]:
+        # `colabfold_batch --version` must still answer in a base install
+        # (without the `alphafold` extra). argparse would handle the flag, but
+        # main() is never reached because the imports below fail first.
+        from colabfold.utils import get_version
+
+        print(f"{os.path.basename(sys.argv[0])} {get_version()}")
+        sys.exit(0)
     raise RuntimeError(
         "\n\nalphafold is not installed. Please run `pip install colabfold[alphafold]`\n"
     )
@@ -68,6 +76,7 @@ from colabfold.utils import (
     NO_GPU_FOUND,
     CIF_REVISION_DATE,
     get_commit,
+    get_version,
     setup_logging,
     CFMMCIFIO,
     AF3Utils,
@@ -1814,6 +1823,7 @@ def generate_af3_input(
 
 def main():
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--version", action="version", version=f"%(prog)s {get_version()}")
     parser.add_argument(
         "input",
         default="input",
@@ -2233,10 +2243,7 @@ def main():
 
     setup_logging(Path(args.results).joinpath("log.txt"), verbose=args.debug_logging)
 
-    version = importlib_metadata.version("colabfold")
-    commit = get_commit()
-    if commit:
-        version += f" ({commit})"
+    version = get_version()
 
     logger.info(f"Running colabfold {version}")
 
