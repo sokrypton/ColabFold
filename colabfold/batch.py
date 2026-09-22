@@ -1359,44 +1359,6 @@ def main():
     )
     pred_group.add_argument("--model-order", default="1,2,3,4,5", type=str)
     pred_group.add_argument(
-        "--num-diffusion-samples",
-        help="Structures per seed, for the alphafold3 models only.",
-        type=int,
-        default=5,
-    )
-    pred_group.add_argument(
-        "--af3-pairing",
-        help="How the alphafold3 models pair a complex MSA: keep ColabFold's row pairing, "
-        "or let them pair by UniProt species id.",
-        choices=["colabfold", "uniprot"],
-        default="colabfold",
-    )
-    pred_group.add_argument(
-        "--model-dir",
-        help="Where the alphafold3 weights live. Downloaded on first use if unset.",
-        type=Path,
-        default=None,
-    )
-    pred_group.add_argument(
-        "--accept-alphafold3-terms",
-        help="Download AlphaFold3's own parameters from Google DeepMind, under their terms of "
-        "use, which do not allow commercial use. Every other model is fetched without this.",
-        action="store_true",
-    )
-    pred_group.add_argument(
-        "--buckets",
-        help="Token counts the alphafold3 models pad to, so queries of mixed length compile "
-        "once per bucket instead of once per length. Comma separated, increasing.",
-        default=None,
-    )
-    pred_group.add_argument(
-        "--weights-precision",
-        help="Which published form of the alphafold3 weights to fetch. int8 is the same "
-        "weights stored smaller and expanded on load, which leaves inference unchanged.",
-        choices=["fp32", "int8"],
-        default="int8",
-    )
-    pred_group.add_argument(
         "--initial-guess",
         nargs="?",
         const=True,
@@ -1451,6 +1413,51 @@ def main():
         help="Experimental: instead of contact probabilities form use binary contacts for extra metrics calculation",
     )
     pred_group.add_argument("--data", help="Path to AlphaFold2 weights directory.")
+
+    af3_group = parser.add_argument_group("AlphaFold3 arguments", "")
+    af3_group.add_argument(
+        "--num-diffusion-samples",
+        help="Structures per seed, for the alphafold3 models only.",
+        type=int,
+        default=5,
+    )
+    af3_group.add_argument(
+        "--af3-pairing",
+        help="How the alphafold3 models pair a complex MSA: keep ColabFold's row pairing, "
+        "or let them pair by UniProt species id.",
+        choices=["colabfold", "uniprot"],
+        default="colabfold",
+    )
+    af3_group.add_argument(
+        "--model-dir",
+        help="Where the alphafold3 weights live. Downloaded on first use if unset.",
+        type=Path,
+        default=None,
+    )
+    af3_group.add_argument(
+        "--accept-alphafold3-terms",
+        help="Download AlphaFold3's own parameters from Google DeepMind, under their terms of "
+        "use, which do not allow commercial use. Every other model is fetched without this.",
+        action="store_true",
+    )
+    af3_group.add_argument(
+        "--buckets",
+        help="Token counts the alphafold3 models pad to, so queries of mixed length compile "
+        "once per bucket instead of once per length. Comma separated, increasing.",
+        default=None,
+    )
+    af3_group.add_argument(
+        "--weights-precision",
+        help="Which published form of the alphafold3 weights to fetch. int8 is the same "
+        "weights stored smaller and expanded on load, which leaves inference unchanged.",
+        choices=["fp32", "int8"],
+        default="int8",
+    )
+    af3_group.add_argument(
+        "--af3-json",
+        help="Generate input JSON for AlphaFold3 from the provided FASTA/A3M file.",
+        action="store_true",
+    )
 
     relax_group = parser.add_argument_group("Relaxation arguments", "")
     relax_group.add_argument(
@@ -1641,15 +1648,6 @@ def main():
         help="Enable debug message logging.",
     )
 
-    af3_group = parser.add_argument_group(
-        "AlphaFold3 arguments", ""
-    )
-    af3_group.add_argument(
-        "--af3-json",
-        help="Generate input JSON for AlphaFold3 from the provided FASTA/A3M file.",
-        action="store_true",
-    )
-    
     args = parser.parse_args()
 
     if (args.custom_template_path is not None) and (args.pdb_hit_file is not None):
