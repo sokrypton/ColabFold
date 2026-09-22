@@ -85,7 +85,7 @@ def gated_linear_unit(x, weights, activation=None, precision=None, **kwargs):
     from colabfold_kernels import dispatch as _dispatch, fused_ops
 
     channels, two, out_dim = weights.shape
-    kernel = fused_ops.gated_dual_proj(_dispatch(), x.dtype)
+    kernel = fused_ops.gated_dual_proj(_dispatch(), x.dtype, activation)
     if (kernel is None or two != 2 or not (_pow2(channels) and _pow2(out_dim))
             or not _gdp_fits(channels, out_dim, x.dtype.itemsize)):
         # Pallas Triton needs power-of-two block dims, and the weights must fit
@@ -98,7 +98,7 @@ def gated_linear_unit(x, weights, activation=None, precision=None, **kwargs):
     lead = x.shape[:-1]
     flat = jnp.reshape(x, (-1, channels))
     keep = jnp.ones((flat.shape[0],), x.dtype)
-    out = kernel(flat, projection, zero, gate, zero, keep, activation=activation)
+    out = kernel(flat, projection, zero, gate, zero, keep, split=False)
     return jnp.reshape(out, lead + (out_dim,))
 
 
