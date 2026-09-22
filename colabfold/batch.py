@@ -1,7 +1,16 @@
 from __future__ import annotations
 
 import os
-ENV = {"TF_FORCE_UNIFIED_MEMORY":"1", "XLA_PYTHON_CLIENT_MEM_FRACTION":"4.0"}
+import importlib.util
+# the jax ROCm plugin is how a ROCm install shows itself before jax is imported
+_IS_ROCM = any(importlib.util.find_spec(m) is not None
+               for m in ("jax_rocm7_plugin", "jax_rocm60_plugin", "jax_rocm_plugin"))
+if _IS_ROCM:
+    # ROCm 7.2 segfaults on graph segment scheduling and on the plugin's profiler hook
+    ENV = {"DEBUG_HIP_GRAPH_SEGMENT_SCHEDULING":"0", "ROCPROFILER_REGISTER_ENABLED":"0"}
+else:
+    # spilling past the GPU takes managed memory
+    ENV = {"TF_FORCE_UNIFIED_MEMORY":"1", "XLA_PYTHON_CLIENT_MEM_FRACTION":"4.0"}
 for k,v in ENV.items():
     if k not in os.environ: os.environ[k] = v
 
