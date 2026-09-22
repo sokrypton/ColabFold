@@ -739,7 +739,6 @@ def run(
     kernel_backend        = kwargs.pop("kernel_backend", "auto")
     compile_mode          = kwargs.pop("compile_mode", "tuned")
     num_diffusion_samples = kwargs.pop("num_diffusion_samples", 5)
-    model_dir             = kwargs.pop("model_dir", None)
     af3_pairing           = kwargs.pop("af3_pairing", "colabfold")
     weights_precision     = kwargs.pop("weights_precision", "int8")
     buckets               = kwargs.pop("buckets", None)
@@ -829,7 +828,6 @@ def run(
             "calc_extra_ptm": calc_extra_ptm,
             "use_probs_extra": use_probs_extra,
             "num_diffusion_samples": num_diffusion_samples,
-            "model_dir": model_dir,
             "af3_pairing": af3_pairing,
             "weights_precision": weights_precision,
             "buckets": buckets,
@@ -1439,12 +1437,6 @@ def main():
         default="colabfold",
     )
     af3_group.add_argument(
-        "--model-dir",
-        help="Where the alphafold3 weights live. Downloaded on first use if unset.",
-        type=Path,
-        default=None,
-    )
-    af3_group.add_argument(
         "--accept-alphafold3-terms",
         help="Download AlphaFold3's own parameters from Google DeepMind, under their terms of "
         "use, which do not allow commercial use. Every other model is fetched without this.",
@@ -1687,7 +1679,7 @@ def main():
 
         ensure_ccd(data_dir)
         ensure_weights(resolve_model_name(args.model_type), data_dir=data_dir,
-                       model_dir=args.model_dir, precision=args.weights_precision,
+                       precision=args.weights_precision,
                        accept_terms=args.accept_alphafold3_terms)
 
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
@@ -1805,7 +1797,6 @@ def main():
         compile_mode=args.compile_mode,
         num_diffusion_samples=args.num_diffusion_samples,
         use_esm=args.use_esm,
-        model_dir=args.model_dir,
         af3_pairing=args.af3_pairing,
         weights_precision=args.weights_precision,
         buckets=[int(b) for b in args.buckets.split(",")] if args.buckets else None,

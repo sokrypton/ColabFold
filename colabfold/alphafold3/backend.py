@@ -152,12 +152,10 @@ class AF3Backend:
             return
         from colabfold.alphafold3.models import load_model
 
-        model_dir = opts.opt("model_dir")
         self.model_runner = load_model(
             self.model_type,
             num_recycles=opts.num_recycles,
             num_diffusion_samples=self._opt(opts, "num_diffusion_samples"),
-            model_dir=Path(model_dir) if model_dir else None,
             use_dropout=self._opt(opts, "use_dropout"),
             download=self._opt(opts, "download_weights"),
             data_dir=opts.data_dir,

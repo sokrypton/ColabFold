@@ -116,8 +116,7 @@ def _wanted(spec, precision: str) -> List[Tuple[str, str]]:
     return out
 
 
-def ensure_weights(model_name: str, data_dir: Optional[Path] = None,
-                   model_dir: Optional[Path] = None, download: bool = True,
+def ensure_weights(model_name: str, data_dir: Optional[Path] = None, download: bool = True,
                    precision: str = "fp32", accept_terms: bool = False) -> Path:
     """Make ``model_name``'s weights exist on disk; return their directory."""
     from alphafold3.model import model_registry, weights
@@ -127,14 +126,13 @@ def ensure_weights(model_name: str, data_dir: Optional[Path] = None,
     if official is not None and precision != "fp32":
         logger.info(f"{spec.name} is published as float32 only, ignoring --weights-precision {precision}")
         precision = "fp32"
-    target = (Path(model_dir).expanduser() if model_dir is not None
-              else model_dir_for(spec.name, data_dir or default_data_dir, precision))
+    target = model_dir_for(spec.name, data_dir or default_data_dir, precision)
     success_marker = target.joinpath(f"download_{spec.name}_{precision}_finished.txt")
     if success_marker.is_file():
         return target
 
     try:
-        # weights already in place, converted by hand or pointed at with --model-dir
+        # weights already in place, downloaded before or converted by hand
         return Path(weights.ensure_weights(model_name, model_dir=target,
                                            download=False, precision=precision))
     except FileNotFoundError:
@@ -144,7 +142,7 @@ def ensure_weights(model_name: str, data_dir: Optional[Path] = None,
         raise RuntimeError(
             f"{spec.name} weights are Google DeepMind's and carry their own terms, which "
             f"do not allow commercial use. Read {TERMS} and pass --accept-alphafold3-terms "
-            f"to download them, or point --model-dir at a copy you already have."
+            f"to download them, or point --data at a copy you already have."
         )
 
     target.mkdir(parents=True, exist_ok=True)

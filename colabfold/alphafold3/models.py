@@ -36,12 +36,11 @@ def known_models() -> List[str]:
     return sorted(set(model_registry.MODEL_SPECS) | set(model_registry.ALIASES))
 
 
-def ensure_weights(model_name: str, model_dir: Optional[Path] = None, download: bool = True,
-                   data_dir: Optional[Path] = None, precision: str = "fp32",
-                   accept_terms: bool = False) -> Path:
+def ensure_weights(model_name: str, download: bool = True, data_dir: Optional[Path] = None,
+                   precision: str = "fp32", accept_terms: bool = False) -> Path:
     from colabfold.alphafold3.weights import ensure_weights as fetch
 
-    return fetch(model_name, data_dir=data_dir, model_dir=model_dir, download=download,
+    return fetch(model_name, data_dir=data_dir, download=download,
                  precision=precision, accept_terms=accept_terms)
 
 
@@ -229,14 +228,13 @@ def featurise(fold_input, model_name: str, model_dir: Path, buckets: Optional[Se
 
 
 def load_model(model_type: str, *, num_recycles: Optional[int], num_diffusion_samples: int,
-               model_dir: Optional[Path] = None, use_dropout: bool = False,
-               download: bool = True, num_msa: Optional[int] = None,
+               use_dropout: bool = False, download: bool = True, num_msa: Optional[int] = None,
                return_embeddings: bool = False,
                data_dir: Optional[Path] = None, precision: str = "fp32",
                accept_terms: bool = False, fused_layer_norm: bool = False) -> "ModelRunner":
     mark_absl_flags_parsed()
     model_name = resolve_model_name(model_type)
-    weights_dir = ensure_weights(model_name, model_dir, download=download, data_dir=data_dir,
+    weights_dir = ensure_weights(model_name, download=download, data_dir=data_dir,
                                  precision=precision, accept_terms=accept_terms)
     config = make_config(model_name, num_recycles, num_diffusion_samples,
                          num_msa=num_msa, return_embeddings=return_embeddings)
