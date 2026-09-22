@@ -80,7 +80,7 @@ def model_to_config_name(model_type: str, model_number: str) -> str:
 
 def _warn_if_kernels_missing(cc) -> None:
     try:
-        from alphafold.model import volta_attn
+        from colabfold_kernels import volta as volta_attn
         if cc is not None and volta_attn.available(cc) and volta_attn.ops_available(cc):
             return
     except Exception:

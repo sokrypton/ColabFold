@@ -60,7 +60,10 @@ class AF3Backend:
             self._require_template_search()
         self._max_template_hits = opts.max_template_hits
         from colabfold.alphafold3.tokamax_patch import install as patch_tokamax
+        from colabfold.alphafold3.tokamax_shim import install as install_shim
 
+        # before alphafold3 imports tokamax, so our kernels can stand in for it
+        install_shim(force=self._opt(opts, "use_fast_kernels"))
         patch_tokamax()
         self._warn_about_ignored(opts)
         samples = self._opt(opts, "num_diffusion_samples")
@@ -144,10 +147,6 @@ class AF3Backend:
             return
         from colabfold.alphafold3.models import load_model
 
-        if self._opt(opts, "use_fast_kernels"):
-            from colabfold.alphafold3.attention import install
-
-            install()
         model_dir = opts.opt("model_dir")
         self.model_runner = load_model(
             self.model_type,
@@ -159,6 +158,7 @@ class AF3Backend:
             data_dir=opts.data_dir,
             precision=self._opt(opts, "weights_precision"),
             accept_terms=self._opt(opts, "accept_alphafold3_terms"),
+            fused_layer_norm=self._opt(opts, "use_fast_kernels"),
             num_msa=opts.max_seq,
             return_embeddings=opts.save_single_representations or opts.save_pair_representations,
         )

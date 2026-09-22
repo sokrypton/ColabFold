@@ -1,0 +1,128 @@
+"""
+Stand in for tokamax so alphafold3 runs on ColabFold's kernels.
+
+Routing only: each name alphafold3 imports is mapped onto a ColabFold kernel
+through ``alphafold.model.fused_ops``, then onto tokamax, then onto jax's own,
+for the shapes each one declines. No maths lives here.
+"""
+import logging
+import sys
+
+logger = logging.getLogger(__name__)
+
+DotProductAttentionImplementation = str  # alphafold3 only uses it as an annotation
+
+_REAL = None  # the real tokamax, kept because importing it would find us instead
+
+
+def _pow2(n: int) -> bool:
+    return n > 0 and n & (n - 1) == 0
+
+
+def _gdp_fits(channels: int, out_dim: int, itemsize: int, block_m: int = 64) -> bool:
+    """gated_dual_proj holds both whole weights in shared memory."""
+    from colabfold_kernels import shared_memory_limit
+
+    limit = shared_memory_limit()
+    need = (block_m * channels + 2 * channels * out_dim) * itemsize
+    return limit is None or need <= limit
+
+
+def _next(name: str, why: str):
+    """Hand on what ColabFold's kernels decline: tokamax if it is there, else jax."""
+    logger.debug(f"{name}: {why}, routing on")
+    if _REAL is not None:
+        return getattr(_REAL, name)
+    return _XLA[name]
+
+
+def dot_product_attention(q, k, v, *, mask=None, bias=None, implementation=None,
+                          scale=None, **kwargs):
+    if kwargs:
+        raise TypeError(f"the tokamax shim does not implement {sorted(kwargs)}")
+    from colabfold_kernels import dispatch as _dispatch, fused_ops
+
+    from colabfold.alphafold3.attention import colabfold_attention
+
+    # alphafold3 hands attention over seq-major, so prefer the kernel that reads it
+    # that way and leave q/k/v where they are
+    dispatch = _dispatch()
+    seq_major = True
+    kernel = fused_ops.attention(dispatch, q.dtype, q.shape[-1], v.shape[-1], layout="seq")
+    if kernel is None:
+        seq_major = False
+        kernel = fused_ops.attention(dispatch, q.dtype, q.shape[-1], v.shape[-1])
+    if kernel is not None:
+        out = colabfold_attention(q, k, v, mask=mask, bias=bias, scale=scale,
+                                  kernel=kernel, seq_major=seq_major)
+        if out is not None:
+            return out
+        why = "the kernel takes a shared bias only"
+    else:
+        why = f"no kernel for {q.dtype} at head dim {q.shape[-1]}"
+    return _next("dot_product_attention", why)(
+        q, k, v, mask=mask, bias=bias, implementation=implementation, scale=scale)
+
+
+def gated_linear_unit(x, weights, activation=None, precision=None, **kwargs):
+    """``activation(x @ weights[:, 0]) * (x @ weights[:, 1])``, as tokamax defines it."""
+    if kwargs:
+        raise TypeError(f"the tokamax shim does not implement {sorted(kwargs)}")
+    import jax.numpy as jnp
+
+    from colabfold_kernels import dispatch as _dispatch, fused_ops
+
+    channels, two, out_dim = weights.shape
+    kernel = fused_ops.gated_dual_proj(_dispatch(), x.dtype)
+    if (kernel is None or two != 2 or not (_pow2(channels) and _pow2(out_dim))
+            or not _gdp_fits(channels, out_dim, x.dtype.itemsize)):
+        # Pallas Triton needs power-of-two block dims, and the weights must fit
+        return _next("gated_linear_unit",
+                     f"no kernel for {x.dtype} at [{channels}, {two}, {out_dim}]")(
+            x=x, weights=weights, activation=activation, precision=precision)
+
+    gate, projection = weights[:, 0, :], weights[:, 1, :]
+    zero = jnp.zeros((out_dim,), jnp.float32)
+    lead = x.shape[:-1]
+    flat = jnp.reshape(x, (-1, channels))
+    keep = jnp.ones((flat.shape[0],), x.dtype)
+    out = kernel(flat, projection, zero, gate, zero, keep, activation=activation)
+    return jnp.reshape(out, lead + (out_dim,))
+
+
+def _xla_attention(q, k, v, *, mask=None, bias=None, implementation=None, scale=None):
+    """jax's own attention, which already takes alphafold3's (..., seq, heads, dim)."""
+    import jax
+
+    return jax.nn.dot_product_attention(q, k, v, bias=bias, mask=mask, scale=scale)
+
+
+def _xla_gated_linear_unit(x, weights, activation=None, precision=None):
+    import jax.numpy as jnp
+
+    gate = jnp.einsum("...k,kp->...p", x, weights[:, 0, :])
+    projection = jnp.einsum("...k,kp->...p", x, weights[:, 1, :])
+    return (activation(gate) if activation is not None else gate) * projection
+
+
+_XLA = {"dot_product_attention": _xla_attention,
+        "gated_linear_unit": _xla_gated_linear_unit}
+
+
+def install(force: bool = False) -> str:
+    """Stand in unless the real tokamax is there. Returns what will run."""
+    global _REAL
+    if "alphafold3.model.model_config" in sys.modules:
+        logger.warning("alphafold3 already imported tokamax; the shim will not take effect")
+    here = sys.modules[__name__]
+    try:
+        import tokamax
+
+        if tokamax is not here:
+            _REAL = tokamax
+    except ImportError:
+        _REAL = None
+    if not force and _REAL is not None:
+        return "tokamax"
+    sys.modules["tokamax"] = here
+    return "colabfold"

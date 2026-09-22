@@ -57,14 +57,22 @@ def make_config(model_name: str, num_recycles: Optional[int], num_diffusion_samp
         config.evoformer.num_msa = num_msa
     config.return_embeddings = return_embeddings
     model_registry.get(model_name).configure(config)
+    from colabfold_kernels import compute_capability
+
+    cc = compute_capability()
+    if cc is not None and cc < 80:
+        # the sm_70 and sm_75 kernels are float16, and those cards have no bfloat16 units
+        config.global_config.half_dtype = "float16"
     return config
 
 
 class ModelRunner:
     """The parts of alphafold3-open's run_alphafold.ModelRunner that a fold needs."""
 
-    def __init__(self, config, model_dir: Path, use_dropout: bool = False, device=None):
+    def __init__(self, config, model_dir: Path, use_dropout: bool = False, device=None,
+                 fused_layer_norm: bool = False):
         self._config = config
+        self._fused_layer_norm = fused_layer_norm
         self._model_dir = Path(model_dir)
         self._use_dropout = use_dropout
         self._device = device
@@ -92,6 +100,11 @@ class ModelRunner:
 
             @hk.transform
             def forward_fn(batch):
+                if self._fused_layer_norm:
+                    from colabfold.alphafold3.layer_norm import interceptor
+
+                    with hk.intercept_methods(interceptor):
+                        return model.Model(self._config)(batch, use_dropout=self._use_dropout)
                 return model.Model(self._config)(batch, use_dropout=self._use_dropout)
 
             apply_fn = jax.jit(forward_fn.apply, device=self._device)
@@ -185,7 +198,7 @@ def load_model(model_type: str, *, num_recycles: Optional[int], num_diffusion_sa
                download: bool = True, num_msa: Optional[int] = None,
                return_embeddings: bool = False,
                data_dir: Optional[Path] = None, precision: str = "fp32",
-               accept_terms: bool = False) -> "ModelRunner":
+               accept_terms: bool = False, fused_layer_norm: bool = False) -> "ModelRunner":
     mark_absl_flags_parsed()
     model_name = resolve_model_name(model_type)
     weights_dir = ensure_weights(model_name, model_dir, download=download, data_dir=data_dir,
@@ -193,4 +206,5 @@ def load_model(model_type: str, *, num_recycles: Optional[int], num_diffusion_sa
     config = make_config(model_name, num_recycles, num_diffusion_samples,
                          num_msa=num_msa, return_embeddings=return_embeddings)
     logger.info(f"Running {model_name} from {weights_dir}")
-    return ModelRunner(config, weights_dir, use_dropout=use_dropout)
+    return ModelRunner(config, weights_dir, use_dropout=use_dropout,
+                       fused_layer_norm=fused_layer_norm)

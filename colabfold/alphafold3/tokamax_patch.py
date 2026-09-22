@@ -13,16 +13,6 @@ SMALL_SHARED_MEMORY = 128 * 1024
 MAX_STAGES = 2
 
 
-def shared_memory_limit():
-    """The smallest budget across the GPUs a fold could land on."""
-    import jax
-
-    limits = [getattr(d, "shared_memory_per_block_optin", None) for d in jax.local_devices()
-              if d.platform == "gpu"]
-    limits = [limit for limit in limits if limit]
-    return min(limits) if limits else None
-
-
 def install() -> bool:
     """Cap how deeply tokamax stages, wherever it picks a config."""
     try:
@@ -31,6 +21,8 @@ def install() -> bool:
         return False
     if getattr(tokamax_op, "_colabfold_capped_stages", False):
         return True
+
+    from colabfold_kernels import shared_memory_limit
 
     limit = shared_memory_limit()
     if limit is None or limit >= SMALL_SHARED_MEMORY:

@@ -3,9 +3,9 @@ Run alphafold3's attention on ColabFold's fused kernels instead of tokamax.
 
 alphafold3 calls one function for every attention
 (``alphafold3.model.components.attention.dot_product_attention``) with q/k/v as
-(..., seq, heads, dim); ColabFold's kernels are heads-major [batch, heads, seq, dim].
-:func:`install` swaps the two, so the AF3 graph runs on tri_flash on Ampere and on the
-prebuilt sm_70/sm_75 kernels below it.
+(..., seq, heads, dim); ColabFold's kernels read either that layout or heads-major [batch, heads, seq, dim].
+:func:`colabfold_attention` adapts the masks and the bias; the routing itself lives in
+:mod:`colabfold.alphafold3.tokamax_shim`.
 """
 import logging
 
@@ -16,14 +16,12 @@ logger = logging.getLogger(__name__)
 NEG = -1e9
 
 
-def _to_heads_major(x):
-    """(..., seq, heads, dim) -> [batch, heads, seq, dim], with the batch flattened."""
+def _flatten_batch(x):
+    """(..., seq, heads, dim) -> [batch, seq, heads, dim], with the batch flattened."""
     import jax.numpy as jnp
 
     lead = tuple(x.shape[:-3])
-    seq, heads, dim = x.shape[-3:]
-    x = jnp.reshape(x, (int(np.prod(lead)) if lead else 1, seq, heads, dim))
-    return jnp.swapaxes(x, 1, 2), lead
+    return jnp.reshape(x, (int(np.prod(lead)) if lead else 1,) + x.shape[-3:]), lead
 
 
 def _mask_bias(mask, batch: int, keys: int, dtype):
@@ -59,18 +57,26 @@ def _nonbatched_bias(bias, heads: int, queries: int, keys: int, dtype):
 
 
 def colabfold_attention(q, k, v, *, mask=None, bias=None, implementation=None, scale=None,
-                        kernel=None):
-    """alphafold3's attention signature, computed by ColabFold's kernel."""
+                        kernel=None, seq_major=False):
+    """alphafold3's attention signature, computed by ColabFold's kernel.
+
+    seq_major says the kernel reads (batch, seq, heads, dim) as alphafold3 hands it
+    over, so q/k/v and the output need no transpose.
+    """
     import jax.numpy as jnp
 
     if kernel is None:
-        from alphafold.model.tri_flash import pallas_attention as kernel
+        from colabfold_kernels.tri_flash import pallas_attention as kernel
 
-    qh, lead = _to_heads_major(q)
-    kh, _ = _to_heads_major(k)
-    vh, _ = _to_heads_major(v)
-    batch, heads, queries, dim = qh.shape
-    keys = kh.shape[2]
+        seq_major = False
+
+    qh, lead = _flatten_batch(q)
+    kh, _ = _flatten_batch(k)
+    vh, _ = _flatten_batch(v)
+    batch, queries, heads, dim = qh.shape
+    keys = kh.shape[1]
+    if not seq_major:
+        qh, kh, vh = (jnp.swapaxes(x, 1, 2) for x in (qh, kh, vh))
 
     nonbatched = _nonbatched_bias(bias, heads, queries, keys, qh.dtype)
     if nonbatched is None and bias is not None:
@@ -79,40 +85,6 @@ def colabfold_attention(q, k, v, *, mask=None, bias=None, implementation=None, s
         scale = dim ** -0.5
 
     out = kernel(qh, kh, vh, _mask_bias(mask, batch, keys, qh.dtype), nonbatched, scale)
-    out = jnp.swapaxes(out, 1, 2)
+    if not seq_major:
+        out = jnp.swapaxes(out, 1, 2)
     return jnp.reshape(out, lead + (queries, heads, dim))
-
-
-def install(fallback=True) -> bool:
-    """Point alphafold3's attention at ColabFold's kernels. True if it took."""
-    try:
-        from alphafold3.model.components import attention as af3_attention
-    except ModuleNotFoundError:
-        return False
-
-    original = getattr(af3_attention, "_colabfold_original", af3_attention.dot_product_attention)
-
-    def dot_product_attention(q, k, v, *, mask=None, bias=None, implementation=None, scale=None):
-        try:
-            out = colabfold_attention(q, k, v, mask=mask, bias=bias, scale=scale)
-            if out is not None:
-                return out
-        except Exception as e:
-            if not fallback:
-                raise
-            logger.warning(f"colabfold kernels declined this attention, using alphafold3's: {e}")
-        return original(q, k, v, mask=mask, bias=bias, implementation=implementation, scale=scale)
-
-    af3_attention._colabfold_original = original
-    af3_attention.dot_product_attention = dot_product_attention
-    logger.info("alphafold3 attention is running on ColabFold's fused kernels")
-    return True
-
-
-def uninstall() -> None:
-    from alphafold3.model.components import attention as af3_attention
-
-    original = getattr(af3_attention, "_colabfold_original", None)
-    if original is not None:
-        af3_attention.dot_product_attention = original
-        del af3_attention._colabfold_original
