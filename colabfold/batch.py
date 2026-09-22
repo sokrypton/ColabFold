@@ -869,9 +869,6 @@ def run(
     }
     dropped = dropped_entities(queries, model_type)
     warn_about_dropped_entities(dropped, model_type)
-    protein_free = [name for name, sequence, _, _ in queries if not sequence]
-    if protein_free and not is_af3_model(model_type):
-        raise ValueError(f"{model_type} folds protein chains only, and {', '.join(protein_free)} has none")
     if dropped:
         config["dropped_entities"] = dropped
     config.update(backend.config_dict(opts))
@@ -911,6 +908,11 @@ def run(
             job_number += 1
         else:
             jobname = safe_filename(raw_jobname)
+
+        # nothing survives the drop: skip this job rather than the whole batch
+        if not query_sequence and not is_af3_model(model_type):
+            logger.error(f"{jobname}: {model_type} folds protein chains only")
+            continue
 
         #######################################
         # check if job has already finished

@@ -476,15 +476,16 @@ def dropped_entities(queries, model_type: str) -> Dict[str, Dict[str, int]]:
     for query in queries:
         extras = query[3] if len(query) > 3 else None
         counts: Dict[str, int] = {}
-        if isinstance(extras, (list, tuple)):
-            for moltype, _payload, copies in extras:
-                counts[moltype.name] = counts.get(moltype.name, 0) + int(copies or 1)
+        # FoldInputExtras is a NamedTuple, so a tuple test catches it: ask for its field first
         fold_input = getattr(extras, "fold_input", None)
         if fold_input is not None:
             for chain in fold_input.chains:
                 kind = type(chain).__name__.replace("Chain", "").upper()
                 if kind != "PROTEIN":
                     counts[kind] = counts.get(kind, 0) + 1
+        elif isinstance(extras, list):
+            for moltype, _payload, copies in extras:
+                counts[moltype.name] = counts.get(moltype.name, 0) + int(copies or 1)
         if counts:
             dropped[query[0]] = counts
     return dropped
