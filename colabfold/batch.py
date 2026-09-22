@@ -994,7 +994,7 @@ def run(
         try:
             (feature_dict, domain_names) \
             = backend.featurize(query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa,
-                                template_results, is_complex, opts,
+                                template_results, sum(query_seqs_cardinality) > 1, opts,
                                 extras=custom_template_path_per_entry)
 
             # to allow display of MSA info during colab/chimera run (thanks tomgoddard)

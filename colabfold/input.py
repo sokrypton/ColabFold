@@ -445,7 +445,8 @@ def get_queries(
 
     is_complex = False
     for job_number, (_, query_sequence, a3m_lines, _) in enumerate(queries):
-        if isinstance(query_sequence, list):
+        # check that ligand only doesn't become a complex
+        if isinstance(query_sequence, list) and len(query_sequence) > 1:
             is_complex = True
             break
         if a3m_lines is not None and a3m_lines[0].startswith("#"):
