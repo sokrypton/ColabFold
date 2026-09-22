@@ -160,6 +160,40 @@ class ModelRunner:
                                                      target_name=target_name))
 
 
+def _esm_dir(name: str, model_dir: Path) -> str:
+    """A language model lives beside the models, and is fetched on first use."""
+    return str(Path(model_dir).expanduser().parent / name)
+
+
+def _resolve_esm(use_esm: bool, fold_input, model_name: str, model_dir: Path):
+    """``use_esm`` -> ``(esm2 rows, esmc pair)``, either of which may be None."""
+    if not use_esm:
+        return None, None
+    from alphafold3.model import esm, model_registry
+
+    sequences = [chain.sequence for chain in fold_input.chains
+                 if type(chain).__name__ == "ProteinChain"]
+    if not sequences:
+        logger.warning(f"--use-esm needs a protein chain, and {fold_input.name} has none")
+        return None, None
+    if model_name == "chai1":
+        logger.info("embedding the sequences with ESM2 for chai1")
+        rows = esm.embed(sequences, _esm_dir("esm2", model_dir), "esm2")
+        return rows, None
+    if model_name not in model_registry.ESMFOLD2_VARIANTS:
+        logger.warning(f"--use-esm does nothing for {model_name}, which folds from its MSA")
+        return None, None
+    if len(sequences) != 1:
+        # esm.embed refuses this too: nothing masks attention between the chains
+        raise NotImplementedError(f"--use-esm embeds one protein chain for now, and "
+                                  f"{fold_input.name} has {len(sequences)}")
+    variant = model_registry.ESMFOLD2_VARIANTS[model_name]["esmc"]
+    logger.info(f"embedding the sequence with {variant} for {model_name}")
+    hidden = esm.embed(sequences[0], _esm_dir(variant, model_dir), "esmc", variant)
+    # each release trains its own shim; another's reads as noise
+    return None, esm.shim(hidden, esm.load_shim_params(str(model_dir), model_name))
+
+
 def featurise(fold_input, model_name: str, model_dir: Path, buckets: Optional[Sequence[int]] = None,
               use_esm: bool = False, ref_max_modified_date=None) -> List[Any]:
     """Featurise one fold input, applying the model family's own conventions."""
@@ -184,9 +218,10 @@ def featurise(fold_input, model_name: str, model_dir: Path, buckets: Optional[Se
     if spec.featurise:
         has_msa = any(getattr(c, "unpaired_msa", None) or getattr(c, "paired_msa", None)
                       for c in fold_input.chains)
+        esm_rows, lm_pair = _resolve_esm(use_esm, fold_input, model_name, model_dir)
         examples = [
             model_features.apply(example, spec, refeaturise=lambda: build(verbose=False),
-                                 model_dir=str(model_dir), esm=None, lm_pair=None,
+                                 model_dir=str(model_dir), esm=esm_rows, lm_pair=lm_pair,
                                  has_msa=has_msa, fold_input=fold_input, cyclic=False)
             for example in examples
         ]

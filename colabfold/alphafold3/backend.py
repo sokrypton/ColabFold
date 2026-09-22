@@ -11,7 +11,7 @@ from colabfold.backend import RunOptions
 logger = logging.getLogger(__name__)
 
 _CONFIG_KEYS = ("num_diffusion_samples", "use_dropout", "buckets", "download_weights",
-                "af3_pairing", "use_fast_kernels", "weights_precision",
+                "af3_pairing", "use_fast_kernels", "use_esm", "weights_precision",
                 "accept_alphafold3_terms")
 
 # Token counts to pad to, so a batch of mixed lengths compiles once per bucket
@@ -31,6 +31,7 @@ _DEFAULTS = {
     "download_weights": True,
     "af3_pairing": "colabfold",
     "use_fast_kernels": False,
+    "use_esm": False,
     "weights_precision": "int8",
     "accept_alphafold3_terms": False,
 }
@@ -179,6 +180,7 @@ class AF3Backend:
         fold_input = dataclasses.replace(model_input, name=prefix)
         examples = featurise(fold_input, self.model_runner.model_name,
                              self.model_runner.model_dir, buckets=self._opt(opts, "buckets"),
+                             use_esm=self._opt(opts, "use_esm"),
                              ref_max_modified_date=date.fromisoformat(opts.max_template_date))
         return predict_structure(
             prefix=prefix,

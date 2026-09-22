@@ -735,6 +735,7 @@ def run(
     use_bfloat16          = kwargs.pop("use_bfloat16", True)
     use_pallas            = kwargs.pop("use_pallas", False)  # old name
     use_fast_kernels      = kwargs.pop("use_fast_kernels", use_pallas)
+    use_esm               = kwargs.pop("use_esm", False)
     kernel_backend        = kwargs.pop("kernel_backend", "auto")
     compile_mode          = kwargs.pop("compile_mode", "tuned")
     num_diffusion_samples = kwargs.pop("num_diffusion_samples", 5)
@@ -821,6 +822,7 @@ def run(
             "use_fuse": use_fuse,
             "use_bfloat16": use_bfloat16,
             "use_fast_kernels": use_fast_kernels,
+            "use_esm": use_esm,
             "kernel_backend": kernel_backend,
             "compile_mode": compile_mode,
             "recompile_padding": recompile_padding,
@@ -1422,6 +1424,14 @@ def main():
         default=5,
     )
     af3_group.add_argument(
+        "--use-esm",
+        default=False,
+        action="store_true",
+        help="Fold with the model's protein language model. esmfold2 is a different model "
+        "without it and chai1 takes it as an extra feature, while models that fold from an "
+        "MSA ignore it. Fetched on first use.",
+    )
+    af3_group.add_argument(
         "--af3-pairing",
         help="How the alphafold3 models pair a complex MSA: keep ColabFold's row pairing, "
         "or let them pair by UniProt species id.",
@@ -1794,6 +1804,7 @@ def main():
         kernel_backend=args.kernel_backend,
         compile_mode=args.compile_mode,
         num_diffusion_samples=args.num_diffusion_samples,
+        use_esm=args.use_esm,
         model_dir=args.model_dir,
         af3_pairing=args.af3_pairing,
         weights_precision=args.weights_precision,
