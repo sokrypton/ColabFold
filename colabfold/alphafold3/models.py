@@ -166,9 +166,19 @@ def _esm_dir(name: str, model_dir: Path) -> str:
     return str(Path(model_dir).expanduser().parent / name)
 
 
+def _refuse_esm_only_model(model_name: str) -> None:
+    """A variant with no MSA encoder has nothing to fold from without its language model."""
+    from alphafold3.model import model_registry
+
+    variant = model_registry.ESMFOLD2_VARIANTS.get(model_name)
+    if variant is not None and not variant.get("msa"):
+        raise ValueError(f"{model_name} does not use MSAs and needs --use-esm")
+
+
 def _resolve_esm(use_esm: bool, fold_input, model_name: str, model_dir: Path):
     """``use_esm`` -> ``(esm2 rows, esmc pair)``, either of which may be None."""
     if not use_esm:
+        _refuse_esm_only_model(model_name)
         return None, None
     from alphafold3.model import esm, model_registry
 
