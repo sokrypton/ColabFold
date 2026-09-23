@@ -54,6 +54,8 @@ from colabfold.utils import (
     AF3Utils,
 )
 from colabfold.input import (
+    dropped_entities,
+    warn_about_dropped_entities,
     pair_msa,
     msa_to_str,
     get_queries,
@@ -1103,37 +1105,6 @@ def run(
 
     logger.info("Done")
     return {"rank":ranks,"metric":metrics}
-
-def dropped_entities(queries, model_type: str) -> Dict[str, Dict[str, int]]:
-    """Per job, the non-protein entities an AlphaFold2 model cannot represent."""
-    if is_af3_model(model_type):
-        return {}
-    dropped = {}
-    for query in queries:
-        extras = query[3] if len(query) > 3 else None
-        counts: Dict[str, int] = {}
-        if isinstance(extras, (list, tuple)):
-            for moltype, _payload, copies in extras:
-                counts[moltype.name] = counts.get(moltype.name, 0) + int(copies or 1)
-        fold_input = getattr(extras, "fold_input", None)
-        if fold_input is not None:
-            for chain in fold_input.chains:
-                kind = type(chain).__name__.replace("Chain", "").upper()
-                if kind != "PROTEIN":
-                    counts[kind] = counts.get(kind, 0) + 1
-        if counts:
-            dropped[query[0]] = counts
-    return dropped
-
-
-def warn_about_dropped_entities(dropped, model_type: str) -> None:
-    for name, counts in dropped.items():
-        what = ", ".join(f"{n} {kind}" for kind, n in sorted(counts.items()))
-        logger.warning(
-            f"{name}: {model_type} folds protein chains only, dropping {what}. "
-            f"Use --model-type alphafold3 (or another model in that family) to fold them."
-        )
-
 
 def set_model_type(is_complex: bool, model_type: str) -> str:
     # backward-compatibility with old options

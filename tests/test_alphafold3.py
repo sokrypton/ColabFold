@@ -7,8 +7,7 @@ import numpy as np
 import pytest
 
 from colabfold.backend import AF3_MODELS, get_backend, is_af3_model
-from colabfold.batch import dropped_entities, warn_about_dropped_entities
-from colabfold.input import classify_molecules
+from colabfold.input import classify_molecules, dropped_entities, warn_about_dropped_entities
 
 
 def test_af2_models_do_not_route_to_af3():
