@@ -21,7 +21,8 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.10"
 absl-py = { version = ">=1.0.0,<3", optional = true }
-jax = { version = ">=0.6.2,<0.12", optional = true }
+# jax 0.11.2 renamed hijax.HiPrimitive, and released flax, which tokamax imports, still asks for it
+jax = { version = ">=0.6.2,<0.11.2", optional = true }
 matplotlib = "^3.8.4"
 biopython = "<1.86"
 numpy = "^2.0.2"
