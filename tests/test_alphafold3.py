@@ -534,3 +534,19 @@ def test_a_dead_mirror_falls_back_to_the_next_url(tmp_path, monkeypatch):
     assert tried == ["https://mirror/x", "https://fallback/x"]
     assert dest.read_bytes() == b"bytes"
     assert not list(tmp_path.glob("*.part")), "the partial file must not be left behind"
+
+
+def test_no_module_imports_alphafold3_before_the_shim_is_installed():
+    """The shim can only stand in for tokamax while nothing has bound it yet."""
+    import subprocess
+    import sys
+
+    modules = ["colabfold.batch", "colabfold.backend", "colabfold.alphafold3.backend",
+               "colabfold.alphafold3.models", "colabfold.alphafold3.weights",
+               "colabfold.alphafold3.input", "colabfold.alphafold3.plot"]
+    out = subprocess.run(
+        [sys.executable, "-c", f"import sys, {', '.join(modules)}; "
+         "print('alphafold3' in sys.modules, 'tokamax' in sys.modules)"],
+        capture_output=True, text=True, check=True,
+    )
+    assert out.stdout.strip() == "False False", "an import here would bind tokamax too early"

@@ -17,12 +17,16 @@ def install() -> bool:
     """Cap how deeply tokamax stages, wherever it picks a config."""
     try:
         from tokamax._src.ops import op as tokamax_op
-    except ImportError:
+    except Exception:
+        # nothing to cap when tokamax is absent, or cannot import on this jax
         return False
     if getattr(tokamax_op, "_colabfold_capped_stages", False):
         return True
 
-    from colabfold_kernels import shared_memory_limit
+    try:
+        from colabfold_kernels import shared_memory_limit
+    except ImportError:
+        return False
 
     limit = shared_memory_limit()
     if limit is None or limit >= SMALL_SHARED_MEMORY:

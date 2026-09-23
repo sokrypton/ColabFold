@@ -6,6 +6,7 @@ through ``colabfold_kernels.fused_ops``, then onto tokamax where it runs, then
 onto jax's own, for the shapes each one declines. No maths lives here.
 """
 import functools
+import importlib.util
 import logging
 import sys
 
@@ -14,6 +15,9 @@ logger = logging.getLogger(__name__)
 DotProductAttentionImplementation = str  # alphafold3 only uses it as an annotation
 
 _REAL = None  # the real tokamax, kept because importing it would find us instead
+
+# the modules that call tokamax, and so bind it at import; model_config only annotates with it
+_CALLERS = ("alphafold3.model.network.modules", "alphafold3.model.components.attention")
 
 
 @functools.lru_cache(maxsize=None)
@@ -109,7 +113,7 @@ _XLA = {"dot_product_attention": _xla_attention,
 def install(force: bool = False) -> str:
     """Stand in unless the real tokamax is there. Returns what will run."""
     global _REAL
-    if "alphafold3.model.model_config" in sys.modules:
+    if any(name in sys.modules for name in _CALLERS):
         logger.warning("alphafold3 already imported tokamax; the shim will not take effect")
     here = sys.modules[__name__]
     try:
@@ -117,8 +121,12 @@ def install(force: bool = False) -> str:
 
         if tokamax is not here:
             _REAL = tokamax
-    except ImportError:
+    except Exception:
+        # a tokamax that cannot import is no different from one that is not there
         _REAL = None
+    if importlib.util.find_spec("colabfold_kernels") is None:
+        logger.info("colabfold-kernels is not installed, leaving tokamax in place")
+        return "tokamax"
     if not force and _REAL is not None and _tokamax_runs_here():
         return "tokamax"
     sys.modules["tokamax"] = here

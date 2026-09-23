@@ -1674,6 +1674,11 @@ def main():
         args.num_models = 0
 
     if args.num_models > 0 and is_af3_model(args.model_type):
+        from colabfold.alphafold3.tokamax_shim import install as install_shim
+
+        # first: whatever imports alphafold3 binds tokamax, and the shim cannot reach it after
+        install_shim(force=args.use_fast_kernels)
+
         from colabfold.alphafold3.models import resolve_model_name
         from colabfold.alphafold3.weights import ensure_ccd, ensure_weights
 

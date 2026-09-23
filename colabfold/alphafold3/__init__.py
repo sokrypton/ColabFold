@@ -19,7 +19,10 @@ def require(data_dir: Optional[Path] = None) -> None:
             f"    {INSTALL}\n"
         )
 
+    from colabfold.alphafold3.tokamax_shim import install as install_shim
     from colabfold.alphafold3.weights import ensure_ccd
 
+    # before alphafold3 binds tokamax, which on some jax releases cannot import at all
+    install_shim()
     ensure_ccd(data_dir)
     import alphafold3  # noqa: F401
