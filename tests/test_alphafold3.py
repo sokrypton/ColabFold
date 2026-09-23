@@ -536,6 +536,34 @@ def test_a_dead_mirror_falls_back_to_the_next_url(tmp_path, monkeypatch):
     assert not list(tmp_path.glob("*.part")), "the partial file must not be left behind"
 
 
+def test_an_msa_in_a_json_is_read_back_and_an_empty_one_is_kept():
+    pytest.importorskip("alphafold3.common.folding_input")
+    from alphafold3.common import folding_input
+
+    from colabfold.alphafold3.input import msa_state, msas_of, with_msas
+
+    def chain(id, sequence="MKVLLA", **msa):
+        return folding_input.ProteinChain(id=id, sequence=sequence, ptms=[], **msa)
+
+    def job(*chains):
+        return folding_input.Input(name="t", chains=list(chains), rng_seeds=[1])
+
+    a3m = ">q\nMKVLLA\n>h1\nMKVLLG\n"
+    given = job(chain("A", unpaired_msa=a3m, paired_msa=""),
+                chain("B", unpaired_msa=a3m, paired_msa=""),
+                chain("C", sequence="MKVAAA", unpaired_msa=">q\nMKVAAA\n", paired_msa=""))
+    assert msa_state(given) == "provided"
+    # one entry per unique sequence, not per chain
+    assert msas_of(given) == ([a3m, ">q\nMKVAAA\n"], None)
+
+    ours = [">q\nMKVLLA\n>h\nMKVLLG\n"]
+    unset, empty = job(chain("A")), job(chain("A", unpaired_msa="", paired_msa=""))
+    assert msa_state(unset) == "missing", "an unset MSA asks for a search"
+    assert msa_state(empty) == "provided", "an empty MSA is a single sequence fold"
+    assert with_msas(unset, ours, None).protein_chains[0].unpaired_msa == ours[0]
+    assert with_msas(empty, ours, None).protein_chains[0].unpaired_msa == ""
+
+
 def test_no_module_imports_alphafold3_before_the_shim_is_installed():
     """The shim can only stand in for tokamax while nothing has bound it yet."""
     import subprocess

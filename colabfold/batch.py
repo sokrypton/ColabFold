@@ -931,15 +931,19 @@ def run(
         # an alphafold3 JSON knows its own chains, and its nucleic acids count too
         fold_input = getattr(custom_template_path_per_entry, "fold_input", None)
         chain_lengths = None
+        own_msa = False
         if fold_input is not None and is_af3_model(model_type):
-            from colabfold.alphafold3.input import polymer_lengths
+            from colabfold.alphafold3.input import msa_state, polymer_lengths
             chain_lengths = polymer_lengths(fold_input)
+            own_msa = msa_state(fold_input) == "provided"
         seq_len = sum(chain_lengths) if chain_lengths is not None else len("".join(query_sequence))
         logger.info(f"Query {job_number + 1}/{len(queries)}: {jobname} (length {seq_len})")
 
         ###########################################
         # generate MSA (a3m_lines) and templates
         ###########################################
+        if own_msa:
+            logger.info(f"{jobname}: folding with the MSAs in the input file")
         try:
             pickled_msa_and_templates = result_dir.joinpath(f"{jobname}.pickle")
             if pickled_msa_and_templates.is_file():
@@ -948,7 +952,23 @@ def run(
                 logger.info(f"Loaded {pickled_msa_and_templates}")
 
             else:
-                if a3m_lines is None:
+                # the file brought its own MSAs, so only templates can still need a search
+                if own_msa:
+                    from colabfold.alphafold3.input import msas_of, sequences_of
+
+                    query_seqs_unique, query_seqs_cardinality = sequences_of(fold_input)
+                    unpaired_msa, paired_msa = msas_of(fold_input)
+                    template_results = []
+                    if use_templates:
+                        (_, _, _, _, template_results) \
+                        = get_msa_and_templates(
+                            jobname, query_seqs_unique, unpaired_msa, result_dir, 'single_sequence',
+                            use_templates, custom_template_path, pair_mode, pairing_strategy,
+                            host_url, user_agent, max_template_date=max_template_date,
+                            max_template_hits=max_template_hits,
+                        )
+
+                elif a3m_lines is None:
                     (unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_results) \
                     = get_msa_and_templates(
                         jobname, query_sequence, a3m_lines, result_dir, msa_mode, use_templates,

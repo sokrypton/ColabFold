@@ -124,6 +124,17 @@ def msa_state(fold_input) -> str:
     return states.pop() if len(states) == 1 else "mixed"
 
 
+def msas_of(fold_input) -> Tuple[List[str], Optional[List[str]]]:
+    """The file's own MSAs, one per unique protein sequence."""
+    unique, _ = sequences_of(fold_input)
+    unpaired, paired = [""] * len(unique), [""] * len(unique)
+    for chain in fold_input.protein_chains:
+        i = unique.index(chain.sequence)
+        unpaired[i] = chain.unpaired_msa or unpaired[i]
+        paired[i] = chain.paired_msa or paired[i]
+    return unpaired, (paired if any(paired) else None)
+
+
 def with_msas(fold_input, unpaired_msa, paired_msa, pairing: str = "colabfold", templates=None):
     """Return a copy of ``fold_input`` with ColabFold's MSAs and templates on its protein chains."""
     import dataclasses
@@ -139,19 +150,23 @@ def with_msas(fold_input, unpaired_msa, paired_msa, pairing: str = "colabfold", 
             # one MSA and one template list per unique sequence, so copies of a chain share them
             i = unique.index(chain.sequence)
             fetched = list(templates[i]) if templates else []
-            # an MSA already in the file is the user's; only fill in what is missing
-            if not (chain.unpaired_msa or chain.paired_msa):
-                chain = folding_input.ProteinChain(
-                    id=chain.id,
-                    sequence=chain.sequence,
-                    ptms=chain.ptms,
-                    description=chain.description,
-                    unpaired_msa=unpaired_msa[i] if unpaired_msa else "",
-                    paired_msa=paired_msa[i] if paired_msa else "",
-                    templates=chain.templates or fetched,
-                )
-            elif fetched and not chain.templates:
-                chain = dataclasses.replace(chain, templates=fetched)
+            # an MSA already in the file is the user's, and "" is a deliberate empty one:
+            # only a field left unset asks ColabFold to fill it in
+            unpaired, paired = chain.unpaired_msa, chain.paired_msa
+            if unpaired is None:
+                unpaired = unpaired_msa[i] if unpaired_msa else ""
+            if paired is None:
+                paired = paired_msa[i] if paired_msa else ""
+            # ProteinChain is not a dataclass, so it is rebuilt rather than replaced
+            chain = folding_input.ProteinChain(
+                id=chain.id,
+                sequence=chain.sequence,
+                ptms=chain.ptms,
+                description=chain.description,
+                unpaired_msa=unpaired,
+                paired_msa=paired,
+                templates=chain.templates or fetched,
+            )
         chains.append(chain)
     return no_af3_search(dataclasses.replace(fold_input, chains=chains))
 
