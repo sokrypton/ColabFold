@@ -1,3 +1,4 @@
+import logging
 import time
 import tarfile
 from pathlib import Path
@@ -10,6 +11,8 @@ import requests
 # The data dir location logic switches between a version with and one without "params" because alphafold
 # always internally joins "params". (We should probably patch alphafold)
 default_data_dir = Path(appdirs.user_cache_dir(__package__ or "colabfold"))
+
+logger = logging.getLogger(__name__)
 
 def download(url, params_dir, size_queue, progress_queue):
     try:
@@ -37,28 +40,39 @@ def download(url, params_dir, size_queue, progress_queue):
         progress_queue.put("error")
 
 
-def fetch_file(urls, dest: Path, desc: str) -> None:
-    """Download to ``dest``, trying each URL in turn until one works."""
+def fetch_file(urls, dest: Path, desc: str, attempts: int = 3) -> None:
+    """Download to ``dest``, trying each URL in turn, resuming what a dropped one left."""
     errors = []
     part = dest.parent.joinpath(dest.name + ".part")
     for url in urls:
-        try:
-            response = requests.get(url, stream=True, timeout=6.02)
-            response.raise_for_status()
-            file_size = int(response.headers.get("Content-Length", 0))
-            with open(part, "wb") as handle, tqdm.tqdm(
-                total=file_size or None, desc=desc, unit="B", unit_scale=True, unit_divisor=1024
-            ) as pbar:
-                for chunk in response.iter_content(chunk_size=1 << 20):
-                    handle.write(chunk)
-                    pbar.update(len(chunk))
-            if file_size and part.stat().st_size != file_size:
-                raise IOError(f"got {part.stat().st_size} of {file_size} bytes")
-            part.replace(dest)
-            return
-        except Exception as e:
-            errors.append(f"{url}: {e}")
-            part.unlink(missing_ok=True)
+        for attempt in range(attempts):
+            have = part.stat().st_size if part.is_file() else 0
+            try:
+                headers = {"Range": f"bytes={have}-"} if have else {}
+                response = requests.get(url, stream=True, timeout=6.02, headers=headers)
+                response.raise_for_status()
+                # a server that ignores the range sends the whole file again
+                resumed = response.status_code == 206
+                have = have if resumed else 0
+                file_size = int(response.headers.get("Content-Length", 0)) + have
+                with open(part, "ab" if resumed else "wb") as handle, tqdm.tqdm(
+                    total=file_size or None, initial=have, desc=desc,
+                    unit="B", unit_scale=True, unit_divisor=1024
+                ) as pbar:
+                    for chunk in response.iter_content(chunk_size=1 << 20):
+                        handle.write(chunk)
+                        pbar.update(len(chunk))
+                if file_size and part.stat().st_size != file_size:
+                    raise IOError(f"got {part.stat().st_size} of {file_size} bytes")
+                part.replace(dest)
+                return
+            except Exception as e:
+                error = f"{url}: {e}"
+                if attempt + 1 < attempts:
+                    logger.warning(f"{dest.name}: {e}, retrying")
+        errors.append(error)
+        # the next URL may serve different bytes, so do not resume onto them
+        part.unlink(missing_ok=True)
     raise RuntimeError(f"could not download {dest.name}\n  " + "\n  ".join(errors))
 
 

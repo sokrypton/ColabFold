@@ -508,12 +508,13 @@ def test_alphafold3s_own_weights_are_gated_and_never_mirrored(tmp_path, monkeypa
     assert asked == [["https://storage.googleapis.com/alphafold3/af3.bin.zst"]]
 
 
-def test_a_dead_mirror_falls_back_to_the_next_url(tmp_path, monkeypatch):
+def test_a_dead_mirror_is_retried_then_dropped_for_the_next_url(tmp_path, monkeypatch):
     import colabfold.download as download
 
     tried = []
 
     class Response:
+        status_code = 200
         headers = {"Content-Length": "5"}
 
         def raise_for_status(self):
@@ -529,11 +530,43 @@ def test_a_dead_mirror_falls_back_to_the_next_url(tmp_path, monkeypatch):
 
     monkeypatch.setattr(download.requests, "get", get)
     dest = tmp_path / "weights.bin.zst"
-    download.fetch_file(["https://mirror/x", "https://fallback/x"], dest, "test")
+    download.fetch_file(["https://mirror/x", "https://fallback/x"], dest, "test", attempts=2)
 
-    assert tried == ["https://mirror/x", "https://fallback/x"]
+    assert tried == ["https://mirror/x", "https://mirror/x", "https://fallback/x"]
     assert dest.read_bytes() == b"bytes"
     assert not list(tmp_path.glob("*.part")), "the partial file must not be left behind"
+
+
+def test_a_dropped_download_resumes_where_it_stopped(tmp_path, monkeypatch):
+    import colabfold.download as download
+
+    ranges = []
+
+    class Response:
+        def __init__(self, length, body, status_code=200):
+            self.headers = {"Content-Length": str(length)}
+            self.body, self.status_code = body, status_code
+
+        def raise_for_status(self):
+            pass
+
+        def iter_content(self, chunk_size):
+            yield self.body
+            if self.status_code == 200:
+                raise OSError("Connection broken: IncompleteRead")
+
+    def get(url, headers=None, **kwargs):
+        ranges.append((headers or {}).get("Range"))
+        if ranges[-1] is None:
+            return Response(10, b"12345")          # drops after half the file
+        return Response(5, b"67890", status_code=206)
+
+    monkeypatch.setattr(download.requests, "get", get)
+    dest = tmp_path / "w.bin"
+    download.fetch_file(["https://host/w"], dest, "test")
+
+    assert ranges == [None, "bytes=5-"], "the second attempt asks for the rest"
+    assert dest.read_bytes() == b"1234567890"
 
 
 def test_an_msa_in_a_json_is_read_back_and_an_empty_one_is_kept():
