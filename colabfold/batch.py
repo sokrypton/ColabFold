@@ -64,8 +64,9 @@ from colabfold.utils import (
 )
 from colabfold.input import (
     dropped_entities,
-    warn_about_dropped_entities,
     pair_msa,
+    refuse_mixed_msas,
+    warn_about_dropped_entities,
     msa_to_str,
     get_queries,
     safe_filename,
@@ -867,6 +868,7 @@ def run(
         "max_template_date": max_template_date,
         "max_template_hits": max_template_hits,
     }
+    refuse_mixed_msas(queries, model_type)
     dropped = dropped_entities(queries, model_type)
     warn_about_dropped_entities(dropped, model_type)
     if dropped:

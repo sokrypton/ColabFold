@@ -498,3 +498,19 @@ def warn_about_dropped_entities(dropped, model_type: str) -> None:
             f"{name}: {model_type} folds protein chains only, dropping {what}. "
             f"Use --model-type alphafold3 (or another model in that family) to fold them."
         )
+
+
+def refuse_mixed_msas(queries, model_type: str) -> None:
+    """Refuse a JSON that gives some protein chains an MSA and leaves others unset."""
+    if not is_af3_model(model_type):
+        return
+    fold_inputs = [(q[0], getattr(q[3], "fold_input", None)) for q in queries if len(q) > 3]
+    if not any(fi is not None for _, fi in fold_inputs):
+        return
+    from colabfold.alphafold3.input import msa_state
+
+    mixed = [name for name, fi in fold_inputs if fi is not None and msa_state(fi) == "mixed"]
+    if mixed:
+        raise ValueError(
+            f"{', '.join(mixed)}: some chains have an MSA and some do not, give all or none"
+        )
