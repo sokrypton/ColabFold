@@ -62,6 +62,8 @@ def make_config(model_name: str, num_recycles: Optional[int], num_diffusion_samp
     if cc is not None and cc < 80:
         # the sm_70 and sm_75 kernels are float16, and those cards have no bfloat16 units
         config.global_config.half_dtype = "float16"
+        # a T4 samples slower in half precision than in float32, and less precisely
+        config.global_config.bfloat16 = "intermediate"
     return config
 
 
