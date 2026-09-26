@@ -64,6 +64,9 @@ def make_config(model_name: str, num_recycles: Optional[int], num_diffusion_samp
         config.global_config.half_dtype = "float16"
         # a T4 samples slower in half precision than in float32, and less precisely
         config.global_config.bfloat16 = "intermediate"
+    elif cc is not None and config.global_config.bfloat16 != "none":
+        # flash triangle attention holds no [rows, heads, N, N] logits, so row chunks only add a scan
+        config.global_config.pair_attention_chunk_size = ((2048, None), (None, 256))
     return config
 
 
