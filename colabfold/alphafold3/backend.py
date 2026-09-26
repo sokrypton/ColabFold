@@ -70,6 +70,13 @@ class AF3Backend:
         # before alphafold3 imports tokamax, so our kernels can stand in for it
         install_shim(force=self._opt(opts, "use_fast_kernels"))
         patch_tokamax()
+        if self._opt(opts, "use_fast_kernels"):
+            try:
+                from colabfold_kernels.diffusion import install as install_megakernel
+            except ImportError:
+                install_megakernel = None
+            if install_megakernel is not None and install_megakernel():
+                logger.info(f"{self.model_type}: diffusion sampling runs in the diffusion megakernel")
         self._warn_about_ignored(opts)
         samples = self._opt(opts, "num_diffusion_samples")
         logger.info(f"{self.model_type}: {opts.num_seeds} seed(s) x {samples} diffusion "
