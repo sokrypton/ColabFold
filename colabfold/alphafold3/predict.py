@@ -98,7 +98,7 @@ def predict_structure(
             tag = f"{model_type}_seed_{seed:03d}_sample_{sample}"
             scores = scores_of(inference_result, processed.ranking_score)
             ranked.append((rank_key(rank_by, scores), tag, processed, scores, took,
-                           model_runner.extract_embeddings(result, len(scores["plddt"]))))
+                           model_runner.extract_embeddings(result, int(np.sum(example["seq_mask"])))))
             best = max(best, ranked[-1][0])
             if prediction_callback is not None:
                 prediction_callback(inference_result.predicted_structure, None,
