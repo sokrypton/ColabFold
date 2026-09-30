@@ -97,8 +97,10 @@ def predict_structure(
             processed = post_processing.post_process_inference_result(inference_result)
             tag = f"{model_type}_seed_{seed:03d}_sample_{sample}"
             scores = scores_of(inference_result, processed.ranking_score)
+            num_tokens = int(np.sum(example["seq_mask"]))
+            logits = model_runner.extract_logits(result, sample, num_tokens) if save_all else None
             ranked.append((rank_key(rank_by, scores), tag, processed, scores, took,
-                           model_runner.extract_embeddings(result, int(np.sum(example["seq_mask"])))))
+                           model_runner.extract_embeddings(result, num_tokens), logits))
             best = max(best, ranked[-1][0])
             if prediction_callback is not None:
                 prediction_callback(inference_result.predicted_structure, None,
@@ -108,7 +110,7 @@ def predict_structure(
     ranked.sort(key=lambda row: row[0], reverse=True)
 
     rank, metric, result_files = [], [], []
-    for n, (_, tag, processed, scores, took, embeddings) in enumerate(ranked):
+    for n, (_, tag, processed, scores, took, embeddings, logits) in enumerate(ranked):
         new_tag = f"rank_{(n + 1):03d}_{tag}"
         rank.append(new_tag)
         metric.append(scores)
@@ -123,6 +125,10 @@ def predict_structure(
             full = result_dir.joinpath(f"{prefix}_confidences_{new_tag}.json")
             full.write_bytes(processed.structure_full_data_json)
             result_files.append(full)
+        if logits:
+            npz = result_dir.joinpath(f"{prefix}_logits_{new_tag}.npz")
+            np.savez_compressed(npz, **logits)
+            result_files.append(npz)
         if embeddings:
             npz = result_dir.joinpath(f"{prefix}_representations_{new_tag}.npz")
             np.savez_compressed(npz, **embeddings)

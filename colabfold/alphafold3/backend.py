@@ -177,6 +177,7 @@ class AF3Backend:
             fused_layer_norm=self._opt(opts, "use_fast_kernels"),
             num_msa=opts.max_seq,
             return_embeddings=opts.save_single_representations or opts.save_pair_representations,
+            return_logits=opts.save_all,
         )
 
     def predict(self, prefix: str, result_dir: Path, model_input, is_complex: bool,

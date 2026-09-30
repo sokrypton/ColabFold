@@ -1560,7 +1560,8 @@ def main():
         default=False,
         action="store_true",
         help="Save all raw outputs from model to a pickle file. "
-        "Useful for downstream use in other models."
+        "Useful for downstream use in other models. "
+        "AF3 family: the full confidence JSON and an npz of the confidence and distogram logits per sample."
     )
     output_group.add_argument(
         "--save-recycles",

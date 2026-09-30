@@ -52,7 +52,8 @@ def default_num_recycles(model_name: str) -> int:
 
 
 def make_config(model_name: str, num_recycles: Optional[int], num_diffusion_samples: int,
-                num_msa: Optional[int] = None, return_embeddings: bool = False):
+                num_msa: Optional[int] = None, return_embeddings: bool = False,
+                return_logits: bool = False):
     from alphafold3.model import model, model_registry
 
     config = model.Model.Config()
@@ -61,6 +62,7 @@ def make_config(model_name: str, num_recycles: Optional[int], num_diffusion_samp
     if num_msa is not None:
         config.evoformer.num_msa = num_msa
     config.return_embeddings = return_embeddings
+    config.return_confidence_logits = config.return_distogram = return_logits
     model_registry.get(model_name).configure(config)
     from colabfold_kernels import compute_capability
 
@@ -163,6 +165,19 @@ class ModelRunner:
                             else value[:num_tokens, :num_tokens]).astype(np.float16)
         return out or None
 
+    def extract_logits(self, result, sample: int, num_tokens: int):
+        """One sample's confidence logits and its seed's distogram logits, trimmed to the tokens"""
+        out = {}
+        for key in ("predicted_lddt_logits", "experimentally_resolved_logits"):
+            if key in result:
+                out[key] = result[key][sample, :num_tokens]
+        for key in ("predicted_aligned_error_logits", "predicted_distance_error_logits"):
+            if key in result:
+                out[key] = result[key][sample, :num_tokens, :num_tokens]
+        if "distogram" in result["distogram"]:
+            out["distogram_logits"] = result["distogram"]["distogram"][:num_tokens, :num_tokens]
+        return {key: value.astype(np.float16) for key, value in out.items()} or None
+
     def extract_inference_results(self, batch, result, target_name: str):
         from alphafold3.model import model
 
@@ -250,7 +265,7 @@ def featurise(fold_input, model_name: str, model_dir: Path, buckets: Optional[Se
 
 def load_model(model_type: str, *, num_recycles: Optional[int], num_diffusion_samples: int,
                use_dropout: bool = False, download: bool = True, num_msa: Optional[int] = None,
-               return_embeddings: bool = False,
+               return_embeddings: bool = False, return_logits: bool = False,
                data_dir: Optional[Path] = None, precision: str = "fp32",
                accept_terms: bool = False, fused_layer_norm: bool = False) -> "ModelRunner":
     mark_absl_flags_parsed()
@@ -258,7 +273,8 @@ def load_model(model_type: str, *, num_recycles: Optional[int], num_diffusion_sa
     weights_dir = ensure_weights(model_name, download=download, data_dir=data_dir,
                                  precision=precision, accept_terms=accept_terms)
     config = make_config(model_name, num_recycles, num_diffusion_samples,
-                         num_msa=num_msa, return_embeddings=return_embeddings)
+                         num_msa=num_msa, return_embeddings=return_embeddings,
+                         return_logits=return_logits)
     logger.info(f"Running {model_name} from {weights_dir}")
     return ModelRunner(config, weights_dir, use_dropout=use_dropout,
                        fused_layer_norm=fused_layer_norm)
