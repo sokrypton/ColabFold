@@ -238,6 +238,7 @@ def featurise(fold_input, model_name: str, model_dir: Path, buckets: Optional[Se
     from alphafold3.model.pipeline import model_features
 
     spec = model_registry.get(model_name)
+    fold_input = model_features.prepare_input(fold_input, spec)
     ccd = decoded_ccd.get_ccd(user_ccd=fold_input.user_ccd)
     build = functools.partial(
         featurisation.featurise_input,
