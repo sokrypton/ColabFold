@@ -236,8 +236,8 @@ def featurise(fold_input, model_name: str, model_dir: Path, buckets: Optional[Se
         examples = [
             model_features.apply(example, spec, refeaturise=lambda: build(verbose=False),
                                  model_dir=str(model_dir), esm=esm_rows, lm_pair=lm_pair,
-                                 has_msa=has_msa, fold_input=fold_input, cyclic=False)
-            for example in examples
+                                 has_msa=has_msa, fold_input=fold_input, cyclic=False, seed=seed)
+            for seed, example in zip(fold_input.rng_seeds, examples)
         ]
     return examples
 
