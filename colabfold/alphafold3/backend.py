@@ -81,6 +81,12 @@ class AF3Backend:
         samples = self._opt(opts, "num_diffusion_samples")
         logger.info(f"{self.model_type}: {opts.num_seeds} seed(s) x {samples} diffusion "
                     f"sample(s) = {opts.num_seeds * samples} structure(s)")
+        from colabfold.alphafold3.models import default_num_recycles, resolve_model_name
+
+        recycles = opts.num_recycles if opts.num_recycles is not None else default_num_recycles(
+            resolve_model_name(self.model_type))
+        logger.info(f"{self.model_type}: {recycles + 1} trunk pass(es) "
+                    f"({'--num-recycle' if opts.num_recycles is not None else 'model default'})")
 
     @staticmethod
     def _require_template_search() -> None:
@@ -203,7 +209,9 @@ class AF3Backend:
     def config_dict(self, opts: RunOptions) -> Dict[str, Any]:
         cfg = {k: self._opt(opts, k) for k in _CONFIG_KEYS}
         if opts.num_recycles is None:
-            cfg["num_recycles"] = 10
+            from colabfold.alphafold3.models import default_num_recycles, resolve_model_name
+
+            cfg["num_recycles"] = default_num_recycles(resolve_model_name(self.model_type))
         return cfg
 
     def plot_msa(self, model_input, dpi: int = 200):

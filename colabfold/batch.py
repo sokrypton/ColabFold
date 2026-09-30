@@ -1319,7 +1319,9 @@ def main():
     pred_group = parser.add_argument_group("Prediction arguments", "")
     pred_group.add_argument(
         "--num-recycle",
-        help="Number of prediction recycles. "
+        help="Number of prediction recycles: N recycles run the trunk N + 1 times, for every model. "
+        "Unset, each model runs its own default (AlphaFold2 3, AlphaFold-Multimer 20 with early stopping, "
+        "AlphaFold3 10, the other AF3-family models their authors' default). "
         "Increasing recycles can improve the prediction quality but slows down the prediction.",
         type=int,
         default=None,

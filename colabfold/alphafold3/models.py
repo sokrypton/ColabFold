@@ -44,14 +44,20 @@ def ensure_weights(model_name: str, download: bool = True, data_dir: Optional[Pa
                  precision=precision, accept_terms=accept_terms)
 
 
+def default_num_recycles(model_name: str) -> int:
+    """The model's own default, in AF's convention (N recycles = N + 1 trunk passes)."""
+    from alphafold3.model import model_registry
+
+    return getattr(model_registry.get(model_name), "default_num_recycles", 10)
+
+
 def make_config(model_name: str, num_recycles: Optional[int], num_diffusion_samples: int,
                 num_msa: Optional[int] = None, return_embeddings: bool = False):
     from alphafold3.model import model, model_registry
 
     config = model.Model.Config()
     config.heads.diffusion.eval.num_samples = num_diffusion_samples
-    if num_recycles is not None:
-        config.num_recycles = num_recycles
+    config.num_recycles = num_recycles if num_recycles is not None else default_num_recycles(model_name)
     if num_msa is not None:
         config.evoformer.num_msa = num_msa
     config.return_embeddings = return_embeddings
