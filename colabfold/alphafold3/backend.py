@@ -95,6 +95,10 @@ class AF3Backend:
                 install_megakernel = None
             if install_megakernel is not None and install_megakernel():
                 logger.info(f"{self.model_type}: diffusion sampling runs in the diffusion megakernel")
+        from colabfold.alphafold3.pairformer_kernels import install as install_pairformer
+
+        if install_pairformer(enable=self._opt(opts, "use_fast_kernels")):
+            logger.info(f"{self.model_type}: the pairformer runs packed triangle attention and, up to 128 channels, the fused triangle multiplication and transition")
         self._warn_about_ignored(opts)
         samples = self._opt(opts, "num_diffusion_samples")
         logger.info(f"{self.model_type}: {opts.num_seeds} seed(s) x {samples} diffusion "
