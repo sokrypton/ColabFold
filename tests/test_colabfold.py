@@ -68,7 +68,7 @@ def test_batch(pytestconfig, caplog, tmp_path, prediction_test):
       #'Running on GPU',
       'Found 5 citations for tools or databases',
       'Query 1/2: 5AWL_1 (length 10)',
-      'Padding length to 13',
+      'Padding length to 16',  # the longest query, 13, rounded up to a multiple of 8
       'alphafold2_ptm_model_1_seed_000 took 0.0s (3 recycles)',
       "reranking models by 'plddt' metric",
       'rank_001_alphafold2_ptm_model_1_seed_000 pLDDT=94.2 pTM=0.0567',

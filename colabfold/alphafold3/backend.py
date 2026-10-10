@@ -24,6 +24,24 @@ BUCKETS = (32, 64, 128, 256, 384, 512, 768, 1024, 1280, 1536, 2048, 2560, 3072, 
 KERNEL_TILE = 64
 assert all(b % KERNEL_TILE == 0 for b in BUCKETS if b > KERNEL_TILE), BUCKETS
 
+# cuBLAS wants a token count that is a multiple of 8: OF3 folds 825 tokens 38% slower than 832, and 840 as fast
+TOKEN_ALIGN = 8
+
+
+# alphafold3 pads an input past the largest bucket to its exact token count, so aligned buckets continue up to here
+MAX_TOKENS = 65536
+
+
+def round_up(n, multiple):
+    return (n + multiple - 1) // multiple * multiple
+
+
+def aligned_buckets(buckets):
+    """Each bucket rounded up to a multiple of TOKEN_ALIGN, then one every TOKEN_ALIGN tokens past the largest."""
+    aligned = sorted(set(round_up(b, TOKEN_ALIGN) for b in buckets))
+    beyond = range(aligned[-1] + TOKEN_ALIGN, MAX_TOKENS + 1, TOKEN_ALIGN)
+    return aligned + list(beyond)
+
 _DEFAULTS = {
     "num_diffusion_samples": 5,
     "use_dropout": False,
@@ -191,7 +209,7 @@ class AF3Backend:
 
         fold_input = dataclasses.replace(model_input, name=prefix)
         examples = featurise(fold_input, self.model_runner.model_name,
-                             self.model_runner.model_dir, buckets=self._opt(opts, "buckets"),
+                             self.model_runner.model_dir, buckets=aligned_buckets(self._opt(opts, "buckets")),
                              use_esm=self._opt(opts, "use_esm"),
                              ref_max_modified_date=date.fromisoformat(opts.max_template_date))
         return predict_structure(

@@ -92,7 +92,11 @@ class MockRunModel:
     
     def cmp_dict(x,y):
       ''' check if two dictionaries are "allclose" '''
-      
+
+      def crop(v, like):
+        # the padding sits past the real residues on every axis, so a recording made unpadded is a prefix
+        return v[tuple(slice(0, n) for n in np.shape(like))] if np.ndim(v) == np.ndim(like) else v
+
       def chk(a,b):
         test = []
         for k,v in a.items():
@@ -102,13 +106,14 @@ class MockRunModel:
             if isinstance(v, dict):
               test.append(chk(v,b[k]))
             else:
-              if not np.allclose(v,b[k]):
+              w = crop(b[k], v)
+              if not np.allclose(v,w):
                 print("--------------------")
                 print(k)
                 print(v)
-                print(b[k])
+                print(w)
                 print("--------------------")
-              test.append(np.allclose(v,b[k]))
+              test.append(np.allclose(v,w))
         return test
       
       return all(jax.tree_util.tree_flatten(chk(x,y))[0])
@@ -121,7 +126,13 @@ class MockRunModel:
       assert cmp_dict(prev_pred, pred)
 
     self.pos += 1
-    return prev_pred, 3
+    # the model runs on the padded length; the recording is of the real residues, so pad it back out like a real run
+    n_old, n_new = np.shape(prev_feat["aatype"])[-1], np.shape(feat["aatype"])[-1]
+    def pad(v):
+      if np.ndim(v) == 0 or n_new == n_old:
+        return v
+      return np.pad(v, [(0, n_new - n_old) if n == n_old else (0, 0) for n in np.shape(v)])
+    return jax.tree_util.tree_map(pad, prev_pred), 3
 
 class MMseqs2Mock:
   """Mocks out the call to the mmseqs2 api

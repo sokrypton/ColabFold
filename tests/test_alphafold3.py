@@ -479,6 +479,16 @@ def test_alphafold3_pads_to_buckets_by_default():
     assert backend._opt(given, "buckets") == [128, 256]
 
 
+def test_buckets_are_aligned_and_extended():
+    from colabfold.alphafold3.backend import BUCKETS, aligned_buckets
+
+    got = aligned_buckets([825, 1664])
+    assert got[:3] == [832, 1664, 1672] and all(b % 8 == 0 for b in got)
+    # the defaults are kept, and an input past the largest gets an aligned bucket rather than its exact length
+    assert aligned_buckets(BUCKETS)[:len(BUCKETS)] == list(BUCKETS)
+    assert 5136 in aligned_buckets(BUCKETS)
+
+
 def test_af3_weights_come_from_hugging_face(tmp_path):
     from colabfold.alphafold3.weights import model_dir_for, urls_for
 

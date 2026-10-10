@@ -205,6 +205,8 @@ class AF2Backend:
             else:
                 self._pad_len = seq_len + recompile_padding
             self._pad_len = min(self._pad_len, self._max_len)
+        # Last step: an 8-aligned length keeps cuBLAS on its aligned kernels (odd lengths cost ~25%).
+        pad_len = -(-max(self._pad_len, seq_len) // 8) * 8
 
         # Track the deepest multimer MSA seen so far so all queries share a shape.
         if "multimer" in self.model_type and "msa" in model_input:
@@ -217,7 +219,7 @@ class AF2Backend:
             is_complex=is_complex,
             use_templates=opts.use_templates,
             sequences_lengths=sequences_lengths,
-            pad_len=self._pad_len,
+            pad_len=pad_len,
             model_type=self.model_type,
             model_runner_and_params=self.model_runner_and_params,
             initial_guess=opts.initial_guess,

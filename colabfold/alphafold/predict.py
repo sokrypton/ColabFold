@@ -66,6 +66,44 @@ def pad_input(
     return input_fix
 
 
+# Residue axis of each AF2-multimer input feature (None: has none); padding is masked by seq_mask and msa_mask.
+_MULTIMER_RESIDUE_AXIS = {
+    "aatype": 0, "all_atom_mask": 0, "all_atom_positions": 0, "asym_id": 0, "deletion_mean": 0,
+    "entity_id": 0, "entity_mask": 0, "residue_index": 0, "seq_mask": 0, "sym_id": 0,
+    "bert_mask": 1, "deletion_matrix": 1, "msa": 1, "msa_mask": 1,
+    "template_aatype": 1, "template_all_atom_mask": 1, "template_all_atom_positions": 1,
+    "assembly_num_chains": None, "cluster_bias_mask": None, "num_alignments": None, "num_templates": None,
+    "seq_length": None,
+}
+
+
+def pad_input_multimer(input_features: Dict[str, Any], pad_len: int) -> Dict[str, Any]:
+    """Zero-pad the residue axes of AF2-multimer features to pad_len; an unknown feature raises KeyError."""
+    def pad(v, axis):
+        if axis is None:
+            return v
+        widths = [(0, 0)] * np.ndim(v)
+        widths[axis] = (0, pad_len - np.shape(v)[axis])
+        return np.pad(v, widths)
+    return {k: pad(v, _MULTIMER_RESIDUE_AXIS[k]) for k, v in input_features.items()}
+
+
+# Outputs with a second residue axis; all others have one, axis 0 or after the layer/MSA axis.
+_PAIR_OUTPUTS = {"predicted_aligned_error", "aligned_confidence_probs", "pae_matrix_with_logits", "pair",
+                 "distogram"}
+
+
+def crop_residues(tree: Any, seq_len: int, path: Tuple[str, ...] = ()) -> Any:
+    """Crop the padded residue axes of model outputs back to seq_len."""
+    if isinstance(tree, dict):
+        return {k: crop_residues(v, seq_len, path + (k,)) for k, v in tree.items()}
+    if np.ndim(tree) == 0 or path[-1] in ("bin_edges", "breaks"):
+        return tree
+    first = 1 if {"traj", "sidechains", "masked_msa"} & set(path) else 0
+    axes = (first, first + 1) if _PAIR_OUTPUTS & set(path) else (first,)
+    return tree[tuple(slice(0, seq_len) if a in axes else slice(None) for a in range(np.ndim(tree)))]
+
+
 class file_manager:
     def __init__(self, prefix: str, result_dir: Path):
         self.prefix = prefix
@@ -137,13 +175,14 @@ def predict_structure(
             #########################
             if "multimer" in model_type:
                 if model_num == 0 and seed_num == 0:
-                    # TODO: add pad_input_mulitmer()
                     input_features = feature_dict
                     input_features["asym_id"] = input_features["asym_id"] - input_features["asym_id"][...,0]
                     # Pad MSA depth up to msa_pad_depth to share one compiled shape
                     # Padded rows are masked (msa_mask=0), so the prediction is unchanged
                     if msa_pad_depth > input_features["msa"].shape[0]:
                         input_features = pipeline_multimer.pad_msa(input_features, min_num_seq=msa_pad_depth)
+                    if seq_len < pad_len:
+                        logger.info(f"Padding length to {pad_len}")
             else:
                 if model_num == 0:
                     input_features = model_runner.process_features(feature_dict, random_seed=seed)
@@ -163,12 +202,18 @@ def predict_structure(
             if initial_guess:
                 input_guess = Path(initial_guess)
                 if input_guess.suffix == ".pdb":
-                    pdb_string = pdb_to_string(initial_guess)
-                    input_features["all_atom_positions"] = protein.from_pdb_string(pdb_string).atom_positions
+                    positions = protein.from_pdb_string(pdb_to_string(initial_guess)).atom_positions
                 elif input_guess.suffix == ".cif":
-                    input_features["all_atom_positions"] = protein.from_mmcif_string(input_guess.read_text()).atom_positions
+                    positions = protein.from_mmcif_string(input_guess.read_text()).atom_positions
                 else:
                     raise ValueError(f"Unsupported initial guess file format: {initial_guess}")
+                # a padded monomer's features are already pad_len long
+                pad = input_features["aatype"].shape[-1] - len(positions)
+                input_features["all_atom_positions"] = np.pad(positions, [(0, pad), (0, 0), (0, 0)])
+
+            # Padded residues are masked; multimer outputs are cropped back right after prediction
+            crop_output = "multimer" in model_type and seq_len < pad_len
+            model_features = pad_input_multimer(input_features, pad_len) if crop_output else input_features
 
 
             ########################
@@ -178,6 +223,7 @@ def predict_structure(
 
             # monitor intermediate results
             def callback(result, recycles):
+                if crop_output: result = crop_residues(result, seq_len)
                 if recycles == 0: result.pop("tol",None)
                 if not is_complex: result.pop("iptm",None)
                 print_line = ""
@@ -197,17 +243,19 @@ def predict_structure(
 
                     if save_all:
                         with files.get("all",f"r{recycles}.pickle").open("wb") as handle:
-                            pickle.dump(result, handle)
+                            pickle.dump(crop_residues(result, seq_len), handle)
                     del unrelaxed_protein
 
             return_representations = save_all or save_single_representations or save_pair_representations
 
             # predict
             result, recycles = \
-            model_runner.predict(input_features,
+            model_runner.predict(model_features,
                 random_seed=seed,
                 return_representations=return_representations,
                 callback=callback)
+            if crop_output:
+                result = crop_residues(result, seq_len)
 
             if calc_extra_ptm and 'predicted_aligned_error' in result.keys():
                 extra_ptm_output = extra_ptm.get_chain_and_interface_metrics(result, input_features['asym_id'],
@@ -258,11 +306,14 @@ def predict_structure(
             # save raw outputs
             if save_all:
                 with files.get("all","pickle").open("wb") as handle:
-                    pickle.dump(result, handle)
+                    pickle.dump(crop_residues(result, seq_len), handle)
+            if save_single_representations or save_pair_representations:
+                # a padded monomer's outputs keep the padding until here
+                representations = crop_residues(result["representations"], seq_len, ("representations",))
             if save_single_representations:
-                np.save(files.get("single_repr","npy"),result["representations"]["single"])
+                np.save(files.get("single_repr","npy"),representations["single"])
             if save_pair_representations:
-                np.save(files.get("pair_repr","npy"),result["representations"]["pair"])
+                np.save(files.get("pair_repr","npy"),representations["pair"])
 
             # write an easy-to-use format (pAE and pLDDT)
             plddt = result["plddt"][:seq_len]
