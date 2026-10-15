@@ -15,15 +15,15 @@ files = [
 
 [[package]]
 name = "alphafold-colabfold"
-version = "2.3.20"
+version = "2.3.23"
 description = "An implementation of the inference pipeline of AlphaFold v2.3.1. This is a completely new model that was entered as AlphaFold2 in CASP14 and published in Nature. This package contains patches for colabfold."
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
-    {file = "alphafold_colabfold-2.3.20-py3-none-any.whl", hash = "sha256:da9cfd96e1acbb0aaca8b4f83f676b7fd688547f01f1528e373da5fac42ee02d"},
-    {file = "alphafold_colabfold-2.3.20.tar.gz", hash = "sha256:c5081d6ffa8d24ab489e67087acce93fbfa53535cf818eea6492e9fa6c70c3d3"},
+    {file = "alphafold_colabfold-2.3.23-py3-none-any.whl", hash = "sha256:fb9096f1219de8933efa5c9340f9d271a7063a4f38339e7058622924d4d3fe48"},
+    {file = "alphafold_colabfold-2.3.23.tar.gz", hash = "sha256:d99d3ecfe37becfd496e8f7c872a330698010270410b632b2ab977cdfec98911"},
 ]
 
 [package.dependencies]
@@ -329,15 +329,31 @@ files = [
 ]
 
 [[package]]
+name = "colabfold-kernels"
+version = "0.4.0"
+description = "Fast fused kernels for ColabFold"
+optional = true
+python-versions = ">=3.10"
+groups = ["main"]
+markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
+files = [
+    {file = "colabfold_kernels-0.4.0-py3-none-any.whl", hash = "sha256:462f4fe4f097a6b971891626bd56e60627b946162ad926a8187326b28ca3be51"},
+    {file = "colabfold_kernels-0.4.0.tar.gz", hash = "sha256:d51223ca71eed1ea593d008e106d91e395f50d4977df8e6b339950271633580e"},
+]
+
+[package.dependencies]
+colabfold-legacy-kernels = {version = ">=0.4.0,<0.5", markers = "sys_platform == \"linux\" and platform_machine == \"x86_64\""}
+
+[[package]]
 name = "colabfold-legacy-kernels"
-version = "0.2.0"
+version = "0.4.0"
 description = "Prebuilt pre-Ampere (sm_70 / sm_75) CUDA kernels for ColabFold."
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
 markers = "sys_platform == \"linux\" and platform_machine == \"x86_64\" and (extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
 files = [
-    {file = "colabfold_legacy_kernels-0.2.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:d125c58d87c5a90f230d65b32e00fccdb35ba8d9ba13de7256cd7edb3a8634bc"},
+    {file = "colabfold_legacy_kernels-0.4.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:27f8f6d64997e27155fb23ad73276afe27a08ff7414165941a69b09c59ea1cec"},
 ]
 
 [[package]]
@@ -1173,10 +1189,12 @@ python-versions = "*"
 groups = ["main"]
 markers = "extra == \"openmm\""
 files = [
+    {file = "openmm-8.6.1-cp310-cp310-macosx_10_12_universal2.whl", hash = "sha256:c446983afafccf8fc31f688e0f5558b5cc38cb3871ef30abc98e565550b32b11"},
     {file = "openmm-8.6.1-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:40486d34776c22f1fa21f495901429d79ede67bde37899610847c0e8afb8d412"},
     {file = "openmm-8.6.1-cp310-cp310-manylinux_2_34_aarch64.whl", hash = "sha256:6e9f62b1dc5a52fc4089540ef2203d72ddb8ba3c502965de36c967d4a3136b4f"},
     {file = "openmm-8.6.1-cp310-cp310-manylinux_2_34_x86_64.whl", hash = "sha256:213d830042252d1bf939f8093de30363611d9e4ed061cbe6191f37dbec4c32f7"},
     {file = "openmm-8.6.1-cp310-cp310-win_amd64.whl", hash = "sha256:648f43e9b9c414efb1a2010d06fa008aee7de65dd1c3bb0b8f669418a02760de"},
+    {file = "openmm-8.6.1-cp311-cp311-macosx_10_12_universal2.whl", hash = "sha256:71d63f310a64b40e00795047aa89081e649cfa8977019959a283147780380f25"},
     {file = "openmm-8.6.1-cp311-cp311-manylinux_2_34_aarch64.whl", hash = "sha256:cfe4b2e8fb5d43f88de03fefb86f2668102f9609fc0162d22e2e79617d949646"},
     {file = "openmm-8.6.1-cp311-cp311-manylinux_2_34_x86_64.whl", hash = "sha256:e0a6ec580be31d4afba35f290c27c069aaeea9a168b0cf959a0dac0df1d9fd5d"},
     {file = "openmm-8.6.1-cp311-cp311-win_amd64.whl", hash = "sha256:176a4d1c65a43ce02087e72fdb056437636689aff9f9cab6027b9516934bc87d"},
@@ -2028,11 +2046,11 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more_it
 type = ["pytest-mypy"]
 
 [extras]
-alphafold = ["absl-py", "alphafold-colabfold", "colabfold-binaries", "colabfold-legacy-kernels", "dm-haiku", "dm-tree", "jax", "py3Dmol"]
-alphafold-minus-jax = ["absl-py", "alphafold-colabfold", "colabfold-binaries", "colabfold-legacy-kernels", "dm-haiku", "dm-tree", "py3Dmol"]
+alphafold = ["absl-py", "alphafold-colabfold", "colabfold-binaries", "colabfold-kernels", "dm-haiku", "dm-tree", "jax", "py3Dmol"]
+alphafold-minus-jax = ["absl-py", "alphafold-colabfold", "colabfold-binaries", "colabfold-kernels", "dm-haiku", "dm-tree", "py3Dmol"]
 openmm = ["openmm", "pdbfixer"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "613c68aff8f7cbef917ea55ce9573eeed4be020ada55c5aee9dd66cbc64cd6b6"
+content-hash = "e7b65002efe5c9acd2e1a2a374cbd6544e1f9e32dca279eabc94ccac20ded8c8"
