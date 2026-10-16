@@ -128,6 +128,7 @@ def load_models_and_params(
     calc_extra_ptm: bool = False,
     use_probs_extra: bool = True,
     use_fast_kernels: bool = False,
+    use_inexact_kernels: bool = False,
     kernel_backend: str = "auto",
     compile_mode: str = "tuned"
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
@@ -140,6 +141,7 @@ def load_models_and_params(
     # Use only two model and later swap params to avoid recompiling
     model_runner_and_params: [Tuple[str, model.RunModel, haiku.Params]] = []
 
+    use_fast_kernels = use_fast_kernels or use_inexact_kernels
     if kernel_backend != "auto" and not use_fast_kernels:
         logger.warning("kernel_backend has no effect without use_fast_kernels")
 
@@ -186,6 +188,8 @@ def load_models_and_params(
                     "use auto or cuda_legacy")
             model_config.model.global_config.use_pallas = use_fast_kernels
             model_config.model.global_config.kernel_backend = backend
+            # lossy, opt-in: colabfold-kernels applies it only where the GPU has 8-bit MMAs
+            model_config.model.global_config.fp8 = use_fast_kernels and use_inexact_kernels
             model_config.model.global_config.compute_capability = cc
             # Volta/Turing tensor cores have no bfloat16
             if use_fast_kernels and backend == "cuda_legacy":

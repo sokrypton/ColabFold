@@ -18,6 +18,7 @@ _CONFIG_KEYS = (
     "use_fuse",
     "use_bfloat16",
     "use_fast_kernels",
+    "use_inexact_kernels",
     "kernel_backend",
     "compile_mode",
     "recompile_padding",
@@ -34,6 +35,7 @@ _DEFAULTS = {
     "use_fuse": True,
     "use_bfloat16": True,
     "use_fast_kernels": False,
+    "use_inexact_kernels": False,
     "kernel_backend": "auto",
     "compile_mode": "tuned",
     "recompile_padding": 10,
@@ -134,6 +136,7 @@ class AF2Backend:
             calc_extra_ptm=self._opt(opts, "calc_extra_ptm"),
             use_probs_extra=self._opt(opts, "use_probs_extra"),
             use_fast_kernels=self._opt(opts, "use_fast_kernels"),
+            use_inexact_kernels=self._opt(opts, "use_inexact_kernels"),
             kernel_backend=self._opt(opts, "kernel_backend"),
             compile_mode=self._opt(opts, "compile_mode"),
         )

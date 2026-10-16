@@ -735,7 +735,8 @@ def run(
     use_fuse              = kwargs.pop("use_fuse", True)
     use_bfloat16          = kwargs.pop("use_bfloat16", True)
     use_pallas            = kwargs.pop("use_pallas", False)  # old name
-    use_fast_kernels      = kwargs.pop("use_fast_kernels", use_pallas)
+    use_inexact_kernels   = kwargs.pop("use_inexact_kernels", False)
+    use_fast_kernels      = kwargs.pop("use_fast_kernels", use_pallas) or use_inexact_kernels
     use_esm               = kwargs.pop("use_esm", False)
     kernel_backend        = kwargs.pop("kernel_backend", "auto")
     compile_mode          = kwargs.pop("compile_mode", "tuned")
@@ -822,6 +823,7 @@ def run(
             "use_fuse": use_fuse,
             "use_bfloat16": use_bfloat16,
             "use_fast_kernels": use_fast_kernels,
+            "use_inexact_kernels": use_inexact_kernels,
             "use_esm": use_esm,
             "kernel_backend": kernel_backend,
             "compile_mode": compile_mode,
@@ -1642,6 +1644,13 @@ def main():
         help="Use fused kernels for faster prediction",
     )
     adv_group.add_argument(
+        "--use-inexact-kernels",
+        dest="use_inexact_kernels",
+        default=False,
+        action=BooleanOptionalAction,
+        help="Use fused kernels, also those that trade accuracy for speed; implies --use-fast-kernels",
+    )
+    adv_group.add_argument(
         # old name: takes an optional value, so it must not precede the paths
         "--use-pallas",
         dest="use_fast_kernels",
@@ -1697,6 +1706,8 @@ def main():
 
     if args.msa_only:
         args.num_models = 0
+    if args.use_inexact_kernels:
+        args.use_fast_kernels = True
 
     if args.num_models > 0 and is_af3_model(args.model_type):
         from colabfold.alphafold3.tokamax_shim import install as install_shim
@@ -1823,6 +1834,7 @@ def main():
         max_template_date=args.max_template_date,
         max_template_hits=args.max_template_hits,
         use_fast_kernels=args.use_fast_kernels,
+        use_inexact_kernels=args.use_inexact_kernels,
         kernel_backend=args.kernel_backend,
         compile_mode=args.compile_mode,
         num_diffusion_samples=args.num_diffusion_samples,
