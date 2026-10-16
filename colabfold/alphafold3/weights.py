@@ -98,6 +98,16 @@ def urls_for(path: str, repo: str) -> List[str]:
     ]
 
 
+# a blob republished with a change alphafold3 depends on: its revision, so a download of an older one is fetched again
+# (chai1 2: chai-lab's structure token-pair weights, which its diffusion conditions on)
+BLOB_REVISION = {"chai1": 2}
+
+
+def _marker(target: Path, name: str, precision: str) -> Path:
+    revision = BLOB_REVISION.get(name)
+    return target.joinpath(f"download_{name}_{precision}{'' if revision is None else f'_r{revision}'}_finished.txt")
+
+
 def model_dir_for(model_name: str, data_dir: Path, precision: str = "fp32") -> Path:
     """Where ``--data`` keeps a model's weights, beside AlphaFold2's params."""
     suffix = "" if precision == "fp32" else f"-{precision}"
@@ -127,10 +137,18 @@ def ensure_weights(model_name: str, data_dir: Optional[Path] = None, download: b
         logger.info(f"{spec.name} is published as float32 only, ignoring --weights-precision {precision}")
         precision = "fp32"
     target = model_dir_for(spec.name, data_dir or default_data_dir, precision)
-    success_marker = target.joinpath(f"download_{spec.name}_{precision}_finished.txt")
+    success_marker = _marker(target, spec.name, precision)
     if success_marker.is_file():
         return target
 
+    stale = [m for m in target.glob(f"download_{spec.name}_{precision}*_finished.txt") if m != success_marker]
+    if stale and download:
+        # our own download of an older revision: fetch it again (a blob without a marker was placed by hand)
+        logger.info(f"{spec.name} weights in {target} are an older revision, downloading the current one")
+        for _, filename in _wanted(spec, precision):
+            target.joinpath(filename).unlink(missing_ok=True)
+        for m in stale:
+            m.unlink()
     try:
         # weights already in place, downloaded before or converted by hand
         return Path(weights.ensure_weights(model_name, model_dir=target,
