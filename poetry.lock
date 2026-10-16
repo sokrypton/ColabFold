@@ -243,15 +243,15 @@ typing-extensions = {version = ">=4.2", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "alphafold-colabfold"
-version = "2.3.24"
+version = "2.3.25"
 description = "An implementation of the inference pipeline of AlphaFold v2.3.1. This is a completely new model that was entered as AlphaFold2 in CASP14 and published in Nature. This package contains patches for colabfold."
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
-    {file = "alphafold_colabfold-2.3.24-py3-none-any.whl", hash = "sha256:32c8f815d80a146a1d8bae82ef28555f67240759f28d91e48838680c2d365072"},
-    {file = "alphafold_colabfold-2.3.24.tar.gz", hash = "sha256:0e47c1a4a8d59d3e58387be5c29ef13afa376d83b832759bdd5d93c55fff66d6"},
+    {file = "alphafold_colabfold-2.3.25-py3-none-any.whl", hash = "sha256:9c2214c2e3d6577c6162b0db91d63e13b029e56973e75684ffb5e851ab09345b"},
+    {file = "alphafold_colabfold-2.3.25.tar.gz", hash = "sha256:1116343cfdc9ea94414ff2a8161235e3882bbea661ac1b28d2ac2dd02a141cae"},
 ]
 
 [package.dependencies]
@@ -736,32 +736,32 @@ files = [
 
 [[package]]
 name = "colabfold-cuda-kernels"
-version = "0.1.0"
+version = "0.2.0"
 description = "Prebuilt CUDA kernels for ColabFold on Ampere and newer GPUs."
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
 markers = "(extra == \"alphafold\" or extra == \"alphafold-minus-jax\" or extra == \"alphafold3\" or extra == \"alphafold3-minus-jax\") and sys_platform == \"linux\""
 files = [
-    {file = "colabfold_cuda_kernels-0.1.0-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:53c4d42602e4a8f3c0091cf1cfbca757e4d82c4c6a0a1e084701c358e3271f52"},
-    {file = "colabfold_cuda_kernels-0.1.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:6c589b80be0a39cd1ea1ebf751bcaabd4c94f6643e0b139a92f65d7d1b8a27db"},
+    {file = "colabfold_cuda_kernels-0.2.0-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:cd381d5e1bd5f241f42704753aa66a18f2ccceca9e5ba75a99ca40d86a107a46"},
+    {file = "colabfold_cuda_kernels-0.2.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:a7beb8531cdfaf6a60a7fe7f4a3358f6f7df987ee051b14a6b6b0656044903bc"},
 ]
 
 [[package]]
 name = "colabfold-kernels"
-version = "0.5.1"
+version = "0.6.0"
 description = "Fast fused kernels for ColabFold"
 optional = true
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\" or extra == \"alphafold3\" or extra == \"alphafold3-minus-jax\""
 files = [
-    {file = "colabfold_kernels-0.5.1-py3-none-any.whl", hash = "sha256:b7b96377d8a15477be20689762d21ea8fa4c680fb77f90885f0a17695a8cdedb"},
-    {file = "colabfold_kernels-0.5.1.tar.gz", hash = "sha256:8a8e2ac8b53dbf1e283016ff604df92269cb6e181782c520cf64377d2853fd25"},
+    {file = "colabfold_kernels-0.6.0-py3-none-any.whl", hash = "sha256:bb8d4ed1285ae1abf72fd88f7ed8a927afec91c0aa4ce1fdae7d9516af0aafdd"},
+    {file = "colabfold_kernels-0.6.0.tar.gz", hash = "sha256:3dd06b2de8d3b3339e6f75c7694ce778f05ccecfa9e3bd433ebcf0159074e1f4"},
 ]
 
 [package.dependencies]
-colabfold-cuda-kernels = {version = ">=0.1.0,<0.2", markers = "sys_platform == \"linux\""}
+colabfold-cuda-kernels = {version = ">=0.2.0,<0.3", markers = "sys_platform == \"linux\""}
 colabfold-legacy-kernels = {version = ">=0.5.0,<0.6", markers = "sys_platform == \"linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
@@ -5247,4 +5247,4 @@ openmm = ["openmm", "pdbfixer"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "eea0d7b71f6e37e6379594092451992ad41736c8404dbf94d5a029ef5596d9eb"
+content-hash = "534abc400bc5acc94fcefcca220c29cb27a5fc26eaadbbfe1ccd5626a25ecff5"
