@@ -200,7 +200,7 @@ def _refuse_esm_only_model(model_name: str) -> None:
 
 
 def _resolve_esm(use_esm: bool, fold_input, model_name: str, model_dir: Path):
-    """``use_esm`` -> ``(esm2 rows, esmc pair)``, either of which may be None."""
+    """``use_esm`` -> ``(esm2 rows, (esmc rows or None, shim params))``, either of which may be None."""
     if not use_esm:
         _refuse_esm_only_model(model_name)
         return None, None
@@ -208,7 +208,7 @@ def _resolve_esm(use_esm: bool, fold_input, model_name: str, model_dir: Path):
 
     sequences = [chain.sequence for chain in fold_input.chains
                  if type(chain).__name__ == "ProteinChain"]
-    if not sequences:
+    if not sequences and model_name not in model_registry.ESMFOLD2_VARIANTS:
         logger.warning(f"--use-esm needs a protein chain, and {fold_input.name} has none")
         return None, None
     if model_name == "chai1":
@@ -218,15 +218,15 @@ def _resolve_esm(use_esm: bool, fold_input, model_name: str, model_dir: Path):
     if model_name not in model_registry.ESMFOLD2_VARIANTS:
         logger.warning(f"--use-esm does nothing for {model_name}, which folds from its MSA")
         return None, None
-    if len(sequences) != 1:
-        # esm.embed refuses this too: nothing masks attention between the chains
-        raise NotImplementedError(f"--use-esm embeds one protein chain for now, and "
-                                  f"{fold_input.name} has {len(sequences)}")
-    variant = model_registry.ESMFOLD2_VARIANTS[model_name]["esmc"]
-    logger.info(f"embedding the sequence with {variant} for {model_name}")
-    hidden = esm.embed(sequences[0], _esm_dir(variant, model_dir), "esmc", variant)
     # each release trains its own shim; another's reads as noise
-    return None, esm.shim(hidden, esm.load_shim_params(str(model_dir), model_name))
+    shim = esm.load_shim_params(str(model_dir), model_name)
+    if not sequences:
+        # native runs the shim over every token all the same, on zero states off protein
+        logger.info(f"{fold_input.name} has no protein chain: {model_name}'s language-model pair from zero states")
+        return None, (None, shim)
+    variant = model_registry.ESMFOLD2_VARIANTS[model_name]["esmc"]
+    logger.info(f"embedding {len(sequences)} protein chain(s) with {variant} for {model_name}")
+    return None, (esm.embed(sequences, _esm_dir(variant, model_dir), "esmc", variant), shim)
 
 
 def featurise(fold_input, model_name: str, model_dir: Path, buckets: Optional[Sequence[int]] = None,
@@ -254,10 +254,10 @@ def featurise(fold_input, model_name: str, model_dir: Path, buckets: Optional[Se
     if spec.featurise:
         has_msa = any(getattr(c, "unpaired_msa", None) or getattr(c, "paired_msa", None)
                       for c in fold_input.chains)
-        esm_rows, lm_pair = _resolve_esm(use_esm, fold_input, model_name, model_dir)
+        esm_rows, lm_hidden = _resolve_esm(use_esm, fold_input, model_name, model_dir)
         examples = [
             model_features.apply(example, spec, refeaturise=lambda: build(verbose=False),
-                                 model_dir=str(model_dir), esm=esm_rows, lm_pair=lm_pair,
+                                 model_dir=str(model_dir), esm=esm_rows, lm_hidden=lm_hidden,
                                  has_msa=has_msa, fold_input=fold_input, cyclic=False, seed=seed)
             for seed, example in zip(fold_input.rng_seeds, examples)
         ]
