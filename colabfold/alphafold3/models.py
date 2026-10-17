@@ -6,6 +6,8 @@ ColabFold needs from it are here instead.
 """
 import functools
 import logging
+import re
+import string
 from pathlib import Path
 from typing import Any, List, Optional, Sequence
 
@@ -229,6 +231,17 @@ def _resolve_esm(use_esm: bool, fold_input, model_name: str, model_dir: Path):
     return None, (esm.embed(sequences, _esm_dir(variant, model_dir), "esmc", variant), shim)
 
 
+_A3M_ROW = re.compile(r"^[^>\s].*", re.M)
+_INSERTIONS = str.maketrans("", "", string.ascii_lowercase)
+
+
+def _aligned(a3m: Optional[str]) -> bool:
+    """True if an a3m holds a row other than its query; a query-only MSA is no alignment at all."""
+    rows = (m.group().rstrip() for m in _A3M_ROW.finditer(a3m or ""))
+    query = next(rows, None)
+    return any(row.translate(_INSERTIONS) != query for row in rows)
+
+
 def featurise(fold_input, model_name: str, model_dir: Path, buckets: Optional[Sequence[int]] = None,
               use_esm: bool = False, ref_max_modified_date=None) -> List[Any]:
     """Featurise one fold input, applying the model family's own conventions."""
@@ -252,7 +265,7 @@ def featurise(fold_input, model_name: str, model_dir: Path, buckets: Optional[Se
     )
     examples = build(verbose=False)
     if spec.featurise:
-        has_msa = any(getattr(c, "unpaired_msa", None) or getattr(c, "paired_msa", None)
+        has_msa = any(_aligned(getattr(c, "unpaired_msa", None)) or _aligned(getattr(c, "paired_msa", None))
                       for c in fold_input.chains)
         esm_rows, lm_hidden = _resolve_esm(use_esm, fold_input, model_name, model_dir)
         examples = [
