@@ -12,8 +12,6 @@ from typing import Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
-# Not wired into the backend yet: the index composition is tested, a real hhsearch hit is not.
-
 
 class TemplateError(ValueError):
     pass
@@ -99,12 +97,13 @@ def build_templates(hits, query_sequence: str, cif_dir: Path,
 def filter_to_chain(mmcif_text: str, chain_id: str) -> Tuple[str, str]:
     """Keep one polymer chain, and say which label id it is keyed by.
 
-    pdb70 names a hit by its auth chain, the sequences below are keyed by label.
+    pdb70 names a hit by its auth chain, the sequences below are keyed by label. Only the label is kept: where auth and label
+    ids are swapped (2MBH: auth A is label B) the auth id names another chain.
     """
     from alphafold3 import structure
 
     struc = structure.from_mmcif(mmcif_text, include_water=False, include_bonds=False)
     chains = struc.polymer_auth_asym_id_to_label_asym_id()
     label = chains.get(chain_id, chain_id)
-    filtered = struc.filter(chain_id=[c for c in (chain_id, label) if c])
+    filtered = struc.filter(chain_id=label)
     return filtered.to_mmcif(), label
