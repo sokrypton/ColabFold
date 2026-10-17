@@ -10,6 +10,9 @@ from colabfold.backend import RunOptions
 
 logger = logging.getLogger(__name__)
 
+# e4m3 k/v in chai-1's trunk pair attention lowers its pLDDT by 1.3 on every seed (ubq, sm_89 and sm_120)
+NO_FP8_ATTENTION = {"chai1"}
+
 _CONFIG_KEYS = ("num_diffusion_samples", "use_dropout", "buckets", "download_weights",
                 "af3_pairing", "use_fast_kernels", "use_inexact_kernels", "use_esm", "weights_precision",
                 "accept_alphafold3_terms")
@@ -96,17 +99,19 @@ class AF3Backend:
                 install_megakernel = None
             if install_megakernel is not None and install_megakernel():
                 logger.info(f"{self.model_type}: diffusion sampling runs in the diffusion megakernel")
+        from colabfold.alphafold3.models import default_num_recycles, resolve_model_name
         from colabfold.alphafold3.pairformer_kernels import install as install_pairformer
 
-        if install_pairformer(enable=self._opt(opts, "use_fast_kernels"),
-                              fp8=self._opt(opts, "use_inexact_kernels")):
+        fp8 = self._opt(opts, "use_inexact_kernels")
+        if fp8 and resolve_model_name(self.model_type) in NO_FP8_ATTENTION:
+            logger.info(f"{self.model_type}: --use-inexact-kernels keeps its pair attention in bf16")
+            fp8 = False
+        if install_pairformer(enable=self._opt(opts, "use_fast_kernels"), fp8=fp8):
             logger.info(f"{self.model_type}: the pairformer runs packed triangle attention and, up to 128 channels, the fused triangle multiplication and transition")
         self._warn_about_ignored(opts)
         samples = self._opt(opts, "num_diffusion_samples")
         logger.info(f"{self.model_type}: {opts.num_seeds} seed(s) x {samples} diffusion "
                     f"sample(s) = {opts.num_seeds * samples} structure(s)")
-        from colabfold.alphafold3.models import default_num_recycles, resolve_model_name
-
         recycles = opts.num_recycles if opts.num_recycles is not None else default_num_recycles(
             resolve_model_name(self.model_type))
         logger.info(f"{self.model_type}: {recycles + 1} trunk pass(es) "
