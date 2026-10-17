@@ -1,6 +1,8 @@
 """Give alphafold3's pairformer the fused colabfold_kernels paths: packed triangle attention between LayerNorm-fused
 projections, the LayerNorm-fused triangle multiplication, and the fused transition."""
 
+import math
+
 # the triangle contraction of incoming edges, as alphafold3 writes it channel-major
 INCOMING = "ckj,cki->cij"
 
@@ -34,10 +36,17 @@ def install(enable: bool = True, fp8: bool = False) -> bool:
         output_projection = fused_ops.output_projection(config, dtype, num_head * head_dim, channels)
         if project is None or output_projection is None:
             return None
-        f8_slots = (1, 2) if fused_ops.fp8_attention(config, head_dim) else ()
+        slots = getattr(fused_ops, "fp8_attention_slots", None)
 
         def ln_projection(x, ln_scale, ln_offset, w, wb):
-            p, bias, *kv = project(x, ln_scale, ln_offset, w, wb, f8_slots=f8_slots)
+            # the e4m3 slots the attention kernel that runs reads (colabfold-kernels 0.7); the pair is N x N rows
+            if slots is not None:
+                f8 = slots(config, dtype, head_dim, math.isqrt(x.shape[0]))
+            else:
+                f8 = ((1, 2), None) if fused_ops.fp8_attention(config, head_dim) else None
+            f8_slots, f8_scales = f8 or ((), None)
+            p, bias, *kv = project(x, ln_scale, ln_offset, w, wb, f8_slots=f8_slots,
+                                   **({} if f8_scales is None else {"f8_scales": f8_scales}))
             return p, bias, kv[0] if kv else None
 
         return ln_projection, output_projection
