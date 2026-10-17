@@ -11,7 +11,7 @@ from colabfold.backend import RunOptions
 logger = logging.getLogger(__name__)
 
 _CONFIG_KEYS = ("num_diffusion_samples", "use_dropout", "buckets", "download_weights",
-                "af3_pairing", "use_fast_kernels", "use_esm", "weights_precision",
+                "af3_pairing", "use_fast_kernels", "use_inexact_kernels", "use_esm", "weights_precision",
                 "accept_alphafold3_terms")
 
 # Token counts to pad to, so a batch of mixed lengths compiles once per bucket
@@ -49,6 +49,7 @@ _DEFAULTS = {
     "download_weights": True,
     "af3_pairing": "colabfold",
     "use_fast_kernels": False,
+    "use_inexact_kernels": False,
     "use_esm": False,
     "weights_precision": "int8",
     "accept_alphafold3_terms": False,
@@ -97,7 +98,8 @@ class AF3Backend:
                 logger.info(f"{self.model_type}: diffusion sampling runs in the diffusion megakernel")
         from colabfold.alphafold3.pairformer_kernels import install as install_pairformer
 
-        if install_pairformer(enable=self._opt(opts, "use_fast_kernels")):
+        if install_pairformer(enable=self._opt(opts, "use_fast_kernels"),
+                              fp8=self._opt(opts, "use_inexact_kernels")):
             logger.info(f"{self.model_type}: the pairformer runs packed triangle attention and, up to 128 channels, the fused triangle multiplication and transition")
         self._warn_about_ignored(opts)
         samples = self._opt(opts, "num_diffusion_samples")
