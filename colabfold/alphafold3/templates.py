@@ -69,12 +69,16 @@ def build_templates(hits, query_sequence: str, cif_dir: Path,
     from colabfold.alphafold3 import require
 
     require()
-    templates = []
+    templates, seen = [], set()
     for hit in hits:
         if len(templates) >= max_templates:
             break
         pdb_id, _, chain_id = hit.name.partition("_")
         chain_id = (chain_id or "A").split()[0]
+        # hhsearch repeats a chain for its secondary local alignments (ubq 1-10 on 5KGF M 67-76): keep the best one
+        if (pdb_id.lower(), chain_id) in seen:
+            continue
+        seen.add((pdb_id.lower(), chain_id))
         cif = Path(cif_dir).joinpath(f"{pdb_id.lower()}.cif")
         if not cif.is_file():
             logger.warning(f"{hit.name}: no {cif.name} beside the hits, skipping")
