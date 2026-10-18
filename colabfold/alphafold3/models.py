@@ -262,7 +262,8 @@ def featurise(fold_input, model_name: str, model_dir: Path, buckets: Optional[Se
         # alphafold3 raises on the date comparison that decides it if this is None
         ref_max_modified_date=ref_max_modified_date,
         flatten_non_standard_residues=not spec.featurise.get("modified_as_one_token", False),
-        ccd_leaving_atoms=bool(spec.featurise.get("ccd_leaving_atoms", False)),
+        # True, or a mode such as 'polymer' (boltz2: a ligand keeps its side's leaving atoms)
+        ccd_leaving_atoms=spec.featurise.get("ccd_leaving_atoms", False) or False,
     )
     examples = build(verbose=False)
     if spec.featurise:
