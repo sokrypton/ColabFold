@@ -160,7 +160,7 @@ def with_msas(fold_input, unpaired_msa, paired_msa, pairing: str = "colabfold", 
             # ProteinChain is not a dataclass, so it is rebuilt rather than replaced
             chain = folding_input.ProteinChain(
                 id=chain.id,
-                sequence=chain.sequence,
+                sequence=getattr(chain, "_sequence", chain.sequence),  # as typed; .sequence is the CCD-parent letters
                 ptms=chain.ptms,
                 description=chain.description,
                 unpaired_msa=unpaired,
