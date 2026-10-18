@@ -208,7 +208,16 @@ def _resolve_esm(use_esm: bool, fold_input, model_name: str, model_dir: Path):
         return None, None
     from alphafold3.model import esm, model_registry
 
-    sequences = [chain.sequence for chain in fold_input.chains
+    def _lm_sequence(chain):
+        # esm gives ESM-C one id per residue, the residue's first token's, and a modified (atomised) residue's tokens
+        # all carry X (24)
+        letters = list(chain.sequence)
+        if model_name in model_registry.ESMFOLD2_VARIANTS:
+            for _ccd, pos in chain.ptms:
+                letters[pos - 1] = "X"
+        return "".join(letters)
+
+    sequences = [_lm_sequence(chain) for chain in fold_input.chains
                  if type(chain).__name__ == "ProteinChain"]
     if not sequences and model_name not in model_registry.ESMFOLD2_VARIANTS:
         logger.warning(f"--use-esm needs a protein chain, and {fold_input.name} has none")
