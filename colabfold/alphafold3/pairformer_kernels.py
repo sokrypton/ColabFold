@@ -18,13 +18,16 @@ def install(enable: bool = True, fp8: bool = False) -> bool:
     except ImportError:
         return False
     modules.PACKED_ATTENTION = modules.PAIR_PROJECTIONS = modules.TRIMUL_KERNELS = modules.GLU_TRANSITION = None
+    modules.PAD_KEEP = False
     if not enable:
         return False
     try:
         from colabfold_kernels import dispatch, fused_ops
     except ImportError:
         return False
-    config = dict(dispatch(), fp8=fp8)
+    # trim_padding: the packed attention skips the key blocks, query blocks and rows the bucket's padding adds; the
+    # pairformer masks padding everywhere downstream, so the zeros it leaves in padded rows are never read
+    config = dict(dispatch(), fp8=fp8, trim_padding=True)
 
     # colabfold-kernels before the LayerNorm-fused kernels: the packed attention alone, the stock triangle multiplication
     fused_ln = hasattr(fused_ops, "ln_projection")
@@ -38,14 +41,14 @@ def install(enable: bool = True, fp8: bool = False) -> bool:
             return None
         slots = getattr(fused_ops, "fp8_attention_slots", None)
 
-        def ln_projection(x, ln_scale, ln_offset, w, wb):
+        def ln_projection(x, ln_scale, ln_offset, w, wb, *keep):
             # the e4m3 slots the attention kernel that runs reads (colabfold-kernels 0.7); the pair is N x N rows
             if slots is not None:
                 f8 = slots(config, dtype, head_dim, math.isqrt(x.shape[0]))
             else:
                 f8 = ((1, 2), None) if fused_ops.fp8_attention(config, head_dim) else None
             f8_slots, f8_scales = f8 or ((), None)
-            p, bias, *kv = project(x, ln_scale, ln_offset, w, wb, f8_slots=f8_slots,
+            p, bias, *kv = project(x, ln_scale, ln_offset, w, wb, *keep, f8_slots=f8_slots,
                                    **({} if f8_scales is None else {"f8_scales": f8_scales}))
             return p, bias, kv[0] if kv else None
 
@@ -78,4 +81,6 @@ def install(enable: bool = True, fp8: bool = False) -> bool:
     modules.PAIR_PROJECTIONS = pair_projections
     modules.TRIMUL_KERNELS = trimul_kernels
     modules.GLU_TRANSITION = lambda dtype, channels, hidden: fused_ops.glu_transition(config, dtype, channels, hidden)
+    # the projections, the epilogue and the transition skip padded row blocks given the pair mask
+    modules.PAD_KEEP = True
     return True
