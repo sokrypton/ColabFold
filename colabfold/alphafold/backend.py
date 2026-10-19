@@ -60,6 +60,7 @@ class AF2Backend:
         self._num_queries = None
         self._msa_mode = None
         self._use_templates = False
+        self._full_depth = False
 
     def _opt(self, opts: RunOptions, key: str):
         return opts.opt(key, _DEFAULTS[key])
@@ -84,6 +85,11 @@ class AF2Backend:
         else:
             max_seq, max_extra_seq = set_if(max_seq, 512), set_if(max_extra_seq, 5120)
 
+        # kernels that skip padded MSA rows: every input at full depth, so the compiled shape depends on length alone;
+        # single_sequence keeps its one row, the same for every input
+        from colabfold.alphafold.models import skips_msa_padding
+
+        self._full_depth = skips_msa_padding(self._opt(opts, "use_fast_kernels"), self._opt(opts, "kernel_backend"))
         if msa_mode == "single_sequence":
             num_seqs = 1
             if is_complex and "multimer" not in self.model_type:
@@ -100,7 +106,7 @@ class AF2Backend:
         if self.model_runner_and_params is not None:
             return
         # For a single query with a real MSA, shrink max_seq to the actual depth.
-        if self._num_queries == 1 and self._msa_mode != "single_sequence":
+        if self._num_queries == 1 and self._msa_mode != "single_sequence" and not self._full_depth:
             if "msa_mask" in model_input:
                 num_seqs = int(sum(model_input["msa_mask"].max(-1) == 1))
             else:
@@ -213,7 +219,12 @@ class AF2Backend:
 
         # Track the deepest multimer MSA seen so far so all queries share a shape.
         if "multimer" in self.model_type and "msa" in model_input:
-            self._msa_pad_depth = max(self._msa_pad_depth, len(model_input["msa"]))
+            depth = len(model_input["msa"])
+            if self._full_depth:
+                # the model samples clusters and extra rows from these: at least that many, past it a power of two
+                floor = self.max_seq + self.max_extra_seq
+                depth = floor if depth <= floor else 1 << (depth - 1).bit_length()
+            self._msa_pad_depth = max(self._msa_pad_depth, depth)
 
         return predict_structure(
             prefix=prefix,
