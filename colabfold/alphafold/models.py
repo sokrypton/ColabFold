@@ -9,7 +9,24 @@ from alphafold.model.modules_multimer import AlphaFold as AlphaFoldMultimer
 
 logger = logging.getLogger(__name__)
 
-def _compile_jit_kwargs(compile_mode: str) -> dict:
+def _xla_flag(name: str) -> str:
+    """The value of --name=... in XLA_FLAGS, or ''."""
+    import os
+    for f in os.environ.get("XLA_FLAGS", "").split():
+        if f.startswith(f"--{name}="):
+            return f.split("=", 1)[1]
+    return ""
+
+
+def _on_rocm() -> bool:
+    try:
+        from colabfold_kernels.device import is_rocm
+        return is_rocm()
+    except Exception:
+        return False
+
+
+def _compile_jit_kwargs(compile_mode: str, cc: Optional[int] = None, use_fast_kernels: bool = False) -> dict:
     import jaxlib
     from packaging.version import Version
     # These params won across GB10/L40S/A100, however exact tile is not very important anyway
@@ -23,6 +40,18 @@ def _compile_jit_kwargs(compile_mode: str) -> dict:
         "tuned": {"xla_gpu_override_gemm_autotuner": tuned},
         "full":  None,
     }.get(compile_mode)
+    # ROCm runs XLA's Triton fusions too; sm_80 and cuBLAS are NVIDIA's
+    rocm = _on_rocm()
+    if copts is not None and use_fast_kernels and (rocm or cc is not None):
+        if rocm or cc >= 80:
+            # our kernels cover the evoformer, so XLA's Triton softmax fusions and its native-vs-Triton tuning of plain
+            # fusions only reach small ops; they cost ~1.5 s per compiled shape (~2.5 s on 2 cores), not fold time
+            disabled = [p for p in _xla_flag("xla_disable_hlo_passes").split(",") if p]
+            copts["xla_disable_hlo_passes"] = ",".join(disabled + ["triton-softmax-rewriter"])
+            copts["xla_gpu_experimental_enable_fusion_autotuner"] = False
+        else:
+            # no Triton below sm_80: autotuning only times cuBLAS algorithms, 1-3 s per shape on a T4 for no fold time
+            copts["xla_gpu_autotune_level"] = 0
     return {"compiler_options": copts} if copts else {}
 
 
@@ -270,17 +299,18 @@ def load_models_and_params(
             if recycle_early_stop_tolerance is not None:
                 model_config.model.recycle_early_stop_tolerance = recycle_early_stop_tolerance
             
-            # get model runner
+            # get model runner; the compile cache keys on the same options the model compiles with
+            jit_kwargs = _compile_jit_kwargs(compile_mode, cc, use_fast_kernels)
             model_runner = model.RunModel(
                 model_config,
                 params_of(model_number),
                 extended_ptm_config={'calc_extended_ptm': calc_extra_ptm,
                                      'use_probs_extended': use_probs_extra},
-                jit_kwargs=_compile_jit_kwargs(compile_mode)
+                jit_kwargs=jit_kwargs
             )
             if compile_cache is not None:
                 from colabfold.alphafold.compile_cache import install
-                install(model_runner, compile_cache, _compile_jit_kwargs(compile_mode), compile_only)
+                install(model_runner, compile_cache, jit_kwargs, compile_only)
         
         if model_number not in wanted:
             continue
