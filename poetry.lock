@@ -269,22 +269,22 @@ scipy = "*"
 
 [[package]]
 name = "alphafold3-colabfold"
-version = "3.1.16"
+version = "3.1.17"
 description = ""
 optional = true
 python-versions = ">=3.12"
 groups = ["main"]
 markers = "python_version >= \"3.12\" and (extra == \"alphafold3\" or extra == \"alphafold3-minus-jax\")"
 files = [
-    {file = "alphafold3_colabfold-3.1.16-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:e5f3c7600bd57374ae0bdceb795362895aa460358dbdd5b3896f463497fb542b"},
-    {file = "alphafold3_colabfold-3.1.16-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:7e4447edc5d9525782b7004240bc34feaf47476573bf6bbc0801c4752e82a989"},
-    {file = "alphafold3_colabfold-3.1.16-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c60c7e04625c02c465d8b8c2fb7885ced5a6ca6fef6eb26aae19205cc585dc18"},
-    {file = "alphafold3_colabfold-3.1.16-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:a7df4182d97fbeeb148e432f5d56a90f63c87dc2f2497832d4cdf44dc9ea0c64"},
-    {file = "alphafold3_colabfold-3.1.16-cp313-cp313-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:b09d1763805ea5267509e75dc39e13db8fa7dc141399b8559341afa77eb08a85"},
-    {file = "alphafold3_colabfold-3.1.16-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6a7d691b7f7d1ebace260f3918b838a4eec0606f7590b67b8b5eb2162b87ac87"},
-    {file = "alphafold3_colabfold-3.1.16-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:3f06abd51c1b6602a636792f76a923e761f2362830b1008d3c75d428d2a17804"},
-    {file = "alphafold3_colabfold-3.1.16-cp314-cp314-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:919b2bbbc590a8b11e77b3aff58264642d991011650e5d2dbd21cd538c5c9e64"},
-    {file = "alphafold3_colabfold-3.1.16-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e663fa2cbb07efca82e992e5f55ca5152f0ea416444d5448d315b6196b0dabb1"},
+    {file = "alphafold3_colabfold-3.1.17-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:1ecf6bf307e864284a4bc24972958bb18c65a96d923bb5e61a961111874f2315"},
+    {file = "alphafold3_colabfold-3.1.17-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:e43eb05ff09be1e14a30054e98cf7c37beb170bac04d819c398968ef8987b418"},
+    {file = "alphafold3_colabfold-3.1.17-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e26b30dcfc243fffc2f49e8a45eb95f8e9aa1fca2c1844fc065072a683c9d094"},
+    {file = "alphafold3_colabfold-3.1.17-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:2553fa1df781436f9abafa6d327d50e3b34549cd71783c1c3372f11d983888af"},
+    {file = "alphafold3_colabfold-3.1.17-cp313-cp313-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:08e48edef32fb925d052c1a365129f78ef66cb9a6a2d36289bdc2d039fb183c7"},
+    {file = "alphafold3_colabfold-3.1.17-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:2c3689c7dd2b6cfdb18d34a25e528e32d2b75e16a41f1e63a853599a3d38bc6a"},
+    {file = "alphafold3_colabfold-3.1.17-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:0e305a34d6d66f6b566940a50a789ef9d3fb94c494da891df9f8fa48b1ab023b"},
+    {file = "alphafold3_colabfold-3.1.17-cp314-cp314-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:857bbdb1c788e0112e0b08bacc8e8476786747f85f5d157b4d1f98406c9c1552"},
+    {file = "alphafold3_colabfold-3.1.17-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f06602168b4d30ed96ac11952276c50dad164984d1219e8d2f93cf52b2489dce"},
 ]
 
 [package.dependencies]
@@ -736,28 +736,28 @@ files = [
 
 [[package]]
 name = "colabfold-cuda-kernels"
-version = "0.2.1"
+version = "0.2.2"
 description = "Prebuilt CUDA kernels for ColabFold on Ampere and newer GPUs."
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
 markers = "(extra == \"alphafold\" or extra == \"alphafold-minus-jax\" or extra == \"alphafold3\" or extra == \"alphafold3-minus-jax\") and sys_platform == \"linux\""
 files = [
-    {file = "colabfold_cuda_kernels-0.2.1-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:ace41b38176f3247fd73039e55f40c9ba626db746237275b7700f729c425afae"},
-    {file = "colabfold_cuda_kernels-0.2.1-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:ad652382baeed411ae949cbde97c82403795fd185c95a4120ee6b45ae0a9036d"},
+    {file = "colabfold_cuda_kernels-0.2.2-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:02d7e810f0f1d7ef7bffb137c396a161cb970d390091526a5776d342a68ed9d9"},
+    {file = "colabfold_cuda_kernels-0.2.2-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:5c199c5b58574c5805cd3ab12f8d7dd997ba66beafff7cd7ebd6f26d62fa474a"},
 ]
 
 [[package]]
 name = "colabfold-kernels"
-version = "0.7.0"
+version = "0.8.0"
 description = "Fast fused kernels for ColabFold"
 optional = true
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\" or extra == \"alphafold3\" or extra == \"alphafold3-minus-jax\""
 files = [
-    {file = "colabfold_kernels-0.7.0-py3-none-any.whl", hash = "sha256:412184a9ec657cda7e1cb8f4c984bdfce5916cf3443a99828b5b4095177dc072"},
-    {file = "colabfold_kernels-0.7.0.tar.gz", hash = "sha256:ee7bf90265e815368b0a263f9a8d9451990fbffb4c10a0f146618da6a245a198"},
+    {file = "colabfold_kernels-0.8.0-py3-none-any.whl", hash = "sha256:1c025d9b67253395d91caea90f04d38886f6b86e565a07b953022477a2056d4c"},
+    {file = "colabfold_kernels-0.8.0.tar.gz", hash = "sha256:3fb6eebbb31c03258458b111129b738cbc677561ef249b81c185d5a57c646c05"},
 ]
 
 [package.dependencies]
@@ -5247,4 +5247,4 @@ openmm = ["openmm", "pdbfixer"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "504a2e268e7ec0d123232865052717b16ec6535e4b217e38d4699413365a438d"
+content-hash = "5438df2bccf5960cdc431b7421f568a0fff04755f8b2b21a0733006bf1cac6e6"
