@@ -6,6 +6,7 @@ from alphafold.model.modules import reset_attention_state
 from colabfold.download import download_alphafold_params
 from colabfold.batch import run, get_queries
 from colabfold.utils import setup_logging
+from colabfold.caat_options import add_prediction_options, prediction_kwargs
 
 
 def main():
@@ -82,7 +83,9 @@ def main():
         help="Directory to save intermediate structures from each evoformer loop.",
     )
 
+    prediction_option_names = add_prediction_options(parser)
     args = parser.parse_args()
+    colabfold_options = prediction_kwargs(args, prediction_option_names)
 
     print(f"Starting ColabFold Prediction for: {args.query_seq_path}")
     print(f"Model Type: {args.model_type}")
@@ -107,6 +110,7 @@ def main():
     query_attn_dir = base_attn_dir / args.query_name
 
     results = run(
+        **colabfold_options,
         queries=queries,
         result_dir=args.result_dir,
         num_models=args.num_models,

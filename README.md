@@ -105,6 +105,21 @@ Additionally, attention heads can be retrieved from CAAT in the same way as Cola
 poetry run colabfold_batch [OPTIONS] --output-attention-dir 'PATH/TO/HEADS'
 ```
 
+Both prediction scripts accept additional ColabFold settings, including
+`--num-recycles` (aliases: `--num-recycle`, `--num_recycles`),
+`--recycle-early-stop-tolerance`, `--num-ensemble`, `--model-order`,
+`--max-seq`, `--max-extra-seq`, `--msa-mode`, `--pair-mode`, `--pair-strategy`,
+`--templates`, `--custom-template-path`, `--use-dropout`,
+`--disable-cluster-profile`, `--rank`, `--stop-at-score`, `--save-recycles`,
+and `--save-all`. Omitted settings retain ColabFold's defaults. In the
+end-to-end pipeline, these settings apply to both query and target predictions.
+
+```bash
+poetry run python scripts/run_e2e_pipeline.py \
+  --query-seq-path query.a3m --query-name query \
+  --num-recycles 10 --recycle-early-stop-tolerance 0.0
+```
+
 **Option C: Run Analysis Only**
 
 If you already have attention head .npy files and simply need to generate the plots and difference maps:

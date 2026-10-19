@@ -6,6 +6,7 @@ from pathlib import Path
 from colabfold.download import download_alphafold_params
 from colabfold.batch import run, get_queries
 from colabfold.utils import setup_logging
+from colabfold.caat_options import add_prediction_options, prediction_kwargs
 
 from alphafold.analysis.utils import _parse_indices
 from alphafold.analysis.attention_pipeline import run_pipeline
@@ -126,7 +127,9 @@ def main() -> None:
         "--alignment-path", default=None, help="Path to MSA alignment."
     )
 
+    prediction_option_names = add_prediction_options(parser)
     args: argparse.Namespace = parser.parse_args()
+    colabfold_options = prediction_kwargs(args, prediction_option_names)
 
     download_alphafold_params(args.model_type, Path("."))
     res_dir = Path(args.result_dir)
@@ -157,6 +160,7 @@ def main() -> None:
     logger.info(f"Distogram output path: {query_distogram_output_dir}")
 
     run(
+        **colabfold_options,
         queries=query_data,
         result_dir=args.result_dir,
         num_models=args.num_models,
@@ -198,6 +202,7 @@ def main() -> None:
         )
 
         run(
+            **colabfold_options,
             queries=target_data,
             result_dir=args.result_dir,
             num_models=args.num_models,
