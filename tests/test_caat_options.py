@@ -19,8 +19,9 @@ def test_recycle_aliases_and_defaults(flag):
     assert prediction_kwargs(parser.parse_args([flag, "0"]), names) == {"num_recycles": 0}
 
 
+@pytest.mark.parametrize("data_option", [None, "--data-dir", "--data"])
 @pytest.mark.parametrize("script", ["run_e2e_pipeline.py", "run_attention_heads.py"])
-def test_prediction_options_reach_every_run(script, tmp_path, monkeypatch):
+def test_prediction_options_reach_every_run(script, data_option, tmp_path, monkeypatch):
     batch = mock.MagicMock()
     batch.get_queries.return_value = ([], False)
     for name in [
@@ -29,6 +30,8 @@ def test_prediction_options_reach_every_run(script, tmp_path, monkeypatch):
     ]:
         monkeypatch.setitem(sys.modules, name, mock.MagicMock())
     monkeypatch.setitem(sys.modules, "colabfold.batch", batch)
+    download = sys.modules["colabfold.download"]
+    download.default_data_dir = tmp_path / "default-cache"
     query = tmp_path / "query.a3m"
     query.touch()
     argv = [script, "--query-seq-path", str(query), "--query-name", "query",
@@ -39,12 +42,17 @@ def test_prediction_options_reach_every_run(script, tmp_path, monkeypatch):
             "--msa-mode", "single_sequence", "--pair-strategy", "complete",
             "--templates", "--custom-template-path", "templates",
             "--disable-cluster-profile", "--rank", "ptm", "--save-recycles"]
+    if data_option:
+        argv += [data_option, str(tmp_path / "custom-weights")]
     if script == "run_e2e_pipeline.py":
         argv += ["--target-seq-path", str(query), "--target-name", "target"]
     monkeypatch.setattr(sys, "argv", argv)
     runpy.run_path(str(Path(__file__).resolve().parents[1] / "scripts" / script), run_name="__main__")
+    expected_data = tmp_path / ("custom-weights" if data_option else "default-cache")
+    download.download_alphafold_params.assert_called_once_with("alphafold2", expected_data)
     assert batch.run.call_count == (2 if script == "run_e2e_pipeline.py" else 1)
     for call in batch.run.call_args_list:
+        assert Path(call.kwargs.get("data_dir", download.default_data_dir)) == expected_data
         for key, value in {
             "num_recycles": 7, "num_ensemble": 2, "recycle_early_stop_tolerance": 0.0,
             "model_order": [3, 1], "max_seq": 64, "max_extra_seq": 128,

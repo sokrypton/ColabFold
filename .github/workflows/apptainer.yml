@@ -1,12 +1,24 @@
-name: Build and Push to GHCR
+name: Build and Test CAAT Container
 on:
   push:
     branches: [ main ]
+  pull_request:
+    paths:
+      - 'images/**'
+      - 'Dockerfile'
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - 'colabfold/**'
+      - 'alphafold/**'
+      - 'scripts/**'
+      - 'dashboard/**'
+      - 'tests/**'
+      - '.github/workflows/apptainer.yml'
   workflow_dispatch:
 
 jobs:
   ghcr-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
@@ -14,36 +26,48 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Singularity
+      - name: Install Apptainer
         run: |
+          wget -q https://github.com/apptainer/apptainer/releases/download/v1.4.5/apptainer_1.4.5_amd64.deb
           sudo apt-get update
-          sudo apt-get install -y wget uuid-runtime libgpgme11
-          export SY_VER=4.1.1
-          wget https://github.com/sylabs/singularity/releases/download/v${SY_VER}/singularity-ce_${SY_VER}-focal_amd64.deb
-          sudo apt-get install -y ./singularity-ce_${SY_VER}-focal_amd64.deb
+          sudo apt-get install -y ./apptainer_1.4.5_amd64.deb
+          rm apptainer_1.4.5_amd64.deb
 
-      - name: Build image
-        run: sudo singularity build caat.sif images/caat.def
+      - name: Build image and run offline smoke test
+        run: |
+          sudo apptainer build caat.sif images/caat.def
+          sudo chown "$(id -u):$(id -g)" caat.sif
 
-      - name: Fix ownership after sudo build
-        run: sudo chown $(whoami) caat.sif
+      - name: Test packaged CAAT code as an unprivileged user
+        run: |
+          mkdir -p "$RUNNER_TEMP/caat-tests"
+          apptainer exec --cleanenv --pwd /work \
+            --bind "$RUNNER_TEMP/caat-tests:/work" \
+            --env JAX_PLATFORMS=cpu --env MPLCONFIGDIR=/work/mpl \
+            caat.sif python -m pytest /opt/CAAT/tests \
+            --ignore=/opt/CAAT/tests/test_colabfold.py \
+            -p no:cacheprovider --junitxml=/work/results.xml
+          apptainer test --cleanenv caat.sif
 
-      - name: Set image tag
-        id: vars
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-test-results
+          path: ${{ runner.temp }}/caat-tests/results.xml
 
       - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | singularity registry login \
-            --username "${{ github.actor }}" \
-            --password-stdin \
-            oras://ghcr.io
+          printf '%s' "$GHCR_TOKEN" | apptainer registry login \
+            --username "${{ github.actor }}" --password-stdin oras://ghcr.io
 
-      - name: Push to GHCR (SHA tag)
+      - name: Publish tested image
+        if: github.event_name != 'pull_request'
         run: |
-          singularity push caat.sif oras://ghcr.io/prameshsharma25/caat:${{ steps.vars.outputs.sha_short }}
-
-      - name: Push to GHCR (latest tag)
-        if: github.ref == 'refs/heads/main'
-        run: |
-          singularity push caat.sif oras://ghcr.io/prameshsharma25/caat:latest
+          apptainer push caat.sif "oras://ghcr.io/prameshsharma25/caat:${GITHUB_SHA:0:7}"
+          if [ "$GITHUB_REF" = refs/heads/main ]; then
+            apptainer push caat.sif oras://ghcr.io/prameshsharma25/caat:latest
+          fi

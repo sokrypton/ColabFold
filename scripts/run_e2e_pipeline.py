@@ -3,7 +3,7 @@ import logging
 import argparse
 
 from pathlib import Path
-from colabfold.download import download_alphafold_params
+from colabfold.download import download_alphafold_params, default_data_dir
 from colabfold.batch import run, get_queries
 from colabfold.utils import setup_logging
 from colabfold.caat_options import add_prediction_options, prediction_kwargs
@@ -131,7 +131,9 @@ def main() -> None:
     args: argparse.Namespace = parser.parse_args()
     colabfold_options = prediction_kwargs(args, prediction_option_names)
 
-    download_alphafold_params(args.model_type, Path("."))
+    download_alphafold_params(
+        args.model_type, Path(colabfold_options.get("data_dir", default_data_dir))
+    )
     res_dir = Path(args.result_dir)
     res_dir.mkdir(parents=True, exist_ok=True)
     setup_logging(res_dir / "log.txt")

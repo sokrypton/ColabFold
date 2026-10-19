@@ -17,6 +17,7 @@ def add_prediction_options(parser):
     """Register optional overrides; omitted values use batch.run's defaults."""
     group = parser.add_argument_group("additional ColabFold settings")
     options = [
+        (("--data-dir", "--data"), "data_dir", str, "Directory containing the params/ model weights; defaults to ColabFold’s cache."),
         (("--num-recycles", "--num-recycle", "--num_recycles"), "num_recycles", int, "Number of prediction recycles (0 disables recycling)."),
         (("--recycle-early-stop-tolerance",), "recycle_early_stop_tolerance", float, "Recycling convergence tolerance."),
         (("--num-ensemble",), "num_ensemble", int, "Number of prediction ensembles."),

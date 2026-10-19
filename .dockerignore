@@ -1,0 +1,26 @@
+# Keep the build context limited to files packaged by Dockerfile.
+**
+!Dockerfile
+!pyproject.toml
+!poetry.lock
+!README.md
+!LICENSE
+!colabfold/
+!colabfold/**
+!scripts/
+!scripts/**
+!dashboard/
+!dashboard/**
+!alphafold/
+!alphafold/**
+!tests/
+!tests/**
+!test-data/
+!test-data/**
+!images/
+!images/**
+**/__pycache__
+**/.venv
+**/.git
+**/.pytest_cache
+**/*.sif

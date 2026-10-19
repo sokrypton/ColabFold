@@ -1,40 +1,38 @@
 Bootstrap: docker
-From: ubuntu:22.04
+From: python:3.11-slim-bookworm
+
+# Build from the repository root. Copy only source, never the host environment.
+%files
+    pyproject.toml /opt/CAAT/pyproject.toml
+    poetry.lock /opt/CAAT/poetry.lock
+    README.md /opt/CAAT/README.md
+    LICENSE /opt/CAAT/LICENSE
+    colabfold /opt/CAAT/colabfold
+    scripts /opt/CAAT/scripts
+    dashboard /opt/CAAT/dashboard
+    alphafold /opt/CAAT/alphafold
+    tests /opt/CAAT/tests
+    test-data /opt/CAAT/test-data
+    images /opt/CAAT/images
 
 %post
-  export DEBIAN_FRONTEND=noninteractive
-  
-  # Install system dependencies
-  apt-get update && apt-get install -y \
-    git \
-    python3.11 \
-    python3.11-venv \
-    python3-pip \
-    wget \
-    curl
-
-  # Setup Poetry
-  pip3 install poetry
-
-  # Setup CAAT
-  git clone https://github.com/prameshsharma25/CAAT.git /opt/CAAT
-  cd /opt/CAAT
-
-  # Point to Python3.11
-  poetry config virtualenvs.in-project true
-  poetry env use python3.11
-
-  # Install CAAT dependencies
-  poetry install
-  poetry install -E alphafold
-
-  # GPU specific dependencies
-  poetry run pip install --no-warn-conflicts 'jax[cuda12]==0.4.28' jaxlib==0.4.28
+    sh /opt/CAAT/images/install.sh
 
 %environment
-  export LC_ALL=C.UTF-8
-  export PATH="/opt/CAAT/.venv/bin:/opt/CAAT:$PATH"
+    export LC_ALL=C.UTF-8
+    export PATH="/opt/CAAT/.venv/bin:/opt/CAAT:$PATH"
+    export MPLBACKEND=Agg
+    export PYTHONNOUSERSITE=1
 
 %runscript
-  cd /opt/CAAT
-  exec poetry run python3 "$@"
+    exec /opt/CAAT/images/entrypoint.sh "$@"
+
+%test
+    export JAX_PLATFORMS=cpu
+    python /opt/CAAT/images/smoke_test.py
+
+%help
+    Run from a writable directory, using --nv for an NVIDIA GPU:
+      apptainer run --cleanenv --nv caat.sif scripts/run_e2e_pipeline.py [OPTIONS]
+    Use --data-dir to select a persistent model-weight directory.
+    For CPU-only execution, set --env JAX_PLATFORMS=cpu.
