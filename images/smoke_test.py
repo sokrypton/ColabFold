@@ -52,7 +52,10 @@ def main():
         )
         output = work / "analysis/smoke"
         ranking = pd.read_csv(output / "smoke_residue_ranking.csv")
-        assert len(ranking) == 20 and np.isfinite(ranking["Attention score"]).all()
+        scores = ranking["Attention score"].to_numpy()
+        assert len(scores) == 20 and np.isfinite(scores).all()
+        # Seeded, nonuniform inputs must retain meaningful residue variation.
+        assert np.ptp(scores) > 1e-6, "Attention scores lost their variation"
         with Image.open(output / "smoke_average_attention.png") as plot:
             plot.verify()
     print("CAAT container smoke test passed.")

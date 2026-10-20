@@ -116,15 +116,25 @@ apptainer run --cleanenv --env JAX_PLATFORMS=cpu \
   --query-name query --query-attn-dir attention_outputs/query
 ```
 
-The Docker image uses the same installer and entrypoint:
+The Docker image uses the same installer and entrypoint. It defaults to the
+non-root `caat` user (UID/GID `10001:10001`), with writable `/work` and
+`/home/caat` directories. For bind-mounted inputs and outputs, override the user
+to match your host UID/GID and put caches in the mounted working directory:
 
 ```bash
 docker build -t caat .
 docker run --rm --gpus all --user "$(id -u):$(id -g)" \
-  -v "$PWD:/work" -e MPLCONFIGDIR=/work/.mplconfig caat \
+  -v "$PWD:/work" -e HOME=/work -e XDG_CACHE_HOME=/work/.cache \
+  -e MPLCONFIGDIR=/work/.mplconfig caat \
   scripts/run_e2e_pipeline.py --query-seq-path query.a3m --query-name query \
   --num-recycles 3 --data-dir /work/weights
 ```
+
+Without `--data-dir`, the container entrypoint uses the home cache when writable,
+then `.cache/colabfold` in the working directory. If neither is writable, it
+creates a temporary cache and prints its location. Set `--data-dir` for persistent
+weights, or `XDG_CACHE_HOME` to explicitly choose the cache root; explicit cache
+settings are preserved.
 
 Container builds run an offline smoke test covering imports, CLI options,
 relative paths, and real attention analysis. Run it again with
@@ -132,6 +142,16 @@ relative paths, and real attention analysis. Run it again with
 that do not require model weights before publishing; GPU inference still
 requires a CUDA-compatible host and `--nv` (Apptainer) or `--gpus all` (Docker).
 The CUDA plugin versions match the JAX version selected by `poetry.lock`.
+
+Published images use `sha-<full-commit-SHA>-sif-<SIF-SHA256>` tags. The publishing
+job summary includes the exact URI and file checksum. Different SIF contents
+receive different tags, including rebuilds of the same commit; the workflow no
+longer writes short commit-only tags. `latest` remains a moving tag for `main`.
+Base images and system packages can change between builds, so rebuilding a
+commit is not guaranteed to reproduce identical bytes. Use the recorded image
+URI to retrieve a particular build and verify the downloaded SIF with
+`sha256sum` against the recorded checksum.
+
 
 ## 2. Running the Pipeline
 

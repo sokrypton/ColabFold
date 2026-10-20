@@ -13,18 +13,23 @@ on:
       - 'scripts/**'
       - 'dashboard/**'
       - 'tests/**'
+      - 'test-data/**'
       - '.github/workflows/apptainer.yml'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   ghcr-build:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Apptainer
         run: |
@@ -56,8 +61,41 @@ jobs:
           name: container-test-results
           path: ${{ runner.temp }}/caat-tests/results.xml
 
+      - name: Upload tested image
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: caat-image
+          path: caat.sif
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+  ghcr-publish:
+    # Serialize registry writes; completion order need not match commit order.
+    concurrency:
+      group: caat-ghcr-publish
+      cancel-in-progress: false
+    needs: ghcr-build
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download tested image
+        uses: actions/download-artifact@v4
+        with:
+          name: caat-image
+
+      - name: Install Apptainer
+        run: |
+          wget -q https://github.com/apptainer/apptainer/releases/download/v1.4.5/apptainer_1.4.5_amd64.deb
+          sudo apt-get update
+          sudo apt-get install -y ./apptainer_1.4.5_amd64.deb
+          rm apptainer_1.4.5_amd64.deb
+
       - name: Login to GHCR
-        if: github.event_name != 'pull_request'
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -65,9 +103,18 @@ jobs:
             --username "${{ github.actor }}" --password-stdin oras://ghcr.io
 
       - name: Publish tested image
-        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          apptainer push caat.sif "oras://ghcr.io/prameshsharma25/caat:${GITHUB_SHA:0:7}"
+          sif_sha=$(sha256sum caat.sif | cut -d ' ' -f 1)
+          image_uri="oras://ghcr.io/prameshsharma25/caat:sha-${GITHUB_SHA}-sif-${sif_sha}"
+          apptainer push caat.sif "$image_uri"
+          printf 'Published image: `%s`\n\nSIF SHA-256: `%s`\n' "$image_uri" "$sif_sha" >> "$GITHUB_STEP_SUMMARY"
           if [ "$GITHUB_REF" = refs/heads/main ]; then
-            apptainer push caat.sif oras://ghcr.io/prameshsharma25/caat:latest
+            main_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+            if [ "$GITHUB_SHA" = "$main_sha" ]; then
+              apptainer push caat.sif oras://ghcr.io/prameshsharma25/caat:latest
+            else
+              echo "Skipping latest: $GITHUB_SHA is no longer the head of main ($main_sha)."
+            fi
           fi
