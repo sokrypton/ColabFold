@@ -183,7 +183,18 @@ def load_models_and_params(
     
     model_runner_and_params_build_order: [Tuple[str, model.RunModel, haiku.Params]] = []
     model_runner = None
+    # each file read once into host memory; only the models that run go to the device, each in one transfer
+    wanted = model_order[:num_models]
+    host_params = {}
+    def params_of(model_number):
+        if model_number not in host_params:
+            host_params[model_number] = get_model_haiku_params(
+                model_type=model_type, model_number=model_number, data_dir=str(data_dir), use_fuse=use_fuse,
+                to_jnp=False)
+        return host_params[model_number]
     for model_number in model_build_order:
+        if model_number not in wanted and model_number not in models_need_compilation:
+            continue
         if model_number in models_need_compilation:
             # get configurations
             config_name = model_to_config_name(model_type, model_number)
@@ -261,16 +272,9 @@ def load_models_and_params(
                 model_config.model.recycle_early_stop_tolerance = recycle_early_stop_tolerance
             
             # get model runner
-            params = get_model_haiku_params(
-                model_type=model_type,
-                model_number=model_number,
-                data_dir=str(data_dir),
-                use_fuse=use_fuse
-            )
-
             model_runner = model.RunModel(
                 model_config,
-                params,
+                params_of(model_number),
                 extended_ptm_config={'calc_extended_ptm': calc_extra_ptm,
                                      'use_probs_extended': use_probs_extra},
                 jit_kwargs=_compile_jit_kwargs(compile_mode)
@@ -279,16 +283,15 @@ def load_models_and_params(
                 from colabfold.alphafold.compile_cache import install
                 install(model_runner, compile_cache, _compile_jit_kwargs(compile_mode), compile_only)
         
-        params = get_model_haiku_params(
-            model_type=model_type,
-            model_number=model_number,
-            data_dir=str(data_dir),
-            use_fuse=use_fuse,
-        )
+        if model_number not in wanted:
+            continue
+        params = params_of(model_number)
         # keep only parameters of compiled model
         params_subset = {}
         for k in model_runner.params.keys():
             params_subset[k] = params[k]
+        import jax
+        params_subset = jax.device_put(params_subset)
 
         model_name = f"model_{model_number}"
         model_runner_and_params_build_order.append(
