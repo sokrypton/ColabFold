@@ -49,32 +49,36 @@ def get_interface_scores(pae, plddt, asym_id, atom_positions, atom_mask,
     distances[:, unplaced] = np.inf
 
     chain_label = {chain: PDB_CHAIN_IDS[int(chain)] for chain in unique_chains}
+    chain_index = {chain: np.flatnonzero(asym_id == chain) for chain in unique_chains}
     ipsae, pdockq, pdockq2 = {}, {}, {}
     for chain_1 in unique_chains:
         for chain_2 in unique_chains:
             if chain_1 == chain_2:
                 continue
             key = f"{chain_label[chain_1]}-{chain_label[chain_2]}"
-            pair_mask = np.outer(asym_id == chain_1, asym_id == chain_2)
+            # only this pair's block: masking the whole matrix made it chains^2 * L^2
+            rows, cols = np.ix_(chain_index[chain_1], chain_index[chain_2])
+            pair_pae = pae[rows, cols]
 
             # ipSAE.
-            valid_pairs = pair_mask & (pae < pae_cutoff)
+            valid_pairs = pair_pae < pae_cutoff
             n0_res = valid_pairs.sum(axis=1)
             d0_res = _calc_d0_array(n0_res)
-            ptm_sums = (_ptm_score(pae, d0_res[:, None]) * valid_pairs).sum(axis=1)
+            ptm_sums = (_ptm_score(pair_pae, d0_res[:, None]) * valid_pairs).sum(axis=1)
             ipsae_by_res = np.divide(ptm_sums, n0_res,
                                      out=np.zeros_like(ptm_sums), where=n0_res > 0)
             ipsae[key] = round(float(ipsae_by_res.max()), 6)
 
             # pDockQ and pDockQ2.
-            contacts = pair_mask & (distances <= PDOCKQ_DIST_CUTOFF)
+            contacts = distances[rows, cols] <= PDOCKQ_DIST_CUTOFF
             n_contacts = contacts.sum()
             if n_contacts > 0:
-                interface_res = contacts.any(axis=1) | contacts.any(axis=0)
-                mean_plddt = plddt[interface_res].mean()
+                interface_plddt = np.concatenate([plddt[chain_index[chain_1]][contacts.any(axis=1)],
+                                                  plddt[chain_index[chain_2]][contacts.any(axis=0)]])
+                mean_plddt = interface_plddt.mean()
                 pdockq_val = 0.724 / (1.0 + np.exp(
                     -0.052 * (mean_plddt * np.log10(n_contacts) - 152.611))) + 0.018
-                mean_ptm = _ptm_score(pae[contacts], 10.0).mean()
+                mean_ptm = _ptm_score(pair_pae[contacts], 10.0).mean()
                 pdockq2_val = 1.31 / (1.0 + np.exp(
                     -0.075 * (mean_plddt * mean_ptm - 84.733))) + 0.005
             else:
