@@ -52,6 +52,7 @@ if TYPE_CHECKING:
 from colabfold.backend import AF3_MODELS, is_af3_model
 from colabfold.citations import write_bibtex
 from colabfold.download import default_data_dir, download_alphafold_params
+from colabfold.alphafold.compile_cache import Precompiled
 from colabfold.utils import (
     ACCEPT_DEFAULT_TERMS,
     DEFAULT_API_SERVER,
@@ -744,6 +745,8 @@ def run(
     af3_pairing           = kwargs.pop("af3_pairing", "colabfold")
     weights_precision     = kwargs.pop("weights_precision", "int8")
     buckets               = kwargs.pop("buckets", None)
+    compile_cache         = kwargs.pop("compile_cache", None)
+    compile_only          = kwargs.pop("compile_only", False)
     accept_alphafold3_terms = kwargs.pop("accept_alphafold3_terms", False)
     if use_fast_kernels and not use_bfloat16:
         raise ValueError("--use-fast-kernels needs half precision, not use_bfloat16=False")
@@ -834,6 +837,8 @@ def run(
             "af3_pairing": af3_pairing,
             "weights_precision": weights_precision,
             "buckets": buckets,
+            "compile_cache": compile_cache,
+            "compile_only": compile_only,
             "accept_alphafold3_terms": accept_alphafold3_terms,
         },
     )
@@ -1075,6 +1080,9 @@ def run(
                 ranks.append(results["rank"])
                 metrics.append(results["metric"])
 
+            except Precompiled:
+                logger.info(f"Compiled the model for {jobname}")
+                continue
             except RuntimeError as e:
                 # This normally happens on OOM. TODO: Filter for the specific OOM error message
                 logger.error(f"Could not predict {jobname}. Not Enough GPU memory? {e}")
@@ -1225,14 +1233,16 @@ def generate_af3_input(
             logger.exception(f"Failed to generate AF3 input json for {jobname}: Could not get MSA/templates. {e}")
             continue
 
-def main():
+def build_parser(positional: bool = True) -> ArgumentParser:
+    """colabfold_batch's arguments; colabfold_compile takes the same ones without input and results."""
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        "input",
-        default="input",
-        help="One of: 1) directory with FASTA/A3M files, 2) CSV/TSV file, 3) FASTA file or 4) A3M file.",
-    )
-    parser.add_argument("results", help="Results output directory.")
+    if positional:
+        parser.add_argument(
+            "input",
+            default="input",
+            help="One of: 1) directory with FASTA/A3M files, 2) CSV/TSV file, 3) FASTA file or 4) A3M file.",
+        )
+        parser.add_argument("results", help="Results output directory.")
 
     msa_group = parser.add_argument_group("MSA arguments", "")
     msa_group.add_argument(
@@ -1469,12 +1479,6 @@ def main():
         action="store_true",
     )
     af3_group.add_argument(
-        "--buckets",
-        help="Token counts the alphafold3 models pad to, so queries of mixed length compile "
-        "once per bucket instead of once per length. Comma separated, increasing.",
-        default=None,
-    )
-    af3_group.add_argument(
         "--weights-precision",
         help="Which published form of the alphafold3 weights to fetch. int8 is the same "
         "weights stored smaller and expanded on load, which leaves inference unchanged.",
@@ -1678,14 +1682,57 @@ def main():
         "'full': unbounded Kernel autotune, can take tens of minutes to compile for longsequences  but optimal inference, can be worth it for large batches."
     )
     adv_group.add_argument(
+        "--buckets",
+        help="Lengths queries pad to, so queries of mixed length compile once per bucket instead of once per "
+        "length: tokens for the alphafold3 models, residues for alphafold2 with --use-fast-kernels. Comma "
+        "separated, increasing; 'none': each query at its own length. Default: the models' own buckets "
+        "(alphafold2 on sm_70/75: none).",
+        default=None,
+    )
+    adv_group.add_argument(
+        "--compile-cache",
+        default="auto",
+        help="With --use-fast-kernels, directory AlphaFold2's compiled models are kept in, by input shape, GPU, driver "
+        "and package versions, so a shape compiles once per machine (colabfold_compile fills it, --clean empties what "
+        "upgrades left). 'auto': 'compiled' in "
+        "--data next to the model parameters; 'none': off.",
+    )
+    adv_group.add_argument(
         "--debug-logging",
         default=False,
         action="store_true",
         help="Enable debug message logging.",
     )
 
-    args = parser.parse_args()
+    return parser
 
+
+def compile_cache_dir(args) -> Optional[Path]:
+    """--compile-cache as a directory, or None: 'auto' is <data>/compiled, next to the model parameters. Fast kernels
+    only: without them every query compiles at its own shape, which a cache would rarely see again."""
+    if not (args.use_fast_kernels or args.use_inexact_kernels):
+        if args.compile_cache not in ("auto", "none"):
+            logger.warning("--compile-cache has no effect without --use-fast-kernels")
+        return None
+    auto = Path(args.data or default_data_dir) / "compiled"
+    return {"auto": auto, "none": None}.get(args.compile_cache, args.compile_cache)
+
+
+def parse_buckets(value: Optional[str]) -> Optional[List[int]]:
+    """--buckets: None for the models' own, [] for none."""
+    if value is None:
+        return None
+    return [] if value == "none" else [int(b) for b in value.split(",")]
+
+
+def main(argv=None):
+    run_args(build_parser().parse_args(argv))
+
+
+def run_args(args, compile_only: bool = False):
+    """colabfold_batch on parsed arguments; compile_only stops each query once its model is compiled
+    (colabfold_compile)."""
+    compile_cache = compile_cache_dir(args)
     if (args.custom_template_path is not None) and (args.pdb_hit_file is not None):
         raise RuntimeError("Arguments --pdb-hit-file and --custom-template-path cannot be used simultaneously.")
     # disable unified memory
@@ -1841,8 +1888,10 @@ def main():
         use_esm=args.use_esm,
         af3_pairing=args.af3_pairing,
         weights_precision=args.weights_precision,
-        buckets=[int(b) for b in args.buckets.split(",")] if args.buckets else None,
+        buckets=parse_buckets(args.buckets),
         accept_alphafold3_terms=args.accept_alphafold3_terms,
+        compile_cache=compile_cache,
+        compile_only=compile_only,
     )
 
 if __name__ == "__main__":

@@ -39,9 +39,19 @@ _DEFAULTS = {
     "kernel_backend": "auto",
     "compile_mode": "tuned",
     "recompile_padding": 10,
+    "buckets": None,
+    "compile_cache": None,
+    "compile_only": False,
     "calc_extra_ptm": False,
     "use_probs_extra": True,
 }
+
+
+# Lengths every query pads to where the fast kernels skip the padded length (AF2's global_config.length_buckets):
+# the same few shapes every run, so a compile cache holds them once per machine.
+# Four per octave, so a query runs on at most a quarter more than its length; one below 256, where a fold takes a
+# fraction of a second either way.
+BUCKETS = tuple(b for k in range(8, 13) for b in (1 << k, 5 << (k - 2), 3 << (k - 1), 7 << (k - 2)))
 
 
 class AF2Backend:
@@ -61,6 +71,7 @@ class AF2Backend:
         self._msa_mode = None
         self._use_templates = False
         self._full_depth = False
+        self._buckets = None
 
     def _opt(self, opts: RunOptions, key: str):
         return opts.opt(key, _DEFAULTS[key])
@@ -87,7 +98,7 @@ class AF2Backend:
 
         # kernels that skip padded MSA rows: every input at full depth, so the compiled shape depends on length alone;
         # single_sequence keeps its one row, the same for every input
-        from colabfold.alphafold.models import skips_msa_padding
+        from colabfold.alphafold.models import _compute_capability, skips_msa_padding
 
         self._full_depth = skips_msa_padding(self._opt(opts, "use_fast_kernels"), self._opt(opts, "kernel_backend"))
         if msa_mode == "single_sequence":
@@ -101,6 +112,14 @@ class AF2Backend:
 
         self.max_seq = max_seq
         self.max_extra_seq = max_extra_seq
+        buckets = self._opt(opts, "buckets")
+        # legacy cards (sm_70/75) skip only attention's padding, so a bucket costs about its padding: native lengths
+        backend = self._opt(opts, "kernel_backend")
+        legacy = backend == "cuda_legacy" or (backend == "auto" and (_compute_capability() or 80) < 80)
+        if buckets is None and not legacy:
+            buckets = BUCKETS
+        if self._full_depth and buckets:  # [] (--buckets none): each query at its own length
+            self._buckets = sorted(buckets)
 
     def _ensure_loaded(self, opts: RunOptions, model_input) -> None:
         if self.model_runner_and_params is not None:
@@ -145,6 +164,9 @@ class AF2Backend:
             use_inexact_kernels=self._opt(opts, "use_inexact_kernels"),
             kernel_backend=self._opt(opts, "kernel_backend"),
             compile_mode=self._opt(opts, "compile_mode"),
+            length_buckets=self._buckets is not None,
+            compile_cache=self._opt(opts, "compile_cache"),
+            compile_only=self._opt(opts, "compile_only"),
         )
 
     def featurize(
@@ -208,7 +230,9 @@ class AF2Backend:
         # length share one compiled shape instead of recompiling per length.
         seq_len = sum(sequences_lengths)
         recompile_padding = self._opt(opts, "recompile_padding")
-        if seq_len > self._pad_len:
+        if self._buckets is not None:
+            self._pad_len = next((b for b in self._buckets if b >= seq_len), seq_len)
+        elif seq_len > self._pad_len:
             if isinstance(recompile_padding, float):
                 self._pad_len = math.ceil(seq_len * recompile_padding)
             else:

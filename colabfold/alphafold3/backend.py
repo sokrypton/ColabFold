@@ -42,7 +42,7 @@ def round_up(n, multiple):
 def aligned_buckets(buckets):
     """Each bucket rounded up to a multiple of TOKEN_ALIGN, then one every TOKEN_ALIGN tokens past the largest."""
     aligned = sorted(set(round_up(b, TOKEN_ALIGN) for b in buckets))
-    beyond = range(aligned[-1] + TOKEN_ALIGN, MAX_TOKENS + 1, TOKEN_ALIGN)
+    beyond = range((aligned[-1] if aligned else 0) + TOKEN_ALIGN, MAX_TOKENS + 1, TOKEN_ALIGN)
     return aligned + list(beyond)
 
 _DEFAULTS = {

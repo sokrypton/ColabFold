@@ -147,7 +147,10 @@ def load_models_and_params(
     use_fast_kernels: bool = False,
     use_inexact_kernels: bool = False,
     kernel_backend: str = "auto",
-    compile_mode: str = "tuned"
+    compile_mode: str = "tuned",
+    length_buckets: bool = False,
+    compile_cache: Optional[Path] = None,
+    compile_only: bool = False,
 ) -> List[Tuple[str, model.RunModel, haiku.Params]]:
     """We use only two actual models and swap the parameters to avoid recompiling.
 
@@ -208,6 +211,8 @@ def load_models_and_params(
             # lossy, opt-in: colabfold-kernels applies it only where the GPU has 8-bit MMAs
             model_config.model.global_config.fp8 = use_fast_kernels and use_inexact_kernels
             model_config.model.global_config.compute_capability = cc
+            # a padded length's triangle attention trimmed and its contractions on the live block
+            model_config.model.global_config.length_buckets = use_fast_kernels and length_buckets
             # Volta/Turing tensor cores have no bfloat16
             if use_fast_kernels and backend == "cuda_legacy":
                 model_config.model.global_config.half_dtype = "float16"
@@ -270,6 +275,9 @@ def load_models_and_params(
                                      'use_probs_extended': use_probs_extra},
                 jit_kwargs=_compile_jit_kwargs(compile_mode)
             )
+            if compile_cache is not None:
+                from colabfold.alphafold.compile_cache import install
+                install(model_runner, compile_cache, _compile_jit_kwargs(compile_mode), compile_only)
         
         params = get_model_haiku_params(
             model_type=model_type,

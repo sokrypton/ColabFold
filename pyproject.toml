@@ -62,6 +62,7 @@ addopts = "--tb=short"
 
 [tool.poetry.scripts]
 colabfold_batch = 'colabfold.batch:main'
+colabfold_compile = 'colabfold.compile:main'
 colabfold_search = 'colabfold.mmseqs.search:main'
 colabfold_split_msas = 'colabfold.mmseqs.split_msas:main'
 colabfold_relax = 'colabfold.relax:main'
