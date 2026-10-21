@@ -7,10 +7,13 @@ SUPPORTED_MODELS = frozenset(
         "openfold3",
         "boltz2",
         "protenix2",
+        "protenix1",
         "rosettafold3",
         "chai1",
         "opendde",
+        "helixfold3",
         "esmfold2",
+        "esmfold2_fast",
         "esmfold2_lm600m",
         "esmfold2_lm300m",
     }

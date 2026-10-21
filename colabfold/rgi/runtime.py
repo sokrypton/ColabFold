@@ -90,14 +90,11 @@ def _guided_apply(runner, model_runner):
     import jax
     from alphafold3.model.network import diffusion_head
 
-    from colabfold.rgi.sampler import coordinate_minimizer, make_guided_sampler
-
-    original = diffusion_head.sample
+    from colabfold.rgi.sampler import coordinate_minimizer, guided
 
     @hk.transform
     def forward(batch, minimize, gather):
-        sampler = make_guided_sampler(original, coordinate_minimizer(minimize, gather))
-        with _replace(diffusion_head, "sample", sampler):
+        with guided(diffusion_head, coordinate_minimizer(minimize, gather)):
             return runner.model.Model(model_runner._model_config)(
                 batch, use_dropout=model_runner._use_dropout
             )
@@ -110,12 +107,20 @@ def install(runner):
     """Install input and per-job hooks in one CLI process, preserving vanilla."""
     import importlib.metadata
 
+    from alphafold3.model.network import diffusion_head
+
+    from colabfold.rgi.sampler import has_denoised_hook
+
+    # A release with the guidance hook needs no pin; before it, only the release
+    # whose sampler source RGI instruments.
     if (
-        importlib.metadata.version("alphafold3-colabfold")
+        not has_denoised_hook(diffusion_head)
+        and importlib.metadata.version("alphafold3-colabfold")
         != ALPHAFOLD3_COLABFOLD_VERSION
     ):
         raise RuntimeError(
-            "RGI requires alphafold3-colabfold==3.1.11; re-run installation."
+            "RGI requires alphafold3-colabfold 3.1.18 or later, or exactly "
+            f"{ALPHAFOLD3_COLABFOLD_VERSION}; re-run installation."
         )
 
     input_class = runner.folding_input.Input
