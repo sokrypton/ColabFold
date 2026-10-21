@@ -1,11 +1,15 @@
-"""Exercise the actual pinned sampler under JIT, vmap, and scan."""
+"""Exercise the actual upstream sampler under JIT, vmap, and scan.
+
+`guided` takes alphafold3-colabfold's DENOISED_HOOK when the installed release
+has it (3.1.18+) and instruments the pinned 3.1.11 sampler otherwise, so these
+hold the same expectations against whichever is installed."""
 
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
-from colabfold.rgi.sampler import coordinate_minimizer, make_guided_sampler
+from colabfold.rgi.sampler import coordinate_minimizer, guided
 
 
 def test_structural_token_coordinates_preserve_residue_mapping():
@@ -35,20 +39,20 @@ def test_identity_hook_preserves_upstream_sampling_paths(model):
     )
     gc = SimpleNamespace(model=model)
 
-    def make(sample):
-        @hk.transform
-        def forward():
-            return sample(lambda x, sigma: x / 2, batch, hk.next_rng_key(), config, gc)[
-                "atom_positions"
-            ]
-
-        return jax.jit(forward.apply)
+    @hk.transform
+    def forward():
+        return dh.sample(lambda x, sigma: x / 2, batch, hk.next_rng_key(), config, gc)[
+            "atom_positions"
+        ]
 
     original = dh.sample
-    guided = make_guided_sampler(original, lambda x, sigma, step: x)
     key = jax.random.PRNGKey(42)
-    np.testing.assert_array_equal(make(original)({}, key), make(guided)({}, key))
+    plain = jax.jit(forward.apply)({}, key)
+    with guided(dh, lambda x, sigma, step: x):
+        hooked = jax.jit(forward.apply)({}, key)
+    np.testing.assert_array_equal(plain, hooked)
     assert dh.sample is original
+    assert getattr(dh, "DENOISED_HOOK", None) is None
 
 
 def test_schedule_passes_pre_churn_sigma_and_zero_based_steps():
@@ -63,7 +67,6 @@ def test_schedule_passes_pre_churn_sigma_and_zero_based_steps():
         jax.debug.callback(lambda s, i: seen.append((float(s), int(i))), sigma, step)
         return x
 
-    guided = make_guided_sampler(dh.sample, minimize)
     batch = SimpleNamespace(
         predicted_structure_info=SimpleNamespace(atom_mask=jnp.ones((2, 2)))
     )
@@ -71,7 +74,7 @@ def test_schedule_passes_pre_churn_sigma_and_zero_based_steps():
 
     @hk.transform
     def forward():
-        return guided(
+        return dh.sample(
             lambda x, sigma: x / 2,
             batch,
             hk.next_rng_key(),
@@ -79,7 +82,8 @@ def test_schedule_passes_pre_churn_sigma_and_zero_based_steps():
             SimpleNamespace(model="openbind0"),
         )
 
-    jax.block_until_ready(jax.jit(forward.apply)({}, jax.random.PRNGKey(42)))
+    with guided(dh, minimize):
+        jax.block_until_ready(jax.jit(forward.apply)({}, jax.random.PRNGKey(42)))
     expected = dh.noise_schedule(np.linspace(0, 1, 7, dtype=np.float32))[:-1]
     assert sorted(i for s, i in seen) == list(range(6))
     np.testing.assert_allclose(

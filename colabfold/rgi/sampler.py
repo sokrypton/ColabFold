@@ -1,6 +1,9 @@
-"""Add checked hook points to the pinned upstream sampler in memory.
+"""Route the upstream sampler's denoised predictions through RGI's minimizer.
 
-The original sampler owns all schedules, random keys, Euler/Heun steps and
+alphafold3-colabfold 3.1.18 and later expose this point as
+``diffusion_head.DENOISED_HOOK``. For 3.1.11, the pinned release before it,
+checked hook points are added to the sampler's source in memory instead. Either
+way the original sampler owns all schedules, random keys, Euler/Heun steps and
 alignment. No installed file is modified, and vanilla keeps the original function.
 """
 
@@ -8,7 +11,31 @@ from __future__ import annotations
 
 import hashlib
 import inspect
+from contextlib import contextmanager
 from functools import lru_cache
+
+
+def has_denoised_hook(diffusion_head):
+    """True when the installed release exposes the guidance point (3.1.18+)."""
+    return hasattr(diffusion_head, "DENOISED_HOOK")
+
+
+@contextmanager
+def guided(diffusion_head, minimize):
+    """Within the block, ``minimize(coords, sigma, step)`` sees every denoised prediction.
+
+    Traced code reads it, so call (and jit) the model inside the block.
+    """
+    if has_denoised_hook(diffusion_head):
+        name, value = "DENOISED_HOOK", minimize
+    else:
+        name, value = "sample", make_guided_sampler(diffusion_head.sample, minimize)
+    original = getattr(diffusion_head, name)
+    setattr(diffusion_head, name, value)
+    try:
+        yield
+    finally:
+        setattr(diffusion_head, name, original)
 
 
 @lru_cache(maxsize=4)
