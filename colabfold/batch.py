@@ -453,6 +453,78 @@ def normalize_a3m(lines: list[str]) -> list[str]:
 
     return out
 
+def _split_by_aln(s, qlens_local, num_chains):
+    segments = [""] * num_chains
+    has_aa = [False] * num_chains
+    seg_idx = 0
+    aln_count = 0
+    start = 0
+    curr_has_aa = False
+
+    dash = '-'
+    A, Z = 'A', 'Z'
+    a, z = 'a', 'z'
+    n = len(s)
+    i = 0
+    while i < n and seg_idx < num_chains:
+        c = s[i]
+        # non-lowercase are aligned columns
+        if not (a <= c <= z):
+            if c != dash and (A <= c <= Z):
+                curr_has_aa = True
+            aln_count += 1
+            if aln_count == qlens_local[seg_idx]:
+                # close current segment
+                segments[seg_idx] = s[start:i+1]
+                has_aa[seg_idx] = curr_has_aa
+                seg_idx += 1
+                aln_count = 0
+                start = i + 1
+                curr_has_aa = False
+        i += 1
+    return segments, has_aa
+
+
+def _split_rows_by_aln(seqs, qlens, num_chains):
+    """_split_by_aln for every row at once: rows with the chains' aligned length in one numpy pass, others by the loop."""
+    import numpy as np
+    total = sum(qlens)
+    out = [None] * len(seqs)
+    fast = [i for i, s in enumerate(seqs) if s.isascii()] if total > 0 and min(qlens) > 0 else []
+    if fast:
+        rows = [seqs[i] for i in fast]
+        b = np.frombuffer(("\n".join(rows) + "\n").encode("ascii"), np.uint8)
+        lower = (b >= ord("a")) & (b <= ord("z"))
+        sep = np.flatnonzero(b == ord("\n"))
+        starts = np.concatenate([[0], sep[:-1] + 1])
+        nonl = ~lower
+        nonl[sep] = False
+        widths = np.add.reduceat(nonl, starts) if len(b) else np.zeros(0, int)
+        good = widths == total
+        # each good row's aligned columns, its segment ends where a chain's count is reached
+        cuts = np.cumsum(qlens)
+        upper = (b >= ord("A")) & (b <= ord("Z"))
+        for r in np.flatnonzero(~good):
+            i = fast[r]
+            out[i] = _split_by_aln(seqs[i], qlens, num_chains)
+        g = np.flatnonzero(good)
+        if len(g):
+            row_of = np.cumsum(np.concatenate([[0], (b == ord("\n"))[:-1]]))
+            keep = nonl & good[row_of]
+            pos = np.flatnonzero(keep)
+            pos = pos.reshape(len(g), total)
+            ends = pos[:, cuts - 1] + 1 - starts[g][:, None]
+            has = np.logical_or.reduceat(upper[pos], np.concatenate([[0], cuts[:-1]]), axis=1)
+            for k, r in enumerate(g):
+                s = rows[r]
+                e = ends[k].tolist()
+                out[fast[r]] = ([s[a:z] for a, z in zip([0] + e[:-1], e)], has[k].tolist())
+    for i, s in enumerate(seqs):
+        if out[i] is None:
+            out[i] = _split_by_aln(s, qlens, num_chains)
+    return out
+
+
 def unserialize_msa(
     a3m_lines: List[str], query_sequence: Union[List[str], str]
 ) -> Tuple[
@@ -505,51 +577,16 @@ def unserialize_msa(
     unpaired_chunks = [[] for _ in range(num_chains)]
     already_in = set()
 
-    qlens_local = query_seq_len
-    def _split_by_aln(s):
-        segments = [""] * num_chains
-        has_aa = [False] * num_chains
-        seg_idx = 0
-        aln_count = 0
-        start = 0
-        curr_has_aa = False
 
-        dash = '-'
-        A, Z = 'A', 'Z'
-        a, z = 'a', 'z'
-        n = len(s)
-        i = 0
-        while i < n and seg_idx < num_chains:
-            c = s[i]
-            # non-lowercase are aligned columns
-            if not (a <= c <= z):
-                if c != dash and (A <= c <= Z):
-                    curr_has_aa = True
-                aln_count += 1
-                if aln_count == qlens_local[seg_idx]:
-                    # close current segment
-                    segments[seg_idx] = s[start:i+1]
-                    has_aa[seg_idx] = curr_has_aa
-                    seg_idx += 1
-                    aln_count = 0
-                    start = i + 1
-                    curr_has_aa = False
-            i += 1
-        return segments, has_aa
+    rows = []
+    for i in range(1, len(a3m_lines) - 1, 2):
+        key = (a3m_lines[i], a3m_lines[i + 1])
+        if key not in already_in:
+            already_in.add(key)
+            rows.append(key)
+    split = _split_rows_by_aln([seq for _, seq in rows], query_seq_len, num_chains)
 
-    i = 1
-    end = len(a3m_lines)
-    while i + 1 < end:
-        header = a3m_lines[i]
-        seq = a3m_lines[i + 1]
-        i += 2
-
-        key = (header, seq)
-        if key in already_in:
-            continue
-        already_in.add(key)
-
-        segments, has_aa = _split_by_aln(seq)
+    for (header, seq), (segments, has_aa) in zip(rows, split):
 
         # Paired if multi-chain (not single protein), not homo-oligomer, >=2 segments have AA
         if (not is_single_protein) and (not is_homooligomer) and (sum(has_aa) > 1):
