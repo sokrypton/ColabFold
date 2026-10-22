@@ -267,7 +267,7 @@ def test_template_indices_compose_onto_the_seqres():
 
 def test_attention_on_the_real_kernel_matches_fp32():
     jax = pytest.importorskip("jax")
-    pytest.importorskip("alphafold.model.tri_flash")
+    pytest.importorskip("colabfold_kernels.tri_flash")
     if jax.devices()[0].platform == "cpu":
         pytest.skip("needs a GPU")
     import jax.numpy as jnp

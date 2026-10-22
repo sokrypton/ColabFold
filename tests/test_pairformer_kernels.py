@@ -19,9 +19,10 @@ LINEAGES = ["alphafold3", "openfold3", "openbind0", "boltz2", "protenix2", "rose
 
 
 def counted(calls, name, f):
-    """f, noting each call and whether it added the residual: add_input, or output_projection's fourth argument."""
+    """f, noting each call and whether it added the residual: add_input, or output_projection's fourth argument (None
+    when it passes only a keep after it)."""
     def wrapped(*args, **kwargs):
-        calls.append((name, kwargs.get("add_input", len(args) > 3)))
+        calls.append((name, kwargs.get("add_input", len(args) > 3 and args[3] is not None)))
         return f(*args, **kwargs)
     return wrapped
 
