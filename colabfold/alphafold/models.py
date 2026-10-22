@@ -108,8 +108,7 @@ def _compute_capability():
 
 
 def skips_msa_padding(use_fast_kernels: bool, kernel_backend: str = "auto") -> bool:
-    """The fast kernels skip an MSA's padded rows (Pallas, and legacy with its trim handlers), so every input can run
-    at the model's full depth."""
+    """The fast kernels skip an MSA's padded rows (Pallas and legacy), so every input can run at the model's full depth."""
     cc = _compute_capability()
     if not use_fast_kernels or cc is None:
         return False
@@ -117,8 +116,8 @@ def skips_msa_padding(use_fast_kernels: bool, kernel_backend: str = "auto") -> b
         kernel_backend = "cuda_legacy" if cc < 80 else "pallas"
     if kernel_backend == "cuda_legacy":
         try:
-            from colabfold_kernels.volta import packed_trim_available
-            return packed_trim_available(cc)
+            from colabfold_kernels.volta import packed_available
+            return packed_available(cc, 32)
         except (ImportError, OSError):
             return False
     return kernel_backend == "pallas"

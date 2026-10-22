@@ -181,6 +181,6 @@ def install(model_runner, cache_dir, jit_kwargs=None, compile_only=False):
     except ImportError:  # no Mosaic GPU (ROCm): nothing of it to load
         pass
     from colabfold_kernels import fused_ops
-    getattr(fused_ops, "register_ffi_targets", lambda gc: None)(model_runner.config.model.global_config)
+    fused_ops.register_ffi_targets(model_runner.config.model.global_config)
     env = environment(model_runner.config, jit_kwargs)
     model_runner.apply = CachedApply(model_runner.apply, cache_dir, env, compile_only)
