@@ -76,6 +76,16 @@ def fetch_file(urls, dest: Path, desc: str, attempts: int = 3) -> None:
     raise RuntimeError(f"could not download {dest.name}\n  " + "\n  ".join(errors))
 
 
+def fetch_tar(url, params_dir: Path, desc: str) -> None:
+    """The tar at url unpacked into params_dir: downloaded first, so a stalled connection times out and resumes instead of
+    hanging the extraction forever."""
+    archive = params_dir.joinpath(url.split("/")[-1])
+    fetch_file([url], archive, desc)
+    with tarfile.open(archive) as file:
+        file.extractall(path=params_dir)
+    archive.unlink()
+
+
 def download_alphafold_params(model_type: str, data_dir: Path = default_data_dir):
     params_dir = data_dir.joinpath("params")
     if model_type == "alphafold2_multimer_v3":
@@ -113,17 +123,7 @@ def download_alphafold_params(model_type: str, data_dir: Path = default_data_dir
 
     params_dir.mkdir(parents=True, exist_ok=True)
     if isinstance(url, str):
-        response = requests.get(url, stream=True)
-        file_size = int(response.headers.get("Content-Length", 0))
-        with tqdm.tqdm.wrapattr(
-            response.raw,
-            "read",
-            total=file_size,
-            desc=f"Downloading {model_type} weights to {data_dir}",
-        ) as response_raw:
-            # Open in stream mode ("r|"), as our requests response doesn't support seeking)
-            file = tarfile.open(fileobj=response_raw, mode="r|")
-            file.extractall(path=params_dir)
+        fetch_tar(url, params_dir, f"Downloading {model_type} weights to {data_dir}")
 
     elif isinstance(url, list):
         # download files in parallel to increase download speed
