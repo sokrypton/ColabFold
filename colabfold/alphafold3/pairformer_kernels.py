@@ -49,6 +49,8 @@ def install(enable: bool = True, fp8: bool = False) -> bool:
         epilogue = fused_ops.trimul_epilogue_ln(config, dtype)
         if project is None or epilogue is None:
             return None
+        # the contraction over the bucket's live tokens only; the projection then writes nothing past them
+        live_con = fused_ops.live_contraction(config, dtype)
 
         def contract(x, ln_scale, ln_offset, wp, bp, wg, bg, mask, *, equation):
             import jax.numpy as jnp
@@ -60,6 +62,16 @@ def install(enable: bool = True, fp8: bool = False) -> bool:
                 incoming = equation == INCOMING
                 a, b = proj(x, ln_scale, ln_offset, wp, bp, wg, bg, mask, transpose=incoming)
                 return gemm(*((b, a) if incoming else (a, b))).astype(x.dtype)
+            if live_con is not None:
+                live_contract, align = live_con
+                last = lambda alive: jnp.max(jnp.where(alive, jnp.arange(alive.shape[0]) + 1, 0))
+                live = jnp.maximum(last(jnp.any(mask > 0, axis=1)), last(jnp.any(mask > 0, axis=0)))
+                inside = jnp.arange(x.shape[0]) < -(-live // align) * align
+                keep = jnp.where(inside[:, None] & inside[None, :], mask, -1).astype(mask.dtype)
+                a, b = project(x.reshape(-1, channels), ln_scale, ln_offset, wp, bp, wg, bg, keep.reshape(-1))
+                a, b = a.reshape(hidden, *x.shape[:2]), b.reshape(hidden, *x.shape[:2])
+                # incoming: b's [c, k, i] is the left operand
+                return live_contract(b, a, live, incoming=True) if equation == INCOMING else live_contract(a, b, live)
             a, b = project(x.reshape(-1, channels), ln_scale, ln_offset, wp, bp, wg, bg, mask.reshape(-1))
             return jnp.einsum(equation, a.reshape(hidden, *x.shape[:2]), b.reshape(hidden, *x.shape[:2]))
 
