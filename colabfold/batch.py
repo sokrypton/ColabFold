@@ -1722,8 +1722,7 @@ def build_parser(positional: bool = True) -> ArgumentParser:
         "--buckets",
         help="Lengths queries pad to, so queries of mixed length compile once per bucket instead of once per "
         "length: tokens for the alphafold3 models, residues for alphafold2 with --use-fast-kernels. Comma "
-        "separated, increasing; 'none': each query at its own length. Default: the models' own buckets "
-        "(alphafold2 on sm_70/75: none).",
+        "separated, increasing; 'none': each query at its own length. Default: the models' own buckets.",
         default=None,
     )
     adv_group.add_argument(

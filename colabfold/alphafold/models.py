@@ -138,8 +138,12 @@ def _compute_capability():
 
 def skips_msa_padding(use_fast_kernels: bool, kernel_backend: str = "auto") -> bool:
     """The fast kernels skip an MSA's padded rows (Pallas and legacy), so every input can run at the model's full depth."""
+    if not use_fast_kernels:
+        return False
+    if _on_rocm():  # no compute capability there; the Pallas kernels skip padded rows as on NVIDIA
+        return kernel_backend in ("auto", "pallas")
     cc = _compute_capability()
-    if not use_fast_kernels or cc is None:
+    if cc is None:
         return False
     if kernel_backend == "auto":
         kernel_backend = "cuda_legacy" if cc < 80 else "pallas"

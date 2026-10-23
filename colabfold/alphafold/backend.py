@@ -98,7 +98,7 @@ class AF2Backend:
 
         # kernels that skip padded MSA rows: every input at full depth, so the compiled shape depends on length alone;
         # single_sequence keeps its one row, the same for every input
-        from colabfold.alphafold.models import _compute_capability, skips_msa_padding
+        from colabfold.alphafold.models import skips_msa_padding
 
         self._full_depth = skips_msa_padding(self._opt(opts, "use_fast_kernels"), self._opt(opts, "kernel_backend"))
         if msa_mode == "single_sequence":
@@ -113,10 +113,7 @@ class AF2Backend:
         self.max_seq = max_seq
         self.max_extra_seq = max_extra_seq
         buckets = self._opt(opts, "buckets")
-        # legacy cards (sm_70/75) skip only attention's padding, so a bucket costs about its padding: native lengths
-        backend = self._opt(opts, "kernel_backend")
-        legacy = backend == "cuda_legacy" or (backend == "auto" and (_compute_capability() or 80) < 80)
-        if buckets is None and not legacy:
+        if buckets is None:
             buckets = BUCKETS
         if self._full_depth and buckets:  # [] (--buckets none): each query at its own length
             self._buckets = sorted(buckets)

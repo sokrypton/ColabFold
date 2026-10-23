@@ -34,11 +34,6 @@ def build_compile_parser():
     return parser
 
 
-def _legacy(kernel_backend):
-    from colabfold.alphafold.models import _compute_capability
-    return kernel_backend == "cuda_legacy" or (kernel_backend == "auto" and (_compute_capability() or 80) < 80)
-
-
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     parser = build_compile_parser()
@@ -64,8 +59,6 @@ def main(argv=None):
         print(f"Removed {removed} compiled models from {cache}")
         return
     buckets = parse_buckets(args.buckets)
-    if buckets is None and _legacy(args.kernel_backend):
-        parser.error("sm_70/75 fold each query at its own length; pass --buckets to compile those")
     lengths = sorted((b for b in buckets or BUCKETS if b <= args.max_length), reverse=True)
     if not lengths:
         parser.error(f"no bucket up to --max-length {args.max_length}")
