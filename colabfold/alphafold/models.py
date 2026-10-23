@@ -254,7 +254,7 @@ def load_models_and_params(
             # lossy, opt-in: colabfold-kernels applies it only where the GPU has 8-bit MMAs
             model_config.model.global_config.fp8 = use_fast_kernels and use_inexact_kernels
             model_config.model.global_config.compute_capability = cc
-            # a padded length's triangle attention trimmed and its contractions on the live block
+            # a bucketed length's triangle attention trims its padding
             model_config.model.global_config.length_buckets = use_fast_kernels and length_buckets
             # Volta/Turing tensor cores have no bfloat16
             if use_fast_kernels and backend == "cuda_legacy":
@@ -294,6 +294,8 @@ def load_models_and_params(
                     model_config.model.num_recycle = num_recycles
                 model_config.model.embeddings_and_evoformer.use_cluster_profile = use_cluster_profile
                 model_config.model.num_ensemble_eval = num_ensemble
+                # the MSA sampled in its own jit: the model compiles once per length, whatever the MSA's depth
+                model_config.model.split_msa_sampling = use_fast_kernels
             else:
                 if num_recycles is not None:
                     model_config.data.common.num_recycle = num_recycles

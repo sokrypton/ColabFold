@@ -45,11 +45,9 @@ def main(argv=None):
 
     # only the fast kernels run at bucketed lengths: without them nothing here would be reused
     args.use_fast_kernels = True
-    model_type = "alphafold2_ptm" if args.model_type == "auto" else args.model_type
-    if is_af3_model(model_type):
+    model_types = ["alphafold2_ptm", "alphafold2_multimer_v3"] if args.model_type == "auto" else [args.model_type]
+    if any(is_af3_model(m) for m in model_types):
         parser.error("compiles the alphafold2 models")
-    if "multimer" in model_type:
-        parser.error("compiles the monomer models: a multimer compiles at its MSA's depth as well as its length")
     cache = compile_cache_dir(args)
     if cache is None:
         parser.error("needs a --compile-cache to compile into")
@@ -63,24 +61,28 @@ def main(argv=None):
     if not lengths:
         parser.error(f"no bucket up to --max-length {args.max_length}")
 
-    download_alphafold_params(model_type, Path(args.data or default_data_dir))  # once, not by every worker
     workers = min(args.workers or max(1, min(4, (os.cpu_count() or 4) // 4)), len(lengths))
     env = {**os.environ, "XLA_PYTHON_CLIENT_PREALLOCATE": "false"}  # only compiling: they share the GPU
     flags = [a for a in argv if a != "--templates"] + ["--use-fast-kernels"]  # template folds compile on first use
-    with tempfile.TemporaryDirectory(prefix="colabfold_compile_") as tmp:
-        procs = []
-        for w in range(workers):
-            inputs = Path(tmp, f"worker_{w}")
-            inputs.mkdir()
-            for n in lengths[w::workers]:  # longest first, dealt round-robin: the workers finish together
-                seq = ("ACDEFGHIKLMNPQRSTVWY" * n)[:n]
-                (inputs / f"bucket_{n}.a3m").write_text(f"#{n}\t1\n>101\n{seq}\n")
-            procs.append(subprocess.Popen(
-                [sys.executable, "-m", "colabfold.compile", *flags, "--model-type", model_type,
-                 "--compile-cache", str(cache), "--worker", str(inputs), str(inputs) + "_out"], env=env))
-        if any(p.wait() for p in procs):
-            raise RuntimeError(f"compiling {model_type} failed")
-    print(f"Compiled {model_type} for {len(lengths)} lengths up to {lengths[0]} into {cache}")
+    for model_type in model_types:
+        download_alphafold_params(model_type, Path(args.data or default_data_dir))  # once, not by every worker
+        # a multimer as a homodimer: its model compiles once per length, its MSA sampler at the shallowest depth here
+        # and at deeper ones on first use
+        copies = 2 if "multimer" in model_type else 1
+        with tempfile.TemporaryDirectory(prefix="colabfold_compile_") as tmp:
+            procs = []
+            for w in range(workers):
+                inputs = Path(tmp, f"worker_{w}")
+                inputs.mkdir()
+                for n in lengths[w::workers]:  # longest first, dealt round-robin: the workers finish together
+                    seq = ("ACDEFGHIKLMNPQRSTVWY" * n)[:n // copies]
+                    (inputs / f"bucket_{n}.a3m").write_text(f"#{len(seq)}\t{copies}\n>101\n{seq}\n")
+                procs.append(subprocess.Popen(
+                    [sys.executable, "-m", "colabfold.compile", *flags, "--model-type", model_type,
+                     "--compile-cache", str(cache), "--worker", str(inputs), str(inputs) + "_out"], env=env))
+            if any(p.wait() for p in procs):
+                raise RuntimeError(f"compiling {model_type} failed")
+        print(f"Compiled {model_type} for {len(lengths)} lengths up to {lengths[0]} into {cache}")
 
 
 if __name__ == "__main__":

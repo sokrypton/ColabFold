@@ -184,3 +184,8 @@ def install(model_runner, cache_dir, jit_kwargs=None, compile_only=False):
     fused_ops.register_ffi_targets(model_runner.config.model.global_config)
     env = environment(model_runner.config, jit_kwargs)
     model_runner.apply = CachedApply(model_runner.apply, cache_dir, env, compile_only)
+    if model_runner.multimer_mode and model_runner.config.model.get("split_msa_sampling", False):
+        # the multimer's MSA sampler, compiled per depth bucket: kept beside the model, run even when only compiling
+        from alphafold.model import msa_sampling
+        sampler = msa_sampling.make_sampler(model_runner.config.model.embeddings_and_evoformer)
+        model_runner._sampler = CachedApply(sampler, cache_dir, env + "-msa-sampler")
