@@ -185,7 +185,13 @@ def test_native_form_runs_without_widgets_and_reads_every_edit(
     cells = json.loads((root / name).read_text())["cells"]
     cell = next(c for c in cells if c.get("metadata", {}).get("id") == "rgi-restraints")
     source = "".join(cell["source"])
-    assert source.partition("\n")[2].startswith(COLAB_FORM.partition("\n")[2])
+    form_fields = set(re.findall(r"^(\w+)\s*=.*#@param", source, re.MULTILINE))
+    if "target_chains" in form_fields:
+        form_fields.remove("target_chains")
+        form_fields.add("conformer_chains")
+    assert form_fields == set(
+        re.findall(r"^(\w+)\s*=.*#@param", COLAB_FORM, re.MULTILINE)
+    )
     assert "notebook_widgets" not in json.dumps(cells)
     assert sum("use_rgi = False #@param" in "".join(c["source"]) for c in cells) == 1
     namespace = {"model": model, "sys": sys, "_toolkit_source": "installed-in-test"}

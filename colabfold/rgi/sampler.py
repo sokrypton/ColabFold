@@ -85,19 +85,56 @@ def _instrument(original):
 
 def make_guided_sampler(original, minimize):
     namespace = dict(original.__globals__, _rgi_minimize=minimize)
-    exec(_instrument(original), namespace)  # noqa: S102 - SHA256-checked upstream source.
+    exec(
+        _instrument(original), namespace
+    )  # noqa: S102 - SHA256-checked upstream source.
     return namespace[original.__name__]
 
 
+def restraint_layout(example, model):
+    """Match the restraint atom mask to the predictor's sampling coordinates."""
+    import numpy as np
+
+    bioemu = model == "bioemu2"
+    if bioemu and any(key.startswith("bioemu2steer/preset_") for key in example):
+        raise ValueError("BioEmu2 RGI requires BIOEMU2_SAMPLER=edm.")
+    key = "bioemu2/af3_index" if bioemu else "structbook/residue_atom_gather"
+    gather = example.get(key)
+    if gather is None:
+        if bioemu:
+            raise ValueError(
+                "BioEmu2 RGI needs its atom map from alphafold3-colabfold 3.1.18 or later."
+            )
+        return example, None
+    gather = np.asarray(gather)
+    mask = np.asarray(example["ref_mask"], bool)
+    if gather.shape != mask.shape or not np.issubdtype(gather.dtype, np.integer):
+        raise ValueError(
+            f"{model} atom map must be an integer array matching ref_mask."
+        )
+    valid = gather[gather >= 0]
+    if len(np.unique(valid)) != len(valid):
+        raise ValueError(f"{model} atom map contains duplicate atoms.")
+    if bioemu:
+        atom_mask = np.asarray(example["bioemu2/atom_mask"], bool)
+        if np.any(valid >= len(atom_mask)) or not np.all(atom_mask[valid]):
+            raise ValueError("BioEmu2 atom map points outside its predicted atoms.")
+        # BioEmu2 omits terminal OXT/OP3 and leaving atoms retained in ref_mask.
+        example = dict(example, ref_mask=mask & (gather >= 0))
+    elif np.any(mask & (gather < 0)):
+        raise ValueError("OpenDDE structural atom map does not cover the RGI atoms.")
+    return example, gather
+
+
 def coordinate_minimizer(minimize, gather=None):
-    """Bridge dense AF3 or OpenDDE structural-token coordinates to the engine."""
+    """Bridge AF3, OpenDDE, or BioEmu2 sampling coordinates to the engine."""
     import jax.numpy as jnp
 
     def apply(coords, sigma, step):
         flat = coords.reshape(-1, 3)
         if gather is None:
             return minimize(flat, sigma, step).reshape(coords.shape)
-        # OpenDDE diffuses structural subtokens; RGI retains per-residue numbering.
+        # RGI retains residue numbering across reordered sampling atom layouts.
         # Invalid padded entries scatter out of bounds with mode='drop'.
         indices = gather.reshape(-1)
         valid = indices >= 0
