@@ -243,15 +243,15 @@ typing-extensions = {version = ">=4.2", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "alphafold-colabfold"
-version = "2.3.26"
+version = "2.3.27"
 description = "An implementation of the inference pipeline of AlphaFold v2.3.1. This is a completely new model that was entered as AlphaFold2 in CASP14 and published in Nature. This package contains patches for colabfold."
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
-    {file = "alphafold_colabfold-2.3.26-py3-none-any.whl", hash = "sha256:5abae5bd6ad2030c2dbc14ed716c894b808acbbc045ac2c67afaaa66c31bb5b1"},
-    {file = "alphafold_colabfold-2.3.26.tar.gz", hash = "sha256:944b883acb83f3a3d0544062c70f3d457c07dc6e1171f7d8fe5ad7411d05b0e1"},
+    {file = "alphafold_colabfold-2.3.27-py3-none-any.whl", hash = "sha256:98ca85b47ed12ebc9d7f54c39c99d3f45ff514ac54b9394e7ebef4e1e125b50d"},
+    {file = "alphafold_colabfold-2.3.27.tar.gz", hash = "sha256:29e55d39ad40b2542d2535de0e0d89b27daadc6d405763972ff110e16158aa32"},
 ]
 
 [package.dependencies]
@@ -269,22 +269,22 @@ scipy = "*"
 
 [[package]]
 name = "alphafold3-colabfold"
-version = "3.1.17"
+version = "3.1.18"
 description = ""
 optional = true
 python-versions = ">=3.12"
 groups = ["main"]
 markers = "python_version >= \"3.12\" and (extra == \"alphafold3\" or extra == \"alphafold3-minus-jax\")"
 files = [
-    {file = "alphafold3_colabfold-3.1.17-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:1ecf6bf307e864284a4bc24972958bb18c65a96d923bb5e61a961111874f2315"},
-    {file = "alphafold3_colabfold-3.1.17-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:e43eb05ff09be1e14a30054e98cf7c37beb170bac04d819c398968ef8987b418"},
-    {file = "alphafold3_colabfold-3.1.17-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e26b30dcfc243fffc2f49e8a45eb95f8e9aa1fca2c1844fc065072a683c9d094"},
-    {file = "alphafold3_colabfold-3.1.17-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:2553fa1df781436f9abafa6d327d50e3b34549cd71783c1c3372f11d983888af"},
-    {file = "alphafold3_colabfold-3.1.17-cp313-cp313-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:08e48edef32fb925d052c1a365129f78ef66cb9a6a2d36289bdc2d039fb183c7"},
-    {file = "alphafold3_colabfold-3.1.17-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:2c3689c7dd2b6cfdb18d34a25e528e32d2b75e16a41f1e63a853599a3d38bc6a"},
-    {file = "alphafold3_colabfold-3.1.17-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:0e305a34d6d66f6b566940a50a789ef9d3fb94c494da891df9f8fa48b1ab023b"},
-    {file = "alphafold3_colabfold-3.1.17-cp314-cp314-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:857bbdb1c788e0112e0b08bacc8e8476786747f85f5d157b4d1f98406c9c1552"},
-    {file = "alphafold3_colabfold-3.1.17-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f06602168b4d30ed96ac11952276c50dad164984d1219e8d2f93cf52b2489dce"},
+    {file = "alphafold3_colabfold-3.1.18-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:de92be778816892aadea4bc0be5bbe5fbd45efe760358a50309cf43a4053eb12"},
+    {file = "alphafold3_colabfold-3.1.18-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:affacb54a68babf3db982121a02b6c67a887a304138391e11179d409007e4694"},
+    {file = "alphafold3_colabfold-3.1.18-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5795a9caccb888229fce9e52e0aa6ff68710f18991d08444228f4dc29be8d7b5"},
+    {file = "alphafold3_colabfold-3.1.18-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:4df072ad57b52145e529c021b5f6e14f807af8751995619375c463c5f8a44897"},
+    {file = "alphafold3_colabfold-3.1.18-cp313-cp313-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:71967de2b492dfd6e787b3a1046f461395da8dce8c5140e497b6ea3cca43966b"},
+    {file = "alphafold3_colabfold-3.1.18-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a73d0d7a13b1fde07cf9961ea60b884ff0f843ff651bd1652940aa3b11647345"},
+    {file = "alphafold3_colabfold-3.1.18-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:508df017e5dcc7668afe2d8b48fac67e1e804308f26b049018a917fdc67684c2"},
+    {file = "alphafold3_colabfold-3.1.18-cp314-cp314-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:506170256d6228d98915f3dfd6372f79d736e6b03a2907b848df707ac352ea5f"},
+    {file = "alphafold3_colabfold-3.1.18-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:1d184cffe33f9583f3404d10d8213e690aa143cbe0531c24f5f2bf41610f7a48"},
 ]
 
 [package.dependencies]
@@ -749,31 +749,31 @@ files = [
 
 [[package]]
 name = "colabfold-kernels"
-version = "0.8.0"
+version = "0.9.0"
 description = "Fast fused kernels for ColabFold"
 optional = true
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\" or extra == \"alphafold3\" or extra == \"alphafold3-minus-jax\""
 files = [
-    {file = "colabfold_kernels-0.8.0-py3-none-any.whl", hash = "sha256:1c025d9b67253395d91caea90f04d38886f6b86e565a07b953022477a2056d4c"},
-    {file = "colabfold_kernels-0.8.0.tar.gz", hash = "sha256:3fb6eebbb31c03258458b111129b738cbc677561ef249b81c185d5a57c646c05"},
+    {file = "colabfold_kernels-0.9.0-py3-none-any.whl", hash = "sha256:6fe36d48fc02ca7314dfea43a737cbf6c45d4f95d5d5c867cbdf639871bafe03"},
+    {file = "colabfold_kernels-0.9.0.tar.gz", hash = "sha256:7714461eac21757c900958507723db18c0cb4993588ff3811a39e68daa4d8933"},
 ]
 
 [package.dependencies]
 colabfold-cuda-kernels = {version = ">=0.2.0,<0.3", markers = "sys_platform == \"linux\""}
-colabfold-legacy-kernels = {version = ">=0.5.0,<0.6", markers = "sys_platform == \"linux\" and platform_machine == \"x86_64\""}
+colabfold-legacy-kernels = {version = ">=0.6.0,<0.7", markers = "sys_platform == \"linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "colabfold-legacy-kernels"
-version = "0.5.1"
+version = "0.6.0"
 description = "Prebuilt pre-Ampere (sm_70 / sm_75) CUDA kernels for ColabFold."
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
 markers = "sys_platform == \"linux\" and platform_machine == \"x86_64\" and (extra == \"alphafold\" or extra == \"alphafold-minus-jax\" or extra == \"alphafold3\" or extra == \"alphafold3-minus-jax\")"
 files = [
-    {file = "colabfold_legacy_kernels-0.5.1-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:968fe86a35feb1d539cc405d3e1e52731ec0a9b04a54e41fb23bfd9170ec976c"},
+    {file = "colabfold_legacy_kernels-0.6.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:71d53745a3b6985ca45698358e2c5cae53ea1378cc7c9fbb90526ab9a8f76608"},
 ]
 
 [[package]]
@@ -1504,12 +1504,12 @@ files = [
 google-auth = ">=2.14.1,<3.0.0"
 googleapis-common-protos = ">=1.63.2,<2.0.0"
 grpcio = [
-    {version = ">=1.49.1,<2.0.0", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
     {version = ">=1.75.1,<2.0.0", optional = true, markers = "python_version >= \"3.14\" and extra == \"grpc\""},
+    {version = ">=1.49.1,<2.0.0", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
 ]
 grpcio-status = [
-    {version = ">=1.49.1,<2.0.0", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
     {version = ">=1.75.1,<2.0.0", optional = true, markers = "python_version >= \"3.14\" and extra == \"grpc\""},
+    {version = ">=1.49.1,<2.0.0", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
 ]
 proto-plus = [
     {version = ">=1.25.0,<2.0.0", markers = "python_version >= \"3.13\""},
@@ -1537,8 +1537,8 @@ files = [
 
 [package.dependencies]
 cryptography = [
-    {version = ">=38.0.3", markers = "python_version < \"3.14\""},
     {version = ">=41.0.5", markers = "python_version >= \"3.14\""},
+    {version = ">=38.0.3", markers = "python_version < \"3.14\""},
 ]
 pyasn1-modules = ">=0.2.1"
 
@@ -1639,8 +1639,8 @@ google-api-core = {version = ">=2.28.0,<3.0.0", extras = ["grpc"]}
 google-auth = ">=2.14.1,<2.24.0 || >2.24.0,<2.25.0 || >2.25.0,<3.0.0"
 grpc-google-iam-v1 = ">=0.14.2,<1.0.0"
 grpcio = [
-    {version = ">=1.59.0,<2.0.0"},
     {version = ">=1.75.1,<2.0.0", markers = "python_version >= \"3.14\""},
+    {version = ">=1.59.0,<2.0.0", markers = "python_version < \"3.14\""},
 ]
 proto-plus = ">=1.26.1,<2.0.0"
 protobuf = ">=6.33.5,<8.0.0"
@@ -5247,4 +5247,4 @@ openmm = ["openmm", "pdbfixer"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "5438df2bccf5960cdc431b7421f568a0fff04755f8b2b21a0733006bf1cac6e6"
+content-hash = "6d442406641842955c5b4562659c5199049ec753a070f03c464be742f3694132"
