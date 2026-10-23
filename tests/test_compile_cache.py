@@ -4,8 +4,8 @@ import jax
 import jax.numpy as jnp
 import pytest
 
-from colabfold.alphafold import compile_cache
-from colabfold.alphafold.compile_cache import CachedApply, clean, install_hash
+from colabfold import compile_cache
+from colabfold.compile_cache import CachedApply, clean, install_hash
 
 needs_permissions = pytest.mark.skipif(not hasattr(os, "geteuid") or os.geteuid() == 0,
                                        reason="root ignores file permissions")
@@ -79,3 +79,11 @@ def test_clean_keeps_this_installation_and_clean_all_nothing(tmp_path):
     (old / "af2-0.exec").write_bytes(b"")
     assert clean(tmp_path, keep=install_hash()) == 1 and not old.exists() and len(entries(tmp_path)) == 1
     assert clean(tmp_path) == 1 and not entries(tmp_path) and not any(tmp_path.iterdir())
+
+
+def test_model_families_keep_apart_and_clean_together(tmp_path):
+    x = jnp.ones(3)
+    CachedApply(jax.jit(apply), tmp_path, "env")(x)
+    CachedApply(jax.jit(apply), tmp_path, "env", prefix="af3")(x)
+    assert len(entries(tmp_path)) == 1 and len(list(tmp_path.glob("*/af3-*.exec"))) == 1
+    assert clean(tmp_path) == 2 and not any(tmp_path.iterdir())

@@ -1,4 +1,4 @@
-"""AF2's compiled forward pass on disk, so a shape compiles once per machine.
+"""The compiled forward pass on disk (AF2 and the AF3-family models), so a shape compiles once per machine.
 
 JAX's persistent cache keys on the lowered module, so even its hits trace and lower the model (~2-3 s a shape). This
 one loads the serialised executable (~0.5 s). Entries live in a directory per installation (GPU, driver, jax/jaxlib,
@@ -30,9 +30,13 @@ def _warn_once(key, message):
         logger.warning(message)
 
 
-def _drop_crashed_writes(directory):
+# an entry's file name prefix per model family
+PREFIXES = ("af2", "af3")
+
+
+def _drop_crashed_writes(directory, prefix):
     """Our .tmp files a day old: writes that crashed before their rename."""
-    for path in directory.glob("af2-*.tmp"):
+    for path in directory.glob(f"{prefix}-*.tmp"):
         try:
             if time.time() - path.stat().st_mtime > 24 * 3600 and _owned(path):
                 path.unlink()
@@ -64,7 +68,8 @@ def install_hash() -> str:
     import jax
     import jaxlib
     h = hashlib.sha256()
-    for package in ("alphafold", "colabfold", "colabfold_kernels", "colabfold_legacy_kernels", "colabfold_cuda_kernels"):
+    for package in ("alphafold", "alphafold3", "tokamax", "colabfold", "colabfold_kernels", "colabfold_legacy_kernels",
+                    "colabfold_cuda_kernels"):
         spec = importlib.util.find_spec(package)
         if spec is None or spec.origin is None:
             continue
@@ -100,7 +105,7 @@ def clean(cache_dir, keep=None) -> int:
     for directory in Path(cache_dir).glob("*/"):
         if directory.name == keep:
             continue
-        for path in directory.glob("af2-*"):
+        for path in (p for prefix in PREFIXES for p in directory.glob(f"{prefix}-*")):
             try:
                 if _owned(path):
                     path.unlink()
@@ -117,10 +122,11 @@ def clean(cache_dir, keep=None) -> int:
 class CachedApply:
     """RunModel.apply's replacement: the executable for these input shapes from memory, else disk, else compiled
     (and stored). compile_only raises Precompiled once the executable exists instead of running it. A cache it cannot
-    read or write costs only the compile."""
+    read or write costs only the compile. prefix names the entries of a model family (PREFIXES)."""
 
-    def __init__(self, jitted, cache_dir, env, compile_only=False):
+    def __init__(self, jitted, cache_dir, env, compile_only=False, prefix="af2"):
         self.jitted, self.root, self.env, self.compile_only = jitted, Path(cache_dir), env, compile_only
+        self.prefix = prefix
         self.dir = self.root / install_hash()
         self.loaded = {}
 
@@ -144,10 +150,11 @@ class CachedApply:
         from jax.experimental import serialize_executable
         try:
             self.dir.mkdir(parents=True, exist_ok=True)
-            with tempfile.NamedTemporaryFile(dir=self.dir, prefix="af2-", suffix=".tmp", delete=False) as handle:
+            with tempfile.NamedTemporaryFile(dir=self.dir, prefix=f"{self.prefix}-", suffix=".tmp",
+                                             delete=False) as handle:
                 pickle.dump(serialize_executable.serialize(compiled), handle)
             os.replace(handle.name, path)  # atomic: concurrent writers of one shape leave one whole entry
-            _drop_crashed_writes(self.dir)
+            _drop_crashed_writes(self.dir, self.prefix)
         except Exception as e:  # read-only or shared cache: runs on, compiling what it lacks
             _warn_once(("store", self.dir), f"Could not store compiled models in {self.dir} "
                                             f"({type(e).__name__}: {e}); they compile each run")
@@ -158,7 +165,7 @@ class CachedApply:
         signature = repr((self.env, str(treedef), [(x.shape, str(x.dtype), getattr(x, "weak_type", False))
                                                    for x in leaves]))
         if signature not in self.loaded:
-            path = self.dir / f"af2-{hashlib.sha256(signature.encode()).hexdigest()[:32]}.exec"
+            path = self.dir / f"{self.prefix}-{hashlib.sha256(signature.encode()).hexdigest()[:32]}.exec"
             compiled = self._load(path)
             if compiled is None:
                 compiled = self.jitted.lower(*jax.tree.map(jax.ShapeDtypeStruct.like, args)).compile()

@@ -15,7 +15,7 @@ NO_FP8_ATTENTION = {"chai1"}
 
 _CONFIG_KEYS = ("num_diffusion_samples", "use_dropout", "buckets", "download_weights",
                 "af3_pairing", "use_fast_kernels", "use_inexact_kernels", "use_esm", "weights_precision",
-                "accept_alphafold3_terms")
+                "accept_alphafold3_terms", "compile_cache", "compile_only")
 
 # Token counts to pad to, so a batch of mixed lengths compiles once per bucket
 # rather than once per length. Copied from run_alphafold.py's --buckets, which
@@ -33,6 +33,15 @@ TOKEN_ALIGN = 8
 
 # alphafold3 pads an input past the largest bucket to its exact token count, so aligned buckets continue up to here
 MAX_TOKENS = 65536
+
+# alphafold3's own switches, read while tracing but not in the compile cache's key; these few only name caches and paths
+_ENV_PREFIXES = ("AF3_", "BIOEMU2_", "IF2_", "AF2_MLM")
+_ENV_HARMLESS = {"AF3_WEIGHTS_DIR", "AF3_ESM_CACHE", "AF3_ESM_DEVICE_CACHE", "AF3_CACHE_MAX_GB", "BIOEMU2_STEERING_CACHE"}
+
+
+def env_switches() -> List[str]:
+    import os
+    return sorted(k for k in os.environ if k.startswith(_ENV_PREFIXES) and k not in _ENV_HARMLESS)
 
 
 def round_up(n, multiple):
@@ -56,6 +65,8 @@ _DEFAULTS = {
     "use_esm": False,
     "weights_precision": "int8",
     "accept_alphafold3_terms": False,
+    "compile_cache": None,
+    "compile_only": False,
 }
 
 
@@ -73,6 +84,8 @@ class AF3Backend:
         self._random_seed = 0
         self._use_templates = False
         self._max_template_hits = 20
+        self._kernels = None  # what the trace-time hooks install, for the compile cache's key
+        self._fp8 = False
 
     def _opt(self, opts: RunOptions, key: str):
         value = opts.opt(key, _DEFAULTS[key])
@@ -97,7 +110,8 @@ class AF3Backend:
                 from colabfold_kernels.diffusion import install as install_megakernel
             except ImportError:
                 install_megakernel = None
-            if install_megakernel is not None and install_megakernel():
+            megakernel = install_megakernel is not None and install_megakernel()
+            if megakernel:
                 logger.info(f"{self.model_type}: diffusion sampling runs in the diffusion megakernel")
         from colabfold.alphafold3.models import default_num_recycles, resolve_model_name
         from colabfold.alphafold3.pairformer_kernels import install as install_pairformer
@@ -108,6 +122,12 @@ class AF3Backend:
             fp8 = False
         if install_pairformer(enable=self._opt(opts, "use_fast_kernels"), fp8=fp8):
             logger.info(f"{self.model_type}: the pairformer runs packed triangle attention and, up to 128 channels, the fused triangle multiplication and transition")
+            # no cache in tokamax-only mode: buckets only pay off where the kernels skip the padding
+            self._kernels, self._fp8 = f"fast fp8={bool(fp8)} megakernel={bool(megakernel)}", bool(fp8)
+        if self._opt(opts, "compile_only") and self._kernels is None:
+            raise ValueError(f"{self.model_type}: the fast kernels did not install, so there is nothing to compile")
+        if self._opt(opts, "compile_only") and env_switches():
+            raise ValueError(f"alphafold3 switches {env_switches()} are set, so the compile cache is off")
         self._warn_about_ignored(opts)
         samples = self._opt(opts, "num_diffusion_samples")
         logger.info(f"{self.model_type}: {opts.num_seeds} seed(s) x {samples} diffusion "
@@ -208,6 +228,15 @@ class AF3Backend:
             return_embeddings=opts.save_single_representations or opts.save_pair_representations,
             return_logits=opts.save_all,
         )
+        cache_dir = self._opt(opts, "compile_cache")
+        if cache_dir is not None and self._kernels is not None and env_switches():
+            logger.warning(f"alphafold3 switches {env_switches()} are set: compile cache off")
+        elif cache_dir is not None and self._kernels is not None:
+            from colabfold_kernels import dispatch, fused_ops
+
+            # a loaded executable calls the FFI kernels untraced: register what tracing would
+            fused_ops.register_ffi_targets(dict(dispatch(), fp8=self._fp8, length_buckets=True))
+            self.model_runner.use_compile_cache(cache_dir, self._kernels, self._opt(opts, "compile_only"))
 
     def predict(self, prefix: str, result_dir: Path, model_input, is_complex: bool,
                 sequences_lengths: List[int], opts: RunOptions,

@@ -315,7 +315,7 @@ def load_models_and_params(
                 jit_kwargs=jit_kwargs
             )
             if compile_cache is not None:
-                from colabfold.alphafold.compile_cache import install
+                from colabfold.compile_cache import install
                 install(model_runner, compile_cache, jit_kwargs, compile_only)
         
         if model_number not in wanted:

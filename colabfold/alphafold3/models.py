@@ -91,6 +91,7 @@ class ModelRunner:
         self._use_dropout = use_dropout
         self._device = device
         self._apply = None
+        self._cache = None
 
     @property
     def model_dir(self) -> Path:
@@ -122,9 +123,28 @@ class ModelRunner:
                 return model.Model(self._config)(batch, use_dropout=self._use_dropout)
 
             apply_fn = jax.jit(forward_fn.apply, device=self._device)
+            if self._cache is not None:
+                from colabfold.compile_cache import CachedApply
+
+                cache_dir, env, compile_only = self._cache
+                apply_fn = CachedApply(apply_fn, cache_dir, env, compile_only, prefix="af3")
             self._preinit_tokamax_context()
             self._apply = functools.partial(apply_fn, self.model_params)
         return self._apply
+
+    def use_compile_cache(self, cache_dir, kernels: str, compile_only: bool = False) -> None:
+        """Load and store the compiled model in cache_dir (compile_cache), before its first call. kernels names what
+        the trace-time hooks put in the graph (fast kernels, FP8, megakernel), which the config does not say."""
+        import hashlib
+        import json
+
+        try:
+            import jax.experimental.mosaic.gpu  # noqa: F401  a loaded executable calls Mosaic GPU's runtime untraced
+        except ImportError:
+            pass
+        env = json.dumps([self._config.as_dict(), self._use_dropout, self._fused_layer_norm, kernels,
+                          str(self._device)], sort_keys=True, default=str)
+        self._cache = (cache_dir, hashlib.sha256(env.encode()).hexdigest(), compile_only)
 
     @staticmethod
     def _preinit_tokamax_context() -> None:

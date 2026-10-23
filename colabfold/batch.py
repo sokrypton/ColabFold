@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 from colabfold.backend import AF3_MODELS, is_af3_model
 from colabfold.citations import write_bibtex
 from colabfold.download import default_data_dir, download_alphafold_params
-from colabfold.alphafold.compile_cache import Precompiled
+from colabfold.compile_cache import Precompiled
 from colabfold.utils import (
     ACCEPT_DEFAULT_TERMS,
     DEFAULT_API_SERVER,
@@ -1728,9 +1728,9 @@ def build_parser(positional: bool = True) -> ArgumentParser:
     adv_group.add_argument(
         "--compile-cache",
         default="auto",
-        help="With --use-fast-kernels, directory AlphaFold2's compiled models are kept in, by input shape, GPU, driver "
-        "and package versions, so a shape compiles once per machine (colabfold_compile fills it, --clean empties what "
-        "upgrades left). 'auto': 'compiled' in "
+        help="With --use-fast-kernels, directory the compiled models (AlphaFold2 and the AF3-family ones) are kept in, by "
+        "input shape, GPU, driver and package versions, so a shape compiles once per machine (colabfold_compile fills "
+        "it, --clean empties what upgrades left). 'auto': 'compiled' in "
         "--data next to the model parameters; 'none': off.",
     )
     adv_group.add_argument(
