@@ -29,34 +29,22 @@ def install(enable: bool = True, fp8: bool = False) -> bool:
     # pairformer masks padding everywhere downstream, so the zeros it leaves in padded rows are never read
     config = dict(dispatch(), fp8=fp8, trim_padding=True)
 
-    # colabfold-kernels before the LayerNorm-fused kernels: the packed attention alone, the stock triangle multiplication
-    fused_ln = hasattr(fused_ops, "ln_projection")
-
     def pair_projections(dtype, channels, num_head, head_dim):
-        if not fused_ln:
-            return None
         project = fused_ops.ln_projection(config, dtype, channels, num_head * head_dim)
         output_projection = fused_ops.output_projection(config, dtype, num_head * head_dim, channels)
         if project is None or output_projection is None:
             return None
-        slots = getattr(fused_ops, "fp8_attention_slots", None)
 
         def ln_projection(x, ln_scale, ln_offset, w, wb, *keep):
-            # the e4m3 slots the attention kernel that runs reads (colabfold-kernels 0.7); the pair is N x N rows
-            if slots is not None:
-                f8 = slots(config, dtype, head_dim, math.isqrt(x.shape[0]))
-            else:
-                f8 = ((1, 2), None) if fused_ops.fp8_attention(config, head_dim) else None
+            # the e4m3 slots the attention kernel that runs reads; the pair is N x N rows
+            f8 = fused_ops.fp8_attention_slots(config, dtype, head_dim, math.isqrt(x.shape[0]))
             f8_slots, f8_scales = f8 or ((), None)
-            p, bias, *kv = project(x, ln_scale, ln_offset, w, wb, *keep, f8_slots=f8_slots,
-                                   **({} if f8_scales is None else {"f8_scales": f8_scales}))
+            p, bias, *kv = project(x, ln_scale, ln_offset, w, wb, *keep, f8_slots=f8_slots, f8_scales=f8_scales)
             return p, bias, kv[0] if kv else None
 
         return ln_projection, output_projection
 
     def trimul_kernels(dtype, channels, hidden):
-        if not fused_ln:
-            return None
         project = fused_ops.ln_gated_dual_proj(config, dtype, channels, hidden)
         epilogue = fused_ops.trimul_epilogue_ln(config, dtype)
         if project is None or epilogue is None:
