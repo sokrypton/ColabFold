@@ -85,9 +85,7 @@ def _instrument(original):
 
 def make_guided_sampler(original, minimize):
     namespace = dict(original.__globals__, _rgi_minimize=minimize)
-    exec(
-        _instrument(original), namespace
-    )  # noqa: S102 - SHA256-checked upstream source.
+    exec(_instrument(original), namespace)  # noqa: S102 - SHA256-checked upstream source.
     return namespace[original.__name__]
 
 
