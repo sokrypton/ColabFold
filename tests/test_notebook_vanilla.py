@@ -17,6 +17,8 @@ import pytest
     ("notebook", "model", "extra_args"),
     [
         ("ColabFold2_preview.ipynb", "openbind0", []),
+        ("ColabFold2_preview.ipynb", "bioemu2", []),
+        ("ColabFold2_preview.ipynb", "protenix1", []),
         ("ColabFold2_preview.ipynb", "af2_ptm", ["--model_dir=af2_weights"]),
         ("ColabFold2_preview.ipynb", "chai1", ["--use_esm_embeddings"]),
         ("ColabFold2_preview.ipynb", "esmfold2", ["--use_esm_embeddings"]),

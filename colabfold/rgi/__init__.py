@@ -16,6 +16,7 @@ SUPPORTED_MODELS = frozenset(
         "esmfold2_fast",
         "esmfold2_lm600m",
         "esmfold2_lm300m",
+        "bioemu2",
     }
 )
 ALPHAFOLD3_COLABFOLD_VERSION = "3.1.11"

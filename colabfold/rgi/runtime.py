@@ -172,6 +172,8 @@ def install(runner):
         from rgi_toolkit.combined import CombinedRestraints
         from rgi_toolkit.notebook import distance_report, restraint_inventory
 
+        from colabfold.rgi.sampler import restraint_layout
+
         config, opted = jobs.get(fold_input.name, (None, {}))
         if config is None:
             return original_predict(fold_input, model_runner, **kwargs)
@@ -183,7 +185,10 @@ def install(runner):
 
         def inference(example, rng_key):
             restraints = CombinedRestraints()
-            adapter = build_adapter(fold_input, example, opted)
+            restraint_example, gather = restraint_layout(
+                example, model_runner.model_name
+            )
+            adapter = build_adapter(fold_input, restraint_example, opted)
             restraints.setup(adapter, config=config)
             if not restraints.is_active():
                 raise ValueError(
@@ -204,19 +209,7 @@ def install(runner):
                 flush=True,
             )
             minimize = restraints.get_minimizer()
-            gather = example.get("structbook/residue_atom_gather")
             if gather is not None:
-                gather = np.asarray(gather)
-                mask = np.asarray(example["ref_mask"], bool)
-                if gather.shape != mask.shape or np.any(mask & (gather < 0)):
-                    raise ValueError(
-                        "OpenDDE structural atom map does not cover the RGI atoms."
-                    )
-                valid = gather[gather >= 0]
-                if len(np.unique(valid)) != len(valid):
-                    raise ValueError(
-                        "OpenDDE structural atom map contains duplicate atoms."
-                    )
                 gather = jnp.asarray(gather)
             apply = model_runner._rgi_apply
             had_model = "_model" in vars(model_runner)
