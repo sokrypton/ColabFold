@@ -958,7 +958,9 @@ def generate_input_feature(
         for sequence_index, sequence in enumerate(query_seqs_unique):
 
             # get unpaired msa
-            if unpaired_msa is None:
+            # a custom a3m may contain only paired sequences, in which case the
+            # unpaired msa is an empty string instead of None
+            if unpaired_msa is None or not unpaired_msa[sequence_index].strip():
                 input_msa = f">{101 + sequence_index}\n{sequence}"
             else:
                 input_msa = unpaired_msa[sequence_index]
@@ -968,7 +970,7 @@ def generate_input_feature(
 
             if "multimer" in model_type:
                 # get paired msa
-                if paired_msa is None:
+                if paired_msa is None or not paired_msa[sequence_index].strip():
                     input_msa = f">{101 + sequence_index}\n{sequence}"
                 else:
                     input_msa = paired_msa[sequence_index]
