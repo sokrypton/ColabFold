@@ -84,6 +84,7 @@ from colabfold.relax import relax_me
 from colabfold.alphafold import extra_ptm, ipsae
 
 from Bio.PDB import MMCIFParser, PDBParser, MMCIF2Dict
+from Bio.PDB.PDBExceptions import PDBConstructionException
 from Bio.PDB.PDBIO import Select
 
 # logging settings
@@ -324,7 +325,11 @@ def mk_hhsearch_db(template_dir: str):
                 cif_string = f.read()
             cif_fh = StringIO(cif_string)
             parser = MMCIFParser(QUIET=True)
-            structure = parser.get_structure("none", cif_fh)
+            try:
+                structure = parser.get_structure("none", cif_fh)
+            except PDBConstructionException as e:
+                logger.warning(f"WARNING: Could not parse {cif_file} ({e}). This file is skipped as a template.")
+                continue
             models = list(structure.get_models())
             if len(models) != 1:
                 logger.warning(f"WARNING: Found {len(models)} models in {cif_file}. The first model will be used as a template.", )
