@@ -61,6 +61,23 @@ class Precompiled(Exception):
     """Raised in place of running the model when only compiling (colabfold_compile)."""
 
 
+def compiler_options(compile_mode: str):
+    """XLA's GEMM tuning for --compile-mode (fast, tuned, full), a fresh dict or None for XLA's defaults."""
+    import jaxlib
+    from packaging.version import Version
+    # These params won across GB10/L40S/A100, however exact tile is not very important anyway
+    if Version(jaxlib.__version__) < Version("0.10.1"):
+        # jaxlib < 0.10 checks for split_k, now deprecated
+        tuned = "block_m: 64 block_n: 64 block_k: 16 split_k: 1 num_stages: 3 num_warps: 4 num_ctas: 1"
+    else:
+        tuned = "block_m: 64 block_n: 64 block_k: 16 num_stages: 3 num_warps: 4 num_ctas: 1"
+    return {
+        "fast":  {"xla_gpu_enable_triton_gemm": False},
+        "tuned": {"xla_gpu_override_gemm_autotuner": tuned},
+        "full":  None,
+    }.get(compile_mode)
+
+
 @functools.lru_cache(maxsize=None)
 def install_hash() -> str:
     """A hash of what every executable of this installation depends on: its entries' directory name."""

@@ -27,19 +27,8 @@ def _on_rocm() -> bool:
 
 
 def _compile_jit_kwargs(compile_mode: str, cc: Optional[int] = None, use_fast_kernels: bool = False) -> dict:
-    import jaxlib
-    from packaging.version import Version
-    # These params won across GB10/L40S/A100, however exact tile is not very important anyway
-    if Version(jaxlib.__version__) < Version("0.10.1"):
-        # jaxlib < 0.10 checks for split_k, now deprecated
-        tuned = "block_m: 64 block_n: 64 block_k: 16 split_k: 1 num_stages: 3 num_warps: 4 num_ctas: 1"
-    else:
-        tuned = "block_m: 64 block_n: 64 block_k: 16 num_stages: 3 num_warps: 4 num_ctas: 1"
-    copts = {
-        "fast":  {"xla_gpu_enable_triton_gemm": False},
-        "tuned": {"xla_gpu_override_gemm_autotuner": tuned},
-        "full":  None,
-    }.get(compile_mode)
+    from colabfold.compile_cache import compiler_options
+    copts = compiler_options(compile_mode)
     # ROCm runs XLA's Triton fusions too; sm_80 and cuBLAS are NVIDIA's
     rocm = _on_rocm()
     if copts is not None and use_fast_kernels and (rocm or cc is not None):

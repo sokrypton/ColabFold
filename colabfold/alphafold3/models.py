@@ -84,8 +84,11 @@ class ModelRunner:
     """The parts of alphafold3-open's run_alphafold.ModelRunner that a fold needs."""
 
     def __init__(self, config, model_dir: Path, use_dropout: bool = False, device=None,
-                 fused_layer_norm: bool = False):
+                 fused_layer_norm: bool = False, compile_mode: str = "tuned"):
+        from colabfold.compile_cache import compiler_options
+
         self._config = config
+        self._compiler_options = compiler_options(compile_mode)
         self._fused_layer_norm = fused_layer_norm
         self._model_dir = Path(model_dir)
         self._use_dropout = use_dropout
@@ -122,7 +125,7 @@ class ModelRunner:
                         return model.Model(self._config)(batch, use_dropout=self._use_dropout)
                 return model.Model(self._config)(batch, use_dropout=self._use_dropout)
 
-            apply_fn = jax.jit(forward_fn.apply, device=self._device)
+            apply_fn = jax.jit(forward_fn.apply, device=self._device, compiler_options=self._compiler_options)
             if self._cache is not None:
                 from colabfold.compile_cache import CachedApply
 
@@ -143,7 +146,7 @@ class ModelRunner:
         except ImportError:
             pass
         env = json.dumps([self._config.as_dict(), self._use_dropout, self._fused_layer_norm, kernels,
-                          str(self._device)], sort_keys=True, default=str)
+                          str(self._device), self._compiler_options], sort_keys=True, default=str)
         self._cache = (cache_dir, hashlib.sha256(env.encode()).hexdigest(), compile_only)
 
     @staticmethod
@@ -312,7 +315,8 @@ def load_model(model_type: str, *, num_recycles: Optional[int], num_diffusion_sa
                use_dropout: bool = False, download: bool = True, num_msa: Optional[int] = None,
                return_embeddings: bool = False, return_logits: bool = False,
                data_dir: Optional[Path] = None, precision: str = "fp32",
-               accept_terms: bool = False, fused_layer_norm: bool = False) -> "ModelRunner":
+               accept_terms: bool = False, fused_layer_norm: bool = False,
+               compile_mode: str = "tuned") -> "ModelRunner":
     mark_absl_flags_parsed()
     model_name = resolve_model_name(model_type)
     weights_dir = ensure_weights(model_name, download=download, data_dir=data_dir,
@@ -322,4 +326,4 @@ def load_model(model_type: str, *, num_recycles: Optional[int], num_diffusion_sa
                          return_logits=return_logits)
     logger.info(f"Running {model_name} from {weights_dir}")
     return ModelRunner(config, weights_dir, use_dropout=use_dropout,
-                       fused_layer_norm=fused_layer_norm)
+                       fused_layer_norm=fused_layer_norm, compile_mode=compile_mode)

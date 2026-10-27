@@ -15,7 +15,7 @@ NO_FP8_ATTENTION = {"chai1"}
 
 _CONFIG_KEYS = ("num_diffusion_samples", "use_dropout", "buckets", "download_weights",
                 "af3_pairing", "use_fast_kernels", "use_inexact_kernels", "use_esm", "weights_precision",
-                "accept_alphafold3_terms", "compile_cache", "compile_only")
+                "accept_alphafold3_terms", "compile_cache", "compile_only", "compile_mode")
 
 # Token counts to pad to, so a batch of mixed lengths compiles once per bucket
 # rather than once per length. Copied from run_alphafold.py's --buckets, which
@@ -67,6 +67,7 @@ _DEFAULTS = {
     "accept_alphafold3_terms": False,
     "compile_cache": None,
     "compile_only": False,
+    "compile_mode": "tuned",
 }
 
 
@@ -227,6 +228,7 @@ class AF3Backend:
             num_msa=opts.max_seq,
             return_embeddings=opts.save_single_representations or opts.save_pair_representations,
             return_logits=opts.save_all,
+            compile_mode=self._opt(opts, "compile_mode"),
         )
         cache_dir = self._opt(opts, "compile_cache")
         if cache_dir is not None and self._kernels is not None and env_switches():
