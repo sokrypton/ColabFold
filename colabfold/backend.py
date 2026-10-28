@@ -111,7 +111,7 @@ AF3_MODELS = (
     "alphafold3", "af3", "openfold3", "of3", "openbind", "openbind0",
     "protenix", "protenix1", "protenix2", "boltz2", "chai1", "chai",
     "intellifold2", "if2", "intellifold", "opendde", "rosettafold3", "rf3",
-    "esmfold2", "esmfold2_fast", "esmfold2_lm300m", "esmfold2_lm600m",
+    "esmfold2", "esmfold2_fast", "esmfold2_lm300m", "esmfold2_lm600m", "mol1", "mol",
 )
 
 
