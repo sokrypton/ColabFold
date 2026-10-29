@@ -122,7 +122,7 @@ class AF3Backend:
             logger.info(f"{self.model_type}: --use-inexact-kernels keeps its pair attention in bf16")
             fp8 = False
         if install_pairformer(enable=self._opt(opts, "use_fast_kernels"), fp8=fp8):
-            logger.info(f"{self.model_type}: the pairformer runs packed triangle attention and, up to 128 channels, the fused triangle multiplication and transition")
+            logger.info(f"{self.model_type}: the pairformer runs fused kernels")
             # no cache in tokamax-only mode: buckets only pay off where the kernels skip the padding
             self._kernels, self._fp8 = f"fast fp8={bool(fp8)} megakernel={bool(megakernel)}", bool(fp8)
         if self._opt(opts, "compile_only") and self._kernels is None:
