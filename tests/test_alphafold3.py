@@ -506,7 +506,7 @@ def test_alphafold3s_own_weights_are_gated_and_never_mirrored(tmp_path, monkeypa
     pytest.importorskip("alphafold3")
     from colabfold.alphafold3 import weights
 
-    with pytest.raises(RuntimeError, match="--accept-alphafold3-terms"):
+    with pytest.raises(RuntimeError, match="--accept-model-terms"):
         weights.ensure_weights("alphafold3", data_dir=tmp_path)
 
     asked = []

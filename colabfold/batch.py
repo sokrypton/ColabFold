@@ -784,7 +784,8 @@ def run(
     buckets               = kwargs.pop("buckets", None)
     compile_cache         = kwargs.pop("compile_cache", None)
     compile_only          = kwargs.pop("compile_only", False)
-    accept_alphafold3_terms = kwargs.pop("accept_alphafold3_terms", False)
+    accept_alphafold3_terms = kwargs.pop("accept_alphafold3_terms", False)  # old name
+    accept_model_terms    = kwargs.pop("accept_model_terms", accept_alphafold3_terms)
     if use_fast_kernels and not use_bfloat16:
         raise ValueError("--use-fast-kernels needs half precision, not use_bfloat16=False")
     max_msa               = kwargs.pop("max_msa",None)
@@ -876,7 +877,7 @@ def run(
             "buckets": buckets,
             "compile_cache": compile_cache,
             "compile_only": compile_only,
-            "accept_alphafold3_terms": accept_alphafold3_terms,
+            "accept_model_terms": accept_model_terms,
         },
     )
     backend.configure(
@@ -1510,10 +1511,18 @@ def build_parser(positional: bool = True) -> ArgumentParser:
         default="colabfold",
     )
     af3_group.add_argument(
-        "--accept-alphafold3-terms",
-        help="Download AlphaFold3's own parameters from Google DeepMind, under their terms of "
-        "use, which do not allow commercial use. Every other model is fetched without this.",
+        "--accept-model-terms",
+        help="Download weights whose terms restrict their use, accepting those terms: AlphaFold3's "
+        "own parameters from Google DeepMind and HelixFold3's, neither for commercial use. Every "
+        "other model is fetched without this.",
         action="store_true",
+    )
+    af3_group.add_argument(
+        # old name
+        "--accept-alphafold3-terms",
+        dest="accept_model_terms",
+        action="store_true",
+        help=SUPPRESS,
     )
     af3_group.add_argument(
         "--weights-precision",
@@ -1804,7 +1813,7 @@ def run_args(args, compile_only: bool = False):
         ensure_ccd(data_dir)
         ensure_weights(resolve_model_name(args.model_type), data_dir=data_dir,
                        precision=args.weights_precision,
-                       accept_terms=args.accept_alphafold3_terms)
+                       accept_terms=args.accept_model_terms)
 
     queries, is_complex = get_queries(args.input, args.sort_queries_by)
 
@@ -1925,7 +1934,7 @@ def run_args(args, compile_only: bool = False):
         af3_pairing=args.af3_pairing,
         weights_precision=args.weights_precision,
         buckets=parse_buckets(args.buckets),
-        accept_alphafold3_terms=args.accept_alphafold3_terms,
+        accept_model_terms=args.accept_model_terms,
         compile_cache=compile_cache,
         compile_only=compile_only,
     )

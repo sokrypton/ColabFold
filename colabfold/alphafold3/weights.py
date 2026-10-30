@@ -23,9 +23,15 @@ CCD_URLS = [
 ]
 
 # Google DeepMind publishes AlphaFold 3's own parameters. They are not ours to
-# redistribute, so they are neither mirrored nor fetched without --accept-alphafold3-terms.
+# redistribute, so they are neither mirrored nor fetched without --accept-model-terms.
 OFFICIAL_URLS = {"alphafold3": "https://storage.googleapis.com/alphafold3/af3.bin.zst"}
 TERMS = "https://github.com/google-deepmind/alphafold3/blob/main/WEIGHTS_TERMS_OF_USE.md"
+# weights whose terms restrict their use: fetched only with --accept-model-terms
+RESTRICTED = {
+    "alphafold3": ("are licensed by Google DeepMind for non-commercial use only", TERMS),
+    "helixfold3": ("are licensed by Baidu for non-commercial use only",
+                   "https://github.com/PaddlePaddle/PaddleHelix/blob/dev/LICENSE"),
+}
 
 
 def ensure_ccd(data_dir: Optional[Path] = None) -> None:
@@ -157,10 +163,10 @@ def ensure_weights(model_name: str, data_dir: Optional[Path] = None, download: b
     except FileNotFoundError:
         if not download or (spec.weights_repo is None and official is None):
             raise
-    if official is not None and not accept_terms:
+    if spec.name in RESTRICTED and not accept_terms:
+        terms, url = RESTRICTED[spec.name]
         raise RuntimeError(
-            f"{spec.name} weights are Google DeepMind's and carry their own terms, which "
-            f"do not allow commercial use. Read {TERMS} and pass --accept-alphafold3-terms "
+            f"{spec.name} weights {terms}. Read {url} and pass --accept-model-terms "
             f"to download them, or point --data at a copy you already have."
         )
 

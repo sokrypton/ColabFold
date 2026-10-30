@@ -72,7 +72,7 @@ def main(argv=None):
             from colabfold.alphafold3.weights import ensure_ccd, ensure_weights
             ensure_ccd(Path(args.data or default_data_dir))
             ensure_weights(resolve_model_name(model_type), data_dir=Path(args.data or default_data_dir),
-                           precision=args.weights_precision, accept_terms=args.accept_alphafold3_terms)
+                           precision=args.weights_precision, accept_terms=args.accept_model_terms)
         else:
             download_alphafold_params(model_type, Path(args.data or default_data_dir))  # once, not by every worker
         # a multimer as a homodimer: its model compiles once per length, its MSA sampler at the shallowest depth here
