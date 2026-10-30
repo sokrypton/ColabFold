@@ -24,7 +24,7 @@ def per_residue_plddt(structure) -> List[float]:
     return [float(v) for v in np.add.reduceat(b, starts) / np.diff(np.append(starts, len(b)))]
 
 
-def scores_of(inference_result, ranking_score: float) -> Dict[str, Any]:
+def scores_of(inference_result, ranking_score: float, has_confidence: bool = True) -> Dict[str, Any]:
     from alphafold3.model import confidence_types
 
     full = confidence_types.StructureConfidenceFull.from_inference_result(inference_result)
@@ -33,13 +33,17 @@ def scores_of(inference_result, ranking_score: float) -> Dict[str, Any]:
     plddt = per_residue_plddt(inference_result.predicted_structure)
     # a model without confidence heads (bioemu2: NaN ranking score, pLDDT zero) has those left out, as AF2's models
     # without pTM leave out theirs
-    confident = bool(np.isfinite(ranking_score))
+    confident = has_confidence and bool(np.isfinite(ranking_score))
     scores = {"plddt": np.around(plddt, 2).tolist() if confident else []}
+    if has_confidence and not confident:  # a collapsed sample (NaN), ranked last
+        scores["failed"] = True
     if np.isfinite(pae).all():
         scores.update(pae=np.around(pae, 2).tolist(), max_pae=float(pae.max()))
     if confident:
         scores["ranking_score"] = float(ranking_score)
     scores["token_chain_ids"] = list(full.token_chain_ids)
+    if "physicality" in meta:
+        scores["physicality"] = meta["physicality"]
     for key, name in (("predicted_tm_score", "ptm"),
                       ("interface_predicted_tm_score", "iptm"),
                       ("has_clash", "has_clash"),
@@ -61,8 +65,14 @@ def _print_line(tag: str, scores: Dict[str, Any], took: float) -> str:
 
 
 def rank_key(rank_by: str, scores: Dict[str, Any]) -> float:
-    """The metric to rank on. ``auto`` is alphafold3's own ranking score; without one, the samples keep their order."""
+    """The metric to rank on. ``auto`` is alphafold3's own ranking score; without one, BioEmu2's physicality (passed
+    first, then the fewest violations), else the samples keep their order. A failed sample ranks last."""
+    if scores.get("failed"):
+        return -float("inf")
     if rank_by in ("auto", "ranking_score"):
+        if "ranking_score" not in scores and "physicality" in scores:
+            physicality = scores["physicality"]
+            return (0.0 if physicality["status"] == "passed" else -1e9) - sum(physicality["stats"].values())
         return float(scores.get("ranking_score", 0.0))
     if rank_by == "plddt":
         return float(np.mean(scores["plddt"])) if scores["plddt"] else float("nan")
@@ -96,11 +106,17 @@ def predict_structure(
         inference_results = model_runner.extract_inference_results(
             batch=example, result=result, target_name=fold_input.name
         )
+        if model_runner.model_name == "bioemu2":
+            # no confidence head: its physicality report on each sample ranks them instead
+            from alphafold3.model.pipeline import bioemu2_physicality
+            bioemu2_physicality.annotate(inference_results, fold_input)
         took = time.time() - start
         for sample, inference_result in enumerate(inference_results):
             processed = post_processing.post_process_inference_result(inference_result)
             tag = f"{model_type}_seed_{seed:03d}_sample_{sample}"
-            scores = scores_of(inference_result, processed.ranking_score)
+            scores = scores_of(inference_result, processed.ranking_score, model_runner.model_name != "bioemu2")
+            if scores.get("failed"):
+                logger.warning(f"{tag}: non-finite ranking score, the sample collapsed; ranked last")
             num_tokens = int(np.sum(example["seq_mask"]))
             logits = model_runner.extract_logits(result, sample, num_tokens) if save_all else None
             ranked.append((rank_key(rank_by, scores), tag, processed, scores, took,
