@@ -73,7 +73,9 @@ def install(enable: bool = True, fp8: bool = False) -> bool:
                 # incoming: b's [c, k, i] is the left operand
                 return live_contract(b, a, live, incoming=True) if equation == INCOMING else live_contract(a, b, live)
             a, b = project(x.reshape(-1, channels), ln_scale, ln_offset, wp, bp, wg, bg, mask.reshape(-1))
-            return jnp.einsum(equation, a.reshape(hidden, *x.shape[:2]), b.reshape(hidden, *x.shape[:2]))
+            # float16 (sm_70/75) sums of N products overflow it: float32, which the epilogue reads as it is
+            return jnp.einsum(equation, a.reshape(hidden, *x.shape[:2]), b.reshape(hidden, *x.shape[:2]),
+                              preferred_element_type=jnp.float32 if x.dtype == jnp.float16 else None)
 
         return contract, epilogue
 
