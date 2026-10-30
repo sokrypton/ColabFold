@@ -30,19 +30,23 @@ def scores_of(inference_result, ranking_score: float) -> Dict[str, Any]:
     full = confidence_types.StructureConfidenceFull.from_inference_result(inference_result)
     meta = inference_result.metadata
     pae = np.asarray(full.pae, dtype=float)
-    scores = {
-        "plddt": np.around(per_residue_plddt(inference_result.predicted_structure), 2).tolist(),
-        "pae": np.around(pae, 2).tolist(),
-        "max_pae": float(pae.max()),
-        "ranking_score": float(ranking_score),
-        "token_chain_ids": list(full.token_chain_ids),
-    }
+    plddt = per_residue_plddt(inference_result.predicted_structure)
+    # a model without confidence heads (bioemu2: NaN ranking score, pLDDT zero) has those left out, as AF2's models
+    # without pTM leave out theirs
+    confident = bool(np.isfinite(ranking_score))
+    scores = {"plddt": np.around(plddt, 2).tolist() if confident else []}
+    if np.isfinite(pae).all():
+        scores.update(pae=np.around(pae, 2).tolist(), max_pae=float(pae.max()))
+    if confident:
+        scores["ranking_score"] = float(ranking_score)
+    scores["token_chain_ids"] = list(full.token_chain_ids)
     for key, name in (("predicted_tm_score", "ptm"),
                       ("interface_predicted_tm_score", "iptm"),
                       ("has_clash", "has_clash"),
                       ("fraction_disordered", "fraction_disordered")):
         value = meta.get(key)
-        if value is not None and np.isfinite(float(value)):
+        # fraction_disordered reads the pLDDT
+        if value is not None and np.isfinite(float(value)) and (confident or name != "fraction_disordered"):
             scores[name] = float(value)
     return scores
 
@@ -57,14 +61,14 @@ def _print_line(tag: str, scores: Dict[str, Any], took: float) -> str:
 
 
 def rank_key(rank_by: str, scores: Dict[str, Any]) -> float:
-    """The metric to rank on. ``auto`` is alphafold3's own ranking score."""
+    """The metric to rank on. ``auto`` is alphafold3's own ranking score; without one, the samples keep their order."""
     if rank_by in ("auto", "ranking_score"):
-        return float(scores["ranking_score"])
+        return float(scores.get("ranking_score", 0.0))
     if rank_by == "plddt":
         return float(np.mean(scores["plddt"])) if scores["plddt"] else float("nan")
     if rank_by == "multimer":
         rank_by = "iptm" if "iptm" in scores else "ptm"
-    return float(scores.get(rank_by, scores["ranking_score"]))
+    return float(scores.get(rank_by, scores.get("ranking_score", 0.0)))
 
 
 def predict_structure(

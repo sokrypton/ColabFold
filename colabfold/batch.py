@@ -1161,7 +1161,7 @@ def run(
                         backend.plot_extra_metrics(scores, ext_metric_png)
 
                 # make pLDDT plot
-                if not 'plots' in skip_output:
+                if not 'plots' in skip_output and scores[0]["plddt"]:
                     from colabfold.colabfold import plot_plddts
                     plddt_plot = plot_plddts([np.asarray(x["plddt"]) for x in scores],
                         Ls=query_sequence_len_array, dpi=dpi)
