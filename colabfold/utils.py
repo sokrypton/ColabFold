@@ -330,10 +330,29 @@ class AF3Utils:
             i = i // 26 - 1
         return "".join(output)
 
+    @staticmethod
+    def merge_paired_msa_into_unpaired(
+        unpairedmsa: Optional[List[str]], pairedmsa: Optional[List[str]]
+    ) -> Optional[List[str]]:
+        if pairedmsa is None:
+            return unpairedmsa
+        if unpairedmsa is None:
+            return list(pairedmsa)
+        merged = []
+        for paired, unpaired in zip(pairedmsa, unpairedmsa):
+            if paired and unpaired:
+                merged.append(paired.rstrip("\n") + "\n" + unpaired)
+            else:
+                merged.append(paired or unpaired or "")
+        return merged
+
     def make_af3_input(self, 
         name: str, query_seqs_unique: List[str], query_seqs_cardinality: List[int],
         unpairedmsa: List[str], pairedmsa: List[str],
     ) -> dict:
+        # paired sequences are provided via unpairedMsa only, as recommended by the AlphaFold3 documentation.
+        unpairedmsa = self.merge_paired_msa_into_unpaired(unpairedmsa, pairedmsa)
+        pairedmsa = None
         sequences: list[dict] = []
         chain_id_count = 0
         for i in range(len(query_seqs_unique)): # NOTE: This will not work if there's no protein sequences
