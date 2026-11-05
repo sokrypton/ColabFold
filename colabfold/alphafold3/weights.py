@@ -106,8 +106,10 @@ def urls_for(path: str, repo: str) -> List[str]:
 
 # a blob republished with a change alphafold3 depends on: its revision, so a download of an older one is fetched again
 # (chai1 2: structure token-pair weights; 3: relative chain/entity, DX restype and declared-bond trunk rows. boltz2 1:
-# Boltz's DNA unknown as DN - N delta rows)
-BLOB_REVISION = {"chai1": 3, "boltz2": 1}
+# Boltz's DNA unknown as DN - N delta rows; rosettafold3 1: the s_inputs columns target_feat drops, for the confidence pair;
+# esmfold2 family 1: 451-wide s_inputs with DN's rows, blob convention 4)
+BLOB_REVISION = {"chai1": 3, "boltz2": 1, "rosettafold3": 1,
+                 "esmfold2": 1, "esmfold2_fast": 1, "esmfold2_lm600m": 1, "esmfold2_lm300m": 1}
 
 
 def _marker(target: Path, name: str, precision: str) -> Path:
