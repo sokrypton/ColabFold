@@ -35,9 +35,10 @@ def install(enable: bool = True, fp8: bool = False) -> bool:
         if project is None or output_projection is None:
             return None
 
-        def ln_projection(x, ln_scale, ln_offset, w, wb, *keep):
-            # the e4m3 slots the attention kernel that runs reads; the pair is N x N rows
-            f8 = fused_ops.fp8_attention_slots(config, dtype, head_dim, math.isqrt(x.shape[0]))
+        def ln_projection(x, ln_scale, ln_offset, w, wb, *keep, seq_len=None):
+            # the e4m3 slots the attention kernel that runs reads; the pair is N x N rows unless a slab says its length
+            n = math.isqrt(x.shape[0]) if seq_len is None else seq_len
+            f8 = None if w is None else fused_ops.fp8_attention_slots(config, dtype, head_dim, n)
             f8_slots, f8_scales = f8 or ((), None)
             p, bias, *kv = project(x, ln_scale, ln_offset, w, wb, *keep, f8_slots=f8_slots, f8_scales=f8_scales)
             return p, bias, kv[0] if kv else None
