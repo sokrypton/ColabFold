@@ -338,6 +338,8 @@ def get_queries(
                 logger.warning(f"non-fasta/a3m/pdb/cif file in input directory: {file}")
                 continue
             if file.suffix.lower() in [".pdb", ".cif"]:
+                from alphafold.common import protein
+
                 header = file.stem
                 if file.suffix.lower() == ".pdb":
                     pdb_string = pdb_to_string(file.read_text())
@@ -351,6 +353,7 @@ def get_queries(
                     continue
 
                 queries.append((header, sequences, None, None))
+                continue
             else:  # file.suffix.lower() in [".a3m", ".fasta", ".faa"]
                 (seqs, header) = parse_fasta(file.read_text())
             if len(seqs) == 0:
