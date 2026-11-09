@@ -139,3 +139,59 @@ def test_convert_pdb_to_mmcif_parse_with_alphafold(pytestconfig, tmp_path):
     )
 
     assert len(parsing_result.errors) == 0
+
+
+def test_af3_merge_paired_msa_into_unpaired():
+    from colabfold.utils import AF3Utils
+
+    query_seqs_unique = ["AAAA", "GGGG"]
+    query_seqs_cardinality = [1, 1]
+    # Per-chain unpaired A3Ms (first entry is the query itself)
+    unpaired_msa = [
+        ">query\nAAAA\n>u1\nAAta\n",
+        ">query\nGGGG\n>u2\nGGgg\n",
+    ]
+    # Per-chain paired A3Ms: row-aligned across chains, gap-only dummy row
+    # for chains without a hit for that species
+    paired_msa = [
+        ">query\nAAAA\n>p1\nAA--\n>p2\n--AA\n",
+        ">query\nGGGG\n>p1\n----\n>p2\nGGGG\n",
+    ]
+
+    # Without a paired MSA, nothing changes and pairedMsa stays empty
+    af3 = AF3Utils("test", query_seqs_unique, query_seqs_cardinality, unpaired_msa, None)
+    for i, seq in enumerate(af3.content["sequences"]):
+        assert seq["protein"]["unpairedMsa"] == unpaired_msa[i]
+        assert seq["protein"]["pairedMsa"] == ""
+
+    # With a paired MSA, the paired rows are merged into unpairedMsa (paired
+    # block first, query sequence as the first entry) and pairedMsa is left
+    # empty so AF3 does not re-pair the MSA by header name matching
+    af3 = AF3Utils("test", query_seqs_unique, query_seqs_cardinality, unpaired_msa, paired_msa)
+    expected_unpaired = [
+        paired_msa[0] + unpaired_msa[0],
+        paired_msa[1] + unpaired_msa[1],
+    ]
+    for i, seq in enumerate(af3.content["sequences"]):
+        assert seq["protein"]["unpairedMsa"] == expected_unpaired[i]
+        # First MSA entry must be exactly the query sequence (AF3 requirement)
+        a3m_lines = seq["protein"]["unpairedMsa"].splitlines()
+        assert a3m_lines[1] == query_seqs_unique[i]
+        assert seq["protein"]["pairedMsa"] == ""
+
+
+def test_af3_merge_paired_msa_into_unpaired_paired_only():
+    from colabfold.utils import AF3Utils
+
+    query_seqs_unique = ["AAAA", "GGGG"]
+    query_seqs_cardinality = [1, 1]
+    paired_msa = [
+        ">query\nAAAA\n>p1\nAA--\n",
+        ">query\nGGGG\n>p1\n----\n",
+    ]
+
+    # paired-only mode: no unpaired MSA available
+    af3 = AF3Utils("test", query_seqs_unique, query_seqs_cardinality, None, paired_msa)
+    for i, seq in enumerate(af3.content["sequences"]):
+        assert seq["protein"]["unpairedMsa"] == paired_msa[i]
+        assert seq["protein"]["pairedMsa"] == ""

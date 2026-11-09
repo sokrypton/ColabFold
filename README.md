@@ -150,6 +150,8 @@ If you are using the MSA server via colabfold_batch, you can also use the `--af3
 colabfold_batch input_sequences.fasta out_dir --af3-json
 ```
 
+For complexes, the paired MSA is written into each chain's `unpairedMsa` field (with the paired rows placed first, aligned across chains), while `pairedMsa` is left empty. This follows the recommendation in the [AlphaFold3 documentation](https://github.com/google-deepmind/alphafold3/blob/main/docs/input.md#msa-pairing), since AlphaFold3 would otherwise re-pair a user-provided `pairedMsa` internally by matching UniProt organism IDs in the sequence headers, which is not supported by the MMseqs2 paired A3M headers. When running AlphaFold3 on such json inputs, use `--resolve_msa_overlaps=false` to prevent the deduplication procedure from destroying the sequence positioning in the unpaired MSA.
+
 #### Including non-protein molecules in FASTA
 AlphaFold3 supports non-protein components such as ligands and nucleic acids in input complexes. To include these in the generated json file, you can specify them directly in your FASTA input using the following format, `molecule type|sequence|(copies)`. As molecue types, dna, rna, ccd, smiles are allowed.
 
