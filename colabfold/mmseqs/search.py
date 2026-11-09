@@ -51,7 +51,7 @@ def mmseqs_search_monomer(
     dbbase: Path,
     base: Path,
     uniref_db: Path = Path("uniref30_2302_db"),
-    template_db: Path = Path(""),  # Unused by default
+    template_db: Path = Path("pdb100_230517"),  # Unused by default
     metagenomic_db: Path = Path("colabfold_envdb_202108_db"),
     mmseqs: Path = Path("mmseqs"),
     use_env: bool = True,
@@ -322,7 +322,9 @@ def main():
     parser.add_argument(
         "--db1", type=Path, default=Path("uniref30_2302_db"), help="UniRef database"
     )
-    parser.add_argument("--db2", type=Path, default=Path(""), help="Templates database")
+    parser.add_argument(
+        "--db2", type=Path, default=Path("pdb100_230517"), help="Templates database"
+    )
     parser.add_argument(
         "--db3",
         type=Path,
