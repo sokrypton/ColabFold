@@ -49,7 +49,7 @@ def test_every_supported_model_accepts_optional_rgi(raw):
 
 
 def test_unsupported_models_keep_vanilla(raw):
-    for model in ("af2_ptm", "af2_multimer", "intellifold2", "unknown"):
+    for model in ("af2_ptm", "af2_multimer", "unknown"):
         prepare_input(raw, model)
         with pytest.raises(ValueError, match="turn use_rgi off"):
             require_supported_model(model)
