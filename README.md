@@ -1,6 +1,6 @@
-# ColabFold - v1.6.2
+# ColabFold - v1.6.3
 
-For details of what was changed in v1.6.2, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.6.2)!
+For details of what was changed in v1.6.3, see [change log](https://github.com/sokrypton/ColabFold/wiki/v1.6.3)!
 
 <p align="center"><img src="https://github.com/sokrypton/ColabFold/raw/main/.github/ColabFold_Marv_Logo.png" height="250"/></p>
 
@@ -66,7 +66,7 @@ For a one-step installer script that supports Linux, macOS, and Windows (WSL2), 
 Alternatively, ColabFold can be installed directly with `conda` and `pip`:
 
 ```shell
-conda create -n colabfold -c conda-forge -c bioconda python=3.13 kalign2=2.04 hhsuite=3.3.0 mmseqs2=18.8cc5c
+conda create -n colabfold -c conda-forge -c bioconda python=3.13 mmseqs2=18.8cc5c
 conda activate colabfold
 # With CUDA GPU support
 pip install colabfold[alphafold,openmm] jax[cuda12] openmm[cuda12]
@@ -81,7 +81,7 @@ pip install colabfold
 A Docker image is also available:
 
 ```shell
-docker pull ghcr.io/sokrypton/colabfold:1.6.2-cuda12
+docker pull ghcr.io/sokrypton/colabfold:1.6.3-cuda12
 ```
 
 See our [wiki](https://github.com/sokrypton/ColabFold/wiki/Running-ColabFold-in-Docker) for more details on running ColabFold in Docker.
@@ -242,9 +242,14 @@ The saved model is reused only when the next run matches the previous one, inclu
 - Every new sequence length or MSA depth triggers a fresh compile. ColabFold reduces this by grouping similar lengths together (`--recompile-padding`) and sorting each batch so similar shapes run back to back (`--sort-queries-by`). Use `length` for monomers (default) and `msa_depth` for repeated multimers of the same length. This way compilation can be reused across multiple predictions.
 - If anything changes (drivers or dependencies), the next prediction compiles again and the old cache is ignored.
 
-### Faster predictions on Ampere or newer GPUs
+### Faster predictions with fused kernels
 
-On NVIDIA GPUs with compute capability >=8.0 (Ampere or newer), add `--use-pallas` to `colabfold_batch` for ~2.5x faster, slightly lower-memory predictions. It runs the Evoformer with fast fused Pallas/Triton kernels.
+Add `--use-fast-kernels` to `colabfold_batch` to run AlphaFold2 with accelerated kernels, about 2.5x faster and with slightly lower memory. `--kernel-backend` picks the implementation based on the available GPU and defaults to `auto`:
+
+- `pallas` on Ampere or newer generation GPUs, using Pallas/Triton kernels.
+- `cuda_legacy` on older Volta and Turing GPUs.
+
+The previously introduced `--use-pallas` parameter is accepted as an alias for `--use-fast-kernels`.
 
 ### Trading compile time for folding speed
 

@@ -501,12 +501,6 @@ def main():
             gpu_server=args.gpu_server,
             unpack=args.unpack,
         )
-    else:
-        id = 0
-        for job_number, (raw_jobname, query_sequences, query_seqs_cardinality, other_molecules) in enumerate(queries_unique):
-            for seq, cardinality in zip(query_sequences, query_seqs_cardinality):
-                args.base.joinpath(f"{id}.a3m").write_text(f"#{len(seq)}\t{cardinality}\n")
-                id += 1
 
     if is_complex is True and keep_paired:
         mmseqs_search_pair(

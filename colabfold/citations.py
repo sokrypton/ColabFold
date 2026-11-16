@@ -1,9 +1,19 @@
 import logging
+import re
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 citations = {
+    "hori2026rgi": """@article{hori2026rgi,
+  author  = {Hori, Tatsuki and Moriwaki, Yoshitaka and Ishitani, Ryuichiro},
+  title   = {{RGI-Toolkit}: Differentiable Restraints for Controllable Biomolecular Structure Prediction},
+  journal = {bioRxiv},
+  year    = {2026},
+  doi     = {10.64898/2026.10.05.756905},
+  url     = {https://www.biorxiv.org/content/10.64898/2026.10.05.756905v1},
+  note    = {Preprint, version 1}
+}""",
     "Mirdita2021": """@article{Mirdita2022,
 author= {Mirdita, Milot and Schütze, Konstantin and Moriwaki, Yoshitaka and Heo, Lim and Ovchinnikov, Sergey and Steinegger, Martin },
 doi = {10.1038/s41592-022-01488-1},
@@ -157,4 +167,16 @@ def write_bibtex(
             writer.write("\n")
 
     logger.info(f"Found {len(to_cite)} citations for tools or databases")
+    return bibtex_file
+
+
+def write_rgi_citation(result_dir: str | Path) -> Path:
+    """Append the RGI paper once, preserving existing output citations."""
+    bibtex_file = Path(result_dir) / "cite.bibtex"
+    existing = bibtex_file.read_text(encoding="utf-8") if bibtex_file.exists() else ""
+    if not re.search(r"@\w+\s*\{\s*hori2026rgi\s*,", existing, re.IGNORECASE):
+        with bibtex_file.open("a", encoding="utf-8") as writer:
+            if existing and not existing.endswith("\n"):
+                writer.write("\n")
+            writer.write(citations["hori2026rgi"] + "\n")
     return bibtex_file

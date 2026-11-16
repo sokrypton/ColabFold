@@ -9,6 +9,7 @@ import warnings
 from Bio import BiopythonDeprecationWarning # what can possibly go wrong...
 warnings.simplefilter(action='ignore', category=BiopythonDeprecationWarning)
 
+import functools
 import json
 hasOrjson = False
 try:
@@ -25,7 +26,8 @@ import shutil
 import pickle
 import gzip
 
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from argparse import (ArgumentParser, ArgumentDefaultsHelpFormatter,
+                      BooleanOptionalAction, SUPPRESS)
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 from io import StringIO
@@ -106,6 +108,21 @@ from jax import local_devices
 logging.getLogger('jax._src.xla_bridge').addFilter(lambda _: False) # jax >=0.4.6
 logging.getLogger('jax._src.lib.xla_bridge').addFilter(lambda _: False) # jax < 0.4.5
 
+@functools.lru_cache(maxsize=None)
+def _tool_path(name: str) -> str:
+    override = os.environ.get(f"COLABFOLD_{name.upper()}")
+    if override:
+        return override
+    found = shutil.which(name)
+    if found:
+        return found
+    try:
+        import colabfold_binaries
+
+        return colabfold_binaries.binary_path(name)
+    except Exception:
+        return name
+
 def mk_mock_template(
     query_sequence: Union[List[str], str], num_temp: int = 1
 ) -> Dict[str, Any]:
@@ -153,13 +170,13 @@ def mk_template(
         mmcif_dir=template_path,
         max_template_date=max_template_date,
         max_hits=max_hits,
-        kalign_binary_path="kalign",
+        kalign_binary_path=_tool_path("kalign"),
         release_dates_path=None,
         obsolete_pdbs_path=None,
     )
 
     hhsearch_pdb70_runner = hhsearch.HHSearch(
-        binary_path="hhsearch", databases=[f"{template_path}/pdb70"]
+        binary_path=_tool_path("hhsearch"), databases=[f"{template_path}/pdb70"]
     )
 
     hhsearch_result = hhsearch_pdb70_runner.query(a3m_lines)
@@ -1292,10 +1309,12 @@ def run(
     use_dropout           = kwargs.pop("training", use_dropout)
     use_fuse              = kwargs.pop("use_fuse", True)
     use_bfloat16          = kwargs.pop("use_bfloat16", True)
-    use_pallas            = kwargs.pop("use_pallas", False)
+    use_pallas            = kwargs.pop("use_pallas", False)  # old name
+    use_fast_kernels      = kwargs.pop("use_fast_kernels", use_pallas)
+    kernel_backend        = kwargs.pop("kernel_backend", "auto")
     compile_mode          = kwargs.pop("compile_mode", "tuned")
-    if use_pallas and not use_bfloat16:
-        raise ValueError("use_pallas requires bfloat16")
+    if use_fast_kernels and not use_bfloat16:
+        raise ValueError("--use-fast-kernels needs half precision, not use_bfloat16=False")
     max_msa               = kwargs.pop("max_msa",None)
     if max_msa is not None:
         max_seq, max_extra_seq = [int(x) for x in max_msa.split(":")]
@@ -1389,7 +1408,8 @@ def run(
         "use_cluster_profile": use_cluster_profile,
         "use_fuse": use_fuse,
         "use_bfloat16": use_bfloat16,
-        "use_pallas": use_pallas,
+        "use_fast_kernels": use_fast_kernels,
+        "kernel_backend": kernel_backend,
         "compile_mode": compile_mode,
         "version": importlib_metadata.version("colabfold"),
         "calc_extra_ptm": calc_extra_ptm,
@@ -1490,6 +1510,11 @@ def run(
                     with open(pickled_msa_and_templates, 'wb') as f:
                         pickle.dump((unpaired_msa, paired_msa, query_seqs_unique, query_seqs_cardinality, template_features), f)
                     logger.info(f"Saved {pickled_msa_and_templates}")
+
+            # a3m input and pickles bypass get_msa_and_templates, and num_extra_msa=1 would then sample a random homolog per seed
+            if msa_mode == "single_sequence" and unpaired_msa is not None:
+                unpaired_msa = [f">{101 + i}\n{seq}" for i, seq in enumerate(query_seqs_unique)]
+                paired_msa = None
 
             # save a3m
             if not 'msa' in skip_output:
@@ -1592,7 +1617,8 @@ def run(
                         use_bfloat16=use_bfloat16,
                         save_all=save_all,
                         calc_extra_ptm=calc_extra_ptm,
-                        use_pallas=use_pallas,
+                        use_fast_kernels=use_fast_kernels,
+                        kernel_backend=kernel_backend,
                         compile_mode=compile_mode
                     )
                     first_job = False
@@ -2147,13 +2173,29 @@ def main():
         "Set to 0 to disable.",
     )
     adv_group.add_argument(
+        "--use-fast-kernels",
+        dest="use_fast_kernels",
+        default=False,
+        action=BooleanOptionalAction,
+        help="Use fused kernels for faster prediction",
+    )
+    adv_group.add_argument(
+        # old name: takes an optional value, so it must not precede the paths
         "--use-pallas",
+        dest="use_fast_kernels",
         nargs="?",
         const=True,
         default=False,
         type=_str2bool,
         metavar="BOOL",
-        help="Use Pallas/Triton kernels for faster prediction",
+        help=SUPPRESS,
+    )
+    adv_group.add_argument(
+        "--kernel-backend",
+        choices=["auto", "pallas", "cuda_legacy"],
+        default="auto",
+        help="Fused kernels: auto (pallas on sm_80+, cuda_legacy below), pallas, "
+             "or cuda_legacy (float16).",
     )
     adv_group.add_argument(
         "--compile-mode",
@@ -2313,7 +2355,8 @@ def main():
         use_probs_extra=use_probs_extra,
         max_template_date=args.max_template_date,
         max_template_hits=args.max_template_hits,
-        use_pallas=args.use_pallas,
+        use_fast_kernels=args.use_fast_kernels,
+        kernel_backend=args.kernel_backend,
         compile_mode=args.compile_mode,
     )
 

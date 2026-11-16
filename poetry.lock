@@ -15,15 +15,15 @@ files = [
 
 [[package]]
 name = "alphafold-colabfold"
-version = "2.3.18"
+version = "2.3.23"
 description = "An implementation of the inference pipeline of AlphaFold v2.3.1. This is a completely new model that was entered as AlphaFold2 in CASP14 and published in Nature. This package contains patches for colabfold."
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
-    {file = "alphafold_colabfold-2.3.18-py3-none-any.whl", hash = "sha256:5711464c031f73758291fdc0ac3bc52861a27d3ea3881e88687eb0f4c1cf345f"},
-    {file = "alphafold_colabfold-2.3.18.tar.gz", hash = "sha256:0ad91633f1dd47c22a96fe3c29eb07e537bf6457ff21a38460e0aa9a7c5a4eeb"},
+    {file = "alphafold_colabfold-2.3.23-py3-none-any.whl", hash = "sha256:fb9096f1219de8933efa5c9340f9d271a7063a4f38339e7058622924d4d3fe48"},
+    {file = "alphafold_colabfold-2.3.23.tar.gz", hash = "sha256:d99d3ecfe37becfd496e8f7c872a330698010270410b632b2ab977cdfec98911"},
 ]
 
 [package.dependencies]
@@ -315,6 +315,48 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "colabfold-binaries"
+version = "0.1.0"
+description = "Prebuilt kalign and hhsearch binaries for ColabFold."
+optional = true
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "(sys_platform == \"linux\" or sys_platform == \"darwin\" and platform_machine == \"arm64\") and (extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
+files = [
+    {file = "colabfold_binaries-0.1.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:c8adc36504c5a1969008a444fe2ec3174d25b92d8a97f5e3606c41df51324c12"},
+    {file = "colabfold_binaries-0.1.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:7daf652c175ecdcd222c0b77c03afe989c07cc5cb5bc7cd5946d2cf73e68970b"},
+    {file = "colabfold_binaries-0.1.0-py3-none-manylinux2014_x86_64.whl", hash = "sha256:188bdfe8237b10f463c59f52b7b6b17ae86f7567d5a9ea486eb9f1e064abeb26"},
+]
+
+[[package]]
+name = "colabfold-kernels"
+version = "0.4.0"
+description = "Fast fused kernels for ColabFold"
+optional = true
+python-versions = ">=3.10"
+groups = ["main"]
+markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
+files = [
+    {file = "colabfold_kernels-0.4.0-py3-none-any.whl", hash = "sha256:462f4fe4f097a6b971891626bd56e60627b946162ad926a8187326b28ca3be51"},
+    {file = "colabfold_kernels-0.4.0.tar.gz", hash = "sha256:d51223ca71eed1ea593d008e106d91e395f50d4977df8e6b339950271633580e"},
+]
+
+[package.dependencies]
+colabfold-legacy-kernels = {version = ">=0.4.0,<0.5", markers = "sys_platform == \"linux\" and platform_machine == \"x86_64\""}
+
+[[package]]
+name = "colabfold-legacy-kernels"
+version = "0.4.0"
+description = "Prebuilt pre-Ampere (sm_70 / sm_75) CUDA kernels for ColabFold."
+optional = true
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "sys_platform == \"linux\" and platform_machine == \"x86_64\" and (extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
+files = [
+    {file = "colabfold_legacy_kernels-0.4.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:27f8f6d64997e27155fb23ad73276afe27a08ff7414165941a69b09c59ea1cec"},
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -435,15 +477,15 @@ tests = ["pytest", "pytest-cov", "pytest-xdist"]
 
 [[package]]
 name = "dm-haiku"
-version = "0.0.16"
+version = "0.0.17"
 description = "Haiku is a library for building neural networks in JAX."
 optional = true
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "extra == \"alphafold\" or extra == \"alphafold-minus-jax\""
 files = [
-    {file = "dm_haiku-0.0.16-py3-none-any.whl", hash = "sha256:cc355d4d5aaa85af20e5a23ccd278bc751232ac8e5971261bed39318c07d744f"},
-    {file = "dm_haiku-0.0.16.tar.gz", hash = "sha256:1830b0ce63c5cef2fb3a63a13033c9d8f612ee7f896f2b0b25a6ba484f5fad28"},
+    {file = "dm_haiku-0.0.17-py3-none-any.whl", hash = "sha256:aa1394276adf59d695c910810ad90febb741503a83c32b022ce1162483904bbb"},
+    {file = "dm_haiku-0.0.17.tar.gz", hash = "sha256:6daa56f3b54f43675713ef7525d1dec7327f2512b57cc2b12104f76f6d7cf581"},
 ]
 
 [package.dependencies]
@@ -454,7 +496,7 @@ tabulate = ">=0.8.9"
 
 [package.extras]
 flax = ["flax (>=0.7.1)"]
-jax = ["jax (>=0.8.1)", "jaxlib (>=0.8.1)"]
+jax = ["jax (>=0.11.0)", "jaxlib (>=0.11.0)"]
 
 [[package]]
 name = "dm-tree"
@@ -493,7 +535,7 @@ attrs = ">=18.2.0"
 numpy = [
     {version = ">=2.1.0", markers = "python_version >= \"3.13\""},
     {version = ">=1.26.0", markers = "python_version == \"3.12\""},
-    {version = ">=1.23.3", markers = "python_version >= \"3.11\""},
+    {version = ">=1.23.3", markers = "python_version == \"3.11\""},
     {version = ">=1.21.2", markers = "python_version == \"3.10\""},
 ]
 wrapt = ">=1.11.2"
@@ -627,34 +669,34 @@ files = [
 
 [[package]]
 name = "jax"
-version = "0.5.3"
+version = "0.6.2"
 description = "Differentiate, compile, and transform Numpy code."
 optional = true
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "python_version == \"3.10\" and (extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
 files = [
-    {file = "jax-0.5.3-py3-none-any.whl", hash = "sha256:1483dc237b4f47e41755d69429e8c3c138736716147cd43bb2b99b259d4e3c41"},
-    {file = "jax-0.5.3.tar.gz", hash = "sha256:f17fcb0fd61dc289394af6ce4de2dada2312f2689bb0d73642c6f026a95fbb2c"},
+    {file = "jax-0.6.2-py3-none-any.whl", hash = "sha256:bb24a82dc60ccf704dcaf6dbd07d04957f68a6c686db19630dd75260d1fb788c"},
+    {file = "jax-0.6.2.tar.gz", hash = "sha256:a437d29038cbc8300334119692744704ca7941490867b9665406b7f90665cd96"},
 ]
 
 [package.dependencies]
-jaxlib = "0.5.3"
-ml_dtypes = ">=0.4.0"
-numpy = {version = ">=1.25", markers = "python_version < \"3.12\""}
+jaxlib = "0.6.2"
+ml_dtypes = ">=0.5.0"
+numpy = ">=1.26"
 opt_einsum = "*"
-scipy = ">=1.11.1"
+scipy = ">=1.12"
 
 [package.extras]
-ci = ["jaxlib (==0.5.1)"]
-cuda = ["jax-cuda12-plugin[with-cuda] (==0.5.3)", "jaxlib (==0.5.3)"]
-cuda12 = ["jax-cuda12-plugin[with-cuda] (==0.5.3)", "jaxlib (==0.5.3)"]
-cuda12-local = ["jax-cuda12-plugin (==0.5.3)", "jaxlib (==0.5.3)"]
-cuda12-pip = ["jax-cuda12-plugin[with-cuda] (==0.5.3)", "jaxlib (==0.5.3)"]
+ci = ["jaxlib (==0.6.1)"]
+cuda = ["jax-cuda12-plugin[with-cuda] (==0.6.2)", "jaxlib (==0.6.2)"]
+cuda12 = ["jax-cuda12-plugin[with-cuda] (==0.6.2)", "jaxlib (==0.6.2)"]
+cuda12-local = ["jax-cuda12-plugin (==0.6.2)", "jaxlib (==0.6.2)"]
 k8s = ["kubernetes"]
-minimum-jaxlib = ["jaxlib (==0.5.3)"]
-rocm = ["jax-rocm60-plugin (==0.5.3)", "jaxlib (==0.5.3)"]
-tpu = ["jaxlib (==0.5.3)", "libtpu (==0.0.11.*)", "requests"]
+minimum-jaxlib = ["jaxlib (==0.6.2)"]
+rocm = ["jax-rocm60-plugin (==0.6.2)", "jaxlib (==0.6.2)"]
+tpu = ["jaxlib (==0.6.2)", "libtpu (==0.0.17.*)", "requests"]
+xprof = ["xprof"]
 
 [[package]]
 name = "jax"
@@ -691,36 +733,37 @@ xprof = ["xprof"]
 
 [[package]]
 name = "jaxlib"
-version = "0.5.3"
+version = "0.6.2"
 description = "XLA library for JAX"
 optional = true
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "python_version == \"3.10\" and (extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
 files = [
-    {file = "jaxlib-0.5.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:48ff5c89fb8a0fe04d475e9ddc074b4879a91d7ab68a51cec5cd1e87f81e6c47"},
-    {file = "jaxlib-0.5.3-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:972400db4af6e85270d81db5e6e620d31395f0472e510c50dfcd4cb3f72b7220"},
-    {file = "jaxlib-0.5.3-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:52be6c9775aff738a61170d8c047505c75bb799a45518e66a7a0908127b11785"},
-    {file = "jaxlib-0.5.3-cp310-cp310-win_amd64.whl", hash = "sha256:b41a6fcaeb374fabc4ee7e74cfed60843bdab607cd54f60a68b7f7655cde2b66"},
-    {file = "jaxlib-0.5.3-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:b62bd8b29e5a4f9bfaa57c8daf6e04820b2c994f448f3dec602d64255545e9f2"},
-    {file = "jaxlib-0.5.3-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:a4666f81d72c060ed3e581ded116a9caa9b0a70a148a54cb12a1d3afca3624b5"},
-    {file = "jaxlib-0.5.3-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:29e1530fc81833216f1e28b578d0c59697654f72ee31c7a44ed7753baf5ac466"},
-    {file = "jaxlib-0.5.3-cp311-cp311-win_amd64.whl", hash = "sha256:8eb54e38d789557579f900ea3d70f104a440f8555a9681ed45f4a122dcbfd92e"},
-    {file = "jaxlib-0.5.3-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:d394dbde4a1c6bd67501cfb29d3819a10b900cb534cc0fc603319f7092f24cfa"},
-    {file = "jaxlib-0.5.3-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:bddf6360377aa1c792e47fd87f307c342e331e5ff3582f940b1bca00f6b4bc73"},
-    {file = "jaxlib-0.5.3-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:5a5e88ab1cd6fdf78d69abe3544e8f09cce200dd339bb85fbe3c2ea67f2a5e68"},
-    {file = "jaxlib-0.5.3-cp312-cp312-win_amd64.whl", hash = "sha256:520665929649f29f7d948d4070dbaf3e032a4c1f7c11f2863eac73320fcee784"},
-    {file = "jaxlib-0.5.3-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:31321c25282a06a6dfc940507bc14d0a0ac838d8ced6c07aa00a7fae34ce7b3f"},
-    {file = "jaxlib-0.5.3-cp313-cp313-manylinux2014_aarch64.whl", hash = "sha256:e904b92dedfbc7e545725a8d7676987030ae9c069001d94701bc109c6dab4100"},
-    {file = "jaxlib-0.5.3-cp313-cp313-manylinux2014_x86_64.whl", hash = "sha256:bb7593cb7fffcb13963f22fa5229ed960b8fb4ae5ec3b0820048cbd67f1e8e31"},
-    {file = "jaxlib-0.5.3-cp313-cp313-win_amd64.whl", hash = "sha256:8019f73a10b1290f988dd3768c684f3a8a147239091c3b790ce7e47e3bbc00bd"},
-    {file = "jaxlib-0.5.3-cp313-cp313t-manylinux2014_x86_64.whl", hash = "sha256:4c9a9d4cda091a3ef068ace8379fff9e98eea2fc51dbdd7c3386144a1bdf715d"},
+    {file = "jaxlib-0.6.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:da4601b2b5dc8c23d6afb293eacfb9aec4e1d1871cb2f29c5a151d103e73b0f8"},
+    {file = "jaxlib-0.6.2-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:4205d098ce8efb5f7fe2fe5098bae6036094dc8d8829f5e0e0d7a9b155326336"},
+    {file = "jaxlib-0.6.2-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:c087a0eb6fb7f6f8f54d56f4730328dfde5040dd3b5ddfa810e7c28ea7102b42"},
+    {file = "jaxlib-0.6.2-cp310-cp310-win_amd64.whl", hash = "sha256:153eaa51f778b60851720729d4f461a91edd9ba3932f6f3bc598d4413870038b"},
+    {file = "jaxlib-0.6.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:a208ff61c58128d306bb4e5ad0858bd2b0960f2c1c10ad42c548f74a60c0020e"},
+    {file = "jaxlib-0.6.2-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:11eae7e05bc5a79875da36324afb9eddd4baeaef2a0386caf6d4f3720b9aef28"},
+    {file = "jaxlib-0.6.2-cp311-cp311-manylinux2014_x86_64.whl", hash = "sha256:335d7e3515ce78b52a410136f46aa4a7ea14d0e7d640f34e1e137409554ad0ac"},
+    {file = "jaxlib-0.6.2-cp311-cp311-win_amd64.whl", hash = "sha256:c6815509997d6b05e5c9daa7994b9ad473ce3e8c8a17bdbbcacc3c744f76f7a0"},
+    {file = "jaxlib-0.6.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:34d8a684a8be949dd87dd4acc97101b4106a0dc9ad151ec891da072319a57b99"},
+    {file = "jaxlib-0.6.2-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:87ec2dc9c3ed9ab936eec8535160c5fbd2c849948559f1c5daa75f63fabe5942"},
+    {file = "jaxlib-0.6.2-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:f1dd09b481a93c1d4c750013f467f74194493ba7bd29fcd4d1cec16e3a214f65"},
+    {file = "jaxlib-0.6.2-cp312-cp312-win_amd64.whl", hash = "sha256:921dbd4db214eba19a29ba9f2450d880e08b2b2c7b968f28cc89da3e62366af4"},
+    {file = "jaxlib-0.6.2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:bff67b188133ce1f0111c7b163ac321fd646b59ed221ea489063e2e0f85cb967"},
+    {file = "jaxlib-0.6.2-cp313-cp313-manylinux2014_aarch64.whl", hash = "sha256:70498837caf538bd458ff6858c8bfd404db82015aba8f663670197fa9900ff02"},
+    {file = "jaxlib-0.6.2-cp313-cp313-manylinux2014_x86_64.whl", hash = "sha256:f94163f14c8fd3ba93ae14b631abacf14cb031bba0b59138869984b4d10375f8"},
+    {file = "jaxlib-0.6.2-cp313-cp313-win_amd64.whl", hash = "sha256:b977604cd36c74b174d25ed685017379468138eb747d865f75e466cb273c801d"},
+    {file = "jaxlib-0.6.2-cp313-cp313t-manylinux2014_aarch64.whl", hash = "sha256:39cf9555f85ae1ce2e2c1a59fc71f2eca4f9867a7cb934fef881ba56b11371d1"},
+    {file = "jaxlib-0.6.2-cp313-cp313t-manylinux2014_x86_64.whl", hash = "sha256:3abd536e44b05fb1657507e3ff1fc3691f99613bae3921ecab9e82f27255f784"},
 ]
 
 [package.dependencies]
-ml_dtypes = ">=0.2.0"
-numpy = ">=1.25"
-scipy = ">=1.11.1"
+ml_dtypes = ">=0.5.0"
+numpy = ">=1.26"
+scipy = ">=1.12"
 
 [[package]]
 name = "jaxlib"
@@ -1139,37 +1182,44 @@ files = [
 
 [[package]]
 name = "openmm"
-version = "8.4.0.post2"
+version = "8.6.1"
 description = "Python wrapper for OpenMM (a C++ MD package)"
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"openmm\""
 files = [
-    {file = "openmm-8.4.0.post2-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:f5466e34b1201ac26a0bd41c8239a7a1849735bcba3c953e4524c1dd0e0015b6"},
-    {file = "openmm-8.4.0.post2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:4b918707cbdcf517a18d1122e45e5721e9d6ad57005dba5183334cb18765803a"},
-    {file = "openmm-8.4.0.post2-cp310-cp310-manylinux_2_34_x86_64.whl", hash = "sha256:eaadcafd6839e7f61153808de66ef47b56c2f909193d86e2b107d77c64017494"},
-    {file = "openmm-8.4.0.post2-cp310-cp310-win_amd64.whl", hash = "sha256:2eed655113d0e78ae9fb539e63b15dd38270c116e96bf1785037fef35e3acc3c"},
-    {file = "openmm-8.4.0.post2-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:9399dd46cf7bf345ad28e77e3457a11298874d2e2e407860cc0e46cceb6d3d11"},
-    {file = "openmm-8.4.0.post2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:49d0e5a0c41ff471f5a24cb73de71ee517b59cc34beaa17aad429892f57e3962"},
-    {file = "openmm-8.4.0.post2-cp311-cp311-manylinux_2_34_x86_64.whl", hash = "sha256:12ffcd82d596bded1382e30af55907754ee481aafc0fc4a921a97de2ea7a8c55"},
-    {file = "openmm-8.4.0.post2-cp311-cp311-win_amd64.whl", hash = "sha256:b18fb1fb3128df8f2cedb23af33c484701a6fa51da8204824a445f800581be13"},
-    {file = "openmm-8.4.0.post2-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:f3c8a012810928b1c0ae91a755d3197e81e7d03d2058d92dd4924d283edeae44"},
-    {file = "openmm-8.4.0.post2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:1bde30736f7b4b595041caf083bb4e4e79a794ab164faedd0664eda0348a299f"},
-    {file = "openmm-8.4.0.post2-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:168544c0b388ae71cc3f85e27c36c4f393854a313c4203f9e9957d6214836c13"},
-    {file = "openmm-8.4.0.post2-cp312-cp312-win_amd64.whl", hash = "sha256:6e9fd826aedf34b4c27a4dcda83da93e90f3e81305c58bcc07dafee22460a469"},
-    {file = "openmm-8.4.0.post2-cp313-cp313-macosx_10_12_x86_64.whl", hash = "sha256:07dfe965a205e57eff525edad4a65f5b426daa068e491536019bc9b3957bc1f3"},
-    {file = "openmm-8.4.0.post2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:4fdfae1f8c7612520f3bd2f7c0dccb9d9df5f085e219272ca43617574b88c3a6"},
-    {file = "openmm-8.4.0.post2-cp313-cp313-manylinux_2_34_x86_64.whl", hash = "sha256:70cdd3309064b95bd304af1f195377e54b6f7060b15b37af725d15764b756b09"},
-    {file = "openmm-8.4.0.post2-cp313-cp313-win_amd64.whl", hash = "sha256:e2912d803e7473048351cddb59176df191db3cbe21d0ab1a6f83e7020b92f01f"},
-    {file = "openmm-8.4.0.post2-cp314-cp314-macosx_10_12_x86_64.whl", hash = "sha256:1aad58ba4cf27eec18061fa8dcef5a22666905f8f0edca0108214cd5a1f8109e"},
-    {file = "openmm-8.4.0.post2-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:951e92fb72f031406f5beb876ea87c4ad00a6759cb7675fb6f6c5f81ecf89ab0"},
-    {file = "openmm-8.4.0.post2-cp314-cp314-manylinux_2_34_x86_64.whl", hash = "sha256:e175a64050d17b571fae66f095abfa9ebf7224ce7bb502e714450925adaa1e98"},
-    {file = "openmm-8.4.0.post2-cp314-cp314-win_amd64.whl", hash = "sha256:25872ca6f1a9140df918af71f879aad457a2a2a45c752265c3a753e25fe028df"},
+    {file = "openmm-8.6.1-cp310-cp310-macosx_10_12_universal2.whl", hash = "sha256:c446983afafccf8fc31f688e0f5558b5cc38cb3871ef30abc98e565550b32b11"},
+    {file = "openmm-8.6.1-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:40486d34776c22f1fa21f495901429d79ede67bde37899610847c0e8afb8d412"},
+    {file = "openmm-8.6.1-cp310-cp310-manylinux_2_34_aarch64.whl", hash = "sha256:6e9f62b1dc5a52fc4089540ef2203d72ddb8ba3c502965de36c967d4a3136b4f"},
+    {file = "openmm-8.6.1-cp310-cp310-manylinux_2_34_x86_64.whl", hash = "sha256:213d830042252d1bf939f8093de30363611d9e4ed061cbe6191f37dbec4c32f7"},
+    {file = "openmm-8.6.1-cp310-cp310-win_amd64.whl", hash = "sha256:648f43e9b9c414efb1a2010d06fa008aee7de65dd1c3bb0b8f669418a02760de"},
+    {file = "openmm-8.6.1-cp311-cp311-macosx_10_12_universal2.whl", hash = "sha256:71d63f310a64b40e00795047aa89081e649cfa8977019959a283147780380f25"},
+    {file = "openmm-8.6.1-cp311-cp311-manylinux_2_34_aarch64.whl", hash = "sha256:cfe4b2e8fb5d43f88de03fefb86f2668102f9609fc0162d22e2e79617d949646"},
+    {file = "openmm-8.6.1-cp311-cp311-manylinux_2_34_x86_64.whl", hash = "sha256:e0a6ec580be31d4afba35f290c27c069aaeea9a168b0cf959a0dac0df1d9fd5d"},
+    {file = "openmm-8.6.1-cp311-cp311-win_amd64.whl", hash = "sha256:176a4d1c65a43ce02087e72fdb056437636689aff9f9cab6027b9516934bc87d"},
+    {file = "openmm-8.6.1-cp312-cp312-macosx_10_12_universal2.whl", hash = "sha256:1ab4a634ae3d0b0784dc5731ae5efb658ec92baf0e4a139c72f6510309791d22"},
+    {file = "openmm-8.6.1-cp312-cp312-manylinux_2_34_aarch64.whl", hash = "sha256:cbf75e64bc1350857c07c67bad71264fb270a15ed8ee7fa59ba0bd106af32589"},
+    {file = "openmm-8.6.1-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:c198fa3a0cb236ab2e8c6405b59ee8acc4ffb6b1a54d001e29c4afb8419e959b"},
+    {file = "openmm-8.6.1-cp312-cp312-win_amd64.whl", hash = "sha256:81d2db56d6cfc9d7ade0adc0039020cb995d3606915087fab3563499981e739a"},
+    {file = "openmm-8.6.1-cp313-cp313-macosx_10_12_universal2.whl", hash = "sha256:91139fb502ccf27055ce8cd7de2c240d75bc0b78fb4342b86a63412aa3380e2e"},
+    {file = "openmm-8.6.1-cp313-cp313-manylinux_2_34_aarch64.whl", hash = "sha256:683a8961635826f9746174e717f11085a6f07c3cbc53024358d3849032f02565"},
+    {file = "openmm-8.6.1-cp313-cp313-manylinux_2_34_x86_64.whl", hash = "sha256:b6295b1cfe63eac11c013cda90b9988fd74a1ec863522a1480affdaed3f20d7a"},
+    {file = "openmm-8.6.1-cp313-cp313-win_amd64.whl", hash = "sha256:fe4d1acfb0278c9591f1f4c247b1b7d3d236b49e7a7d6d464e1c547f406d8af9"},
+    {file = "openmm-8.6.1-cp314-cp314-macosx_10_12_universal2.whl", hash = "sha256:b32f55a3f2c3285208c3b360b7fd3dd5dbb23a6c7fc8688bc6d6e250e1a60999"},
+    {file = "openmm-8.6.1-cp314-cp314-manylinux_2_34_aarch64.whl", hash = "sha256:1bb475c7e9c371b2d786804d0e89ba2f22dce720bd374522d2d1e7ef80845fd8"},
+    {file = "openmm-8.6.1-cp314-cp314-manylinux_2_34_x86_64.whl", hash = "sha256:85fa5b75a16f57b3a6d98341653071f0fce1ae7b0864d99e4b0b6daf36aa1ae2"},
+    {file = "openmm-8.6.1-cp314-cp314-win_amd64.whl", hash = "sha256:291e40e9977e4c02c116d91d6dae586a8668135f3dece50a682c47b129b2cc8c"},
 ]
 
 [package.dependencies]
 numpy = "*"
+
+[package.extras]
+cuda12 = ["OpenMM-CUDA-12 (==8.6.1) ; platform_system != \"Darwin\""]
+cuda13 = ["OpenMM-CUDA-13 (==8.6.1) ; platform_system != \"Darwin\""]
+hip6 = ["OpenMM-HIP-6 (==8.6.1) ; platform_system != \"Darwin\" and platform_machine == \"x86_64\""]
+hip7 = ["OpenMM-HIP-7 (==8.6.1) ; platform_system != \"Darwin\" and platform_machine == \"x86_64\""]
 
 [[package]]
 name = "opt-einsum"
@@ -1754,7 +1804,7 @@ description = "Easily download, build, install, upgrade, and uninstall Python pa
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "python_version >= \"3.12\" and (extra == \"alphafold\" or extra == \"alphafold-minus-jax\")"
+markers = "(extra == \"alphafold\" or extra == \"alphafold-minus-jax\") and python_version >= \"3.12\""
 files = [
     {file = "setuptools-69.0.3-py3-none-any.whl", hash = "sha256:385eb4edd9c9d5c17540511303e39a147ce2fc04bc55289c322b9e5904fe2c05"},
     {file = "setuptools-69.0.3.tar.gz", hash = "sha256:be1af57fc409f93647f2e8e4573a142ed38724b8cdd389706a867bb4efcf1e78"},
@@ -1996,11 +2046,11 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more_it
 type = ["pytest-mypy"]
 
 [extras]
-alphafold = ["absl-py", "alphafold-colabfold", "dm-haiku", "dm-tree", "jax", "py3Dmol"]
-alphafold-minus-jax = ["absl-py", "alphafold-colabfold", "dm-haiku", "dm-tree", "py3Dmol"]
+alphafold = ["absl-py", "alphafold-colabfold", "colabfold-binaries", "colabfold-kernels", "dm-haiku", "dm-tree", "jax", "py3Dmol"]
+alphafold-minus-jax = ["absl-py", "alphafold-colabfold", "colabfold-binaries", "colabfold-kernels", "dm-haiku", "dm-tree", "py3Dmol"]
 openmm = ["openmm", "pdbfixer"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "757540633ffa41bc9416ef1ac4a7a5c091ec31988647b251273e81ee0d254e5f"
+content-hash = "e7b65002efe5c9acd2e1a2a374cbd6544e1f9e32dca279eabc94ccac20ded8c8"
