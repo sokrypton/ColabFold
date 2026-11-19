@@ -156,6 +156,7 @@ def ensure_weights(model_name: str, data_dir: Optional[Path] = None, download: b
         logger.info(f"{spec.name} weights in {target} are an older revision, downloading the current one")
         for _, filename in _wanted(spec, precision):
             target.joinpath(filename).unlink(missing_ok=True)
+            target.joinpath(filename + ".part").unlink(missing_ok=True)
         for m in stale:
             m.unlink()
     try:
